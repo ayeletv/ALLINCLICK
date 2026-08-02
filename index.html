@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הכל בקליק — תורים בלי לחכות בתור</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Suez+One&family=Heebo:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#141014;
+    --ink-2:#1D171C;
+    --ivory:#F5EEE4;
+    --ivory-dim:#C9C0B4;
+    --wine:#9B2C42;
+    --wine-deep:#6E1F30;
+    --gold:#C9A227;
+    --gold-soft:#E8CE7A;
+    --sage:#7C9473;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--ink);
+    color:var(--ivory);
+    font-family:'Heebo', sans-serif;
+    overflow-x:hidden;
+  }
+  .serif{font-family:'Suez One', serif; font-weight:400;}
+  .mono{font-family:'JetBrains Mono', monospace;}
+
+  /* HERO */
+  .hero{
+    min-height:92vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:6vh 6vw;
+    position:relative;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(155,44,66,0.25), transparent 60%),
+      var(--ink);
+    border-bottom:1px solid rgba(245,238,228,0.08);
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    letter-spacing:0.08em;
+    color:var(--gold-soft);
+    border:1px solid rgba(201,162,39,0.4);
+    border-radius:999px;
+    padding:6px 18px;
+    display:inline-block;
+    margin-bottom:2.2rem;
+    opacity:0;
+    animation:fadeUp 0.8s ease forwards 0.1s;
+  }
+  .hero h1{
+    font-size:clamp(52px, 10vw, 116px);
+    font-weight:400;
+    line-height:0.95;
+    letter-spacing:-0.01em;
+    opacity:0;
+    animation:fadeUp 0.9s ease forwards 0.25s;
+  }
+  .hero h1 span{color:var(--wine);}
+  .hero .tagline{
+    font-size:clamp(18px, 2.4vw, 26px);
+    color:var(--ivory-dim);
+    margin-top:1.6rem;
+    max-width:640px;
+    opacity:0;
+    animation:fadeUp 0.9s ease forwards 0.4s;
+  }
+  .hero .tagline b{color:var(--ivory); font-weight:500;}
+  .scroll-hint{
+    margin-top:4rem;
+    font-size:13px;
+    color:var(--ivory-dim);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    opacity:0;
+    animation:fadeUp 0.9s ease forwards 0.6s;
+  }
+  .scroll-hint .line{width:1px; height:38px; background:linear-gradient(var(--gold), transparent); animation:pulse 2s ease-in-out infinite;}
+  @keyframes fadeUp{from{opacity:0; transform:translateY(18px);} to{opacity:1; transform:translateY(0);}}
+  @keyframes pulse{0%,100%{opacity:0.3;} 50%{opacity:1;}}
+  @media (prefers-reduced-motion: reduce){
+    .hero *{animation:none !important; opacity:1 !important;}
+    .scroll-hint .line{animation:none;}
+  }
+
+  /* DEMO SECTION */
+  .stage{
+    max-width:1040px;
+    margin:0 auto;
+    padding:8vh 6vw 10vh;
+  }
+  .stage-head{
+    text-align:center;
+    margin-bottom:3rem;
+  }
+  .stage-head .kicker{font-family:'JetBrains Mono'; font-size:12px; letter-spacing:0.1em; color:var(--wine); text-transform:uppercase;}
+  .stage-head h2{font-size:clamp(30px,4vw,46px); font-weight:700; margin-top:0.6rem;}
+
+  .switcher{
+    display:flex;
+    justify-content:center;
+    gap:0;
+    margin-bottom:3.5rem;
+    border:1px solid rgba(245,238,228,0.15);
+    border-radius:999px;
+    padding:5px;
+    max-width:640px;
+    margin-inline:auto;
+    background:var(--ink-2);
+    flex-wrap:wrap;
+  }
+  .switcher button{
+    flex:1;
+    min-width:110px;
+    background:none;
+    border:none;
+    color:var(--ivory-dim);
+    font-family:'Heebo';
+    font-size:13px;
+    font-weight:500;
+    padding:11px 10px;
+    border-radius:999px;
+    cursor:pointer;
+    transition:all 0.25s ease;
+  }
+  .switcher button.active{
+    background:var(--wine);
+    color:var(--ivory);
+  }
+
+  .panel{display:none; animation:fadeUp 0.5s ease forwards;}
+  .panel.active{display:block;}
+
+  /* CUSTOMER VIEW */
+  .phone{
+    max-width:380px;
+    margin:0 auto;
+    background:var(--ink-2);
+    border:1px solid rgba(245,238,228,0.12);
+    border-radius:32px;
+    padding:10px;
+  }
+  .phone-screen{
+    background:var(--ivory);
+    color:var(--ink);
+    border-radius:24px;
+    padding:26px 22px 28px;
+  }
+  .phone-screen .label{
+    font-size:12px;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    color:#8A8178;
+    margin-bottom:10px;
+  }
+  .svc-card{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border:1.5px solid #E4DACB;
+    border-radius:14px;
+    padding:13px 16px;
+    margin-bottom:8px;
+    cursor:pointer;
+    transition:all 0.2s ease;
+  }
+  .svc-card span:first-child{font-weight:500;}
+  .svc-card span:last-child{font-family:'JetBrains Mono'; font-size:13px; color:#8A8178;}
+  .svc-card.selected{
+    border-color:var(--wine);
+    background:#FBEFEF;
+  }
+  .svc-card.selected span:last-child{color:var(--wine);}
+
+  .slot-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:22px;}
+  .slot{
+    position:relative;
+    text-align:center;
+    padding:14px 4px 10px;
+    border:1.5px solid #E4DACB;
+    border-radius:14px 14px 8px 8px;
+    font-family:'JetBrains Mono';
+    font-size:13px;
+    cursor:pointer;
+    transition:all 0.2s ease;
+    background:linear-gradient(#fff, #fff) padding-box;
+  }
+  .slot::before{
+    content:'';
+    position:absolute;
+    top:-6px; left:50%; transform:translateX(-50%);
+    width:14px; height:6px;
+    background:#E4DACB;
+    border-radius:3px 3px 0 0;
+    transition:background 0.2s ease;
+  }
+  .slot.selected{border-color:var(--wine); color:var(--wine); font-weight:500;}
+  .slot.selected::before{background:var(--wine);}
+  .slot.booked{color:#B8AFA2; background:#F3EEE6;}
+  .slot.booked::before{background:#D8CFC0;}
+
+  .field{
+    width:100%;
+    border:1.5px solid #E4DACB;
+    border-radius:12px;
+    padding:12px 14px;
+    font-family:'Heebo';
+    font-size:14px;
+    margin-bottom:8px;
+    background:#fff;
+    color:var(--ink);
+  }
+  .field:focus{outline:none; border-color:var(--wine);}
+  .cta{
+    width:100%;
+    background:var(--wine);
+    color:var(--ivory);
+    border:none;
+    border-radius:12px;
+    padding:14px;
+    font-family:'Heebo';
+    font-weight:500;
+    font-size:15px;
+    cursor:pointer;
+    margin-top:6px;
+    transition:transform 0.15s ease, background 0.2s ease;
+  }
+  .cta:hover{background:var(--wine-deep);}
+  .cta:active{transform:scale(0.98);}
+  .staff-picker{display:flex; gap:10px; overflow-x:auto; padding-bottom:4px;}
+  .staff-chip{
+    display:flex; flex-direction:column; align-items:center; gap:5px;
+    cursor:pointer;
+    flex-shrink:0;
+    padding:4px;
+    border-radius:12px;
+    border:1.5px solid transparent;
+  }
+  .staff-chip.selected{border-color:var(--wine);}
+  .staff-chip .avatar{
+    width:44px; height:44px;
+    border-radius:50%;
+    background:#F3ECE0;
+    color:#9B7E2E;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Suez One'; font-size:15px;
+    overflow:hidden;
+  }
+  .staff-chip .avatar img{width:100%; height:100%; object-fit:cover;}
+  .staff-chip span{font-size:11px; color:#6B6259; max-width:60px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .staff-chip.selected span{color:var(--wine); font-weight:500;}
+
+  .confirm-msg{
+    display:none;
+    align-items:center;
+    gap:8px;
+    color:#3E5C36;
+    font-size:13px;
+    margin-top:12px;
+    padding:10px 12px;
+    background:#EEF3EA;
+    border-radius:10px;
+  }
+  .confirm-msg.show{display:flex;}
+  .waitlist-box{margin-bottom:16px;}
+  .waitlist-prompt{
+    border:1.5px solid #E8CE7A;
+    background:#FBF6E8;
+    border-radius:12px;
+    padding:12px 14px;
+    font-size:13px;
+    color:#7A6320;
+  }
+  .waitlist-prompt button{
+    margin-top:8px;
+    background:var(--gold);
+    color:var(--ink);
+    border:none;
+    border-radius:8px;
+    padding:8px 14px;
+    font-family:'Heebo';
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+  }
+  .waitlist-confirmed{
+    border:1.5px solid #9FBF93;
+    background:#EEF3EA;
+    border-radius:12px;
+    padding:12px 14px;
+    font-size:13px;
+    color:#3E5C36;
+  }
+  .my-appt{
+    border:1.5px solid #E4DACB;
+    border-radius:16px;
+    padding:20px;
+  }
+  .my-appt .status-dot{color:#3E5C36; font-size:13px; margin-bottom:10px; display:flex; align-items:center; gap:6px;}
+  .my-appt h4{font-family:'Suez One'; font-weight:400; font-size:18px; margin-bottom:4px;}
+  .my-appt .appt-meta{font-size:13px; color:#8A8178; margin-bottom:18px;}
+  .my-appt-actions{display:flex; gap:8px;}
+  .my-appt-actions button{
+    flex:1;
+    border-radius:10px;
+    padding:11px;
+    font-family:'Heebo';
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+    border:1.5px solid #E4DACB;
+    background:#fff;
+  }
+  .my-appt-actions .danger{color:var(--wine); border-color:#E8C3CB;}
+
+  /* BUSINESS VIEW */
+  .stat-row{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:24px;}
+  .stat{
+    background:var(--ink-2);
+    border:1px solid rgba(245,238,228,0.1);
+    border-radius:16px;
+    padding:20px;
+  }
+  .stat .num{font-family:'Suez One'; font-size:34px; font-weight:400; color:var(--gold-soft);}
+  .stat .lbl{font-size:13px; color:var(--ivory-dim); margin-top:4px;}
+
+  .board{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow:hidden;}
+  .row{
+    display:grid;
+    grid-template-columns:80px 1fr 1fr 100px;
+    align-items:center;
+    padding:14px 20px;
+    border-bottom:1px solid rgba(245,238,228,0.08);
+    font-size:14px;
+  }
+  .row:last-child{border-bottom:none;}
+  .row.head{color:var(--ivory-dim); font-size:12px; letter-spacing:0.05em; text-transform:uppercase;}
+  .row .time{font-family:'JetBrains Mono'; color:var(--gold-soft);}
+  .badge{font-size:12px; padding:4px 12px; border-radius:999px; width:fit-content;}
+  .badge.confirmed{background:rgba(124,148,115,0.2); color:var(--sage);}
+  .badge.open{background:rgba(201,162,39,0.15); color:var(--gold-soft);}
+
+  /* NOTIFICATIONS VIEW */
+  .notif-grid{display:flex; flex-direction:column; gap:18px; max-width:520px; margin:0 auto;}
+  .notif-card{
+    border:1px solid rgba(245,238,228,0.12);
+    border-radius:16px;
+    padding:20px;
+    background:var(--ink-2);
+  }
+  .notif-tag{font-family:'JetBrains Mono'; font-size:11px; letter-spacing:0.05em; color:var(--gold-soft); text-transform:uppercase; margin-bottom:10px;}
+  .notif-card h4{font-family:'Suez One'; font-weight:400; font-size:17px; margin-bottom:6px;}
+  .notif-card p{font-size:14px; color:var(--ivory-dim); line-height:1.7;}
+  .sms-bubble{
+    background:var(--wine);
+    color:var(--ivory);
+    border-radius:16px 16px 4px 16px;
+    padding:14px 16px;
+    font-size:14px;
+    line-height:1.7;
+    max-width:90%;
+    margin-right:auto;
+  }
+
+  /* WHAT'S NEW VIEW */
+  .new-grid{display:flex; flex-direction:column; gap:14px; max-width:560px; margin:0 auto;}
+  .new-card{
+    display:flex;
+    gap:16px;
+    align-items:center;
+    border:1px solid rgba(245,238,228,0.12);
+    border-radius:16px;
+    padding:16px 18px;
+    background:var(--ink-2);
+  }
+  .new-icon{
+    width:46px; height:46px; min-width:46px;
+    border-radius:12px;
+    background:rgba(201,162,39,0.12);
+    color:var(--gold-soft);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px;
+  }
+  .new-body h4{font-family:'Suez One'; font-weight:400; font-size:16px; margin-bottom:3px;}
+  .new-body p{font-size:13px; color:var(--ivory-dim); line-height:1.6;}
+  .new-badge{
+    font-size:11px;
+    background:rgba(155,44,66,0.18);
+    color:#E9A9BA;
+    padding:3px 10px;
+    border-radius:999px;
+    margin-inline-start:auto;
+    white-space:nowrap;
+  }
+
+  /* BUSINESS SUB-TABS */
+  .subswitcher{
+    display:flex;
+    gap:8px;
+    margin-bottom:2rem;
+    flex-wrap:wrap;
+  }
+  .subswitcher button{
+    background:none;
+    border:1px solid rgba(245,238,228,0.15);
+    color:var(--ivory-dim);
+    font-family:'Heebo';
+    font-size:13px;
+    font-weight:500;
+    padding:8px 18px;
+    border-radius:999px;
+    cursor:pointer;
+    transition:all 0.2s ease;
+  }
+  .subswitcher button.active{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:var(--ink);
+  }
+  .subpanel{display:none;}
+  .subpanel.active{display:block; animation:fadeUp 0.4s ease forwards;}
+
+  /* HOURS EDITOR */
+  .hours-list{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow:hidden;}
+  .hours-row{
+    display:grid;
+    grid-template-columns:90px auto 1fr;
+    align-items:center;
+    gap:14px;
+    padding:14px 20px;
+    border-bottom:1px solid rgba(245,238,228,0.08);
+  }
+  .hours-row:last-child{border-bottom:none;}
+  .hours-row .day{font-weight:500; font-size:14px;}
+  .toggle{
+    width:40px; height:22px;
+    border-radius:999px;
+    background:rgba(245,238,228,0.15);
+    position:relative;
+    cursor:pointer;
+    transition:background 0.2s ease;
+    flex-shrink:0;
+  }
+  .toggle::after{
+    content:'';
+    position:absolute;
+    top:2px; right:2px;
+    width:18px; height:18px;
+    border-radius:50%;
+    background:var(--ivory-dim);
+    transition:all 0.2s ease;
+  }
+  .toggle.on{background:var(--sage);}
+  .toggle.on::after{background:var(--ivory); right:20px;}
+  .hours-range{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:'JetBrains Mono';
+    font-size:13px;
+  }
+  .hours-range select{
+    background:var(--ink);
+    color:var(--ivory);
+    border:1px solid rgba(245,238,228,0.2);
+    border-radius:8px;
+    padding:6px 8px;
+    font-family:'JetBrains Mono';
+    font-size:13px;
+  }
+  .hours-row.closed .hours-range{opacity:0.3; pointer-events:none;}
+  .hours-row.closed .hours-range::before{content:'סגור'; color:var(--ivory-dim); font-family:'Heebo';}
+  .hours-row.closed .hours-range select{display:none;}
+
+  /* INVENTORY */
+  .inv-alert{
+    display:none;
+    align-items:flex-start;
+    gap:10px;
+    background:rgba(155,44,66,0.14);
+    border:1px solid rgba(155,44,66,0.4);
+    color:#E9A9BA;
+    border-radius:14px;
+    padding:14px 18px;
+    font-size:13px;
+    line-height:1.7;
+    margin-bottom:20px;
+  }
+  .inv-alert.show{display:flex;}
+  .inv-list{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow:hidden;}
+  .inv-row{
+    display:grid;
+    grid-template-columns:1.2fr 120px 80px 110px;
+    align-items:center;
+    gap:8px;
+    padding:12px 20px;
+    border-bottom:1px solid rgba(245,238,228,0.08);
+    font-size:14px;
+  }
+  .inv-row:last-child{border-bottom:none;}
+  .inv-row.head{color:var(--ivory-dim); font-size:12px; letter-spacing:0.05em; text-transform:uppercase;}
+  .stock-counter{display:flex; align-items:center; gap:8px;}
+  .stock-btn{
+    width:26px; height:26px;
+    border-radius:8px;
+    border:1px solid rgba(245,238,228,0.2);
+    background:var(--ink);
+    color:var(--ivory);
+    font-size:15px;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:all 0.15s ease;
+    flex-shrink:0;
+  }
+  .stock-btn:hover{border-color:var(--gold); color:var(--gold-soft);}
+  .stock-btn:active{transform:scale(0.92);}
+  .stock-num{font-family:'JetBrains Mono'; font-weight:500; min-width:24px; text-align:center;}
+  .inv-row input.threshold{
+    width:100%;
+    background:var(--ink);
+    color:var(--ivory);
+    border:1px solid rgba(201,162,39,0.4);
+    border-radius:8px;
+    padding:6px 8px;
+    font-family:'JetBrains Mono';
+    font-size:13px;
+    text-align:center;
+  }
+  .badge.low{background:rgba(155,44,66,0.2); color:#E9A9BA;}
+  .badge.ok{background:rgba(124,148,115,0.2); color:var(--sage);}
+
+  /* SERVICE MANAGEMENT */
+  .svc-manage-list{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow:hidden; margin-bottom:20px;}
+  .svc-manage-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:14px 20px;
+    border-bottom:1px solid rgba(245,238,228,0.08);
+    font-size:14px;
+  }
+  .svc-manage-row:last-child{border-bottom:none;}
+  .svc-manage-row .price{font-family:'JetBrains Mono'; color:var(--gold-soft); margin-inline-end:16px;}
+  .svc-del{
+    background:none;
+    border:1px solid rgba(245,238,228,0.15);
+    color:var(--ivory-dim);
+    border-radius:8px;
+    width:30px; height:30px;
+    cursor:pointer;
+    font-size:14px;
+    transition:all 0.2s ease;
+  }
+  .svc-del:hover{border-color:var(--wine); color:var(--wine);}
+  .svc-add-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .svc-add-row input{
+    flex:1;
+    min-width:140px;
+    background:var(--ink-2);
+    color:var(--ivory);
+    border:1px solid rgba(245,238,228,0.2);
+    border-radius:10px;
+    padding:11px 14px;
+    font-family:'Heebo';
+    font-size:14px;
+  }
+  .svc-add-row input::placeholder{color:var(--ivory-dim);}
+  .svc-add-row .cta{flex:0 0 auto; padding:11px 24px;}
+
+  /* REPORTS */
+  .bar-chart{
+    display:flex;
+    align-items:flex-end;
+    gap:10px;
+    height:140px;
+    border:1px solid rgba(245,238,228,0.12);
+    border-radius:16px;
+    padding:16px 20px 10px;
+  }
+  .bar-col{display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;}
+  .bar-fill{
+    width:100%;
+    max-width:30px;
+    background:var(--gold);
+    border-radius:6px 6px 2px 2px;
+    transition:height 0.4s ease;
+  }
+  .bar-col .bar-lbl{font-size:11px; color:var(--ivory-dim);}
+  .popular-list{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow:hidden;}
+  .popular-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:12px 20px;
+    border-bottom:1px solid rgba(245,238,228,0.08);
+    font-size:14px;
+  }
+  .popular-row:last-child{border-bottom:none;}
+  .popular-row .pop-name{flex:0 0 130px;}
+  .popular-row .pop-bar-track{flex:1; height:8px; background:rgba(245,238,228,0.1); border-radius:99px; overflow:hidden;}
+  .popular-row .pop-bar-fill{height:100%; background:var(--sage); border-radius:99px;}
+  .popular-row .pop-count{flex:0 0 34px; text-align:left; font-family:'JetBrains Mono'; color:var(--ivory-dim); font-size:13px;}
+
+  /* CLIENTS & STAFF */
+  .client-list{display:flex; flex-direction:column; gap:12px; margin-bottom:20px;}
+  .client-card{
+    display:flex;
+    align-items:flex-start;
+    gap:14px;
+    border:1px solid rgba(245,238,228,0.12);
+    border-radius:14px;
+    padding:16px 18px;
+    background:var(--ink-2);
+  }
+  .client-avatar{
+    width:48px; height:48px; min-width:48px;
+    border-radius:50%;
+    background:rgba(201,162,39,0.15);
+    color:var(--gold-soft);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Suez One'; font-size:16px;
+    overflow:hidden;
+  }
+  .client-avatar img{width:100%; height:100%; object-fit:cover;}
+  .client-info{flex:1; min-width:0;}
+  .client-info .name-row{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .client-info h4{font-family:'Suez One'; font-weight:400; font-size:16px;}
+  .client-info .phone{font-family:'JetBrains Mono'; font-size:12px; color:var(--ivory-dim);}
+  .client-info .visits{font-size:12px; color:var(--gold-soft); margin-top:2px;}
+  .client-info .role-tag{font-size:12px; color:var(--ivory-dim); margin-top:2px;}
+  .client-note{
+    width:100%;
+    margin-top:10px;
+    background:var(--ink);
+    color:var(--ivory);
+    border:1px solid rgba(245,238,228,0.15);
+    border-radius:8px;
+    padding:8px 10px;
+    font-family:'Heebo';
+    font-size:13px;
+    resize:vertical;
+    min-height:36px;
+  }
+  .client-note::placeholder{color:var(--ivory-dim);}
+  .client-add-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .client-add-row input{
+    flex:1;
+    min-width:130px;
+    background:var(--ink-2);
+    color:var(--ivory);
+    border:1px solid rgba(245,238,228,0.2);
+    border-radius:10px;
+    padding:11px 14px;
+    font-family:'Heebo';
+    font-size:14px;
+  }
+  .client-add-row input::placeholder{color:var(--ivory-dim);}
+  .client-add-row .cta{flex:0 0 auto; padding:11px 24px;}
+  .brand-logo-upload.small{width:44px; height:44px; flex-shrink:0;}
+  .brand-logo-upload.small span{font-size:10px;}
+
+  /* BRANDING */
+  .brand-editor{display:flex; align-items:center; gap:20px; flex-wrap:wrap;}
+  .brand-logo-upload{
+    width:76px; height:76px;
+    border-radius:50%;
+    border:1.5px dashed rgba(245,238,228,0.3);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+    overflow:hidden;
+    transition:border-color 0.2s ease;
+  }
+  .brand-logo-upload:hover{border-color:var(--gold);}
+  .brand-logo-upload span{font-size:12px; color:var(--ivory-dim);}
+  .brand-logo-upload img{width:100%; height:100%; object-fit:cover;}
+  .field-dark{
+    width:100%;
+    background:var(--ink-2);
+    color:var(--ivory);
+    border:1px solid rgba(245,238,228,0.2);
+    border-radius:10px;
+    padding:11px 14px;
+    font-family:'Heebo';
+    font-size:14px;
+  }
+  .brand-preview{
+    display:flex; align-items:center; gap:12px;
+    border:1px solid rgba(245,238,228,0.12);
+    border-radius:14px;
+    padding:14px 18px;
+    max-width:380px;
+    background:var(--ink-2);
+  }
+  .brand-preview .logo-dot{
+    width:40px; height:40px;
+    border-radius:50%;
+    background:rgba(201,162,39,0.15);
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+    flex-shrink:0;
+    color:var(--gold-soft);
+    font-size:14px;
+  }
+  .brand-preview .logo-dot img{width:100%; height:100%; object-fit:cover;}
+  .brand-preview .biz-name{font-family:'Suez One'; font-weight:400; font-size:16px; color:var(--ivory);}
+
+  .phone-product-tag{
+    font-family:'JetBrains Mono';
+    font-size:11px;
+    letter-spacing:0.05em;
+    color:#9B7E2E;
+    margin-bottom:8px;
+  }
+  .phone-brand{
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:16px;
+    padding-bottom:14px;
+    border-bottom:1px solid #E4DACB;
+  }
+  .phone-brand .logo-dot{
+    width:36px; height:36px;
+    border-radius:50%;
+    background:#F3ECE0;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+    flex-shrink:0;
+    color:#9B7E2E;
+    font-size:13px;
+  }
+  .phone-brand .logo-dot img{width:100%; height:100%; object-fit:cover;}
+  .phone-brand .biz-name{font-family:'Suez One'; font-weight:400; font-size:16px; color:var(--ink);}
+
+  @media (max-width:640px){
+    .hours-row{grid-template-columns:70px auto 1fr; padding:12px 14px;}
+    .inv-row{grid-template-columns:1.1fr 100px 60px 60px; padding:10px 12px; font-size:12px;}
+    .new-card{flex-wrap:wrap;}
+  }
+
+  footer{
+    text-align:center;
+    padding:5vh 6vw 6vh;
+    color:var(--ivory-dim);
+    font-size:13px;
+    border-top:1px solid rgba(245,238,228,0.08);
+  }
+  footer .brand{color:var(--gold-soft); font-family:'Suez One'; font-style:normal;}
+
+  @media (max-width:640px){
+    .stat-row{grid-template-columns:1fr;}
+    .row{grid-template-columns:60px 1fr 1fr; font-size:13px;}
+    .row .badge-col{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="eyebrow">דמו מוצר — SaaS לניהול תורים</div>
+  <h1 class="serif">הכל <span>בקליק</span></h1>
+  <p class="tagline">תורים, מלאי, שירותים ושעות פעילות —<br><b>הכל במקום אחד.</b> הלקוחות קובעות לבד, ואת מנהלת את כל העסק בלי טלפון אחד.</p>
+  <div class="scroll-hint">
+    <span>גלילה למטה</span>
+    <div class="line"></div>
+  </div>
+</section>
+
+<section class="stage">
+  <div class="stage-head">
+    <div class="kicker">שלוש נקודות מבט</div>
+    <h2 class="serif">אותה מערכת, שלושה מסכים</h2>
+  </div>
+
+  <div class="switcher">
+    <button class="active" onclick="showPanel('customer', this)">ללקוחה</button>
+    <button onclick="showPanel('whatsnew', this)">מה חדש</button>
+    <button onclick="showPanel('business', this)">לבעלת העסק</button>
+    <button onclick="showPanel('notif', this)">ההתראות</button>
+  </div>
+
+  <div id="panel-customer" class="panel active">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="phone-product-tag">הכל בקליק</div>
+        <div class="phone-brand" id="phoneBrand"></div>
+
+        <div id="bookingFormWrap">
+          <div class="label">בחירת שירות</div>
+          <div id="custSvcList"></div>
+          <div class="label" style="margin-top:18px;">בחירת עובדת</div>
+          <div class="staff-picker" id="staffPicker"></div>
+          <div class="label" style="margin-top:18px;">יום שלישי — שעות פנויות</div>
+          <div class="slot-grid" id="slots"></div>
+          <div class="waitlist-box" id="waitlistBox"></div>
+          <div class="label">פרטי קשר</div>
+          <input class="field" placeholder="שם מלא">
+          <input class="field" placeholder="050-0000000">
+          <button class="cta" onclick="confirmBooking()">אישור תור</button>
+        </div>
+
+        <div id="myAppointment" class="my-appt" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel-whatsnew" class="panel">
+    <div class="new-grid">
+      <div class="new-card">
+        <div class="new-icon">✦</div>
+        <div class="new-body">
+          <h4>לק ג'ל בגוונים חדשים לקיץ</h4>
+          <p>הגיעה קולקציה חדשה של 12 גוונים — אפשר לבחור בזמן קביעת התור.</p>
+        </div>
+        <div class="new-badge">חדש</div>
+      </div>
+      <div class="new-card">
+        <div class="new-icon">✦</div>
+        <div class="new-body">
+          <h4>טיפול פרפין לידיים</h4>
+          <p>שירות חדש שמרכך ומזין — 15 דקות, תוספת ל-25 ש"ח לכל שירות ידיים.</p>
+        </div>
+        <div class="new-badge">חדש</div>
+      </div>
+      <div class="new-card">
+        <div class="new-icon">✦</div>
+        <div class="new-body">
+          <h4>שעות פתיחה מורחבות בימי שני</h4>
+          <p>מעכשיו אפשר לקבוע תור בימי שני גם עד השעה 20:00.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel-business" class="panel">
+    <div class="subswitcher">
+      <button class="active" onclick="showSub('overview', this)">סקירה</button>
+      <button onclick="showSub('clients', this)">לקוחות</button>
+      <button onclick="showSub('staff', this)">צוות</button>
+      <button onclick="showSub('reports', this)">דוחות</button>
+      <button onclick="showSub('branding', this)">מיתוג</button>
+      <button onclick="showSub('services', this)">השירותים שלי</button>
+      <button onclick="showSub('hours', this)">שעות פעילות</button>
+      <button onclick="showSub('inventory', this)">מלאי</button>
+    </div>
+
+    <div id="sub-overview" class="subpanel active">
+      <div class="stat-row">
+        <div class="stat"><div class="num mono">7</div><div class="lbl">תורים היום</div></div>
+        <div class="stat"><div class="num mono">3</div><div class="lbl">מקומות פנויים</div></div>
+        <div class="stat"><div class="num mono">890 ₪</div><div class="lbl">הכנסה צפויה</div></div>
+      </div>
+      <div class="board">
+        <div class="row head"><span>שעה</span><span>לקוחה</span><span>שירות</span><span class="badge-col">סטטוס</span></div>
+        <div class="row"><span class="time">09:00</span><span>נועה כהן</span><span>מניקור ג'ל</span><span class="badge-col"><span class="badge confirmed">מאושר</span></span></div>
+        <div class="row"><span class="time">10:30</span><span>שירה לוי</span><span>בנייה בג'ל</span><span class="badge-col"><span class="badge confirmed">מאושר</span></span></div>
+        <div class="row"><span class="time">12:00</span><span>מאיה אזולאי</span><span>פדיקור</span><span class="badge-col"><span class="badge confirmed">מאושר</span></span></div>
+        <div class="row"><span class="time">14:00</span><span>—</span><span>—</span><span class="badge-col"><span class="badge open">פנוי</span></span></div>
+      </div>
+    </div>
+
+    <div id="sub-clients" class="subpanel">
+      <div class="client-list" id="clientList"></div>
+      <div class="client-add-row">
+        <div class="brand-logo-upload small" id="clientPhotoUpload" onclick="document.getElementById('clientPhotoFile').click()">
+          <span id="clientPhotoPlaceholder">+ תמונה</span>
+          <img id="clientPhotoPreview" style="display:none;">
+        </div>
+        <input type="file" id="clientPhotoFile" accept="image/*" style="display:none;" onchange="handleClientPhotoUpload(event)">
+        <input type="text" id="newClientName" placeholder="שם הלקוחה">
+        <input type="text" id="newClientPhone" placeholder="050-0000000">
+        <button class="cta" style="width:auto; margin-top:0;" onclick="addClient()">הוספת לקוחה</button>
+      </div>
+    </div>
+
+    <div id="sub-staff" class="subpanel">
+      <div class="client-list" id="staffList"></div>
+      <div class="client-add-row">
+        <div class="brand-logo-upload small" id="staffPhotoUpload" onclick="document.getElementById('staffPhotoFile').click()">
+          <span id="staffPhotoPlaceholder">+ תמונה</span>
+          <img id="staffPhotoPreview" style="display:none;">
+        </div>
+        <input type="file" id="staffPhotoFile" accept="image/*" style="display:none;" onchange="handleStaffPhotoUpload(event)">
+        <input type="text" id="newStaffName" placeholder="שם העובדת">
+        <input type="text" id="newStaffRole" placeholder="תפקיד (למשל: מניקוריסטית)">
+        <button class="cta" style="width:auto; margin-top:0;" onclick="addStaff()">הוספת עובדת</button>
+      </div>
+    </div>
+
+    <div id="sub-reports" class="subpanel">
+      <div class="subswitcher" style="margin-bottom:1.5rem;">
+        <button class="active" onclick="showReportRange('week', this)">השבוע</button>
+        <button onclick="showReportRange('month', this)">החודש</button>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="num mono" id="repRevenue">3,240 ₪</div><div class="lbl">הכנסה</div></div>
+        <div class="stat"><div class="num mono" id="repCount">27</div><div class="lbl">תורים</div></div>
+        <div class="stat"><div class="num mono" id="repAvg">120 ₪</div><div class="lbl">ממוצע לתור</div></div>
+      </div>
+      <div class="label" style="margin:8px 0 10px;">הכנסה לפי יום</div>
+      <div class="bar-chart" id="revChart"></div>
+      <div class="label" style="margin:24px 0 10px;">השירותים הכי מבוקשים</div>
+      <div class="popular-list" id="popularList"></div>
+    </div>
+
+    <div id="sub-branding" class="subpanel">
+      <div class="brand-editor">
+        <div class="brand-logo-upload" id="logoUpload" onclick="document.getElementById('logoFile').click()">
+          <span id="logoPlaceholder">+ לוגו</span>
+          <img id="logoPreview" style="display:none;">
+        </div>
+        <input type="file" id="logoFile" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
+        <div style="flex:1; min-width:200px;">
+          <div class="label" style="margin-bottom:6px;">שם העסק</div>
+          <input type="text" id="bizNameInput" class="field-dark" placeholder="שם העסק שלך" value="הסלון שלי" oninput="updateBranding()">
+        </div>
+      </div>
+      <div class="label" style="margin:22px 0 10px;">כך זה ייראה ללקוחה</div>
+      <div class="brand-preview" id="brandPreview"></div>
+    </div>
+
+    <div id="sub-services" class="subpanel">
+      <div class="svc-manage-list" id="svcManageList"></div>
+      <div class="svc-add-row">
+        <input type="text" id="newSvcName" placeholder="שם השירות (למשל: לייזר)">
+        <input type="number" id="newSvcPrice" placeholder="מחיר בש&quot;ח">
+        <button class="cta" style="width:auto; margin-top:0;" onclick="addService()">הוספת שירות</button>
+      </div>
+    </div>
+
+    <div id="sub-hours" class="subpanel">
+      <div class="hours-list" id="hoursList"></div>
+    </div>
+
+    <div id="sub-inventory" class="subpanel">
+      <div class="inv-alert" id="invAlert"></div>
+      <div class="inv-list">
+        <div class="inv-row head"><span>מוצר</span><span>במלאי</span><span>סף התראה</span><span>סטטוס</span></div>
+        <div id="invList"></div>
+      </div>
+      <div class="svc-add-row" style="margin-top:16px;">
+        <input type="text" id="newInvName" placeholder="שם מוצר (למשל: לק סגול)">
+        <input type="number" id="newInvStock" placeholder="כמות התחלתית">
+        <input type="number" id="newInvThreshold" placeholder="סף התראה">
+        <button class="cta" style="width:auto; margin-top:0;" onclick="addInventoryItem()">הוספת מוצר</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel-notif" class="panel">
+    <div class="notif-grid">
+      <div class="notif-card">
+        <div class="notif-tag">מייל אוטומטי</div>
+        <h4>התור שלך אושר</h4>
+        <p>היי נועה, נקבע לך תור למניקור ג'ל ביום שלישי בשעה 09:00. לביטול או שינוי מועד, לחצי כאן.</p>
+      </div>
+      <div class="notif-card">
+        <div class="notif-tag">SMS תזכורת</div>
+        <div class="sms-bubble">תזכורת: מחר 09:00 תור למניקור ג'ל. להגעה השיבי 1, לביטול השיבי 2.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  נבנה כדמו ל<span class="brand">הכל בקליק</span> — מערכת תורים עצמאית ללא שיחות טלפון
+</footer>
+
+<script>
+  const reportData = {
+    week: {
+      revenue: '3,240 ₪', count: 27, avg: '120 ₪',
+      bars: [
+        { lbl: 'א', val: 420 }, { lbl: 'ב', val: 610 }, { lbl: 'ג', val: 380 },
+        { lbl: 'ד', val: 540 }, { lbl: 'ה', val: 690 }, { lbl: 'ו', val: 600 }, { lbl: 'ש', val: 0 }
+      ],
+      popular: [
+        { name: "מניקור ג'ל", count: 12 }, { name: "בנייה בג'ל", count: 8 }, { name: "פדיקור", count: 7 }
+      ]
+    },
+    month: {
+      revenue: '12,860 ₪', count: 104, avg: '124 ₪',
+      bars: [
+        { lbl: 'שבוע 1', val: 2900 }, { lbl: 'שבוע 2', val: 3400 },
+        { lbl: 'שבוע 3', val: 2650 }, { lbl: 'שבוע 4', val: 3910 }
+      ],
+      popular: [
+        { name: "מניקור ג'ל", count: 46 }, { name: "בנייה בג'ל", count: 33 }, { name: "פדיקור", count: 25 }
+      ]
+    }
+  };
+
+  function showReportRange(range, btn){
+    document.querySelectorAll('#sub-reports .subswitcher button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderReports(range);
+  }
+
+  function renderReports(range){
+    const data = reportData[range];
+    document.getElementById('repRevenue').textContent = data.revenue;
+    document.getElementById('repCount').textContent = data.count;
+    document.getElementById('repAvg').textContent = data.avg;
+
+    const maxVal = Math.max(...data.bars.map(b => b.val), 1);
+    const chartEl = document.getElementById('revChart');
+    chartEl.innerHTML = '';
+    data.bars.forEach(b => {
+      const col = document.createElement('div');
+      col.className = 'bar-col';
+      const height = Math.round((b.val / maxVal) * 100);
+      col.innerHTML = `<div class="bar-fill" style="height:${height}%;"></div><span class="bar-lbl">${b.lbl}</span>`;
+      chartEl.appendChild(col);
+    });
+
+    const maxCount = Math.max(...data.popular.map(p => p.count), 1);
+    const popEl = document.getElementById('popularList');
+    popEl.innerHTML = '';
+    data.popular.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'popular-row';
+      const width = Math.round((p.count / maxCount) * 100);
+      row.innerHTML = `<span class="pop-name">${p.name}</span><div class="pop-bar-track"><div class="pop-bar-fill" style="width:${width}%;"></div></div><span class="pop-count">${p.count}</span>`;
+      popEl.appendChild(row);
+    });
+  }
+  renderReports('week');
+
+  let branding = { name: 'הסלון שלי', logo: null };
+
+  function updateBranding(){
+    branding.name = document.getElementById('bizNameInput').value.trim() || 'הסלון שלי';
+    renderBranding();
+  }
+
+  function handleLogoUpload(event){
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      branding.logo = e.target.result;
+      document.getElementById('logoPreview').src = branding.logo;
+      document.getElementById('logoPreview').style.display = 'block';
+      document.getElementById('logoPlaceholder').style.display = 'none';
+      renderBranding();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function renderBranding(){
+    const logoHtml = branding.logo
+      ? `<img src="${branding.logo}">`
+      : branding.name.trim().charAt(0);
+
+    document.getElementById('brandPreview').innerHTML = `
+      <div class="logo-dot">${logoHtml}</div>
+      <span class="biz-name">${branding.name}</span>`;
+
+    document.getElementById('phoneBrand').innerHTML = `
+      <div class="logo-dot">${logoHtml}</div>
+      <span class="biz-name">${branding.name}</span>`;
+  }
+  renderBranding();
+
+  let clients = [
+    { name: "נועה כהן", phone: "050-1234567", photo: null, visits: 6, lastVisit: "לפני שבוע", note: "מעדיפה גוונים בהירים" },
+    { name: "שירה לוי", phone: "052-7654321", photo: null, visits: 2, lastVisit: "לפני חודש", note: "" }
+  ];
+  let newClientPhoto = null;
+
+  function renderClients(){
+    const listEl = document.getElementById('clientList');
+    listEl.innerHTML = '';
+    clients.forEach((c, i) => {
+      const row = document.createElement('div');
+      row.className = 'client-card';
+      const avatarHtml = c.photo ? `<img src="${c.photo}">` : c.name.trim().charAt(0);
+      row.innerHTML = `
+        <div class="client-avatar">${avatarHtml}</div>
+        <div class="client-info">
+          <div class="name-row">
+            <div>
+              <h4>${c.name}</h4>
+              <div class="phone">${c.phone}</div>
+              <div class="visits">${c.visits} ביקורים · אחרון ${c.lastVisit}</div>
+            </div>
+            <button class="svc-del" aria-label="מחיקת לקוחה">✕</button>
+          </div>
+          <textarea class="client-note" placeholder="הערה אישית (העדפות, רגישויות...)">${c.note}</textarea>
+        </div>`;
+      row.querySelector('.svc-del').onclick = () => { clients.splice(i, 1); renderClients(); };
+      row.querySelector('.client-note').oninput = (e) => { c.note = e.target.value; };
+      listEl.appendChild(row);
+    });
+  }
+
+  function handleClientPhotoUpload(event){
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      newClientPhoto = e.target.result;
+      document.getElementById('clientPhotoPreview').src = newClientPhoto;
+      document.getElementById('clientPhotoPreview').style.display = 'block';
+      document.getElementById('clientPhotoPlaceholder').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function addClient(){
+    const nameEl = document.getElementById('newClientName');
+    const phoneEl = document.getElementById('newClientPhone');
+    const name = nameEl.value.trim();
+    if (!name) return;
+    clients.push({ name, phone: phoneEl.value.trim(), photo: newClientPhoto, visits: 0, lastVisit: "—", note: "" });
+    nameEl.value = ''; phoneEl.value = '';
+    newClientPhoto = null;
+    document.getElementById('clientPhotoPreview').style.display = 'none';
+    document.getElementById('clientPhotoPlaceholder').style.display = 'block';
+    renderClients();
+  }
+  renderClients();
+
+  let staff = [
+    { name: "דנה", role: "מניקוריסטית ראשית", photo: null },
+    { name: "מאיה", role: "פדיקור וטיפולי SPA", photo: null }
+  ];
+  let newStaffPhoto = null;
+  let selectedStaffIndex = 0;
+
+  function renderStaff(){
+    const listEl = document.getElementById('staffList');
+    listEl.innerHTML = '';
+    staff.forEach((s, i) => {
+      const row = document.createElement('div');
+      row.className = 'client-card';
+      const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
+      row.innerHTML = `
+        <div class="client-avatar">${avatarHtml}</div>
+        <div class="client-info">
+          <div class="name-row">
+            <div>
+              <h4>${s.name}</h4>
+              <div class="role-tag">${s.role}</div>
+            </div>
+            <button class="svc-del" aria-label="מחיקת עובדת">✕</button>
+          </div>
+        </div>`;
+      row.querySelector('.svc-del').onclick = () => {
+        staff.splice(i, 1);
+        if (selectedStaffIndex >= staff.length) selectedStaffIndex = 0;
+        renderStaff();
+        renderStaffPicker();
+      };
+      listEl.appendChild(row);
+    });
+    renderStaffPicker();
+  }
+
+  function renderStaffPicker(){
+    const pickerEl = document.getElementById('staffPicker');
+    if (!pickerEl) return;
+    pickerEl.innerHTML = '';
+    staff.forEach((s, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'staff-chip' + (i === selectedStaffIndex ? ' selected' : '');
+      const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
+      chip.innerHTML = `<div class="avatar">${avatarHtml}</div><span>${s.name}</span>`;
+      chip.onclick = () => { selectedStaffIndex = i; renderStaffPicker(); };
+      pickerEl.appendChild(chip);
+    });
+  }
+
+  function handleStaffPhotoUpload(event){
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      newStaffPhoto = e.target.result;
+      document.getElementById('staffPhotoPreview').src = newStaffPhoto;
+      document.getElementById('staffPhotoPreview').style.display = 'block';
+      document.getElementById('staffPhotoPlaceholder').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function addStaff(){
+    const nameEl = document.getElementById('newStaffName');
+    const roleEl = document.getElementById('newStaffRole');
+    const name = nameEl.value.trim();
+    if (!name) return;
+    staff.push({ name, role: roleEl.value.trim() || 'צוות', photo: newStaffPhoto });
+    nameEl.value = ''; roleEl.value = '';
+    newStaffPhoto = null;
+    document.getElementById('staffPhotoPreview').style.display = 'none';
+    document.getElementById('staffPhotoPlaceholder').style.display = 'block';
+    renderStaff();
+  }
+  renderStaff();
+
+  let services = [
+    { name: "מניקור ג'ל", price: 120 },
+    { name: "בנייה בג'ל", price: 180 },
+    { name: "פדיקור", price: 90 }
+  ];
+  let selectedSvcIndex = 0;
+
+  function renderServices(){
+    const custList = document.getElementById('custSvcList');
+    custList.innerHTML = '';
+    services.forEach((s, i) => {
+      const el = document.createElement('div');
+      el.className = 'svc-card' + (i === selectedSvcIndex ? ' selected' : '');
+      el.innerHTML = `<span>${s.name}</span><span>${s.price} ש"ח</span>`;
+      el.onclick = () => { selectedSvcIndex = i; renderServices(); };
+      custList.appendChild(el);
+    });
+
+    const manageList = document.getElementById('svcManageList');
+    manageList.innerHTML = '';
+    services.forEach((s, i) => {
+      const row = document.createElement('div');
+      row.className = 'svc-manage-row';
+      row.innerHTML = `<span>${s.name}</span><span><span class="price">${s.price} ש"ח</span><button class="svc-del" onclick="removeService(${i})" aria-label="מחיקת שירות">✕</button></span>`;
+      manageList.appendChild(row);
+    });
+  }
+
+  function addService(){
+    const nameEl = document.getElementById('newSvcName');
+    const priceEl = document.getElementById('newSvcPrice');
+    const name = nameEl.value.trim();
+    const price = parseInt(priceEl.value);
+    if (!name || !price) return;
+    services.push({ name, price });
+    nameEl.value = '';
+    priceEl.value = '';
+    renderServices();
+  }
+
+  function removeService(i){
+    services.splice(i, 1);
+    if (selectedSvcIndex >= services.length) selectedSvcIndex = 0;
+    renderServices();
+  }
+
+  renderServices();
+
+  const times = [
+    { t: '09:00', booked: false },
+    { t: '10:30', booked: true },
+    { t: '12:00', booked: false },
+    { t: '13:30', booked: true }
+  ];
+  const slotsEl = document.getElementById('slots');
+  let selectedSlot = null;
+
+  times.forEach((slot, i) => {
+    const d = document.createElement('div');
+    d.className = 'slot' + (slot.booked ? ' booked' : (selectedSlot === null && !slot.booked ? ' selected' : ''));
+    d.textContent = slot.t;
+    if (!slot.booked && selectedSlot === null) selectedSlot = slot.t;
+    d.onclick = () => {
+      if (slot.booked){
+        showWaitlistPrompt(slot.t);
+        return;
+      }
+      document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+      d.classList.add('selected');
+      selectedSlot = slot.t;
+      document.getElementById('waitlistBox').innerHTML = '';
+    };
+    slotsEl.appendChild(d);
+  });
+
+  function showWaitlistPrompt(time){
+    document.getElementById('waitlistBox').innerHTML = `
+      <div class="waitlist-prompt">
+        השעה ${time} תפוסה כרגע.
+        <div><button onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
+      </div>`;
+  }
+
+  function joinWaitlist(time){
+    document.getElementById('waitlistBox').innerHTML = `
+      <div class="waitlist-confirmed">✓ &nbsp;נרשמת לרשימת ההמתנה ל-${time}. נשלח לך הודעה אם יתפנה מקום.</div>`;
+  }
+
+  function confirmBooking(){
+    const svc = services[selectedSvcIndex];
+    const emp = staff[selectedStaffIndex];
+    document.getElementById('bookingFormWrap').style.display = 'none';
+    const apptEl = document.getElementById('myAppointment');
+    apptEl.style.display = 'block';
+    apptEl.innerHTML = `
+      <div class="status-dot">✓ מאושר — מייל ו-SMS נשלחו</div>
+      <h4>${svc ? svc.name : 'שירות'}</h4>
+      <div class="appt-meta">יום שלישי, ${selectedSlot}${svc ? ' · ' + svc.price + ' ש"ח' : ''}${emp ? ' · אצל ' + emp.name : ''}</div>
+      <div class="my-appt-actions">
+        <button onclick="rescheduleAppointment()">שינוי מועד</button>
+        <button class="danger" onclick="cancelAppointment()">ביטול תור</button>
+      </div>`;
+  }
+
+  function rescheduleAppointment(){
+    document.getElementById('myAppointment').style.display = 'none';
+    document.getElementById('bookingFormWrap').style.display = 'block';
+  }
+
+  function cancelAppointment(){
+    const apptEl = document.getElementById('myAppointment');
+    apptEl.innerHTML = `
+      <div class="waitlist-confirmed">✓ &nbsp;התור בוטל. נשלחה הודעת ביטול למייל ול-SMS.</div>
+      <div class="my-appt-actions" style="margin-top:14px;">
+        <button onclick="rescheduleAppointment()">קביעת תור חדש</button>
+      </div>`;
+  }
+
+  function showPanel(name, btn){
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    document.querySelectorAll('.switcher button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function showSub(name, btn){
+    document.querySelectorAll('.subpanel').forEach(p => p.classList.remove('active'));
+    document.getElementById('sub-' + name).classList.add('active');
+    document.querySelectorAll('.subswitcher button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  const hourOptions = [];
+  for (let h = 7; h <= 21; h++) hourOptions.push(String(h).padStart(2,'0') + ':00');
+
+  const days = [
+    { name: 'ראשון', open: true, from: '09:00', to: '12:00' },
+    { name: 'שני', open: true, from: '12:00', to: '17:00' },
+    { name: 'שלישי', open: true, from: '09:00', to: '17:00' },
+    { name: 'רביעי', open: true, from: '09:00', to: '17:00' },
+    { name: 'חמישי', open: true, from: '09:00', to: '19:00' },
+    { name: 'שישי', open: true, from: '08:00', to: '13:00' },
+    { name: 'שבת', open: false, from: '09:00', to: '17:00' }
+  ];
+
+  const hoursList = document.getElementById('hoursList');
+  days.forEach((day, i) => {
+    const row = document.createElement('div');
+    row.className = 'hours-row' + (day.open ? '' : ' closed');
+
+    const fromOptions = hourOptions.map(h => `<option value="${h}" ${h===day.from?'selected':''}>${h}</option>`).join('');
+    const toOptions = hourOptions.map(h => `<option value="${h}" ${h===day.to?'selected':''}>${h}</option>`).join('');
+
+    row.innerHTML = `
+      <span class="day">${day.name}</span>
+      <div class="toggle${day.open ? ' on' : ''}"></div>
+      <div class="hours-range">
+        <select>${fromOptions}</select>
+        <span>עד</span>
+        <select>${toOptions}</select>
+      </div>`;
+
+    row.querySelector('.toggle').onclick = () => {
+      row.classList.toggle('closed');
+      row.querySelector('.toggle').classList.toggle('on');
+    };
+
+    hoursList.appendChild(row);
+  });
+
+  let inventory = [
+    { name: "לק ג'ל אדום", stock: 6, threshold: 8 },
+    { name: "אצטון", stock: 1, threshold: 3 },
+    { name: "פילים חד\"פ", stock: 60, threshold: 20 },
+    { name: "כפפות (זוגות)", stock: 10, threshold: 15 }
+  ];
+
+  function renderInventory(){
+    const listEl = document.getElementById('invList');
+    listEl.innerHTML = '';
+    const lowItems = [];
+
+    inventory.forEach((item, i) => {
+      const low = item.stock <= item.threshold;
+      if (low) lowItems.push(item.name + ' (נותרו ' + item.stock + ')');
+
+      const row = document.createElement('div');
+      row.className = 'inv-row';
+      row.innerHTML = `
+        <span>${item.name}</span>
+        <div class="stock-counter">
+          <button class="stock-btn" aria-label="הפחתת כמות">−</button>
+          <span class="stock-num">${item.stock}</span>
+          <button class="stock-btn" aria-label="הוספת כמות">+</button>
+        </div>
+        <input type="number" class="threshold" value="${item.threshold}">
+        <span style="display:flex; align-items:center; gap:6px;"><span class="badge ${low ? 'low' : 'ok'}">${low ? 'נמוך' : 'תקין'}</span><button class="svc-del" aria-label="מחיקת מוצר">✕</button></span>`;
+
+      const btns = row.querySelectorAll('.stock-btn');
+      btns[0].onclick = () => { if (item.stock > 0) item.stock--; renderInventory(); };
+      btns[1].onclick = () => { item.stock++; renderInventory(); };
+      row.querySelector('.threshold').oninput = (e) => {
+        item.threshold = parseInt(e.target.value) || 0;
+        renderInventory();
+      };
+      row.querySelector('.svc-del').onclick = () => {
+        inventory.splice(i, 1);
+        renderInventory();
+      };
+
+      listEl.appendChild(row);
+    });
+
+    const alertEl = document.getElementById('invAlert');
+    if (lowItems.length){
+      alertEl.classList.add('show');
+      alertEl.innerHTML = '⚠ &nbsp;<span>מלאי נמוך מהסף שהגדרת: ' + lowItems.join(', ') + '. תישלח לך התראה גם למייל.</span>';
+    } else {
+      alertEl.classList.remove('show');
+    }
+  }
+  renderInventory();
+
+  function addInventoryItem(){
+    const nameEl = document.getElementById('newInvName');
+    const stockEl = document.getElementById('newInvStock');
+    const thresholdEl = document.getElementById('newInvThreshold');
+    const name = nameEl.value.trim();
+    const stock = parseInt(stockEl.value);
+    const threshold = parseInt(thresholdEl.value);
+    if (!name || isNaN(stock) || isNaN(threshold)) return;
+    inventory.push({ name, stock, threshold });
+    nameEl.value = '';
+    stockEl.value = '';
+    thresholdEl.value = '';
+    renderInventory();
+  }
+</script>
+
+</body>
+</html>
