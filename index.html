@@ -239,29 +239,6 @@
   }
   .cta:hover{background:var(--wine-deep);}
   .cta:active{transform:scale(0.98);}
-  .staff-picker{display:flex; gap:10px; overflow-x:auto; padding-bottom:4px;}
-  .staff-chip{
-    display:flex; flex-direction:column; align-items:center; gap:5px;
-    cursor:pointer;
-    flex-shrink:0;
-    padding:4px;
-    border-radius:12px;
-    border:1.5px solid transparent;
-  }
-  .staff-chip.selected{border-color:var(--wine);}
-  .staff-chip .avatar{
-    width:44px; height:44px;
-    border-radius:50%;
-    background:#F3ECE0;
-    color:#9B7E2E;
-    display:flex; align-items:center; justify-content:center;
-    font-family:'Suez One'; font-size:15px;
-    overflow:hidden;
-  }
-  .staff-chip .avatar img{width:100%; height:100%; object-fit:cover;}
-  .staff-chip span{font-size:11px; color:#6B6259; max-width:60px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .staff-chip.selected span{color:var(--wine); font-weight:500;}
-
   .confirm-msg{
     display:none;
     align-items:center;
@@ -617,69 +594,6 @@
   .popular-row .pop-bar-fill{height:100%; background:var(--sage); border-radius:99px;}
   .popular-row .pop-count{flex:0 0 34px; text-align:left; font-family:'JetBrains Mono'; color:var(--ivory-dim); font-size:13px;}
 
-  /* CLIENTS & STAFF */
-  .client-list{display:flex; flex-direction:column; gap:12px; margin-bottom:20px;}
-  .client-card{
-    display:flex;
-    align-items:flex-start;
-    gap:14px;
-    border:1px solid rgba(245,238,228,0.12);
-    border-radius:14px;
-    padding:16px 18px;
-    background:var(--ink-2);
-  }
-  .client-avatar{
-    width:48px; height:48px; min-width:48px;
-    border-radius:50%;
-    background:rgba(201,162,39,0.15);
-    color:var(--gold-soft);
-    display:flex; align-items:center; justify-content:center;
-    font-family:'Suez One'; font-size:16px;
-    overflow:hidden;
-  }
-  .client-avatar img{width:100%; height:100%; object-fit:cover;}
-  .client-info{flex:1; min-width:0;}
-  .client-info .name-row{display:flex; justify-content:space-between; align-items:center; gap:10px;}
-  .client-info h4{font-family:'Suez One'; font-weight:400; font-size:16px;}
-  .client-info .phone{font-family:'JetBrains Mono'; font-size:12px; color:var(--ivory-dim);}
-  .client-info .visits{font-size:12px; color:var(--gold-soft); margin-top:2px;}
-  .client-info .role-tag{font-size:12px; color:var(--ivory-dim); margin-top:2px;}
-  .client-note{
-    width:100%;
-    margin-top:10px;
-    background:var(--ink);
-    color:var(--ivory);
-    border:1px solid rgba(245,238,228,0.15);
-    border-radius:8px;
-    padding:8px 10px;
-    font-family:'Heebo';
-    font-size:13px;
-    resize:vertical;
-    min-height:36px;
-  }
-  .client-note::placeholder{color:var(--ivory-dim);}
-  .client-add-row{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    flex-wrap:wrap;
-  }
-  .client-add-row input{
-    flex:1;
-    min-width:130px;
-    background:var(--ink-2);
-    color:var(--ivory);
-    border:1px solid rgba(245,238,228,0.2);
-    border-radius:10px;
-    padding:11px 14px;
-    font-family:'Heebo';
-    font-size:14px;
-  }
-  .client-add-row input::placeholder{color:var(--ivory-dim);}
-  .client-add-row .cta{flex:0 0 auto; padding:11px 24px;}
-  .brand-logo-upload.small{width:44px; height:44px; flex-shrink:0;}
-  .brand-logo-upload.small span{font-size:10px;}
-
   /* BRANDING */
   .brand-editor{display:flex; align-items:center; gap:20px; flex-wrap:wrap;}
   .brand-logo-upload{
@@ -808,8 +722,6 @@
         <div id="bookingFormWrap">
           <div class="label">בחירת שירות</div>
           <div id="custSvcList"></div>
-          <div class="label" style="margin-top:18px;">בחירת עובדת</div>
-          <div class="staff-picker" id="staffPicker"></div>
           <div class="label" style="margin-top:18px;">יום שלישי — שעות פנויות</div>
           <div class="slot-grid" id="slots"></div>
           <div class="waitlist-box" id="waitlistBox"></div>
@@ -855,8 +767,6 @@
   <div id="panel-business" class="panel">
     <div class="subswitcher">
       <button class="active" onclick="showSub('overview', this)">סקירה</button>
-      <button onclick="showSub('clients', this)">לקוחות</button>
-      <button onclick="showSub('staff', this)">צוות</button>
       <button onclick="showSub('reports', this)">דוחות</button>
       <button onclick="showSub('branding', this)">מיתוג</button>
       <button onclick="showSub('services', this)">השירותים שלי</button>
@@ -876,34 +786,6 @@
         <div class="row"><span class="time">10:30</span><span>שירה לוי</span><span>בנייה בג'ל</span><span class="badge-col"><span class="badge confirmed">מאושר</span></span></div>
         <div class="row"><span class="time">12:00</span><span>מאיה אזולאי</span><span>פדיקור</span><span class="badge-col"><span class="badge confirmed">מאושר</span></span></div>
         <div class="row"><span class="time">14:00</span><span>—</span><span>—</span><span class="badge-col"><span class="badge open">פנוי</span></span></div>
-      </div>
-    </div>
-
-    <div id="sub-clients" class="subpanel">
-      <div class="client-list" id="clientList"></div>
-      <div class="client-add-row">
-        <div class="brand-logo-upload small" id="clientPhotoUpload" onclick="document.getElementById('clientPhotoFile').click()">
-          <span id="clientPhotoPlaceholder">+ תמונה</span>
-          <img id="clientPhotoPreview" style="display:none;">
-        </div>
-        <input type="file" id="clientPhotoFile" accept="image/*" style="display:none;" onchange="handleClientPhotoUpload(event)">
-        <input type="text" id="newClientName" placeholder="שם הלקוחה">
-        <input type="text" id="newClientPhone" placeholder="050-0000000">
-        <button class="cta" style="width:auto; margin-top:0;" onclick="addClient()">הוספת לקוחה</button>
-      </div>
-    </div>
-
-    <div id="sub-staff" class="subpanel">
-      <div class="client-list" id="staffList"></div>
-      <div class="client-add-row">
-        <div class="brand-logo-upload small" id="staffPhotoUpload" onclick="document.getElementById('staffPhotoFile').click()">
-          <span id="staffPhotoPlaceholder">+ תמונה</span>
-          <img id="staffPhotoPreview" style="display:none;">
-        </div>
-        <input type="file" id="staffPhotoFile" accept="image/*" style="display:none;" onchange="handleStaffPhotoUpload(event)">
-        <input type="text" id="newStaffName" placeholder="שם העובדת">
-        <input type="text" id="newStaffRole" placeholder="תפקיד (למשל: מניקוריסטית)">
-        <button class="cta" style="width:auto; margin-top:0;" onclick="addStaff()">הוספת עובדת</button>
       </div>
     </div>
 
@@ -1082,142 +964,6 @@
   }
   renderBranding();
 
-  let clients = [
-    { name: "נועה כהן", phone: "050-1234567", photo: null, visits: 6, lastVisit: "לפני שבוע", note: "מעדיפה גוונים בהירים" },
-    { name: "שירה לוי", phone: "052-7654321", photo: null, visits: 2, lastVisit: "לפני חודש", note: "" }
-  ];
-  let newClientPhoto = null;
-
-  function renderClients(){
-    const listEl = document.getElementById('clientList');
-    listEl.innerHTML = '';
-    clients.forEach((c, i) => {
-      const row = document.createElement('div');
-      row.className = 'client-card';
-      const avatarHtml = c.photo ? `<img src="${c.photo}">` : c.name.trim().charAt(0);
-      row.innerHTML = `
-        <div class="client-avatar">${avatarHtml}</div>
-        <div class="client-info">
-          <div class="name-row">
-            <div>
-              <h4>${c.name}</h4>
-              <div class="phone">${c.phone}</div>
-              <div class="visits">${c.visits} ביקורים · אחרון ${c.lastVisit}</div>
-            </div>
-            <button class="svc-del" aria-label="מחיקת לקוחה">✕</button>
-          </div>
-          <textarea class="client-note" placeholder="הערה אישית (העדפות, רגישויות...)">${c.note}</textarea>
-        </div>`;
-      row.querySelector('.svc-del').onclick = () => { clients.splice(i, 1); renderClients(); };
-      row.querySelector('.client-note').oninput = (e) => { c.note = e.target.value; };
-      listEl.appendChild(row);
-    });
-  }
-
-  function handleClientPhotoUpload(event){
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      newClientPhoto = e.target.result;
-      document.getElementById('clientPhotoPreview').src = newClientPhoto;
-      document.getElementById('clientPhotoPreview').style.display = 'block';
-      document.getElementById('clientPhotoPlaceholder').style.display = 'none';
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function addClient(){
-    const nameEl = document.getElementById('newClientName');
-    const phoneEl = document.getElementById('newClientPhone');
-    const name = nameEl.value.trim();
-    if (!name) return;
-    clients.push({ name, phone: phoneEl.value.trim(), photo: newClientPhoto, visits: 0, lastVisit: "—", note: "" });
-    nameEl.value = ''; phoneEl.value = '';
-    newClientPhoto = null;
-    document.getElementById('clientPhotoPreview').style.display = 'none';
-    document.getElementById('clientPhotoPlaceholder').style.display = 'block';
-    renderClients();
-  }
-  renderClients();
-
-  let staff = [
-    { name: "דנה", role: "מניקוריסטית ראשית", photo: null },
-    { name: "מאיה", role: "פדיקור וטיפולי SPA", photo: null }
-  ];
-  let newStaffPhoto = null;
-  let selectedStaffIndex = 0;
-
-  function renderStaff(){
-    const listEl = document.getElementById('staffList');
-    listEl.innerHTML = '';
-    staff.forEach((s, i) => {
-      const row = document.createElement('div');
-      row.className = 'client-card';
-      const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
-      row.innerHTML = `
-        <div class="client-avatar">${avatarHtml}</div>
-        <div class="client-info">
-          <div class="name-row">
-            <div>
-              <h4>${s.name}</h4>
-              <div class="role-tag">${s.role}</div>
-            </div>
-            <button class="svc-del" aria-label="מחיקת עובדת">✕</button>
-          </div>
-        </div>`;
-      row.querySelector('.svc-del').onclick = () => {
-        staff.splice(i, 1);
-        if (selectedStaffIndex >= staff.length) selectedStaffIndex = 0;
-        renderStaff();
-        renderStaffPicker();
-      };
-      listEl.appendChild(row);
-    });
-    renderStaffPicker();
-  }
-
-  function renderStaffPicker(){
-    const pickerEl = document.getElementById('staffPicker');
-    if (!pickerEl) return;
-    pickerEl.innerHTML = '';
-    staff.forEach((s, i) => {
-      const chip = document.createElement('div');
-      chip.className = 'staff-chip' + (i === selectedStaffIndex ? ' selected' : '');
-      const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
-      chip.innerHTML = `<div class="avatar">${avatarHtml}</div><span>${s.name}</span>`;
-      chip.onclick = () => { selectedStaffIndex = i; renderStaffPicker(); };
-      pickerEl.appendChild(chip);
-    });
-  }
-
-  function handleStaffPhotoUpload(event){
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      newStaffPhoto = e.target.result;
-      document.getElementById('staffPhotoPreview').src = newStaffPhoto;
-      document.getElementById('staffPhotoPreview').style.display = 'block';
-      document.getElementById('staffPhotoPlaceholder').style.display = 'none';
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function addStaff(){
-    const nameEl = document.getElementById('newStaffName');
-    const roleEl = document.getElementById('newStaffRole');
-    const name = nameEl.value.trim();
-    if (!name) return;
-    staff.push({ name, role: roleEl.value.trim() || 'צוות', photo: newStaffPhoto });
-    nameEl.value = ''; roleEl.value = '';
-    newStaffPhoto = null;
-    document.getElementById('staffPhotoPreview').style.display = 'none';
-    document.getElementById('staffPhotoPlaceholder').style.display = 'block';
-    renderStaff();
-  }
-  renderStaff();
-
   let services = [
     { name: "מניקור ג'ל", price: 120 },
     { name: "בנייה בג'ל", price: 180 },
@@ -1308,14 +1054,13 @@
 
   function confirmBooking(){
     const svc = services[selectedSvcIndex];
-    const emp = staff[selectedStaffIndex];
     document.getElementById('bookingFormWrap').style.display = 'none';
     const apptEl = document.getElementById('myAppointment');
     apptEl.style.display = 'block';
     apptEl.innerHTML = `
       <div class="status-dot">✓ מאושר — מייל ו-SMS נשלחו</div>
       <h4>${svc ? svc.name : 'שירות'}</h4>
-      <div class="appt-meta">יום שלישי, ${selectedSlot}${svc ? ' · ' + svc.price + ' ש"ח' : ''}${emp ? ' · אצל ' + emp.name : ''}</div>
+      <div class="appt-meta">יום שלישי, ${selectedSlot}${svc ? ' · ' + svc.price + ' ש"ח' : ''}</div>
       <div class="my-appt-actions">
         <button onclick="rescheduleAppointment()">שינוי מועד</button>
         <button class="danger" onclick="cancelAppointment()">ביטול תור</button>
