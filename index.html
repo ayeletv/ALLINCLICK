@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Suez+One&family=Heebo:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/1.66.0/iconfont/tabler-icons.min.css">
 <style>
   :root{
     --ink:#141014;
@@ -239,6 +240,75 @@
   }
   .cta:hover{background:var(--wine-deep);}
   .cta:active{transform:scale(0.98);}
+  .staff-picker{display:flex; gap:10px; overflow-x:auto; padding-bottom:4px;}
+  .mini-cal{margin-bottom:16px;}
+  .mini-cal-header{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:8px;
+    font-size:13px;
+    color:#4A443D;
+  }
+  .mini-cal-header button{
+    background:none;
+    border:1px solid #E4DACB;
+    border-radius:8px;
+    width:26px; height:26px;
+    font-size:14px;
+    color:#4A443D;
+    cursor:pointer;
+  }
+  .mini-cal-header button:disabled{opacity:0.3; cursor:not-allowed;}
+  .mini-cal-weekdays{
+    display:grid; grid-template-columns:repeat(7,1fr);
+    text-align:center; font-size:11px; color:#8A8178; margin-bottom:4px;
+  }
+  .mini-cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px;}
+  .cal-day-cell{
+    aspect-ratio:1;
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px;
+    border-radius:8px;
+    cursor:pointer;
+    color:#4A443D;
+  }
+  .cal-day-cell.empty{cursor:default;}
+  .cal-day-cell.today{font-weight:600; color:var(--wine);}
+  .cal-day-cell.selected{background:var(--wine); color:#fff; font-weight:500;}
+  .cal-day-cell.past, .cal-day-cell.closed-day{opacity:0.3; cursor:not-allowed;}
+  .staff-chip{
+    display:flex; flex-direction:column; align-items:center; gap:5px;
+    cursor:pointer;
+    flex-shrink:0;
+    padding:4px;
+    border-radius:12px;
+    border:1.5px solid transparent;
+  }
+  .staff-chip.selected{border-color:var(--wine);}
+  .staff-chip .avatar{
+    width:44px; height:44px;
+    border-radius:50%;
+    background:#F3ECE0;
+    color:#9B7E2E;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Suez One'; font-size:15px;
+    overflow:hidden;
+  }
+  .staff-chip .avatar img{width:100%; height:100%; object-fit:cover;}
+  .staff-chip span{font-size:11px; color:#6B6259; max-width:60px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .staff-chip.selected span{color:var(--wine); font-weight:500;}
+
+  .reminder-choice{
+    display:flex; gap:14px; flex-wrap:wrap;
+    margin-bottom:6px;
+    font-size:13px;
+  }
+  .reminder-choice label{
+    display:flex; align-items:center; gap:5px;
+    cursor:pointer;
+    color:#4A443D;
+  }
+  .reminder-choice input[type="radio"]{width:auto; margin:0;}
+
   .confirm-msg{
     display:none;
     align-items:center;
@@ -461,6 +531,20 @@
   .hours-row.closed .hours-range::before{content:'סגור'; color:var(--ivory-dim); font-family:'Heebo';}
   .hours-row.closed .hours-range select{display:none;}
 
+  .inv-email-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+  .inv-email-row input{
+    background:var(--ink-2);
+    color:var(--ivory);
+    border:1px solid rgba(245,238,228,0.2);
+    border-radius:10px;
+    padding:9px 12px;
+    font-family:'Heebo';
+    font-size:13px;
+    min-width:200px;
+  }
   /* INVENTORY */
   .inv-alert{
     display:none;
@@ -476,6 +560,11 @@
     margin-bottom:20px;
   }
   .inv-alert.show{display:flex;}
+  .inv-alert.bday{
+    background:rgba(201,162,39,0.14);
+    border-color:rgba(201,162,39,0.4);
+    color:var(--gold-soft);
+  }
   .inv-list{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow:hidden;}
   .inv-row{
     display:grid;
@@ -517,6 +606,40 @@
   }
   .badge.low{background:rgba(155,44,66,0.2); color:#E9A9BA;}
   .badge.ok{background:rgba(124,148,115,0.2); color:var(--sage);}
+
+  /* BROADCAST */
+  .broadcast-box{max-width:520px;}
+  .template-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .custom-tpl-form{display:flex; flex-direction:column; gap:8px; max-width:400px;}
+  .custom-tpl-form input{
+    background:var(--ink-2);
+    color:var(--ivory);
+    border:1px solid rgba(245,238,228,0.2);
+    border-radius:10px;
+    padding:9px 12px;
+    font-family:'Heebo';
+    font-size:13px;
+  }
+  .template-btn.custom{display:flex; align-items:center; gap:6px;}
+  .template-btn .tpl-del{
+    background:none; border:none; color:var(--gold-soft);
+    font-size:12px; cursor:pointer; padding:0; opacity:0.7;
+  }
+  .template-btn .tpl-del:hover{opacity:1;}
+  .template-btn{
+    background:rgba(201,162,39,0.12);
+    border:1px solid rgba(201,162,39,0.4);
+    color:var(--gold-soft);
+    border-radius:10px;
+    padding:10px 16px;
+    font-family:'Heebo';
+    font-size:14px;
+    cursor:pointer;
+    transition:all 0.2s ease;
+  }
+  .template-btn:hover{background:rgba(201,162,39,0.2);}
+  .broadcast-footer{display:flex; align-items:center; justify-content:space-between; margin-top:14px; gap:12px; flex-wrap:wrap;}
+  .broadcast-count{font-size:13px; color:var(--ivory-dim);}
 
   /* SERVICE MANAGEMENT */
   .svc-manage-list{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow:hidden; margin-bottom:20px;}
@@ -593,6 +716,146 @@
   .popular-row .pop-bar-track{flex:1; height:8px; background:rgba(245,238,228,0.1); border-radius:99px; overflow:hidden;}
   .popular-row .pop-bar-fill{height:100%; background:var(--sage); border-radius:99px;}
   .popular-row .pop-count{flex:0 0 34px; text-align:left; font-family:'JetBrains Mono'; color:var(--ivory-dim); font-size:13px;}
+
+  /* CLIENTS & STAFF */
+  .client-list{display:flex; flex-direction:column; gap:12px; margin-bottom:20px;}
+  .client-card{
+    display:flex;
+    align-items:flex-start;
+    gap:14px;
+    border:1px solid rgba(245,238,228,0.12);
+    border-radius:14px;
+    padding:16px 18px;
+    background:var(--ink-2);
+  }
+  .client-avatar{
+    width:48px; height:48px; min-width:48px;
+    border-radius:50%;
+    background:rgba(201,162,39,0.15);
+    color:var(--gold-soft);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Suez One'; font-size:16px;
+    overflow:hidden;
+  }
+  .client-avatar img{width:100%; height:100%; object-fit:cover;}
+  .client-info{flex:1; min-width:0;}
+  .client-info .name-row{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .client-info h4{font-family:'Suez One'; font-weight:400; font-size:16px;}
+  .client-info .phone{font-family:'JetBrains Mono'; font-size:12px; color:var(--ivory-dim);}
+  .client-name-input{
+    font-family:'Suez One'; font-weight:400; font-size:16px;
+    background:none; border:1px solid transparent; border-radius:6px;
+    color:var(--ivory); padding:2px 4px; width:100%; margin-inline-start:-4px;
+  }
+  .client-name-input:hover, .client-name-input:focus{border-color:rgba(245,238,228,0.2); background:var(--ink);}
+  .client-mini-row{display:flex; gap:6px; flex-wrap:wrap; margin:4px 0;}
+  .client-mini-input{
+    font-family:'JetBrains Mono'; font-size:11.5px;
+    background:none; border:1px solid transparent; border-radius:6px;
+    color:var(--ivory-dim); padding:3px 5px; max-width:140px;
+  }
+  .client-mini-input:hover, .client-mini-input:focus{border-color:rgba(245,238,228,0.2); background:var(--ink); color:var(--ivory);}
+  .client-info .visits{font-size:12px; color:var(--gold-soft); margin-top:2px;}
+  .client-info .role-tag{font-size:12px; color:var(--ivory-dim); margin-top:2px;}
+  .client-note{
+    width:100%;
+    margin-top:10px;
+    background:var(--ink);
+    color:var(--ivory);
+    border:1px solid rgba(245,238,228,0.15);
+    border-radius:8px;
+    padding:8px 10px;
+    font-family:'Heebo';
+    font-size:13px;
+    resize:vertical;
+    min-height:36px;
+  }
+  .client-note::placeholder{color:var(--ivory-dim);}
+  .client-add-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .client-add-row input{
+    flex:1;
+    min-width:130px;
+    background:var(--ink-2);
+    color:var(--ivory);
+    border:1px solid rgba(245,238,228,0.2);
+    border-radius:10px;
+    padding:11px 14px;
+    font-family:'Heebo';
+    font-size:14px;
+  }
+  .client-add-row input::placeholder{color:var(--ivory-dim);}
+  .client-add-row .cta{flex:0 0 auto; padding:11px 24px;}
+  .brand-logo-upload.small{width:44px; height:44px; flex-shrink:0;}
+  .brand-logo-upload.small span{font-size:10px;}
+
+  /* WEEKLY CALENDAR */
+  .staff-filter-row{display:flex; gap:14px; overflow-x:auto; margin-bottom:20px; padding-bottom:4px;}
+  .staff-filter-chip{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    cursor:pointer;
+    flex-shrink:0;
+    opacity:0.55;
+    transition:opacity 0.2s ease;
+  }
+  .staff-filter-chip.active{opacity:1;}
+  .staff-filter-chip .avatar{
+    width:44px; height:44px;
+    border-radius:50%;
+    background:rgba(201,162,39,0.15);
+    color:var(--gold-soft);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Suez One'; font-size:15px;
+    overflow:hidden;
+    border:2px solid transparent;
+  }
+  .staff-filter-chip.active .avatar{border-color:var(--gold);}
+  .staff-filter-chip .avatar img{width:100%; height:100%; object-fit:cover;}
+  .staff-filter-chip span{font-size:11px; color:var(--ivory-dim);}
+  .staff-filter-chip.active span{color:var(--ivory);}
+
+  .week-cal-wrap{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow-x:auto;}
+  .week-cal{display:flex; min-width:820px;}
+  .cal-hours-col{width:52px; flex-shrink:0; padding-top:44px;}
+  .cal-hour-lbl{
+    font-family:'JetBrains Mono';
+    font-size:11px;
+    color:var(--ivory-dim);
+    text-align:center;
+    padding-top:2px;
+    border-top:1px solid rgba(245,238,228,0.08);
+    box-sizing:border-box;
+  }
+  .cal-day-col{flex:1; min-width:104px; border-inline-start:1px solid rgba(245,238,228,0.08); position:relative;}
+  .cal-day-head{
+    height:44px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:12px; color:var(--ivory-dim);
+    border-bottom:1px solid rgba(245,238,228,0.1);
+  }
+  .cal-day-head b{font-family:'Suez One'; font-weight:400; font-size:14px; color:var(--ivory);}
+  .cal-day-body{position:relative;}
+  .cal-hour-line{border-top:1px solid rgba(245,238,228,0.08); box-sizing:border-box;}
+  .cal-half-line{position:absolute; inset-inline:0; border-top:1px dashed rgba(245,238,228,0.05);}
+  .cal-appt{
+    position:absolute;
+    inset-inline:3px;
+    border-radius:5px;
+    padding:2px 6px;
+    font-size:10.5px;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    overflow:hidden;
+    color:#1C1719;
+    cursor:default;
+    box-shadow:0 0 0 1px rgba(28,23,25,0.1);
+  }
+  .cal-appt b{font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 
   /* BRANDING */
   .brand-editor{display:flex; align-items:center; gap:20px; flex-wrap:wrap;}
@@ -686,6 +949,101 @@
     .row{grid-template-columns:60px 1fr 1fr; font-size:13px;}
     .row .badge-col{display:none;}
   }
+
+  /* MY DAY OVERLAY */
+  .myday-overlay{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(20,16,20,0.85);
+    z-index:1000;
+    align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .myday-overlay.show{display:flex;}
+  .myday-sheet{
+    background:#fff;
+    color:var(--ink);
+    border-radius:16px;
+    max-width:480px; width:100%;
+    max-height:85vh;
+    overflow-y:auto;
+    padding:24px;
+  }
+  .myday-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;}
+  .myday-header h3{font-family:'Suez One'; font-weight:400; font-size:20px;}
+  .myday-actions{display:flex; gap:8px;}
+  .myday-actions button{
+    background:#F3ECE0; border:none; border-radius:8px;
+    padding:8px 12px; font-family:'Heebo'; font-size:13px; cursor:pointer;
+  }
+  .myday-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 0; border-bottom:1px solid #EEE7DC; font-size:14px;
+  }
+  .myday-row:last-child{border-bottom:none;}
+  .myday-row .t{font-family:'JetBrains Mono'; font-weight:500; color:var(--wine);}
+  .myday-row .who{color:#8A8178; font-size:12px;}
+
+  /* ONBOARDING */
+  .onboard-overlay{
+    display:flex;
+    position:fixed; inset:0;
+    background:rgba(20,16,20,0.9);
+    z-index:1000;
+    align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .onboard-overlay.hide{display:none;}
+  .onboard-sheet{
+    background:var(--ink-2);
+    border:1px solid rgba(245,238,228,0.15);
+    border-radius:16px;
+    max-width:460px; width:100%;
+    max-height:85vh;
+    overflow-y:auto;
+    padding:28px;
+  }
+  .onboard-sheet h3{font-family:'Suez One'; font-weight:400; font-size:20px; margin-bottom:6px;}
+  .onboard-sub{font-size:13px; color:var(--ivory-dim); margin-bottom:14px;}
+  .onboard-list{list-style:none; display:flex; flex-direction:column; gap:8px; margin-bottom:22px;}
+  .onboard-list li{font-size:13px; color:var(--ivory-dim); line-height:1.5;}
+  .onboard-list li b{color:var(--gold-soft); font-weight:500;}
+
+  .search-input{
+    width:100%;
+    background:var(--ink-2);
+    color:var(--ivory);
+    border:1px solid rgba(245,238,228,0.2);
+    border-radius:10px;
+    padding:10px 14px;
+    font-family:'Heebo';
+    font-size:14px;
+    margin-bottom:14px;
+  }
+  .search-input::placeholder{color:var(--ivory-dim);}
+
+  .switcher button i, .subswitcher button i, .onboard-list i, .template-btn i{
+    margin-inline-end:4px;
+    vertical-align:-2px;
+    font-size:15px;
+  }
+
+  @media print{
+    body > *:not(#myDayOverlay){display:none !important;}
+    .myday-overlay{position:static !important; background:none !important; padding:0 !important; display:block !important;}
+    .myday-sheet{max-height:none !important; box-shadow:none !important;}
+    .no-print, .myday-actions{display:none !important;}
+  }
+
+  @media (max-width:480px){
+    .myday-sheet, .onboard-sheet{padding:18px;}
+    .onboard-list li{font-size:12px;}
+    .subswitcher{gap:6px; padding:4px;}
+    .subswitcher button{min-width:0; flex:1 1 30%; font-size:11px; padding:9px 6px;}
+    .switcher button{font-size:12px; padding:9px 6px;}
+    .broadcast-box, .custom-tpl-form{max-width:100%;}
+    .stage{padding:6vh 4vw 8vh;}
+  }
 </style>
 </head>
 <body>
@@ -693,7 +1051,7 @@
 <section class="hero">
   <div class="eyebrow">דמו מוצר — SaaS לניהול תורים</div>
   <h1 class="serif">הכל <span>בקליק</span></h1>
-  <p class="tagline">תורים, מלאי, שירותים ושעות פעילות —<br><b>הכל במקום אחד.</b> הלקוחות קובעות לבד, ואת מנהלת את כל העסק בלי טלפון אחד.</p>
+  <p class="tagline">מה שיגדיל את העסק שלך — <b>הכל במקום אחד, בלי מאמץ.</b></p>
   <div class="scroll-hint">
     <span>גלילה למטה</span>
     <div class="line"></div>
@@ -707,10 +1065,10 @@
   </div>
 
   <div class="switcher">
-    <button class="active" onclick="showPanel('customer', this)">ללקוחה</button>
-    <button onclick="showPanel('whatsnew', this)">מה חדש</button>
-    <button onclick="showPanel('business', this)">לבעלת העסק</button>
-    <button onclick="showPanel('notif', this)">ההתראות</button>
+    <button class="active" onclick="showPanel('customer', this)"><i class="ti ti-calendar-event"></i> ללקוחה</button>
+    <button onclick="showPanel('whatsnew', this)"><i class="ti ti-sparkles"></i> מה חדש</button>
+    <button onclick="showPanel('business', this)"><i class="ti ti-briefcase"></i> לבעלת העסק</button>
+    <button onclick="showPanel('notif', this)"><i class="ti ti-bell"></i> ההתראות</button>
   </div>
 
   <div id="panel-customer" class="panel active">
@@ -722,12 +1080,34 @@
         <div id="bookingFormWrap">
           <div class="label">בחירת שירות</div>
           <div id="custSvcList"></div>
-          <div class="label" style="margin-top:18px;">יום שלישי — שעות פנויות</div>
+          <div class="label" style="margin-top:18px;">בחירת עובדת</div>
+          <div class="staff-picker" id="staffPicker"></div>
+          <div class="label" style="margin-top:18px;">בחירת יום</div>
+          <div class="mini-cal" id="miniCal">
+            <div class="mini-cal-header">
+              <button type="button" onclick="calShiftMonth(-1)" id="calPrevBtn">‹</button>
+              <span id="miniCalTitle"></span>
+              <button type="button" onclick="calShiftMonth(1)">›</button>
+            </div>
+            <div class="mini-cal-weekdays">
+              <span>א</span><span>ב</span><span>ג</span><span>ד</span><span>ה</span><span>ו</span><span>ש</span>
+            </div>
+            <div class="mini-cal-grid" id="miniCalGrid"></div>
+          </div>
+          <div class="label" id="slotsLabel">שעות פנויות</div>
           <div class="slot-grid" id="slots"></div>
           <div class="waitlist-box" id="waitlistBox"></div>
           <div class="label">פרטי קשר</div>
-          <input class="field" placeholder="שם מלא">
-          <input class="field" placeholder="050-0000000">
+          <input class="field" id="bookingNameInput" placeholder="שם מלא">
+          <input class="field" id="bookingPhoneInput" type="tel" placeholder="050-0000000">
+          <div id="bookingPhoneError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">מספר טלפון לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567)</div>
+          <div class="label" style="margin-top:10px;">איך תרצי לקבל תזכורת?</div>
+          <div class="reminder-choice" id="reminderChoice">
+            <label><input type="radio" name="reminderChannel" value="sms"> SMS</label>
+            <label><input type="radio" name="reminderChannel" value="call"> שיחת טלפון</label>
+            <label><input type="radio" name="reminderChannel" value="both"> שניהם</label>
+          </div>
+          <div id="reminderChoiceError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש לבחור ערוץ תזכורת לפני קביעת התור</div>
           <button class="cta" onclick="confirmBooking()">אישור תור</button>
         </div>
 
@@ -737,41 +1117,21 @@
   </div>
 
   <div id="panel-whatsnew" class="panel">
-    <div class="new-grid">
-      <div class="new-card">
-        <div class="new-icon">✦</div>
-        <div class="new-body">
-          <h4>לק ג'ל בגוונים חדשים לקיץ</h4>
-          <p>הגיעה קולקציה חדשה של 12 גוונים — אפשר לבחור בזמן קביעת התור.</p>
-        </div>
-        <div class="new-badge">חדש</div>
-      </div>
-      <div class="new-card">
-        <div class="new-icon">✦</div>
-        <div class="new-body">
-          <h4>טיפול פרפין לידיים</h4>
-          <p>שירות חדש שמרכך ומזין — 15 דקות, תוספת ל-25 ש"ח לכל שירות ידיים.</p>
-        </div>
-        <div class="new-badge">חדש</div>
-      </div>
-      <div class="new-card">
-        <div class="new-icon">✦</div>
-        <div class="new-body">
-          <h4>שעות פתיחה מורחבות בימי שני</h4>
-          <p>מעכשיו אפשר לקבוע תור בימי שני גם עד השעה 20:00.</p>
-        </div>
-      </div>
-    </div>
+    <div class="new-grid" id="whatsNewList"></div>
   </div>
 
   <div id="panel-business" class="panel">
     <div class="subswitcher">
-      <button class="active" onclick="showSub('overview', this)">סקירה</button>
-      <button onclick="showSub('reports', this)">דוחות</button>
-      <button onclick="showSub('branding', this)">מיתוג</button>
-      <button onclick="showSub('services', this)">השירותים שלי</button>
-      <button onclick="showSub('hours', this)">שעות פעילות</button>
-      <button onclick="showSub('inventory', this)">מלאי</button>
+      <button class="active" onclick="showSub('overview', this)"><i class="ti ti-layout-dashboard"></i> סקירה</button>
+      <button onclick="showSub('clients', this)"><i class="ti ti-users"></i> לקוחות</button>
+      <button onclick="showSub('broadcast', this)"><i class="ti ti-send"></i> הודעות ללקוחות</button>
+      <button onclick="showSub('staff', this)"><i class="ti ti-users-group"></i> צוות</button>
+      <button onclick="showSub('reports', this)"><i class="ti ti-chart-line"></i> דוחות</button>
+      <button onclick="showSub('branding', this)"><i class="ti ti-palette"></i> מיתוג</button>
+      <button onclick="showSub('services', this)"><i class="ti ti-scissors"></i> השירותים שלי</button>
+      <button onclick="showSub('whatsnewadmin', this)"><i class="ti ti-sparkles"></i> מה חדש</button>
+      <button onclick="showSub('hours', this)"><i class="ti ti-clock"></i> שעות פעילות</button>
+      <button onclick="showSub('inventory', this)"><i class="ti ti-package"></i> מלאי</button>
     </div>
 
     <div id="sub-overview" class="subpanel active">
@@ -780,12 +1140,85 @@
         <div class="stat"><div class="num mono">3</div><div class="lbl">מקומות פנויים</div></div>
         <div class="stat"><div class="num mono">890 ₪</div><div class="lbl">הכנסה צפויה</div></div>
       </div>
-      <div class="board">
-        <div class="row head"><span>שעה</span><span>לקוחה</span><span>שירות</span><span class="badge-col">סטטוס</span></div>
-        <div class="row"><span class="time">09:00</span><span>נועה כהן</span><span>מניקור ג'ל</span><span class="badge-col"><span class="badge confirmed">מאושר</span></span></div>
-        <div class="row"><span class="time">10:30</span><span>שירה לוי</span><span>בנייה בג'ל</span><span class="badge-col"><span class="badge confirmed">מאושר</span></span></div>
-        <div class="row"><span class="time">12:00</span><span>מאיה אזולאי</span><span>פדיקור</span><span class="badge-col"><span class="badge confirmed">מאושר</span></span></div>
-        <div class="row"><span class="time">14:00</span><span>—</span><span>—</span><span class="badge-col"><span class="badge open">פנוי</span></span></div>
+      <button class="template-btn" style="margin-bottom:16px;" onclick="openMyDayView()">🖨️ תצוגת היום שלי</button>
+      <div class="label" style="margin:8px 0 10px;">היומן השבועי</div>
+      <div class="staff-filter-row" id="staffFilterRow"></div>
+      <div class="week-cal-wrap">
+        <div class="week-cal" id="weekCal"></div>
+      </div>
+    </div>
+
+    <div id="sub-clients" class="subpanel">
+      <div class="inv-email-row">
+        <span class="label" style="margin:0;">סמני "לא הגיעה זמן רב" אחרי (ימים)</span>
+        <input type="number" id="inactivityThreshold" value="21" style="width:70px;" oninput="updateInactivityThreshold()">
+      </div>
+      <div class="inv-alert" id="missYouAlert"></div>
+      <div class="inv-alert bday" id="birthdayAlert"></div>
+      <input type="text" id="clientSearch" class="search-input" placeholder="חיפוש לקוחה לפי שם..." oninput="renderClients()">
+      <div class="client-list" id="clientList"></div>
+      <div class="client-add-row">
+        <div class="brand-logo-upload small" id="clientPhotoUpload" onclick="document.getElementById('clientPhotoFile').click()">
+          <span id="clientPhotoPlaceholder">+ תמונה</span>
+          <img id="clientPhotoPreview" style="display:none;">
+        </div>
+        <input type="file" id="clientPhotoFile" accept="image/*" style="display:none;" onchange="handleClientPhotoUpload(event)">
+        <input type="text" id="newClientName" placeholder="שם הלקוחה">
+        <input type="text" id="newClientPhone" placeholder="050-0000000">
+        <input type="email" id="newClientEmail" placeholder="אימייל">
+        <input type="date" id="newClientBirthday" placeholder="תאריך לידה">
+        <button class="cta" style="width:auto; margin-top:0;" onclick="addClient()">הוספת לקוחה</button>
+      </div>
+    </div>
+
+    <div id="sub-broadcast" class="subpanel">
+      <div class="broadcast-box">
+        <div class="label" style="margin-bottom:6px;">תבנית מהירה</div>
+        <div class="template-row">
+          <button class="template-btn" onclick="fillTemplate('shana')">🍯 שנה טובה</button>
+          <button class="template-btn" onclick="fillTemplate('shabbat')">🕯️ שבת שלום</button>
+          <button class="template-btn" onclick="fillTemplate('birthday')">🎂 יום הולדת שמח</button>
+          <button class="template-btn" onclick="fillTemplate('holiday')">🎉 חג שמח</button>
+        </div>
+        <div class="template-row" id="customTemplateRow" style="margin-top:8px;"></div>
+
+        <div class="label" style="margin:14px 0 6px;">הוספת תבנית משלך</div>
+        <div class="custom-tpl-form">
+          <input type="text" id="newTplLabel" placeholder="שם קצר (למשל: תזכורת חג)">
+          <textarea id="newTplContent" class="client-note" style="min-height:60px;" placeholder="תוכן התבנית..."></textarea>
+          <button class="cta" style="width:auto; margin-top:0;" onclick="addCustomTemplate()">שמירת תבנית</button>
+        </div>
+
+        <div class="label" style="margin:16px 0 6px;">תמונה מצורפת (אופציונלי)</div>
+        <div class="brand-logo-upload" id="broadcastPhotoUpload" onclick="document.getElementById('broadcastPhotoFile').click()" style="width:100%; height:120px; border-radius:12px;">
+          <span id="broadcastPhotoPlaceholder">+ הוספת תמונה</span>
+          <img id="broadcastPhotoPreview" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:12px;">
+        </div>
+        <input type="file" id="broadcastPhotoFile" accept="image/*" style="display:none;" onchange="handleBroadcastPhotoUpload(event)">
+
+        <div class="label" style="margin:16px 0 6px;">תוכן ההודעה</div>
+        <textarea id="broadcastMessage" class="client-note" style="min-height:100px;" placeholder="כתבי כאן את ההודעה שתישלח לכל הלקוחות..."></textarea>
+
+        <div class="broadcast-footer">
+          <span id="broadcastCount" class="broadcast-count"></span>
+          <button class="cta" style="width:auto; margin-top:0;" onclick="sendBroadcast()">שליחה לכל הלקוחות</button>
+        </div>
+        <div id="broadcastResult" class="waitlist-confirmed" style="display:none; margin-top:14px;"></div>
+      </div>
+    </div>
+
+    <div id="sub-staff" class="subpanel">
+      <input type="text" id="staffSearch" class="search-input" placeholder="חיפוש עובדת לפי שם..." oninput="renderStaff()">
+      <div class="client-list" id="staffList"></div>
+      <div class="client-add-row">
+        <div class="brand-logo-upload small" id="staffPhotoUpload" onclick="document.getElementById('staffPhotoFile').click()">
+          <span id="staffPhotoPlaceholder">+ תמונה</span>
+          <img id="staffPhotoPreview" style="display:none;">
+        </div>
+        <input type="file" id="staffPhotoFile" accept="image/*" style="display:none;" onchange="handleStaffPhotoUpload(event)">
+        <input type="text" id="newStaffName" placeholder="שם העובדת">
+        <input type="text" id="newStaffRole" placeholder="תפקיד (למשל: מניקוריסטית)">
+        <button class="cta" style="width:auto; margin-top:0;" onclick="addStaff()">הוספת עובדת</button>
       </div>
     </div>
 
@@ -826,7 +1259,20 @@
       <div class="svc-add-row">
         <input type="text" id="newSvcName" placeholder="שם השירות (למשל: לייזר)">
         <input type="number" id="newSvcPrice" placeholder="מחיר בש&quot;ח">
+        <input type="number" id="newSvcDuration" placeholder="משך בדקות">
         <button class="cta" style="width:auto; margin-top:0;" onclick="addService()">הוספת שירות</button>
+      </div>
+    </div>
+
+    <div id="sub-whatsnewadmin" class="subpanel">
+      <div class="client-list" id="whatsNewAdminList"></div>
+      <div class="custom-tpl-form">
+        <input type="text" id="newWnTitle" placeholder="כותרת (למשל: מבצע לקיץ)">
+        <textarea id="newWnDesc" class="client-note" style="min-height:60px;" placeholder="תיאור קצר..."></textarea>
+        <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ivory-dim);">
+          <input type="checkbox" id="newWnBadge" style="width:auto;"> להציג תג "חדש"
+        </label>
+        <button class="cta" style="width:auto; margin-top:0;" onclick="addWhatsNew()">הוספת עדכון</button>
       </div>
     </div>
 
@@ -835,6 +1281,10 @@
     </div>
 
     <div id="sub-inventory" class="subpanel">
+      <div class="inv-email-row">
+        <span class="label" style="margin:0;">מייל לקבלת התראות מלאי</span>
+        <input type="email" id="invAlertEmail" placeholder="you@example.com" oninput="updateInvAlertEmail()">
+      </div>
       <div class="inv-alert" id="invAlert"></div>
       <div class="inv-list">
         <div class="inv-row head"><span>מוצר</span><span>במלאי</span><span>סף התראה</span><span>סטטוס</span></div>
@@ -868,7 +1318,73 @@
   נבנה כדמו ל<span class="brand">הכל בקליק</span> — מערכת תורים עצמאית ללא שיחות טלפון
 </footer>
 
+<div id="myDayOverlay" class="myday-overlay">
+  <div class="myday-sheet">
+    <div class="myday-header no-print">
+      <h3 id="myDayTitle">היום שלי</h3>
+      <div class="myday-actions">
+        <button onclick="window.print()">🖨️ הדפסה</button>
+        <button onclick="closeMyDayView()">✕ סגירה</button>
+      </div>
+    </div>
+    <div id="myDayList" class="myday-list"></div>
+  </div>
+</div>
+
+<div id="onboardOverlay" class="onboard-overlay">
+  <div class="onboard-sheet">
+    <h3>ברוכה הבאה ל"הכל בקליק" 👋</h3>
+    <p class="onboard-sub">הנה מה שכל טאב עושה:</p>
+    <ul class="onboard-list">
+      <li><i class="ti ti-layout-dashboard"></i> <b>סקירה</b> — היומן השבועי שלך, לפי עובדת</li>
+      <li><i class="ti ti-users"></i> <b>לקוחות</b> — כרטיסיות לקוחות, הערות, ומעקב מי לא הגיעה זמן רב</li>
+      <li><i class="ti ti-users-group"></i> <b>צוות</b> — ניהול העובדות בעסק</li>
+      <li><i class="ti ti-chart-line"></i> <b>דוחות</b> — הכנסות ושירותים פופולריים לאורך זמן</li>
+      <li><i class="ti ti-palette"></i> <b>מיתוג</b> — לוגו ושם העסק כפי שהלקוחה רואה</li>
+      <li><i class="ti ti-scissors"></i> <b>השירותים שלי</b> — הוספה ועריכה של שירותים ומחירים</li>
+      <li><i class="ti ti-sparkles"></i> <b>מה חדש</b> — עדכונים ומבצעים שהלקוחה רואה</li>
+      <li><i class="ti ti-clock"></i> <b>שעות פעילות</b> — מתי את זמינה לתורים</li>
+      <li><i class="ti ti-package"></i> <b>מלאי</b> — מעקב מוצרים והתראות מלאי נמוך</li>
+      <li><i class="ti ti-send"></i> <b>הודעות ללקוחות</b> — שליחת הודעות וברכות לכולן</li>
+    </ul>
+    <button class="cta" style="width:auto; padding:12px 28px;" onclick="closeOnboarding()">הבנתי, בואו נתחיל</button>
+  </div>
+</div>
+
 <script>
+  function closeOnboarding(){
+    document.getElementById('onboardOverlay').classList.add('hide');
+  }
+
+  function openMyDayView(){
+    const now = new Date();
+    const dow = now.getDay();
+    const dayKey = weekdayKeys[dow];
+    const dayName = days[dow].name;
+    const dateStr = now.getDate() + ' ב' + hebrewMonths[now.getMonth()];
+    document.getElementById('myDayTitle').textContent = `היום שלי — יום ${dayName}, ${dateStr}`;
+
+    const todays = weekAppointments
+      .filter(a => a.day === dayKey)
+      .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+
+    const listEl = document.getElementById('myDayList');
+    if (!todays.length){
+      listEl.innerHTML = '<p style="color:#8A8178; font-size:14px;">אין תורים היום.</p>';
+    } else {
+      listEl.innerHTML = todays.map(a => {
+        const empName = (staff[a.staff] && staff[a.staff].name) || '';
+        return `<div class="myday-row"><span class="t">${a.time}</span><span>${a.client} · ${a.service}</span><span class="who">${empName}</span></div>`;
+      }).join('');
+    }
+
+    document.getElementById('myDayOverlay').classList.add('show');
+  }
+
+  function closeMyDayView(){
+    document.getElementById('myDayOverlay').classList.remove('show');
+  }
+
   const reportData = {
     week: {
       revenue: '3,240 ₪', count: 27, avg: '120 ₪',
@@ -964,10 +1480,470 @@
   }
   renderBranding();
 
+  let clients = [
+    { name: "נועה כהן", phone: "050-1234567", email: "noa.cohen@example.com", photo: null, visits: 6, daysSinceVisit: 7, note: "מעדיפה גוונים בהירים", birthday: (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 27); return d.toISOString().slice(0,10); })() },
+    { name: "שירה לוי", phone: "052-7654321", email: "shira.levi@example.com", photo: null, visits: 2, daysSinceVisit: 34, note: "", birthday: "1994-11-03" },
+    { name: "מאיה אזולאי", phone: "053-9988776", email: "maya.az@example.com", photo: null, visits: 9, daysSinceVisit: 60, note: "לקוחה ותיקה", birthday: "1988-02-19" }
+  ];
+  let newClientPhoto = null;
+  let inactivityThresholdDays = 21;
+
+  function updateInactivityThreshold(){
+    inactivityThresholdDays = parseInt(document.getElementById('inactivityThreshold').value) || 21;
+    renderClients();
+  }
+
+  function formatLastVisit(days){
+    if (days === null || days === undefined) return '—';
+    if (days === 0) return 'היום';
+    if (days < 7) return `לפני ${days} ימים`;
+    if (days < 30) return `לפני ${Math.round(days / 7)} שבועות`;
+    return `לפני ${Math.round(days / 30)} חודשים`;
+  }
+
+  function sendMissYouMessage(i){
+    const c = clients[i];
+    const resultEl = document.getElementById('clientMissYouResult-' + i);
+    if (resultEl){
+      resultEl.style.display = 'block';
+      resultEl.textContent = `✓ נשלחה הודעת "מתגעגעים אלייך" ל-${c.name} — במייל (עם תמונה) וב-SMS (טקסט)`;
+    }
+  }
+
+  function sendMissYouToAll(){
+    const inactiveIdx = clients
+      .map((c, i) => ({ c, i }))
+      .filter(({ c }) => c.daysSinceVisit !== null && c.daysSinceVisit !== undefined && c.daysSinceVisit >= inactivityThresholdDays);
+    inactiveIdx.forEach(({ i }) => sendMissYouMessage(i));
+    const alertEl = document.getElementById('missYouAlert');
+    alertEl.innerHTML = `✓ &nbsp;<span>נשלחה הודעת "מתגעגעים אלייך" ל-${inactiveIdx.length} לקוחות — במייל (עם תמונה) וב-SMS (טקסט).</span>`;
+  }
+
+  const hebrewMonths = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+
+  function isBirthdayToday(birthdayStr){
+    if (!birthdayStr) return false;
+    const b = new Date(birthdayStr);
+    const now = new Date();
+    return b.getMonth() === now.getMonth() && b.getDate() === now.getDate();
+  }
+
+  function formatBirthday(birthdayStr){
+    if (!birthdayStr) return null;
+    const b = new Date(birthdayStr);
+    return b.getDate() + ' ב' + hebrewMonths[b.getMonth()];
+  }
+
+  function renderClients(){
+    const listEl = document.getElementById('clientList');
+    listEl.innerHTML = '';
+    const inactiveClients = [];
+    const birthdayClients = [];
+    const searchEl = document.getElementById('clientSearch');
+    const searchTerm = searchEl ? searchEl.value.trim().toLowerCase() : '';
+
+    clients.forEach((c, i) => {
+      const isInactive = c.daysSinceVisit !== null && c.daysSinceVisit !== undefined && c.daysSinceVisit >= inactivityThresholdDays;
+      if (isInactive) inactiveClients.push(c.name);
+      const isBday = isBirthdayToday(c.birthday);
+      if (isBday) birthdayClients.push(c.name);
+      if (searchTerm && !c.name.toLowerCase().includes(searchTerm)) return;
+
+      const row = document.createElement('div');
+      row.className = 'client-card';
+      const avatarHtml = c.photo ? `<img src="${c.photo}">` : c.name.trim().charAt(0);
+      row.innerHTML = `
+        <div class="client-avatar">${avatarHtml}</div>
+        <div class="client-info">
+          <div class="name-row">
+            <div style="flex:1;">
+              <input class="client-name-input" value="${c.name}" placeholder="שם הלקוחה">
+              <div class="client-mini-row">
+                <input class="client-mini-input" data-field="phone" value="${c.phone || ''}" placeholder="טלפון">
+                <input class="client-mini-input" data-field="email" type="email" value="${c.email || ''}" placeholder="אימייל">
+                <input class="client-mini-input" data-field="birthday" type="date" value="${c.birthday || ''}">
+              </div>
+              <div class="visits">${c.visits} ביקורים · אחרון ${formatLastVisit(c.daysSinceVisit)}${isInactive ? ' <span class="badge low" style="margin-inline-start:6px;">לא הגיעה זמן רב</span>' : ''}${isBday ? ' <span class="badge" style="background:rgba(201,162,39,0.2); color:var(--gold-soft); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : ''}</div>
+            </div>
+            <button class="svc-del" aria-label="מחיקת לקוחה">✕</button>
+          </div>
+          <textarea class="client-note" placeholder="הערה אישית (העדפות, רגישויות...)">${c.note}</textarea>
+          ${isInactive ? `<button class="template-btn" style="margin-top:8px;" onclick="sendMissYouMessage(${i})">💌 שליחת הודעת געגוע</button><div id="clientMissYouResult-${i}" class="waitlist-confirmed" style="display:none; margin-top:8px;"></div>` : ''}
+        </div>`;
+      row.querySelector('.client-name-input').oninput = (e) => { c.name = e.target.value; };
+      row.querySelectorAll('.client-mini-input').forEach(inp => {
+        if (inp.dataset.field === 'birthday'){
+          inp.onchange = (e) => { c.birthday = e.target.value; renderClients(); };
+        } else {
+          inp.oninput = (e) => { c[e.target.dataset.field] = e.target.value; };
+        }
+      });
+      row.querySelector('.svc-del').onclick = () => { clients.splice(i, 1); renderClients(); if (typeof renderBroadcastCount === 'function') renderBroadcastCount(); };
+      row.querySelector('.client-note').oninput = (e) => { c.note = e.target.value; };
+      listEl.appendChild(row);
+    });
+
+    const alertEl = document.getElementById('missYouAlert');
+    if (inactiveClients.length){
+      alertEl.classList.add('show');
+      alertEl.innerHTML = `⚠ &nbsp;<span>${inactiveClients.length} לקוחות לא הגיעו מעל ${inactivityThresholdDays} ימים: ${inactiveClients.join(', ')}.</span> <button class="template-btn" style="margin-inline-start:8px;" onclick="sendMissYouToAll()">שליחה לכולן</button>`;
+    } else {
+      alertEl.classList.remove('show');
+    }
+
+    const bdayAlertEl = document.getElementById('birthdayAlert');
+    if (birthdayClients.length){
+      bdayAlertEl.classList.add('show');
+      bdayAlertEl.innerHTML = `🎂 &nbsp;<span>מזל טוב! היום יום ההולדת של ${birthdayClients.join(', ')} — הודעת "יום הולדת שמח, בואי לפנק את עצמך" נשלחה אליהן אוטומטית במייל (עם תמונה) וב-SMS (טקסט).</span>`;
+    } else {
+      bdayAlertEl.classList.remove('show');
+    }
+
+    if (typeof renderBroadcastCount === 'function') renderBroadcastCount();
+  }
+
+  function handleClientPhotoUpload(event){
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      newClientPhoto = e.target.result;
+      document.getElementById('clientPhotoPreview').src = newClientPhoto;
+      document.getElementById('clientPhotoPreview').style.display = 'block';
+      document.getElementById('clientPhotoPlaceholder').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function addClient(){
+    const nameEl = document.getElementById('newClientName');
+    const phoneEl = document.getElementById('newClientPhone');
+    const emailEl = document.getElementById('newClientEmail');
+    const birthdayEl = document.getElementById('newClientBirthday');
+    const name = nameEl.value.trim();
+    if (!name) return;
+    if (phoneEl.value.trim() && !isValidIsraeliPhone(phoneEl.value)){
+      phoneEl.style.borderColor = 'var(--wine)';
+      phoneEl.title = 'מספר טלפון לא תקין';
+      phoneEl.focus();
+      return;
+    }
+    phoneEl.style.borderColor = '';
+    clients.push({ name, phone: phoneEl.value.trim(), email: emailEl.value.trim(), photo: newClientPhoto, visits: 0, daysSinceVisit: null, note: "", birthday: birthdayEl.value || null });
+    nameEl.value = ''; phoneEl.value = ''; emailEl.value = ''; birthdayEl.value = '';
+    newClientPhoto = null;
+    document.getElementById('clientPhotoPreview').style.display = 'none';
+    document.getElementById('clientPhotoPlaceholder').style.display = 'block';
+    renderClients();
+  }
+  renderClients();
+
+  let broadcastPhoto = null;
+
+  function handleBroadcastPhotoUpload(event){
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      broadcastPhoto = e.target.result;
+      document.getElementById('broadcastPhotoPreview').src = broadcastPhoto;
+      document.getElementById('broadcastPhotoPreview').style.display = 'block';
+      document.getElementById('broadcastPhotoPlaceholder').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const messageTemplates = {
+    shana: 'שנה טובה ומתוקה! 🍯✨\nתודה שאת חלק מהלקוחות שלנו — מאחלות לך שנה מלאה בבריאות, אושר והרבה רגעים יפים.\nמחכות לראות אותך גם השנה!',
+    shabbat: 'שבת שלום! 🕯️\nמאחלות לך שבת נעימה ורגועה, מלאה במנוחה עם היקרים לך.\nנשמח לראותך שוב בקרוב!',
+    birthday: 'יום הולדת שמח! 🎂🎉\nמאחלות לך שנה נפלאה, מלאה בבריאות, אושר והמון סיבות לחגוג.\nכמתנה קטנה, מגיע לך פינוק אצלנו — מחכות לראותך!',
+    holiday: 'חג שמח! 🎉\nמאחלות לך ולמשפחתך חג שמח ומלא שמחה, בריאות ורגעים טובים.\nלהתראות בקרוב!'
+  };
+
+  function fillTemplate(key){
+    document.getElementById('broadcastMessage').value = messageTemplates[key] || '';
+  }
+
+  let customTemplates = [];
+
+  function renderCustomTemplates(){
+    const rowEl = document.getElementById('customTemplateRow');
+    rowEl.innerHTML = '';
+    customTemplates.forEach((tpl, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'template-btn custom';
+      btn.innerHTML = `<span>✏️ ${tpl.label}</span><span class="tpl-del" aria-label="מחיקת תבנית">✕</span>`;
+      btn.querySelector('span:first-child').onclick = () => {
+        document.getElementById('broadcastMessage').value = tpl.content;
+      };
+      btn.querySelector('.tpl-del').onclick = (e) => {
+        e.stopPropagation();
+        customTemplates.splice(i, 1);
+        renderCustomTemplates();
+      };
+      rowEl.appendChild(btn);
+    });
+  }
+
+  function addCustomTemplate(){
+    const labelEl = document.getElementById('newTplLabel');
+    const contentEl = document.getElementById('newTplContent');
+    const label = labelEl.value.trim();
+    const content = contentEl.value.trim();
+    if (!label || !content) return;
+    customTemplates.push({ label, content });
+    labelEl.value = '';
+    contentEl.value = '';
+    renderCustomTemplates();
+  }
+  renderCustomTemplates();
+
+  function renderBroadcastCount(){
+    const countEl = document.getElementById('broadcastCount');
+    if (!countEl) return;
+    const withEmail = clients.filter(c => c.email && c.email.trim()).length;
+    countEl.textContent = `יישלח ל-${withEmail} מתוך ${clients.length} לקוחות (עם כתובת מייל רשומה)`;
+  }
+
+  function sendBroadcast(){
+    const msg = document.getElementById('broadcastMessage').value.trim();
+    const withEmail = clients.filter(c => c.email && c.email.trim()).length;
+    const resultEl = document.getElementById('broadcastResult');
+    if (!msg){
+      resultEl.style.display = 'block';
+      resultEl.textContent = 'יש לכתוב תוכן להודעה לפני השליחה.';
+      return;
+    }
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `✓ &nbsp;ההודעה${broadcastPhoto ? ' (עם התמונה המצורפת)' : ''} נשלחה ל-${withEmail} לקוחות במייל.`;
+  }
+
+
+  let staff = [
+    { name: "דנה", role: "מניקוריסטית ראשית", photo: null },
+    { name: "מאיה", role: "פדיקור וטיפולי SPA", photo: null }
+  ];
+  let newStaffPhoto = null;
+  let selectedStaffIndex = 0;
+
+  function renderStaff(){
+    const listEl = document.getElementById('staffList');
+    listEl.innerHTML = '';
+    const searchEl = document.getElementById('staffSearch');
+    const searchTerm = searchEl ? searchEl.value.trim().toLowerCase() : '';
+    staff.forEach((s, i) => {
+      if (searchTerm && !s.name.toLowerCase().includes(searchTerm)) return;
+      const row = document.createElement('div');
+      row.className = 'client-card';
+      const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
+      row.innerHTML = `
+        <div class="client-avatar">${avatarHtml}</div>
+        <div class="client-info">
+          <div class="name-row">
+            <div>
+              <h4>${s.name}</h4>
+              <div class="role-tag">${s.role}</div>
+            </div>
+            <button class="svc-del" aria-label="מחיקת עובדת">✕</button>
+          </div>
+        </div>`;
+      row.querySelector('.svc-del').onclick = () => {
+        staff.splice(i, 1);
+        if (selectedStaffIndex >= staff.length) selectedStaffIndex = 0;
+        if (typeof selectedStaffFilter === 'number' && selectedStaffFilter >= staff.length) selectedStaffFilter = 'all';
+        renderStaff();
+        renderStaffPicker();
+        if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
+        if (typeof renderWeekCal === 'function') renderWeekCal();
+      };
+      listEl.appendChild(row);
+    });
+    renderStaffPicker();
+  }
+
+  function renderStaffPicker(){
+    const pickerEl = document.getElementById('staffPicker');
+    if (!pickerEl) return;
+    pickerEl.innerHTML = '';
+    staff.forEach((s, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'staff-chip' + (i === selectedStaffIndex ? ' selected' : '');
+      const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
+      chip.innerHTML = `<div class="avatar">${avatarHtml}</div><span>${s.name}</span>`;
+      chip.onclick = () => { selectedStaffIndex = i; renderStaffPicker(); if (typeof renderAvailableSlots === 'function') renderAvailableSlots(); if (typeof renderMiniCal === 'function') renderMiniCal(); };
+      pickerEl.appendChild(chip);
+    });
+  }
+
+  function handleStaffPhotoUpload(event){
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      newStaffPhoto = e.target.result;
+      document.getElementById('staffPhotoPreview').src = newStaffPhoto;
+      document.getElementById('staffPhotoPreview').style.display = 'block';
+      document.getElementById('staffPhotoPlaceholder').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function addStaff(){
+    const nameEl = document.getElementById('newStaffName');
+    const roleEl = document.getElementById('newStaffRole');
+    const name = nameEl.value.trim();
+    if (!name) return;
+    staff.push({ name, role: roleEl.value.trim() || 'צוות', photo: newStaffPhoto });
+    nameEl.value = ''; roleEl.value = '';
+    newStaffPhoto = null;
+    document.getElementById('staffPhotoPreview').style.display = 'none';
+    document.getElementById('staffPhotoPlaceholder').style.display = 'block';
+    renderStaff();
+    if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+  }
+  renderStaff();
+
+  const staffColors = ['#E8CE7A', '#9FBF93', '#E29AA8', '#9DBFE8', '#D9B27C'];
+  const calStartHour = 8, calEndHour = 18;
+
+  const weekdayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  const weekdayLabels = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
+  const nowReal = new Date();
+  const todayDow = nowReal.getDay(); // 0=Sunday ... 6=Saturday, matches days[] order below
+  const nowMinutesReal = nowReal.getHours() * 60 + nowReal.getMinutes();
+
+  const weekDays = [];
+  for (let i = 0; i < 7; i++){
+    const dow = (todayDow + i) % 7;
+    const d = new Date(nowReal);
+    d.setDate(nowReal.getDate() + i);
+    weekDays.push({ key: weekdayKeys[dow], label: weekdayLabels[dow], date: String(d.getDate()), dowIndex: dow });
+  }
+
+  let weekAppointments = [
+    { day: 'sun', time: '09:30', dur: 45, client: 'אורית', service: 'מניקור', staff: 0 },
+    { day: 'sun', time: '09:15', dur: 60, client: 'ליזי', service: 'בנייה', staff: 1 },
+    { day: 'sun', time: '10:30', dur: 45, client: 'רעות', service: 'פדיקור', staff: 0 },
+    { day: 'sun', time: '11:30', dur: 30, client: 'שירה', service: "לק ג'ל", staff: 2 },
+    { day: 'mon', time: '13:00', dur: 45, client: 'תהילה', service: 'מניקור', staff: 1 },
+    { day: 'mon', time: '14:00', dur: 45, client: 'רבקה', service: 'פדיקור', staff: 0 },
+    { day: 'mon', time: '12:30', dur: 60, client: 'חיה', service: 'בנייה', staff: 2 },
+    { day: 'tue', time: '09:00', dur: 45, client: 'שרי', service: 'אפילציה', staff: 1 },
+    { day: 'tue', time: '10:15', dur: 30, client: 'קיילה', service: "לק ג'ל", staff: 0 },
+    { day: 'tue', time: '11:30', dur: 45, client: 'מיכל', service: 'אפילציה', staff: 2 },
+    { day: 'wed', time: '09:30', dur: 45, client: 'שרה', service: 'מניקור', staff: 0 },
+    { day: 'wed', time: '11:00', dur: 60, client: 'חני', service: 'בנייה', staff: 1 },
+    { day: 'thu', time: '09:00', dur: 45, client: 'דסי', service: 'אפילציה', staff: 2 },
+    { day: 'thu', time: '09:30', dur: 30, client: 'הודיה', service: "לק ג'ל", staff: 0 },
+    { day: 'fri', time: '08:30', dur: 45, client: 'תמר', service: 'מניקור', staff: 1 },
+    { day: 'fri', time: '10:00', dur: 45, client: 'בתיה', service: 'פדיקור', staff: 0 }
+  ];
+
+  let selectedStaffFilter = 'all';
+
+  function timeToMinutes(t){
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  }
+
+  function renderStaffFilterRow(){
+    const rowEl = document.getElementById('staffFilterRow');
+    if (!rowEl) return;
+    rowEl.innerHTML = '';
+    const allChip = document.createElement('div');
+    allChip.className = 'staff-filter-chip' + (selectedStaffFilter === 'all' ? ' active' : '');
+    allChip.innerHTML = `<div class="avatar" style="background:rgba(245,238,228,0.12); color:var(--ivory-dim);">כל</div><span>כולן</span>`;
+    allChip.onclick = () => { selectedStaffFilter = 'all'; renderStaffFilterRow(); renderWeekCal(); };
+    rowEl.appendChild(allChip);
+
+    staff.forEach((s, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'staff-filter-chip' + (selectedStaffFilter === i ? ' active' : '');
+      const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
+      chip.innerHTML = `<div class="avatar">${avatarHtml}</div><span>${s.name}</span>`;
+      chip.onclick = () => { selectedStaffFilter = i; renderStaffFilterRow(); renderWeekCal(); };
+      rowEl.appendChild(chip);
+    });
+  }
+
+  function renderWeekCal(){
+    const calEl = document.getElementById('weekCal');
+    if (!calEl) return;
+    calEl.innerHTML = '';
+
+    const hoursCol = document.createElement('div');
+    hoursCol.className = 'cal-hours-col';
+    const hourBandHeight = 96;
+    for (let h = calStartHour; h <= calEndHour; h++){
+      const lbl = document.createElement('div');
+      lbl.className = 'cal-hour-lbl';
+      lbl.style.height = hourBandHeight + 'px';
+      lbl.textContent = String(h).padStart(2,'0') + ':00';
+      hoursCol.appendChild(lbl);
+    }
+    calEl.appendChild(hoursCol);
+
+    weekDays.forEach(day => {
+      const col = document.createElement('div');
+      col.className = 'cal-day-col';
+
+      const head = document.createElement('div');
+      head.className = 'cal-day-head';
+      head.innerHTML = `<span>${day.date}</span><b>${day.label}</b>`;
+      col.appendChild(head);
+
+      const body = document.createElement('div');
+      body.className = 'cal-day-body';
+      body.style.height = (calEndHour - calStartHour) * hourBandHeight + 'px';
+      for (let h = calStartHour; h < calEndHour; h++){
+        const line = document.createElement('div');
+        line.className = 'cal-hour-line';
+        line.style.height = hourBandHeight + 'px';
+        const half = document.createElement('div');
+        half.className = 'cal-half-line';
+        half.style.top = (h - calStartHour) * hourBandHeight + hourBandHeight / 2 + 'px';
+        body.appendChild(line);
+        body.appendChild(half);
+      }
+
+      const dayAppts = weekAppointments
+        .filter(a => a.day === day.key && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
+        .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+
+      const rowH = 21, rowGap = 2;
+      const stackCountByHour = {};
+
+      dayAppts.forEach(a => {
+        const mins = timeToMinutes(a.time);
+        const hourIdx = Math.floor(mins / 60) - calStartHour;
+        if (hourIdx < 0 || hourIdx >= (calEndHour - calStartHour)) return;
+        const stackPos = stackCountByHour[hourIdx] || 0;
+        stackCountByHour[hourIdx] = stackPos + 1;
+
+        const block = document.createElement('div');
+        block.className = 'cal-appt';
+        block.style.top = (hourIdx * hourBandHeight + stackPos * (rowH + rowGap) + 2) + 'px';
+        block.style.height = rowH + 'px';
+        block.style.background = staffColors[a.staff % staffColors.length];
+        block.title = `${a.client} · ${a.service} · ${a.time} (${a.dur} דק')`;
+        block.innerHTML = `<b>${a.time.slice(0,5)} ${a.client}</b>`;
+        body.appendChild(block);
+      });
+
+      col.appendChild(body);
+      calEl.appendChild(col);
+    });
+  }
+
+  renderStaffFilterRow();
+  renderWeekCal();
+
   let services = [
-    { name: "מניקור ג'ל", price: 120 },
-    { name: "בנייה בג'ל", price: 180 },
-    { name: "פדיקור", price: 90 }
+    { name: "מניקור ג'ל", price: 120, duration: 45 },
+    { name: "בנייה בג'ל", price: 180, duration: 60 },
+    { name: "פדיקור", price: 90, duration: 45 },
+    { name: "לייזר - אזור קטן", price: 40, duration: 5 }
   ];
   let selectedSvcIndex = 0;
 
@@ -977,8 +1953,8 @@
     services.forEach((s, i) => {
       const el = document.createElement('div');
       el.className = 'svc-card' + (i === selectedSvcIndex ? ' selected' : '');
-      el.innerHTML = `<span>${s.name}</span><span>${s.price} ש"ח</span>`;
-      el.onclick = () => { selectedSvcIndex = i; renderServices(); };
+      el.innerHTML = `<span>${s.name}</span><span>${s.price} ש"ח · ${s.duration} דק'</span>`;
+      el.onclick = () => { selectedSvcIndex = i; renderServices(); if (typeof renderAvailableSlots === 'function') renderAvailableSlots(); if (typeof renderMiniCal === 'function') renderMiniCal(); };
       custList.appendChild(el);
     });
 
@@ -987,7 +1963,7 @@
     services.forEach((s, i) => {
       const row = document.createElement('div');
       row.className = 'svc-manage-row';
-      row.innerHTML = `<span>${s.name}</span><span><span class="price">${s.price} ש"ח</span><button class="svc-del" onclick="removeService(${i})" aria-label="מחיקת שירות">✕</button></span>`;
+      row.innerHTML = `<span>${s.name}</span><span><span class="price">${s.price} ש"ח · ${s.duration} דק'</span><button class="svc-del" onclick="removeService(${i})" aria-label="מחיקת שירות">✕</button></span>`;
       manageList.appendChild(row);
     });
   }
@@ -995,12 +1971,15 @@
   function addService(){
     const nameEl = document.getElementById('newSvcName');
     const priceEl = document.getElementById('newSvcPrice');
+    const durationEl = document.getElementById('newSvcDuration');
     const name = nameEl.value.trim();
     const price = parseInt(priceEl.value);
-    if (!name || !price) return;
-    services.push({ name, price });
+    const duration = parseInt(durationEl.value);
+    if (!name || !price || !duration) return;
+    services.push({ name, price, duration });
     nameEl.value = '';
     priceEl.value = '';
+    durationEl.value = '';
     renderServices();
   }
 
@@ -1008,41 +1987,275 @@
     services.splice(i, 1);
     if (selectedSvcIndex >= services.length) selectedSvcIndex = 0;
     renderServices();
+    if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
   }
 
   renderServices();
 
-  const times = [
-    { t: '09:00', booked: false },
-    { t: '10:30', booked: true },
-    { t: '12:00', booked: false },
-    { t: '13:30', booked: true }
+  let whatsNewItems = [
+    { title: "לק ג'ל בגוונים חדשים לקיץ", desc: "הגיעה קולקציה חדשה של 12 גוונים — אפשר לבחור בזמן קביעת התור.", badge: true },
+    { title: "טיפול פרפין לידיים", desc: 'שירות חדש שמרכך ומזין — 15 דקות, תוספת ל-25 ש"ח לכל שירות ידיים.', badge: true },
+    { title: "שעות פתיחה מורחבות בימי שני", desc: "מעכשיו אפשר לקבוע תור בימי שני גם עד השעה 20:00.", badge: false }
   ];
+
+  function renderWhatsNew(){
+    const custEl = document.getElementById('whatsNewList');
+    custEl.innerHTML = whatsNewItems.map(item => `
+      <div class="new-card">
+        <div class="new-icon">✦</div>
+        <div class="new-body">
+          <h4>${item.title}</h4>
+          <p>${item.desc}</p>
+        </div>
+        ${item.badge ? '<div class="new-badge">חדש</div>' : ''}
+      </div>`).join('');
+
+    const adminEl = document.getElementById('whatsNewAdminList');
+    if (!adminEl) return;
+    adminEl.innerHTML = '';
+    whatsNewItems.forEach((item, i) => {
+      const row = document.createElement('div');
+      row.className = 'client-card';
+      row.innerHTML = `
+        <div class="client-info">
+          <div class="name-row">
+            <div>
+              <h4 style="display:flex; align-items:center; gap:6px;">${item.title}${item.badge ? '<span class="new-badge" style="position:static;">חדש</span>' : ''}</h4>
+              <p style="font-size:13px; color:var(--ivory-dim); margin-top:4px;">${item.desc}</p>
+            </div>
+            <button class="svc-del" aria-label="מחיקת עדכון">✕</button>
+          </div>
+        </div>`;
+      row.querySelector('.svc-del').onclick = () => { whatsNewItems.splice(i, 1); renderWhatsNew(); };
+      adminEl.appendChild(row);
+    });
+  }
+
+  function addWhatsNew(){
+    const titleEl = document.getElementById('newWnTitle');
+    const descEl = document.getElementById('newWnDesc');
+    const badgeEl = document.getElementById('newWnBadge');
+    const title = titleEl.value.trim();
+    const desc = descEl.value.trim();
+    if (!title || !desc) return;
+    whatsNewItems.unshift({ title, desc, badge: badgeEl.checked });
+    titleEl.value = '';
+    descEl.value = '';
+    badgeEl.checked = false;
+    renderWhatsNew();
+  }
+  renderWhatsNew();
+
+  const hourOptions = [];
+  for (let h = 7; h <= 21; h++) hourOptions.push(String(h).padStart(2,'0') + ':00');
+
+  const days = [
+    { name: 'ראשון', open: true, from: '09:00', to: '12:00' },
+    { name: 'שני', open: true, from: '12:00', to: '17:00' },
+    { name: 'שלישי', open: true, from: '09:00', to: '17:00' },
+    { name: 'רביעי', open: true, from: '09:00', to: '17:00' },
+    { name: 'חמישי', open: true, from: '09:00', to: '19:00' },
+    { name: 'שישי', open: true, from: '08:00', to: '13:00' },
+    { name: 'שבת', open: false, from: '09:00', to: '17:00' }
+  ];
+
+  const todayMidnight = new Date(nowReal.getFullYear(), nowReal.getMonth(), nowReal.getDate());
+  let bookingSelectedDate = new Date(todayMidnight);
+  let calViewYear = todayMidnight.getFullYear();
+  let calViewMonth = todayMidnight.getMonth();
+
+  const slotStepMinutes = 15;
   const slotsEl = document.getElementById('slots');
   let selectedSlot = null;
 
-  times.forEach((slot, i) => {
-    const d = document.createElement('div');
-    d.className = 'slot' + (slot.booked ? ' booked' : (selectedSlot === null && !slot.booked ? ' selected' : ''));
-    d.textContent = slot.t;
-    if (!slot.booked && selectedSlot === null) selectedSlot = slot.t;
-    d.onclick = () => {
-      if (slot.booked){
-        showWaitlistPrompt(slot.t);
-        return;
-      }
-      document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
-      d.classList.add('selected');
-      selectedSlot = slot.t;
-      document.getElementById('waitlistBox').innerHTML = '';
-    };
-    slotsEl.appendChild(d);
-  });
+  function sameDate(a, b){
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
 
-  function showWaitlistPrompt(time){
+  function hasAnySlot(cellDate){
+    const svc = services[selectedSvcIndex];
+    const dow = cellDate.getDay();
+    const dayInfo = days[dow];
+    if (!svc || !dayInfo || !dayInfo.open) return false;
+
+    const dayKey = weekdayKeys[dow];
+    let openMin = timeToMinutes(dayInfo.from);
+    const closeMin = timeToMinutes(dayInfo.to);
+    const duration = svc.duration || 30;
+
+    if (sameDate(cellDate, todayMidnight)){
+      const earliestStart = Math.ceil(nowMinutesReal / slotStepMinutes) * slotStepMinutes;
+      openMin = Math.max(openMin, earliestStart);
+    }
+    if (openMin + duration > closeMin) return false;
+
+    const busy = weekAppointments
+      .filter(a => a.day === dayKey && a.staff === selectedStaffIndex)
+      .map(a => {
+        const s = timeToMinutes(a.time);
+        return [s, s + a.dur];
+      });
+
+    for (let t = openMin; t + duration <= closeMin; t += slotStepMinutes){
+      const end = t + duration;
+      if (busy.every(([bStart, bEnd]) => end <= bStart || t >= bEnd)) return true;
+    }
+    return false;
+  }
+
+  function renderMiniCal(){
+    const gridEl = document.getElementById('miniCalGrid');
+    const titleEl = document.getElementById('miniCalTitle');
+    const prevBtn = document.getElementById('calPrevBtn');
+    gridEl.innerHTML = '';
+    titleEl.textContent = hebrewMonths[calViewMonth] + ' ' + calViewYear;
+
+    const isCurrentMonth = (calViewYear === todayMidnight.getFullYear() && calViewMonth === todayMidnight.getMonth());
+    prevBtn.disabled = isCurrentMonth;
+
+    const firstOfMonth = new Date(calViewYear, calViewMonth, 1);
+    const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+    const leadingBlanks = firstOfMonth.getDay();
+
+    for (let i = 0; i < leadingBlanks; i++){
+      const blank = document.createElement('div');
+      blank.className = 'cal-day-cell empty';
+      gridEl.appendChild(blank);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++){
+      const cellDate = new Date(calViewYear, calViewMonth, d);
+      const dow = cellDate.getDay();
+      const isPast = cellDate < todayMidnight;
+      const isClosedDay = !days[dow].open;
+      const noSlots = !isPast && !isClosedDay && !hasAnySlot(cellDate);
+      const cell = document.createElement('div');
+      cell.className = 'cal-day-cell';
+      if (sameDate(cellDate, todayMidnight)) cell.classList.add('today');
+      if (sameDate(cellDate, bookingSelectedDate)) cell.classList.add('selected');
+      if (isPast) cell.classList.add('past');
+      else if (isClosedDay) cell.classList.add('closed-day');
+      else if (noSlots) cell.classList.add('closed-day');
+      cell.textContent = d;
+      if (!isPast && !isClosedDay && !noSlots){
+        cell.onclick = () => {
+          bookingSelectedDate = cellDate;
+          renderMiniCal();
+          renderAvailableSlots();
+        };
+      } else if (noSlots){
+        cell.title = 'אין שעות פנויות ביום זה לשירות/עובדת שנבחרו';
+      }
+      gridEl.appendChild(cell);
+    }
+
+    const dow = bookingSelectedDate.getDay();
+    const dateLabel = bookingSelectedDate.getDate() + ' ב' + hebrewMonths[bookingSelectedDate.getMonth()];
+    document.getElementById('slotsLabel').textContent = 'שעות פנויות — יום ' + days[dow].name + ', ' + dateLabel;
+  }
+
+  function calShiftMonth(delta){
+    calViewMonth += delta;
+    if (calViewMonth < 0){ calViewMonth = 11; calViewYear--; }
+    if (calViewMonth > 11){ calViewMonth = 0; calViewYear++; }
+    renderMiniCal();
+  }
+
+  function renderAvailableSlots(){
+    slotsEl.innerHTML = '';
+    document.getElementById('waitlistBox').innerHTML = '';
+    selectedSlot = null;
+
+    const svc = services[selectedSvcIndex];
+    const dow = bookingSelectedDate.getDay();
+    const dayInfo = days[dow];
+    const dayKey = weekdayKeys[dow];
+    const isToday = sameDate(bookingSelectedDate, todayMidnight);
+    if (!svc || !dayInfo || !dayInfo.open){
+      slotsEl.innerHTML = '<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">אין שעות פעילות ביום זה</div>';
+      return;
+    }
+
+    let openMin = timeToMinutes(dayInfo.from);
+    const closeMin = timeToMinutes(dayInfo.to);
+    const duration = svc.duration || 30;
+
+    if (isToday){
+      const earliestStart = Math.ceil(nowMinutesReal / slotStepMinutes) * slotStepMinutes;
+      openMin = Math.max(openMin, earliestStart);
+    }
+
+    if (openMin + duration > closeMin){
+      slotsEl.innerHTML = '<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">היום כבר נגמרו השעות הפנויות</div>';
+      return;
+    }
+
+    const busy = weekAppointments
+      .filter(a => a.day === dayKey && a.staff === selectedStaffIndex)
+      .map(a => {
+        const s = timeToMinutes(a.time);
+        return [s, s + a.dur];
+      });
+
+    const fits = (start, dur) => {
+      const end = start + dur;
+      if (end > closeMin) return false;
+      return busy.every(([bStart, bEnd]) => end <= bStart || start >= bEnd);
+    };
+
+    const findConflict = (start, dur) => {
+      const end = start + dur;
+      return busy.find(([bStart, bEnd]) => !(end <= bStart || start >= bEnd));
+    };
+
+    const minutesToTime = (m) => String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0');
+
+    let firstFree = null;
+    for (let t = openMin; t + duration <= closeMin; t += slotStepMinutes){
+      const available = fits(t, duration);
+      const timeStr = String(Math.floor(t / 60)).padStart(2,'0') + ':' + String(t % 60).padStart(2,'0');
+      const d = document.createElement('div');
+      d.className = 'slot' + (available ? '' : ' booked');
+      d.textContent = timeStr;
+      if (available){
+        if (firstFree === null) firstFree = timeStr;
+        d.onclick = () => {
+          document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+          d.classList.add('selected');
+          selectedSlot = timeStr;
+          document.getElementById('waitlistBox').innerHTML = '';
+        };
+      } else {
+        const conflict = findConflict(t, duration);
+        let reason;
+        if (conflict){
+          const [cStart] = conflict;
+          if (cStart <= t){
+            reason = `יש כבר תור שמתחיל ב-${minutesToTime(cStart)} ועדיין לא הסתיים.`;
+          } else {
+            reason = `טיפול באורך ${duration} דק׳ שמתחיל ב-${timeStr} ייחפוף לתור שמתחיל ב-${minutesToTime(cStart)}.`;
+          }
+        } else {
+          reason = 'השעה הזו לא מתאימה למשך הטיפול שנבחר.';
+        }
+        d.onclick = () => showWaitlistPrompt(timeStr, reason);
+      }
+      slotsEl.appendChild(d);
+    }
+
+    if (firstFree){
+      selectedSlot = firstFree;
+      const firstEl = Array.from(slotsEl.children).find(el => el.textContent === firstFree);
+      if (firstEl) firstEl.classList.add('selected');
+    } else {
+      slotsEl.innerHTML += '<div style="grid-column:1/-1; font-size:13px; color:#8A8178; margin-top:6px;">אין שעות פנויות עם משך הטיפול הזה היום</div>';
+    }
+  }
+
+  function showWaitlistPrompt(time, reason){
     document.getElementById('waitlistBox').innerHTML = `
       <div class="waitlist-prompt">
-        השעה ${time} תפוסה כרגע.
+        השעה ${time} לא זמינה — ${reason || 'תפוסה כרגע.'}
         <div><button onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
       </div>`;
   }
@@ -1052,27 +2265,103 @@
       <div class="waitlist-confirmed">✓ &nbsp;נרשמת לרשימת ההמתנה ל-${time}. נשלח לך הודעה אם יתפנה מקום.</div>`;
   }
 
+  renderMiniCal();
+  renderAvailableSlots();
+
+  function isValidIsraeliPhone(phone){
+    const digits = (phone || '').replace(/[^0-9]/g, '');
+    return /^0\d{8,9}$/.test(digits);
+  }
+
+  document.getElementById('bookingPhoneInput').addEventListener('input', function(){
+    if (isValidIsraeliPhone(this.value)){
+      document.getElementById('bookingPhoneError').style.display = 'none';
+      this.style.borderColor = '';
+    }
+  });
+
+  document.querySelectorAll('input[name="reminderChannel"]').forEach(function(radio){
+    radio.addEventListener('change', function(){
+      document.getElementById('reminderChoiceError').style.display = 'none';
+    });
+  });
+
   function confirmBooking(){
+    if (!selectedSlot){
+      document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">לא נבחרה שעה פנויה ליום זה — יש לבחור יום אחר עם זמינות, או שירות/עובדת אחרת.</div>`;
+      return;
+    }
+
+    const phoneVal = document.getElementById('bookingPhoneInput').value;
+    const errorEl = document.getElementById('bookingPhoneError');
+    if (!isValidIsraeliPhone(phoneVal)){
+      errorEl.style.display = 'block';
+      document.getElementById('bookingPhoneInput').style.borderColor = 'var(--wine)';
+      return;
+    }
+    errorEl.style.display = 'none';
+
+    const reminderInput = document.querySelector('input[name="reminderChannel"]:checked');
+    const reminderErrorEl = document.getElementById('reminderChoiceError');
+    if (!reminderInput){
+      reminderErrorEl.style.display = 'block';
+      return;
+    }
+    reminderErrorEl.style.display = 'none';
+    const reminderLabels = { sms: 'SMS', call: 'שיחת טלפון', both: 'SMS ושיחת טלפון' };
+    const reminderText = reminderLabels[reminderInput.value];
+
     const svc = services[selectedSvcIndex];
+    const emp = staff[selectedStaffIndex];
+    const clientNameVal = document.getElementById('bookingNameInput').value.trim() || 'לקוחה';
+    const dayKey = weekdayKeys[bookingSelectedDate.getDay()];
+
+    currentBookedAppointment = {
+      day: dayKey,
+      time: selectedSlot,
+      dur: svc ? (svc.duration || 30) : 30,
+      client: clientNameVal,
+      service: svc ? svc.name : 'שירות',
+      staff: selectedStaffIndex
+    };
+    weekAppointments.push(currentBookedAppointment);
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof renderMiniCal === 'function') renderMiniCal();
+
     document.getElementById('bookingFormWrap').style.display = 'none';
     const apptEl = document.getElementById('myAppointment');
     apptEl.style.display = 'block';
     apptEl.innerHTML = `
       <div class="status-dot">✓ מאושר — מייל ו-SMS נשלחו</div>
       <h4>${svc ? svc.name : 'שירות'}</h4>
-      <div class="appt-meta">יום שלישי, ${selectedSlot}${svc ? ' · ' + svc.price + ' ש"ח' : ''}</div>
+      <div class="appt-meta">${bookingSelectedDate.getDate()} ב${hebrewMonths[bookingSelectedDate.getMonth()]}, ${selectedSlot}${svc ? ' · ' + svc.price + ' ש"ח' : ''}${emp ? ' · אצל ' + emp.name : ''}</div>
+      <div class="appt-meta" style="margin-top:2px;">תזכורת באמצעות: ${reminderText}</div>
       <div class="my-appt-actions">
         <button onclick="rescheduleAppointment()">שינוי מועד</button>
         <button class="danger" onclick="cancelAppointment()">ביטול תור</button>
       </div>`;
   }
 
+  let currentBookedAppointment = null;
+
+  function removeCurrentBookedAppointment(){
+    if (!currentBookedAppointment) return;
+    const idx = weekAppointments.indexOf(currentBookedAppointment);
+    if (idx !== -1) weekAppointments.splice(idx, 1);
+    currentBookedAppointment = null;
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof renderMiniCal === 'function') renderMiniCal();
+  }
+
   function rescheduleAppointment(){
+    removeCurrentBookedAppointment();
     document.getElementById('myAppointment').style.display = 'none';
     document.getElementById('bookingFormWrap').style.display = 'block';
+    if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
   }
 
   function cancelAppointment(){
+    removeCurrentBookedAppointment();
     const apptEl = document.getElementById('myAppointment');
     apptEl.innerHTML = `
       <div class="waitlist-confirmed">✓ &nbsp;התור בוטל. נשלחה הודעת ביטול למייל ול-SMS.</div>
@@ -1094,19 +2383,6 @@
     document.querySelectorAll('.subswitcher button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }
-
-  const hourOptions = [];
-  for (let h = 7; h <= 21; h++) hourOptions.push(String(h).padStart(2,'0') + ':00');
-
-  const days = [
-    { name: 'ראשון', open: true, from: '09:00', to: '12:00' },
-    { name: 'שני', open: true, from: '12:00', to: '17:00' },
-    { name: 'שלישי', open: true, from: '09:00', to: '17:00' },
-    { name: 'רביעי', open: true, from: '09:00', to: '17:00' },
-    { name: 'חמישי', open: true, from: '09:00', to: '19:00' },
-    { name: 'שישי', open: true, from: '08:00', to: '13:00' },
-    { name: 'שבת', open: false, from: '09:00', to: '17:00' }
-  ];
 
   const hoursList = document.getElementById('hoursList');
   days.forEach((day, i) => {
@@ -1130,8 +2406,23 @@
       row.querySelector('.toggle').classList.toggle('on');
     };
 
+    row.querySelectorAll('select').forEach((sel, si) => {
+      sel.onchange = () => {
+        if (si === 0) day.from = sel.value; else day.to = sel.value;
+        if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+      };
+    });
+
     hoursList.appendChild(row);
   });
+
+
+  let invAlertEmail = '';
+
+  function updateInvAlertEmail(){
+    invAlertEmail = document.getElementById('invAlertEmail').value.trim();
+    renderInventory();
+  }
 
   let inventory = [
     { name: "לק ג'ל אדום", stock: 6, threshold: 8 },
@@ -1179,7 +2470,10 @@
     const alertEl = document.getElementById('invAlert');
     if (lowItems.length){
       alertEl.classList.add('show');
-      alertEl.innerHTML = '⚠ &nbsp;<span>מלאי נמוך מהסף שהגדרת: ' + lowItems.join(', ') + '. תישלח לך התראה גם למייל.</span>';
+      const emailNote = invAlertEmail
+        ? `תישלח התראה למייל ${invAlertEmail}.`
+        : `<u style="cursor:pointer;" onclick="document.getElementById('invAlertEmail').focus();">לא הוגדר מייל לשליחת התראות — לחצי כאן להגדיר</u>.`;
+      alertEl.innerHTML = '⚠ &nbsp;<span>מלאי נמוך מהסף שהגדרת: ' + lowItems.join(', ') + '. ' + emailNote + '</span>';
     } else {
       alertEl.classList.remove('show');
     }
