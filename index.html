@@ -872,7 +872,7 @@
 
   .week-cal-wrap{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow-x:auto; scroll-behavior:smooth;}
   .week-cal{display:flex; min-width:820px; scroll-snap-type:x proximity;}
-  .cal-hours-col{width:52px; flex-shrink:0; padding-top:44px;}
+  .cal-hours-col{width:52px; flex-shrink:0; padding-top:56px;}
   .cal-hour-lbl{
     font-family:'JetBrains Mono';
     font-size:11px;
@@ -884,12 +884,13 @@
   }
   .cal-day-col{flex:1; min-width:104px; border-inline-start:1px solid rgba(245,238,228,0.08); position:relative; scroll-snap-align:start;}
   .cal-day-head{
-    height:44px;
+    height:56px;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     font-size:12px; color:var(--ivory-dim);
     border-bottom:1px solid rgba(245,238,228,0.1);
   }
   .cal-day-head b{font-family:'Suez One'; font-weight:400; font-size:14px; color:var(--ivory);}
+  .cal-day-head .heb-date{font-size:9px; color:var(--gold-soft); opacity:0.8;}
   .cal-day-body{position:relative;}
   .cal-hour-line{border-top:1px solid rgba(245,238,228,0.08); box-sizing:border-box;}
   .cal-half-line{position:absolute; inset-inline:0; border-top:1px dashed rgba(245,238,228,0.05);}
@@ -1830,11 +1831,10 @@
 
   function hebrewDateStr(date){
     try {
-      const parts = new Intl.DateTimeFormat('he-u-ca-hebrew', { day: 'numeric', month: 'long', year: 'numeric' }).formatToParts(date);
+      const parts = new Intl.DateTimeFormat('he-u-ca-hebrew', { day: 'numeric', month: 'long' }).formatToParts(date);
       const dayNum = parseInt(parts.find(p => p.type === 'day').value);
       const monthName = parts.find(p => p.type === 'month').value;
-      const yearNum = parts.find(p => p.type === 'year').value;
-      return hebrewDayNumeral(dayNum) + ' ב' + monthName + ' ' + yearNum;
+      return hebrewDayNumeral(dayNum) + ' ב' + monthName;
     } catch(e){
       return '';
     }
@@ -2210,8 +2210,7 @@
 
       const head = document.createElement('div');
       head.className = 'cal-day-head';
-      head.title = hebrewDateStr(day.fullDate);
-      head.innerHTML = `<span>${day.date}</span><b>${day.label}</b>`;
+      head.innerHTML = `<span>${day.date}</span><b>${day.label}</b><span class="heb-date">${hebrewDateStr(day.fullDate)}</span>`;
       col.appendChild(head);
 
       const body = document.createElement('div');
@@ -2292,7 +2291,7 @@
     const dayKey = weekdayKeys[dow];
     const isToday = sameDate(date, new Date(nowReal.getFullYear(), nowReal.getMonth(), nowReal.getDate()));
     document.getElementById('ovDayTitle').textContent =
-      (isToday ? 'היום · ' : '') + days[dow].name + ', ' + date.getDate() + ' ב' + hebrewMonths[date.getMonth()];
+      (isToday ? 'היום · ' : '') + days[dow].name + ', ' + date.getDate() + ' ב' + hebrewMonths[date.getMonth()] + ' (' + hebrewDateStr(date) + ')';
 
     const dayAppts = weekAppointments
       .filter(a => a.day === dayKey && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
