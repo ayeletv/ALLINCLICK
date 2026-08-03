@@ -242,6 +242,41 @@
   .cta:active{transform:scale(0.98);}
   .staff-picker{display:flex; gap:10px; overflow-x:auto; padding-bottom:4px;}
   .mini-cal{margin-bottom:16px;}
+
+  .day-nav-header{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:16px;
+  }
+  .day-nav-header button{
+    background:var(--ink-2);
+    border:1px solid rgba(245,238,228,0.15);
+    color:var(--ivory-dim);
+    border-radius:10px;
+    padding:9px 14px;
+    font-family:'Heebo';
+    font-size:13px;
+    cursor:pointer;
+  }
+  .day-nav-header span{font-family:'Suez One'; font-weight:400; font-size:16px; color:var(--ivory);}
+
+  #overviewMonthWrap .mini-cal-header{color:var(--ivory-dim);}
+  #overviewMonthWrap .mini-cal-header button{border-color:rgba(245,238,228,0.2); color:var(--ivory-dim); background:var(--ink-2);}
+  #overviewMonthWrap .mini-cal-weekdays{color:var(--ivory-dim);}
+  #overviewMonthWrap .cal-day-cell{color:var(--ivory-dim); position:relative;}
+  #overviewMonthWrap .cal-day-cell.today{color:var(--gold-soft);}
+  #overviewMonthWrap .cal-day-cell.selected{background:var(--wine); color:var(--ivory);}
+  #overviewMonthWrap .cal-day-cell .ov-count{
+    position:absolute; bottom:1px; left:50%; transform:translateX(-50%);
+    font-size:8px; background:var(--gold); color:var(--ink); border-radius:999px;
+    padding:0 3px; line-height:1.3;
+  }
+  .ov-agenda-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 14px; border-bottom:1px solid rgba(245,238,228,0.08); font-size:13px;
+  }
+  .ov-agenda-row:last-child{border-bottom:none;}
+  .ov-agenda-row .t{font-family:'JetBrains Mono'; color:var(--gold-soft);}
+
   .mini-cal-header{
     display:flex; align-items:center; justify-content:space-between;
     margin-bottom:8px;
@@ -296,6 +331,23 @@
   .staff-chip .avatar img{width:100%; height:100%; object-fit:cover;}
   .staff-chip span{font-size:11px; color:#6B6259; max-width:60px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .staff-chip.selected span{color:var(--wine); font-weight:500;}
+
+  .step-dots{display:flex; justify-content:center; gap:8px; margin-bottom:18px;}
+  .step-dot{width:8px; height:8px; border-radius:50%; background:#E4DACB;}
+  .step-dot.active{background:var(--wine); width:20px; border-radius:4px;}
+  .booking-step{display:none;}
+  .booking-step.active{display:block; animation:fadeUp 0.3s ease forwards;}
+  .step-nav{display:flex; gap:8px; margin-top:6px;}
+  .step-back{
+    background:none;
+    border:1.5px solid #E4DACB;
+    color:#6B6259;
+    border-radius:12px;
+    padding:14px 18px;
+    font-family:'Heebo';
+    font-size:14px;
+    cursor:pointer;
+  }
 
   .reminder-choice{
     display:flex; gap:14px; flex-wrap:wrap;
@@ -818,8 +870,8 @@
   .staff-filter-chip span{font-size:11px; color:var(--ivory-dim);}
   .staff-filter-chip.active span{color:var(--ivory);}
 
-  .week-cal-wrap{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow-x:auto;}
-  .week-cal{display:flex; min-width:820px;}
+  .week-cal-wrap{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow-x:auto; scroll-behavior:smooth;}
+  .week-cal{display:flex; min-width:820px; scroll-snap-type:x proximity;}
   .cal-hours-col{width:52px; flex-shrink:0; padding-top:44px;}
   .cal-hour-lbl{
     font-family:'JetBrains Mono';
@@ -830,7 +882,7 @@
     border-top:1px solid rgba(245,238,228,0.08);
     box-sizing:border-box;
   }
-  .cal-day-col{flex:1; min-width:104px; border-inline-start:1px solid rgba(245,238,228,0.08); position:relative;}
+  .cal-day-col{flex:1; min-width:104px; border-inline-start:1px solid rgba(245,238,228,0.08); position:relative; scroll-snap-align:start;}
   .cal-day-head{
     height:44px;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -1078,37 +1130,61 @@
         <div class="phone-brand" id="phoneBrand"></div>
 
         <div id="bookingFormWrap">
-          <div class="label">בחירת שירות</div>
-          <div id="custSvcList"></div>
-          <div class="label" style="margin-top:18px;">בחירת עובדת</div>
-          <div class="staff-picker" id="staffPicker"></div>
-          <div class="label" style="margin-top:18px;">בחירת יום</div>
-          <div class="mini-cal" id="miniCal">
-            <div class="mini-cal-header">
-              <button type="button" onclick="calShiftMonth(-1)" id="calPrevBtn">‹</button>
-              <span id="miniCalTitle"></span>
-              <button type="button" onclick="calShiftMonth(1)">›</button>
-            </div>
-            <div class="mini-cal-weekdays">
-              <span>א</span><span>ב</span><span>ג</span><span>ד</span><span>ה</span><span>ו</span><span>ש</span>
-            </div>
-            <div class="mini-cal-grid" id="miniCalGrid"></div>
+          <div class="step-dots" id="stepDots">
+            <span class="step-dot active" data-step="1"></span>
+            <span class="step-dot" data-step="2"></span>
+            <span class="step-dot" data-step="3"></span>
           </div>
-          <div class="label" id="slotsLabel">שעות פנויות</div>
-          <div class="slot-grid" id="slots"></div>
-          <div class="waitlist-box" id="waitlistBox"></div>
-          <div class="label">פרטי קשר</div>
-          <input class="field" id="bookingNameInput" placeholder="שם מלא">
-          <input class="field" id="bookingPhoneInput" type="tel" placeholder="050-0000000">
-          <div id="bookingPhoneError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">מספר טלפון לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567)</div>
-          <div class="label" style="margin-top:10px;">איך תרצי לקבל תזכורת?</div>
-          <div class="reminder-choice" id="reminderChoice">
-            <label><input type="radio" name="reminderChannel" value="sms"> SMS</label>
-            <label><input type="radio" name="reminderChannel" value="call"> שיחת טלפון</label>
-            <label><input type="radio" name="reminderChannel" value="both"> שניהם</label>
+
+          <div class="booking-step active" id="bstep-1">
+            <div class="label">בחירת שירות</div>
+            <div id="custSvcList"></div>
+            <div class="label" style="margin-top:18px;">בחירת עובדת</div>
+            <div class="staff-picker" id="staffPicker"></div>
+            <button class="cta" onclick="goToStep(2)">המשך</button>
           </div>
-          <div id="reminderChoiceError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש לבחור ערוץ תזכורת לפני קביעת התור</div>
-          <button class="cta" onclick="confirmBooking()">אישור תור</button>
+
+          <div class="booking-step" id="bstep-2">
+            <div class="label">בחירת יום</div>
+            <div class="mini-cal" id="miniCal">
+              <div class="mini-cal-header">
+                <button type="button" onclick="calShiftMonth(-1)" id="calPrevBtn">‹</button>
+                <span id="miniCalTitle"></span>
+                <button type="button" onclick="calShiftMonth(1)">›</button>
+              </div>
+              <div class="mini-cal-weekdays">
+                <span>א</span><span>ב</span><span>ג</span><span>ד</span><span>ה</span><span>ו</span><span>ש</span>
+              </div>
+              <div class="mini-cal-grid" id="miniCalGrid"></div>
+            </div>
+            <div class="label" id="slotsLabel">שעות פנויות</div>
+            <div class="slot-grid" id="slots"></div>
+            <div class="waitlist-box" id="waitlistBox"></div>
+            <div class="step-nav">
+              <button class="step-back" onclick="goToStep(1)">חזרה</button>
+              <button class="cta" style="flex:1;" onclick="goToStep(3)">המשך</button>
+            </div>
+          </div>
+
+          <div class="booking-step" id="bstep-3">
+            <div class="label">פרטי קשר</div>
+            <input class="field" id="bookingNameInput" placeholder="שם מלא">
+            <div id="bookingNameError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין שם מלא</div>
+            <input class="field" id="bookingPhoneInput" type="tel" placeholder="050-0000000">
+            <div id="bookingWelcomeBack" style="display:none; color:var(--sage); font-size:12px; margin:-4px 0 8px;"></div>
+            <div id="bookingPhoneError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">מספר טלפון לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567)</div>
+            <div class="label" style="margin-top:10px;">איך תרצי לקבל תזכורת?</div>
+            <div class="reminder-choice" id="reminderChoice">
+              <label><input type="radio" name="reminderChannel" value="sms"> SMS</label>
+              <label><input type="radio" name="reminderChannel" value="call"> שיחת טלפון</label>
+              <label><input type="radio" name="reminderChannel" value="both"> שניהם</label>
+            </div>
+            <div id="reminderChoiceError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש לבחור ערוץ תזכורת לפני קביעת התור</div>
+            <div class="step-nav">
+              <button class="step-back" onclick="goToStep(2)">חזרה</button>
+              <button class="cta" style="flex:1;" onclick="confirmBooking()">אישור תור</button>
+            </div>
+          </div>
         </div>
 
         <div id="myAppointment" class="my-appt" style="display:none;"></div>
@@ -1140,11 +1216,42 @@
         <div class="stat"><div class="num mono">3</div><div class="lbl">מקומות פנויים</div></div>
         <div class="stat"><div class="num mono">890 ₪</div><div class="lbl">הכנסה צפויה</div></div>
       </div>
-      <button class="template-btn" style="margin-bottom:16px;" onclick="openMyDayView()">🖨️ תצוגת היום שלי</button>
-      <div class="label" style="margin:8px 0 10px;">היומן השבועי</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+        <button class="template-btn" onclick="openMyDayView()">🖨️ תצוגת היום שלי</button>
+        <button class="template-btn" onclick="openManualBookingModal()">➕ הוספת תור ידנית</button>
+      </div>
+      <div class="label" style="margin:8px 0 10px;" id="calSectionLabel">היומן השבועי</div>
+      <div class="subswitcher" style="margin-bottom:1rem;">
+        <button class="active" onclick="setOverviewView('week', this)">שבועי</button>
+        <button onclick="setOverviewView('day', this)">יומי</button>
+        <button onclick="setOverviewView('month', this)">חודשי</button>
+      </div>
       <div class="staff-filter-row" id="staffFilterRow"></div>
-      <div class="week-cal-wrap">
+      <div class="week-cal-wrap" id="weekCalWrap">
         <div class="week-cal" id="weekCal"></div>
+      </div>
+      <div id="overviewDayWrap" style="display:none;">
+        <div class="day-nav-header">
+          <button type="button" onclick="ovDayShift(-1)">‹ יום קודם</button>
+          <span id="ovDayTitle"></span>
+          <button type="button" onclick="ovDayShift(1)">יום הבא ›</button>
+        </div>
+        <div id="ovDayList"></div>
+      </div>
+      <div id="overviewMonthWrap" style="display:none;">
+        <div class="mini-cal" style="max-width:420px;">
+          <div class="mini-cal-header">
+            <button type="button" onclick="ovCalShiftMonth(-1)">‹</button>
+            <span id="ovCalTitle"></span>
+            <button type="button" onclick="ovCalShiftMonth(1)">›</button>
+          </div>
+          <div class="mini-cal-weekdays">
+            <span>א</span><span>ב</span><span>ג</span><span>ד</span><span>ה</span><span>ו</span><span>ש</span>
+          </div>
+          <div class="mini-cal-grid" id="ovCalGrid"></div>
+        </div>
+        <div class="label" style="margin:20px 0 10px;" id="ovDayAgendaLabel">בחרי יום כדי לראות תורים</div>
+        <div id="ovDayAgendaList"></div>
       </div>
     </div>
 
@@ -1226,6 +1333,16 @@
       <div class="subswitcher" style="margin-bottom:1.5rem;">
         <button class="active" onclick="showReportRange('week', this)">השבוע</button>
         <button onclick="showReportRange('month', this)">החודש</button>
+        <button onclick="showReportRange('custom', this)">טווח מותאם אישית</button>
+      </div>
+      <div id="customRangeControls" style="display:none; margin-bottom:1.5rem;">
+        <div class="inv-email-row">
+          <span class="label" style="margin:0;">מתאריך</span>
+          <input type="date" id="reportFromDate" class="search-input" style="margin:0; width:auto;">
+          <span class="label" style="margin:0;">עד תאריך</span>
+          <input type="date" id="reportToDate" class="search-input" style="margin:0; width:auto;">
+          <button class="cta" style="width:auto; margin-top:0;" onclick="renderCustomRangeReport()">הצגת דוח</button>
+        </div>
       </div>
       <div class="stat-row">
         <div class="stat"><div class="num mono" id="repRevenue">3,240 ₪</div><div class="lbl">הכנסה</div></div>
@@ -1331,6 +1448,27 @@
   </div>
 </div>
 
+<div id="manualBookingOverlay" class="myday-overlay">
+  <div class="myday-sheet">
+    <div class="myday-header">
+      <h3>הוספת תור ידנית</h3>
+      <div class="myday-actions">
+        <button onclick="closeManualBookingModal()">✕ סגירה</button>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <input type="text" id="mbClientName" class="field" placeholder="שם הלקוחה">
+      <input type="tel" id="mbClientPhone" class="field" placeholder="050-0000000">
+      <select id="mbService" class="field"></select>
+      <select id="mbStaff" class="field"></select>
+      <input type="date" id="mbDate" class="field">
+      <input type="time" id="mbTime" class="field">
+      <div id="mbError" style="display:none; color:var(--wine); font-size:13px;"></div>
+      <button class="cta" onclick="submitManualBooking()">הוספת תור</button>
+    </div>
+  </div>
+</div>
+
 <div id="onboardOverlay" class="onboard-overlay">
   <div class="onboard-sheet">
     <h3>ברוכה הבאה ל"הכל בקליק" 👋</h3>
@@ -1385,6 +1523,78 @@
     document.getElementById('myDayOverlay').classList.remove('show');
   }
 
+  function openManualBookingModal(){
+    const svcSelect = document.getElementById('mbService');
+    svcSelect.innerHTML = services.map((s, i) => `<option value="${i}">${s.name} (${s.duration} דק')</option>`).join('');
+
+    const staffSelect = document.getElementById('mbStaff');
+    staffSelect.innerHTML = staff.map((s, i) => `<option value="${i}">${s.name}</option>`).join('');
+
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('mbDate').value = `${yyyy}-${mm}-${dd}`;
+    document.getElementById('mbDate').min = `${yyyy}-${mm}-${dd}`;
+    document.getElementById('mbTime').value = '';
+    document.getElementById('mbClientName').value = '';
+    document.getElementById('mbClientPhone').value = '';
+    document.getElementById('mbError').style.display = 'none';
+
+    document.getElementById('manualBookingOverlay').classList.add('show');
+  }
+
+  function closeManualBookingModal(){
+    document.getElementById('manualBookingOverlay').classList.remove('show');
+  }
+
+  function submitManualBooking(){
+    const name = document.getElementById('mbClientName').value.trim();
+    const phone = document.getElementById('mbClientPhone').value.trim();
+    const svcIdx = parseInt(document.getElementById('mbService').value);
+    const staffIdx = parseInt(document.getElementById('mbStaff').value);
+    const dateVal = document.getElementById('mbDate').value;
+    const timeVal = document.getElementById('mbTime').value;
+    const errorEl = document.getElementById('mbError');
+
+    if (!name || !dateVal || !timeVal || isNaN(svcIdx) || isNaN(staffIdx)){
+      errorEl.style.display = 'block';
+      errorEl.textContent = 'יש למלא שם, תאריך, שעה, שירות ועובדת.';
+      return;
+    }
+
+    const svc = services[svcIdx];
+    const dateParts = dateVal.split('-').map(Number);
+    const apptDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+    const dayKey = weekdayKeys[apptDate.getDay()];
+    const dur = svc.duration || 30;
+
+    const startMin = timeToMinutes(timeVal);
+    const endMin = startMin + dur;
+    const conflict = weekAppointments.some(a => {
+      if (a.day !== dayKey || a.staff !== staffIdx) return false;
+      const aStart = timeToMinutes(a.time);
+      const aEnd = aStart + a.dur;
+      return !(endMin <= aStart || startMin >= aEnd);
+    });
+    if (conflict){
+      errorEl.style.display = 'block';
+      errorEl.textContent = `יש כבר תור חופף לעובדת זו באותו זמן.`;
+      return;
+    }
+
+    weekAppointments.push({ day: dayKey, time: timeVal, dur, client: name, service: svc.name, staff: staffIdx });
+
+    if (phone && !clients.some(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, ''))){
+      clients.push({ name, phone, email: '', photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
+      if (typeof renderClients === 'function') renderClients();
+    }
+
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof renderMiniCal === 'function') renderMiniCal();
+    closeManualBookingModal();
+  }
+
   const reportData = {
     week: {
       revenue: '3,240 ₪', count: 27, avg: '120 ₪',
@@ -1411,11 +1621,22 @@
   function showReportRange(range, btn){
     document.querySelectorAll('#sub-reports .subswitcher button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    renderReports(range);
+    const customEl = document.getElementById('customRangeControls');
+    if (range === 'custom'){
+      customEl.style.display = 'block';
+      const today = new Date();
+      const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      document.getElementById('reportFromDate').value = fmt(firstOfMonth);
+      document.getElementById('reportToDate').value = fmt(today);
+      renderCustomRangeReport();
+    } else {
+      customEl.style.display = 'none';
+      renderReports(range);
+    }
   }
 
-  function renderReports(range){
-    const data = reportData[range];
+  function renderReportOutput(data){
     document.getElementById('repRevenue').textContent = data.revenue;
     document.getElementById('repCount').textContent = data.count;
     document.getElementById('repAvg').textContent = data.avg;
@@ -1434,6 +1655,9 @@
     const maxCount = Math.max(...data.popular.map(p => p.count), 1);
     const popEl = document.getElementById('popularList');
     popEl.innerHTML = '';
+    if (!data.popular.length){
+      popEl.innerHTML = '<div class="popular-row" style="color:#8A8178;">אין נתונים בטווח זה</div>';
+    }
     data.popular.forEach(p => {
       const row = document.createElement('div');
       row.className = 'popular-row';
@@ -1442,7 +1666,75 @@
       popEl.appendChild(row);
     });
   }
+
+  function renderReports(range){
+    renderReportOutput(reportData[range]);
+  }
   renderReports('week');
+
+  function renderCustomRangeReport(){
+    const fromVal = document.getElementById('reportFromDate').value;
+    const toVal = document.getElementById('reportToDate').value;
+    if (!fromVal || !toVal) return;
+
+    const fromParts = fromVal.split('-').map(Number);
+    const toParts = toVal.split('-').map(Number);
+    const fromD = new Date(fromParts[0], fromParts[1]-1, fromParts[2]);
+    const toD = new Date(toParts[0], toParts[1]-1, toParts[2]);
+    if (toD < fromD) return;
+
+    const totalDays = Math.round((toD - fromD) / 86400000) + 1;
+    const useWeekly = totalDays > 14;
+    const bars = [];
+    const popularMap = {};
+    let totalRevenue = 0, totalCount = 0;
+
+    let weekBucketStart = null, weekBucketRevenue = 0, weekIndex = 1;
+
+    for (let i = 0; i < totalDays; i++){
+      const d = new Date(fromD);
+      d.setDate(fromD.getDate() + i);
+      const dow = d.getDay();
+      const dayKey = weekdayKeys[dow];
+      const dayAppts = weekAppointments.filter(a => a.day === dayKey);
+      let dayRevenue = 0;
+
+      dayAppts.forEach(a => {
+        const svcMatch = services.find(s => s.name === a.service);
+        const price = svcMatch ? svcMatch.price : 0;
+        dayRevenue += price;
+        totalRevenue += price;
+        totalCount += 1;
+        popularMap[a.service] = (popularMap[a.service] || 0) + 1;
+      });
+
+      if (!useWeekly){
+        bars.push({ lbl: d.getDate() + '/' + (d.getMonth()+1), val: dayRevenue });
+      } else {
+        if (weekBucketStart === null) weekBucketStart = d;
+        weekBucketRevenue += dayRevenue;
+        if ((i + 1) % 7 === 0 || i === totalDays - 1){
+          bars.push({ lbl: 'שבוע ' + weekIndex, val: weekBucketRevenue });
+          weekIndex++;
+          weekBucketRevenue = 0;
+          weekBucketStart = null;
+        }
+      }
+    }
+
+    const popular = Object.entries(popularMap)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    renderReportOutput({
+      revenue: totalRevenue.toLocaleString('he-IL') + ' ₪',
+      count: totalCount,
+      avg: totalCount ? Math.round(totalRevenue / totalCount).toLocaleString('he-IL') + ' ₪' : '0 ₪',
+      bars: bars.length ? bars : [{ lbl: '', val: 0 }],
+      popular
+    });
+  }
 
   let branding = { name: 'הסלון שלי', logo: null };
 
@@ -1520,6 +1812,33 @@
   }
 
   const hebrewMonths = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+
+  function hebrewDayNumeral(n){
+    if (n === 15) return 'ט״ו';
+    if (n === 16) return 'ט״ז';
+    const onesLetters = ['', 'א','ב','ג','ד','ה','ו','ז','ח','ט'];
+    const tensLetters = ['', 'י','כ','ל'];
+    const t = Math.floor(n / 10), o = n % 10;
+    let str = tensLetters[t] + onesLetters[o];
+    if (str.length > 1){
+      str = str.slice(0, -1) + '״' + str.slice(-1);
+    } else {
+      str = str + '׳';
+    }
+    return str;
+  }
+
+  function hebrewDateStr(date){
+    try {
+      const parts = new Intl.DateTimeFormat('he-u-ca-hebrew', { day: 'numeric', month: 'long', year: 'numeric' }).formatToParts(date);
+      const dayNum = parseInt(parts.find(p => p.type === 'day').value);
+      const monthName = parts.find(p => p.type === 'month').value;
+      const yearNum = parts.find(p => p.type === 'year').value;
+      return hebrewDayNumeral(dayNum) + ' ב' + monthName + ' ' + yearNum;
+    } catch(e){
+      return '';
+    }
+  }
 
   function isBirthdayToday(birthdayStr){
     if (!birthdayStr) return false;
@@ -1818,7 +2137,7 @@
     const dow = (todayDow + i) % 7;
     const d = new Date(nowReal);
     d.setDate(nowReal.getDate() + i);
-    weekDays.push({ key: weekdayKeys[dow], label: weekdayLabels[dow], date: String(d.getDate()), dowIndex: dow });
+    weekDays.push({ key: weekdayKeys[dow], label: weekdayLabels[dow], date: String(d.getDate()), dowIndex: dow, fullDate: d });
   }
 
   let weekAppointments = [
@@ -1854,7 +2173,7 @@
     const allChip = document.createElement('div');
     allChip.className = 'staff-filter-chip' + (selectedStaffFilter === 'all' ? ' active' : '');
     allChip.innerHTML = `<div class="avatar" style="background:rgba(245,238,228,0.12); color:var(--ivory-dim);">כל</div><span>כולן</span>`;
-    allChip.onclick = () => { selectedStaffFilter = 'all'; renderStaffFilterRow(); renderWeekCal(); };
+    allChip.onclick = () => { selectedStaffFilter = 'all'; renderStaffFilterRow(); renderWeekCal(); if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal(); };
     rowEl.appendChild(allChip);
 
     staff.forEach((s, i) => {
@@ -1862,7 +2181,7 @@
       chip.className = 'staff-filter-chip' + (selectedStaffFilter === i ? ' active' : '');
       const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
       chip.innerHTML = `<div class="avatar">${avatarHtml}</div><span>${s.name}</span>`;
-      chip.onclick = () => { selectedStaffFilter = i; renderStaffFilterRow(); renderWeekCal(); };
+      chip.onclick = () => { selectedStaffFilter = i; renderStaffFilterRow(); renderWeekCal(); if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal(); };
       rowEl.appendChild(chip);
     });
   }
@@ -1884,12 +2203,14 @@
     }
     calEl.appendChild(hoursCol);
 
-    weekDays.forEach(day => {
+    weekDays.forEach((day, dayIdx) => {
       const col = document.createElement('div');
       col.className = 'cal-day-col';
+      col.id = 'weekcol-' + dayIdx;
 
       const head = document.createElement('div');
       head.className = 'cal-day-head';
+      head.title = hebrewDateStr(day.fullDate);
       head.innerHTML = `<span>${day.date}</span><b>${day.label}</b>`;
       col.appendChild(head);
 
@@ -1938,6 +2259,120 @@
 
   renderStaffFilterRow();
   renderWeekCal();
+
+  let overviewViewMode = 'week';
+  const ovInitDate = new Date();
+  let ovCalViewYear = ovInitDate.getFullYear();
+  let ovCalViewMonth = ovInitDate.getMonth();
+  let ovSelectedDate = null;
+
+  function setOverviewView(mode, btn){
+    overviewViewMode = mode;
+    document.querySelectorAll('#sub-overview .subswitcher button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const labels = { week: 'היומן השבועי', day: 'היומן היומי', month: 'היומן החודשי' };
+    document.getElementById('calSectionLabel').textContent = labels[mode];
+    document.getElementById('weekCalWrap').style.display = mode === 'week' ? 'block' : 'none';
+    document.getElementById('overviewDayWrap').style.display = mode === 'day' ? 'block' : 'none';
+    document.getElementById('overviewMonthWrap').style.display = mode === 'month' ? 'block' : 'none';
+    if (mode === 'month') renderOverviewMonthCal();
+    if (mode === 'day') renderOverviewDayView();
+  }
+
+  let ovCurrentDayDate = new Date();
+
+  function ovDayShift(delta){
+    ovCurrentDayDate.setDate(ovCurrentDayDate.getDate() + delta);
+    renderOverviewDayView();
+  }
+
+  function renderOverviewDayView(){
+    const date = ovCurrentDayDate;
+    const dow = date.getDay();
+    const dayKey = weekdayKeys[dow];
+    const isToday = sameDate(date, new Date(nowReal.getFullYear(), nowReal.getMonth(), nowReal.getDate()));
+    document.getElementById('ovDayTitle').textContent =
+      (isToday ? 'היום · ' : '') + days[dow].name + ', ' + date.getDate() + ' ב' + hebrewMonths[date.getMonth()];
+
+    const dayAppts = weekAppointments
+      .filter(a => a.day === dayKey && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
+      .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+
+    const listEl = document.getElementById('ovDayList');
+    if (!dayAppts.length){
+      listEl.innerHTML = '<p style="color:var(--ivory-dim); font-size:14px;">אין תורים ביום זה.</p>';
+      return;
+    }
+    listEl.innerHTML = '<div class="board">' + dayAppts.map(a => {
+      const empName = (staff[a.staff] && staff[a.staff].name) || '';
+      return `<div class="ov-agenda-row"><span class="t">${a.time}</span><span>${a.client} · ${a.service}</span><span style="color:var(--ivory-dim); font-size:12px;">${empName}</span></div>`;
+    }).join('') + '</div>';
+  }
+
+  function ovCalShiftMonth(delta){
+    ovCalViewMonth += delta;
+    if (ovCalViewMonth < 0){ ovCalViewMonth = 11; ovCalViewYear--; }
+    if (ovCalViewMonth > 11){ ovCalViewMonth = 0; ovCalViewYear++; }
+    renderOverviewMonthCal();
+  }
+
+  function renderOverviewMonthCal(){
+    const gridEl = document.getElementById('ovCalGrid');
+    const titleEl = document.getElementById('ovCalTitle');
+    if (!gridEl || !titleEl) return;
+    gridEl.innerHTML = '';
+    titleEl.textContent = hebrewMonths[ovCalViewMonth] + ' ' + ovCalViewYear;
+
+    const firstOfMonth = new Date(ovCalViewYear, ovCalViewMonth, 1);
+    const daysInMonth = new Date(ovCalViewYear, ovCalViewMonth + 1, 0).getDate();
+    const leadingBlanks = firstOfMonth.getDay();
+
+    for (let i = 0; i < leadingBlanks; i++){
+      const blank = document.createElement('div');
+      blank.className = 'cal-day-cell empty';
+      gridEl.appendChild(blank);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++){
+      const cellDate = new Date(ovCalViewYear, ovCalViewMonth, d);
+      const dow = cellDate.getDay();
+      const dayKey = weekdayKeys[dow];
+      const count = weekAppointments.filter(a => a.day === dayKey && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter)).length;
+
+      const cell = document.createElement('div');
+      cell.className = 'cal-day-cell';
+      if (sameDate(cellDate, todayMidnight)) cell.classList.add('today');
+      if (ovSelectedDate && sameDate(cellDate, ovSelectedDate)) cell.classList.add('selected');
+      cell.innerHTML = String(d) + (count > 0 ? `<span class="ov-count">${count}</span>` : '');
+      cell.onclick = () => {
+        ovSelectedDate = cellDate;
+        renderOverviewMonthCal();
+        renderOvDayAgenda(cellDate);
+      };
+      gridEl.appendChild(cell);
+    }
+  }
+
+  function renderOvDayAgenda(date){
+    const dow = date.getDay();
+    const dayKey = weekdayKeys[dow];
+    const labelEl = document.getElementById('ovDayAgendaLabel');
+    const listEl = document.getElementById('ovDayAgendaList');
+    labelEl.textContent = 'תורים ליום ' + days[dow].name + ', ' + date.getDate() + ' ב' + hebrewMonths[date.getMonth()] + ' (' + hebrewDateStr(date) + ')';
+
+    const dayAppts = weekAppointments
+      .filter(a => a.day === dayKey && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
+      .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+
+    if (!dayAppts.length){
+      listEl.innerHTML = '<p style="color:var(--ivory-dim); font-size:13px;">אין תורים ביום זה.</p>';
+      return;
+    }
+    listEl.innerHTML = '<div class="board">' + dayAppts.map(a => {
+      const empName = (staff[a.staff] && staff[a.staff].name) || '';
+      return `<div class="ov-agenda-row"><span class="t">${a.time}</span><span>${a.client} · ${a.service}</span><span style="color:var(--ivory-dim); font-size:12px;">${empName}</span></div>`;
+    }).join('') + '</div>';
+  }
 
   let services = [
     { name: "מניקור ג'ל", price: 120, duration: 45 },
@@ -2151,7 +2586,7 @@
 
     const dow = bookingSelectedDate.getDay();
     const dateLabel = bookingSelectedDate.getDate() + ' ב' + hebrewMonths[bookingSelectedDate.getMonth()];
-    document.getElementById('slotsLabel').textContent = 'שעות פנויות — יום ' + days[dow].name + ', ' + dateLabel;
+    document.getElementById('slotsLabel').textContent = 'שעות פנויות — יום ' + days[dow].name + ', ' + dateLabel + ' (' + hebrewDateStr(bookingSelectedDate) + ')';
   }
 
   function calShiftMonth(delta){
@@ -2273,11 +2708,31 @@
     return /^0\d{8,9}$/.test(digits);
   }
 
+  document.getElementById('bookingNameInput').addEventListener('input', function(){
+    if (this.value.trim()){
+      document.getElementById('bookingNameError').style.display = 'none';
+      this.style.borderColor = '';
+    }
+  });
+
   document.getElementById('bookingPhoneInput').addEventListener('input', function(){
     if (isValidIsraeliPhone(this.value)){
       document.getElementById('bookingPhoneError').style.display = 'none';
       this.style.borderColor = '';
     }
+    const digits = this.value.replace(/[^0-9]/g, '');
+    const welcomeEl = document.getElementById('bookingWelcomeBack');
+    const nameInput = document.getElementById('bookingNameInput');
+    if (digits.length >= 9){
+      const match = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits);
+      if (match){
+        nameInput.value = match.name;
+        welcomeEl.style.display = 'block';
+        welcomeEl.textContent = `✓ ברוכה שובך, ${match.name}! מילאנו את הפרטים שלך אוטומטית.`;
+        return;
+      }
+    }
+    welcomeEl.style.display = 'none';
   });
 
   document.querySelectorAll('input[name="reminderChannel"]').forEach(function(radio){
@@ -2291,6 +2746,17 @@
       document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">לא נבחרה שעה פנויה ליום זה — יש לבחור יום אחר עם זמינות, או שירות/עובדת אחרת.</div>`;
       return;
     }
+
+    const nameInput = document.getElementById('bookingNameInput');
+    const nameErrorEl = document.getElementById('bookingNameError');
+    if (!nameInput.value.trim()){
+      nameErrorEl.style.display = 'block';
+      nameInput.style.borderColor = 'var(--wine)';
+      nameInput.focus();
+      return;
+    }
+    nameErrorEl.style.display = 'none';
+    nameInput.style.borderColor = '';
 
     const phoneVal = document.getElementById('bookingPhoneInput').value;
     const errorEl = document.getElementById('bookingPhoneError');
@@ -2334,7 +2800,7 @@
     apptEl.innerHTML = `
       <div class="status-dot">✓ מאושר — מייל ו-SMS נשלחו</div>
       <h4>${svc ? svc.name : 'שירות'}</h4>
-      <div class="appt-meta">${bookingSelectedDate.getDate()} ב${hebrewMonths[bookingSelectedDate.getMonth()]}, ${selectedSlot}${svc ? ' · ' + svc.price + ' ש"ח' : ''}${emp ? ' · אצל ' + emp.name : ''}</div>
+      <div class="appt-meta">${bookingSelectedDate.getDate()} ב${hebrewMonths[bookingSelectedDate.getMonth()]} (${hebrewDateStr(bookingSelectedDate)}), ${selectedSlot}${svc ? ' · ' + svc.price + ' ש"ח' : ''}${emp ? ' · אצל ' + emp.name : ''}</div>
       <div class="appt-meta" style="margin-top:2px;">תזכורת באמצעות: ${reminderText}</div>
       <div class="my-appt-actions">
         <button onclick="rescheduleAppointment()">שינוי מועד</button>
@@ -2353,10 +2819,19 @@
     if (typeof renderMiniCal === 'function') renderMiniCal();
   }
 
+  function goToStep(n){
+    document.querySelectorAll('.booking-step').forEach(s => s.classList.remove('active'));
+    document.getElementById('bstep-' + n).classList.add('active');
+    document.querySelectorAll('.step-dot').forEach(d => {
+      d.classList.toggle('active', parseInt(d.dataset.step) === n);
+    });
+  }
+
   function rescheduleAppointment(){
     removeCurrentBookedAppointment();
     document.getElementById('myAppointment').style.display = 'none';
     document.getElementById('bookingFormWrap').style.display = 'block';
+    goToStep(1);
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
   }
 
