@@ -1798,29 +1798,6 @@
     closeManualBookingModal();
   }
 
-  const reportData = {
-    week: {
-      revenue: '3,240 ₪', count: 27, avg: '120 ₪',
-      bars: [
-        { lbl: 'א', val: 420 }, { lbl: 'ב', val: 610 }, { lbl: 'ג', val: 380 },
-        { lbl: 'ד', val: 540 }, { lbl: 'ה', val: 690 }, { lbl: 'ו', val: 600 }, { lbl: 'ש', val: 0 }
-      ],
-      popular: [
-        { name: "מניקור ג'ל", count: 12 }, { name: "בנייה בג'ל", count: 8 }, { name: "פדיקור", count: 7 }
-      ]
-    },
-    month: {
-      revenue: '12,860 ₪', count: 104, avg: '124 ₪',
-      bars: [
-        { lbl: 'שבוע 1', val: 2900 }, { lbl: 'שבוע 2', val: 3400 },
-        { lbl: 'שבוע 3', val: 2650 }, { lbl: 'שבוע 4', val: 3910 }
-      ],
-      popular: [
-        { name: "מניקור ג'ל", count: 46 }, { name: "בנייה בג'ל", count: 33 }, { name: "פדיקור", count: 25 }
-      ]
-    }
-  };
-
   function showReportRange(range, btn){
     document.querySelectorAll('#sub-reports .subswitcher button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -1870,29 +1847,14 @@
     });
   }
 
-  function renderReports(range){
-    renderReportOutput(reportData[range]);
-  }
-  renderReports('week');
-
-  function renderCustomRangeReport(){
-    const fromVal = document.getElementById('reportFromDate').value;
-    const toVal = document.getElementById('reportToDate').value;
-    if (!fromVal || !toVal) return;
-
-    const fromParts = fromVal.split('-').map(Number);
-    const toParts = toVal.split('-').map(Number);
-    const fromD = new Date(fromParts[0], fromParts[1]-1, fromParts[2]);
-    const toD = new Date(toParts[0], toParts[1]-1, toParts[2]);
-    if (toD < fromD) return;
-
+  function computeRealRangeReport(fromD, toD){
     const totalDays = Math.round((toD - fromD) / 86400000) + 1;
     const useWeekly = totalDays > 14;
     const bars = [];
     const popularMap = {};
     let totalRevenue = 0, totalCount = 0;
 
-    let weekBucketStart = null, weekBucketRevenue = 0, weekIndex = 1;
+    let weekBucketRevenue = 0, weekIndex = 1;
 
     for (let i = 0; i < totalDays; i++){
       const d = new Date(fromD);
@@ -1914,13 +1876,11 @@
       if (!useWeekly){
         bars.push({ lbl: d.getDate() + '/' + (d.getMonth()+1), val: dayRevenue });
       } else {
-        if (weekBucketStart === null) weekBucketStart = d;
         weekBucketRevenue += dayRevenue;
         if ((i + 1) % 7 === 0 || i === totalDays - 1){
           bars.push({ lbl: 'שבוע ' + weekIndex, val: weekBucketRevenue });
           weekIndex++;
           weekBucketRevenue = 0;
-          weekBucketStart = null;
         }
       }
     }
@@ -1930,13 +1890,41 @@
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    renderReportOutput({
+    return {
       revenue: totalRevenue.toLocaleString('he-IL') + ' ₪',
       count: totalCount,
       avg: totalCount ? Math.round(totalRevenue / totalCount).toLocaleString('he-IL') + ' ₪' : '0 ₪',
       bars: bars.length ? bars : [{ lbl: '', val: 0 }],
       popular
-    });
+    };
+  }
+
+  function renderReports(range){
+    const today = new Date();
+    let fromD, toD;
+    if (range === 'week'){
+      fromD = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
+      toD = today;
+    } else {
+      fromD = new Date(today.getFullYear(), today.getMonth(), 1);
+      toD = today;
+    }
+    renderReportOutput(computeRealRangeReport(fromD, toD));
+  }
+  renderReports('week');
+
+  function renderCustomRangeReport(){
+    const fromVal = document.getElementById('reportFromDate').value;
+    const toVal = document.getElementById('reportToDate').value;
+    if (!fromVal || !toVal) return;
+
+    const fromParts = fromVal.split('-').map(Number);
+    const toParts = toVal.split('-').map(Number);
+    const fromD = new Date(fromParts[0], fromParts[1]-1, fromParts[2]);
+    const toD = new Date(toParts[0], toParts[1]-1, toParts[2]);
+    if (toD < fromD) return;
+
+    renderReportOutput(computeRealRangeReport(fromD, toD));
   }
 
   let branding = { name: 'הסלון שלי', logo: null, phone: '' };
