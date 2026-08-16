@@ -1911,7 +1911,6 @@
     }
     renderReportOutput(computeRealRangeReport(fromD, toD));
   }
-  renderReports('week');
 
   function renderCustomRangeReport(){
     const fromVal = document.getElementById('reportFromDate').value;
@@ -2780,6 +2779,7 @@
 
   renderCategories();
   renderServices();
+  renderReports('week');
 
   let whatsNewItems = [];
 
