@@ -11,6 +11,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyDdFyCz3er-cxE0uoa5bGGTxe37cBFA12w",
@@ -22,6 +23,7 @@
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
+  const auth = firebase.auth();
 </script>
 <style>
   :root{
@@ -1206,7 +1208,7 @@
   <div class="switcher">
     <button class="active" onclick="showPanel('customer', this)"><i class="ti ti-calendar-event"></i> ללקוחה</button>
     <button onclick="showPanel('whatsnew', this)"><i class="ti ti-sparkles"></i> מה חדש</button>
-    <button onclick="showPanel('business', this)"><i class="ti ti-briefcase"></i> לבעלת העסק</button>
+    <button onclick="handleBusinessTabClick(this)"><i class="ti ti-briefcase"></i> לבעלת העסק</button>
     <button onclick="showPanel('notif', this)"><i class="ti ti-bell"></i> ההתראות</button>
   </div>
 
@@ -1313,6 +1315,7 @@
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
         <button class="template-btn" onclick="openMyDayView()">🖨️ תצוגת היום שלי</button>
         <button class="template-btn" onclick="openManualBookingModal()">➕ הוספת תור ידנית</button>
+        <button class="template-btn" onclick="doLogout()" style="margin-inline-start:auto;">🚪 התנתקות</button>
       </div>
       <div class="label" style="margin:8px 0 10px;" id="calSectionLabel">היומן השבועי</div>
       <div class="subswitcher" style="margin-bottom:1rem;">
@@ -1571,6 +1574,23 @@
       <input type="time" id="mbTime" class="field">
       <div id="mbError" style="display:none; color:var(--wine); font-size:13px;"></div>
       <button class="cta" onclick="submitManualBooking()">הוספת תור</button>
+    </div>
+  </div>
+</div>
+
+<div id="loginOverlay" class="myday-overlay">
+  <div class="myday-sheet">
+    <div class="myday-header">
+      <h3>כניסת בעלת העסק</h3>
+      <div class="myday-actions">
+        <button onclick="closeLoginOverlay()">✕ סגירה</button>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <input type="email" id="loginEmail" class="field" placeholder="אימייל">
+      <input type="password" id="loginPassword" class="field" placeholder="סיסמה">
+      <div id="loginError" style="display:none; color:var(--wine); font-size:13px;"></div>
+      <button class="cta" onclick="doLogin()">התחברות</button>
     </div>
   </div>
 </div>
@@ -3386,6 +3406,53 @@
   // this covers every edit anywhere in the app without needing to hook each one individually.
   setInterval(saveState, 4000);
   window.addEventListener('beforeunload', saveState);
+
+  /* ===== AUTH (business owner login) ===== */
+  let isLoggedIn = false;
+  let pendingBusinessBtn = null;
+
+  auth.onAuthStateChanged(user => {
+    isLoggedIn = !!user;
+  });
+
+  function handleBusinessTabClick(btn){
+    if (isLoggedIn){
+      showPanel('business', btn);
+      return;
+    }
+    pendingBusinessBtn = btn;
+    document.getElementById('loginError').style.display = 'none';
+    document.getElementById('loginOverlay').classList.add('show');
+  }
+
+  function closeLoginOverlay(){
+    document.getElementById('loginOverlay').classList.remove('show');
+  }
+
+  function doLogin(){
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errorEl = document.getElementById('loginError');
+    errorEl.style.display = 'none';
+
+    auth.signInWithEmailAndPassword(email, password)
+      .then(() => {
+        closeLoginOverlay();
+        document.getElementById('loginEmail').value = '';
+        document.getElementById('loginPassword').value = '';
+        if (pendingBusinessBtn) showPanel('business', pendingBusinessBtn);
+      })
+      .catch(err => {
+        errorEl.style.display = 'block';
+        errorEl.textContent = 'התחברות נכשלה — בדקי את המייל והסיסמה (' + err.code + ')';
+      });
+  }
+
+  function doLogout(){
+    auth.signOut().then(() => {
+      document.querySelectorAll('.switcher button')[0].click();
+    });
+  }
 </script>
 
 </body>
