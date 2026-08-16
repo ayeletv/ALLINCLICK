@@ -188,19 +188,31 @@
     color:var(--wine); margin:14px 0 6px; padding-bottom:4px;
     border-bottom:1px solid #E4DACB;
   }
-  .svc-cat-accordion{
-    display:flex; align-items:center; gap:8px;
-    margin:8px 0 0; padding:12px 14px;
-    border:1.5px solid #E4DACB;
-    border-radius:14px;
-    cursor:pointer;
-    transition:all 0.2s ease;
+  .cat-grid{
+    display:grid; grid-template-columns:repeat(2, 1fr); gap:12px;
   }
-  .svc-cat-accordion span:first-child{flex:1; font-size:14px;}
-  .svc-cat-count{font-family:'Heebo'; font-weight:400; font-size:11.5px; color:#8A8178;}
-  .svc-cat-arrow{font-size:16px; color:#8A8178; transition:transform 0.2s ease;}
-  .svc-cat-accordion.open{border-color:var(--wine); background:#FBEFEF;}
-  .svc-cat-accordion.open .svc-cat-arrow{transform:rotate(90deg); color:var(--wine);}
+  .cat-tile{
+    aspect-ratio:1;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px;
+    border:none;
+    border-radius:18px;
+    cursor:pointer;
+    transition:transform 0.15s ease, box-shadow 0.15s ease;
+    padding:10px;
+    text-align:center;
+    box-shadow:0 4px 14px rgba(0,0,0,0.15);
+  }
+  .cat-tile:hover{transform:translateY(-3px); box-shadow:0 8px 20px rgba(0,0,0,0.22);}
+  .cat-tile:active{transform:translateY(-1px);}
+  .cat-tile-name{font-family:'Suez One'; font-weight:400; font-size:17px; color:#fff;}
+  .cat-tile-count{font-size:11.5px; color:rgba(255,255,255,0.8);}
+  .cat-back-btn{
+    background:none; border:none;
+    color:var(--wine); font-family:'Heebo'; font-size:13px; font-weight:500;
+    cursor:pointer; padding:0;
+  }
+
   #svcManageList .svc-cat-header{
     color:var(--gold-soft);
     border-bottom-color:rgba(245,238,228,0.15);
@@ -218,6 +230,11 @@
   }
   .billing-notice.show{display:block;}
   .billing-notice b{display:block; margin-bottom:2px;}
+  .notice-phone-link{
+    display:inline-block; margin-top:6px;
+    color:#9B2C42; font-weight:600; text-decoration:none;
+  }
+  .notice-phone-link:hover{text-decoration:underline;}
   .svc-card{
     display:flex;
     justify-content:space-between;
@@ -1190,9 +1207,8 @@
 <body>
 
 <section class="hero">
-  <div class="eyebrow">דמו מוצר — SaaS לניהול תורים</div>
   <h1 class="serif">הכל <span>בקליק</span></h1>
-  <p class="tagline">מה שיגדיל את העסק שלך — <b>הכל במקום אחד, בלי מאמץ.</b></p>
+  <p class="tagline"><b>הכל במקום אחד, בלי מאמץ.</b></p>
   <div class="scroll-hint">
     <span>גלילה למטה</span>
     <div class="line"></div>
@@ -1200,16 +1216,11 @@
 </section>
 
 <section class="stage">
-  <div class="stage-head">
-    <div class="kicker">שלוש נקודות מבט</div>
-    <h2 class="serif">אותה מערכת, שלושה מסכים</h2>
-  </div>
-
   <div class="switcher">
-    <button class="active" onclick="showPanel('customer', this)"><i class="ti ti-calendar-event"></i> ללקוחה</button>
-    <button onclick="showPanel('whatsnew', this)"><i class="ti ti-sparkles"></i> מה חדש</button>
-    <button onclick="handleBusinessTabClick(this)"><i class="ti ti-briefcase"></i> לבעלת העסק</button>
-    <button onclick="showPanel('notif', this)"><i class="ti ti-bell"></i> ההתראות</button>
+    <button class="active" onclick="showPanel('customer', this)"><i class="ti ti-calendar-event"></i> קביעת תור</button>
+    <button onclick="showPanel('whatsnew', this)"><i class="ti ti-sparkles"></i> פינוקים חדשים 🎁</button>
+    <button id="businessTabBtn" onclick="handleBusinessTabClick(this)" style="display:none;"><i class="ti ti-briefcase"></i> לבעלת העסק</button>
+    <button id="notifTabBtn" onclick="showPanel('notif', this)" style="display:none;"><i class="ti ti-bell"></i> ההתראות</button>
   </div>
 
   <div id="panel-customer" class="panel active">
@@ -1226,12 +1237,19 @@
           </div>
 
           <div class="booking-step active" id="bstep-1">
-            <div class="label">בחירת שירות</div>
-            <div id="custSvcList"></div>
-            <div id="svcBillingNotice" class="billing-notice"></div>
-            <div class="label" style="margin-top:18px;">בחירת עובדת</div>
-            <div class="staff-picker" id="staffPicker"></div>
-            <button class="cta" onclick="goToStep(2)">המשך</button>
+            <div id="catGridView">
+              <div class="label">בחירת טיפול</div>
+              <div class="cat-grid" id="catGrid"></div>
+            </div>
+            <div id="catServicesView" style="display:none;">
+              <button class="cat-back-btn" onclick="showCategoryGrid()">‹ חזרה לקטגוריות</button>
+              <div class="label" id="catServicesLabel" style="margin-top:12px;">בחירת שירות</div>
+              <div id="custSvcList"></div>
+              <div id="svcBillingNotice" class="billing-notice"></div>
+              <div class="label" style="margin-top:18px;">בחירת עובדת</div>
+              <div class="staff-picker" id="staffPicker"></div>
+              <button class="cta" onclick="goToStep(2)">המשך</button>
+            </div>
           </div>
 
           <div class="booking-step" id="bstep-2">
@@ -1315,6 +1333,7 @@
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
         <button class="template-btn" onclick="openMyDayView()">🖨️ תצוגת היום שלי</button>
         <button class="template-btn" onclick="openManualBookingModal()">➕ הוספת תור ידנית</button>
+        <button class="template-btn" onclick="openChangePasswordOverlay()">🔑 שינוי סיסמה</button>
         <button class="template-btn" onclick="doLogout()" style="margin-inline-start:auto;">🚪 התנתקות</button>
       </div>
       <div class="label" style="margin:8px 0 10px;" id="calSectionLabel">היומן השבועי</div>
@@ -1462,6 +1481,8 @@
         <div style="flex:1; min-width:200px;">
           <div class="label" style="margin-bottom:6px;">שם העסק</div>
           <input type="text" id="bizNameInput" class="field-dark" placeholder="שם העסק שלך" value="הסלון שלי" oninput="updateBranding()">
+          <div class="label" style="margin:12px 0 6px;">טלפון ליצירת קשר (להתייעצות)</div>
+          <input type="tel" id="bizPhoneInput" class="field-dark" placeholder="050-0000000" oninput="updateBranding()">
         </div>
       </div>
       <div class="label" style="margin:22px 0 10px;">כך זה ייראה ללקוחה</div>
@@ -1542,6 +1563,7 @@
 
 <footer>
   נבנה כדמו ל<span class="brand">הכל בקליק</span> — מערכת תורים עצמאית ללא שיחות טלפון
+  <div style="margin-top:10px;"><a href="#" onclick="openLoginOverlayDirect(); return false;" style="color:var(--ivory-dim); font-size:11px; text-decoration:underline;">כניסת בעלת עסק</a></div>
 </footer>
 
 <div id="myDayOverlay" class="myday-overlay">
@@ -1595,7 +1617,26 @@
   </div>
 </div>
 
-<div id="onboardOverlay" class="onboard-overlay">
+<div id="changePasswordOverlay" class="myday-overlay">
+  <div class="myday-sheet">
+    <div class="myday-header">
+      <h3>שינוי סיסמה</h3>
+      <div class="myday-actions">
+        <button onclick="closeChangePasswordOverlay()">✕ סגירה</button>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <input type="password" id="cpCurrentPassword" class="field" placeholder="סיסמה נוכחית">
+      <input type="password" id="cpNewPassword" class="field" placeholder="סיסמה חדשה">
+      <input type="password" id="cpConfirmPassword" class="field" placeholder="אימות סיסמה חדשה">
+      <div id="cpError" style="display:none; color:var(--wine); font-size:13px;"></div>
+      <div id="cpSuccess" style="display:none; color:#3E5C36; font-size:13px;"></div>
+      <button class="cta" onclick="doChangePassword()">עדכון סיסמה</button>
+    </div>
+  </div>
+</div>
+
+<div id="onboardOverlay" class="onboard-overlay hide">
   <div class="onboard-sheet">
     <h3>ברוכה הבאה ל"הכל בקליק" 👋</h3>
     <p class="onboard-sub">הנה מה שכל טאב עושה:</p>
@@ -1898,11 +1939,13 @@
     });
   }
 
-  let branding = { name: 'הסלון שלי', logo: null };
+  let branding = { name: 'הסלון שלי', logo: null, phone: '' };
 
   function updateBranding(){
     branding.name = document.getElementById('bizNameInput').value.trim() || 'הסלון שלי';
+    branding.phone = document.getElementById('bizPhoneInput').value.trim();
     renderBranding();
+    if (typeof renderServices === 'function') renderServices();
   }
 
   function handleLogoUpload(event){
@@ -1931,14 +1974,15 @@
     document.getElementById('phoneBrand').innerHTML = `
       <div class="logo-dot">${logoHtml}</div>
       <span class="biz-name">${branding.name}</span>`;
+
+    const nameInputEl = document.getElementById('bizNameInput');
+    const phoneInputEl = document.getElementById('bizPhoneInput');
+    if (nameInputEl && document.activeElement !== nameInputEl) nameInputEl.value = branding.name;
+    if (phoneInputEl && document.activeElement !== phoneInputEl) phoneInputEl.value = branding.phone || '';
   }
   renderBranding();
 
-  let clients = [
-    { name: "נועה כהן", phone: "050-1234567", email: "noa.cohen@example.com", photo: null, visits: 6, daysSinceVisit: 7, note: "מעדיפה גוונים בהירים", birthday: (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 27); return d.toISOString().slice(0,10); })() },
-    { name: "שירה לוי", phone: "052-7654321", email: "shira.levi@example.com", photo: null, visits: 2, daysSinceVisit: 34, note: "", birthday: "1994-11-03" },
-    { name: "מאיה אזולאי", phone: "053-9988776", email: "maya.az@example.com", photo: null, visits: 9, daysSinceVisit: 60, note: "לקוחה ותיקה", birthday: "1988-02-19" }
-  ];
+  let clients = [];
   let newClientPhoto = null;
   let inactivityThresholdDays = 21;
 
@@ -2240,10 +2284,7 @@
     ];
   }
 
-  let staff = [
-    { name: "דנה", role: "מניקוריסטית ראשית", photo: null, hours: makeDefaultHours() },
-    { name: "מאיה", role: "פדיקור וטיפולי SPA", photo: null, hours: makeDefaultHours() }
-  ];
+  let staff = [];
   let newStaffPhoto = null;
   let selectedStaffIndex = 0;
 
@@ -2342,24 +2383,7 @@
     weekDays.push({ key: weekdayKeys[dow], label: weekdayLabels[dow], date: String(d.getDate()), dowIndex: dow, fullDate: d });
   }
 
-  let weekAppointments = [
-    { day: 'sun', time: '09:30', dur: 45, client: 'אורית', service: 'מניקור', staff: 0 },
-    { day: 'sun', time: '09:15', dur: 60, client: 'ליזי', service: 'בנייה', staff: 1 },
-    { day: 'sun', time: '10:30', dur: 45, client: 'רעות', service: 'פדיקור', staff: 0 },
-    { day: 'sun', time: '11:30', dur: 30, client: 'שירה', service: "לק ג'ל", staff: 2 },
-    { day: 'mon', time: '13:00', dur: 45, client: 'תהילה', service: 'מניקור', staff: 1 },
-    { day: 'mon', time: '14:00', dur: 45, client: 'רבקה', service: 'פדיקור', staff: 0 },
-    { day: 'mon', time: '12:30', dur: 60, client: 'חיה', service: 'בנייה', staff: 2 },
-    { day: 'tue', time: '09:00', dur: 45, client: 'שרי', service: 'אפילציה', staff: 1 },
-    { day: 'tue', time: '10:15', dur: 30, client: 'קיילה', service: "לק ג'ל", staff: 0 },
-    { day: 'tue', time: '11:30', dur: 45, client: 'מיכל', service: 'אפילציה', staff: 2 },
-    { day: 'wed', time: '09:30', dur: 45, client: 'שרה', service: 'מניקור', staff: 0 },
-    { day: 'wed', time: '11:00', dur: 60, client: 'חני', service: 'בנייה', staff: 1 },
-    { day: 'thu', time: '09:00', dur: 45, client: 'דסי', service: 'אפילציה', staff: 2 },
-    { day: 'thu', time: '09:30', dur: 30, client: 'הודיה', service: "לק ג'ל", staff: 0 },
-    { day: 'fri', time: '08:30', dur: 45, client: 'תמר', service: 'מניקור', staff: 1 },
-    { day: 'fri', time: '10:00', dur: 45, client: 'בתיה', service: 'פדיקור', staff: 0 }
-  ];
+  let weekAppointments = [];
 
   let selectedStaffFilter = 'all';
 
@@ -2587,14 +2611,9 @@
     }).join('') + '</div>';
   }
 
-  let categories = ["לייזר", "טיפול פנים", "מניקור ופדיקור"];
+  let categories = [];
 
-  let services = [
-    { name: "מניקור ג'ל", price: 120, duration: 45, category: "מניקור ופדיקור" },
-    { name: "בנייה בג'ל", price: 180, duration: 60, category: "מניקור ופדיקור" },
-    { name: "פדיקור", price: 90, duration: 45, category: "מניקור ופדיקור" },
-    { name: "לייזר - אזור קטן", price: 40, duration: 5, category: "לייזר" }
-  ];
+  let services = [];
   let selectedSvcIndex = 0;
 
   function renderCategoryOptions(){
@@ -2639,49 +2658,90 @@
     renderCategories();
   }
 
-  let expandedCategory = null;
+  let selectedCategoryForBooking = null;
 
-  function renderServices(){
-    const custList = document.getElementById('custSvcList');
-    custList.innerHTML = '';
+  const catTilePalette = ['#9B2C42', '#C9A227', '#3F6B5C', '#B5654B', '#5B7C99', '#8B5FA3'];
 
-    const selSvcNow = services[selectedSvcIndex];
-    if (expandedCategory === null && selSvcNow) expandedCategory = selSvcNow.category;
-
+  function renderCategoryGrid(){
+    const gridEl = document.getElementById('catGrid');
+    if (!gridEl) return;
+    gridEl.innerHTML = '';
+    let colorIdx = 0;
     categories.forEach(cat => {
       const catServices = services.filter(s => s.category === cat);
       if (!catServices.length) return;
-      const isOpen = expandedCategory === cat;
-
-      const header = document.createElement('div');
-      header.className = 'svc-cat-header svc-cat-accordion' + (isOpen ? ' open' : '');
-      header.innerHTML = `<span>${cat}</span><span class="svc-cat-count">${catServices.length} טיפולים</span><span class="svc-cat-arrow">›</span>`;
-      header.onclick = () => {
-        expandedCategory = isOpen ? null : cat;
-        renderServices();
-      };
-      custList.appendChild(header);
-
-      if (isOpen){
-        catServices.forEach(s => {
-          const i = services.indexOf(s);
-          const el = document.createElement('div');
-          el.className = 'svc-card' + (i === selectedSvcIndex ? ' selected' : '');
-          el.innerHTML = `<span>${s.name}</span><span>${s.price} ש"ח · ${s.duration} דק'</span>`;
-          el.onclick = () => { selectedSvcIndex = i; renderServices(); if (typeof renderAvailableSlots === 'function') renderAvailableSlots(); if (typeof renderMiniCal === 'function') renderMiniCal(); };
-          custList.appendChild(el);
-        });
-      }
+      const tile = document.createElement('div');
+      tile.className = 'cat-tile';
+      tile.style.background = catTilePalette[colorIdx % catTilePalette.length];
+      colorIdx++;
+      tile.innerHTML = `<span class="cat-tile-name">${cat}</span><span class="cat-tile-count">${catServices.length} טיפולים</span>`;
+      tile.onclick = () => showCategoryServices(cat);
+      gridEl.appendChild(tile);
     });
+  }
 
+  function showCategoryGrid(){
+    selectedCategoryForBooking = null;
+    const gridView = document.getElementById('catGridView');
+    const svcView = document.getElementById('catServicesView');
+    if (gridView) gridView.style.display = 'block';
+    if (svcView) svcView.style.display = 'none';
+  }
+
+  function showCategoryServices(cat){
+    selectedCategoryForBooking = cat;
+    const gridView = document.getElementById('catGridView');
+    const svcView = document.getElementById('catServicesView');
+    if (gridView) gridView.style.display = 'none';
+    if (svcView) svcView.style.display = 'block';
+    const labelEl = document.getElementById('catServicesLabel');
+    if (labelEl) labelEl.textContent = cat;
+    renderServiceListForCategory(cat);
+  }
+
+  function renderServiceListForCategory(cat){
+    const custList = document.getElementById('custSvcList');
+    if (!custList) return;
+    custList.innerHTML = '';
+    services.forEach((s, i) => {
+      if (s.category !== cat) return;
+      const el = document.createElement('div');
+      el.className = 'svc-card' + (i === selectedSvcIndex ? ' selected' : '');
+      el.innerHTML = `<span>${s.name}</span><span>${s.price} ש"ח · ${s.duration} דק'</span>`;
+      el.onclick = () => {
+        selectedSvcIndex = i;
+        renderServiceListForCategory(cat);
+        if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+        if (typeof renderMiniCal === 'function') renderMiniCal();
+      };
+      custList.appendChild(el);
+    });
+    updateBillingNotice();
+  }
+
+  function updateBillingNotice(){
     const noticeEl = document.getElementById('svcBillingNotice');
-    if (noticeEl){
-      const selSvc = services[selectedSvcIndex];
-      if (selSvc){
-        noticeEl.classList.add('show');
-        noticeEl.innerHTML = `<b>לתשומת ליבך:</b>הטיפול יחויב לפי הבחירה שלך — ${selSvc.name}, ${selSvc.duration} דק׳, ${selSvc.price} ש"ח. אם יש לך ספק לגבי משך הטיפול המתאים לך, מוזמנת להתקשר להתייעצות לפני קביעת התור.`;
+    if (!noticeEl) return;
+    const selSvc = services[selectedSvcIndex];
+    if (selSvc){
+      noticeEl.classList.add('show');
+      const phoneLink = branding.phone
+        ? ` <a href="tel:${branding.phone.replace(/[^0-9+]/g,'')}" class="notice-phone-link">📞 ${branding.phone}</a>`
+        : '';
+      noticeEl.innerHTML = `<b>לתשומת ליבך:</b>הטיפול יחויב לפי הבחירה שלך — ${selSvc.name}, ${selSvc.duration} דק׳, ${selSvc.price} ש"ח. אם יש לך ספק לגבי משך הטיפול המתאים לך, מוזמנת להתקשר להתייעצות לפני קביעת התור.${phoneLink}`;
+    } else {
+      noticeEl.classList.remove('show');
+    }
+  }
+
+  function renderServices(){
+    renderCategoryGrid();
+    if (selectedCategoryForBooking){
+      const stillHasServices = services.some(s => s.category === selectedCategoryForBooking);
+      if (stillHasServices){
+        renderServiceListForCategory(selectedCategoryForBooking);
       } else {
-        noticeEl.classList.remove('show');
+        showCategoryGrid();
       }
     }
 
@@ -2733,11 +2793,7 @@
   renderCategories();
   renderServices();
 
-  let whatsNewItems = [
-    { title: "לק ג'ל בגוונים חדשים לקיץ", desc: "הגיעה קולקציה חדשה של 12 גוונים — אפשר לבחור בזמן קביעת התור.", badge: true },
-    { title: "טיפול פרפין לידיים", desc: 'שירות חדש שמרכך ומזין — 15 דקות, תוספת ל-25 ש"ח לכל שירות ידיים.', badge: true },
-    { title: "שעות פתיחה מורחבות בימי שני", desc: "מעכשיו אפשר לקבוע תור בימי שני גם עד השעה 20:00.", badge: false }
-  ];
+  let whatsNewItems = [];
 
   function renderWhatsNew(){
     const custEl = document.getElementById('whatsNewList');
@@ -3280,12 +3336,7 @@
     renderInventory();
   }
 
-  let inventory = [
-    { name: "לק ג'ל אדום", stock: 6, threshold: 8 },
-    { name: "אצטון", stock: 1, threshold: 3 },
-    { name: "פילים חד\"פ", stock: 60, threshold: 20 },
-    { name: "כפפות (זוגות)", stock: 10, threshold: 15 }
-  ];
+  let inventory = [];
 
   function renderInventory(){
     const listEl = document.getElementById('invList');
@@ -3413,6 +3464,10 @@
 
   auth.onAuthStateChanged(user => {
     isLoggedIn = !!user;
+    const btn = document.getElementById('businessTabBtn');
+    if (btn) btn.style.display = isLoggedIn ? '' : 'none';
+    const notifBtn = document.getElementById('notifTabBtn');
+    if (notifBtn) notifBtn.style.display = isLoggedIn ? '' : 'none';
   });
 
   function handleBusinessTabClick(btn){
@@ -3425,9 +3480,21 @@
     document.getElementById('loginOverlay').classList.add('show');
   }
 
+  function openLoginOverlayDirect(){
+    if (isLoggedIn){
+      handleBusinessTabClick(document.getElementById('businessTabBtn'));
+      return;
+    }
+    pendingBusinessBtn = document.getElementById('businessTabBtn');
+    document.getElementById('loginError').style.display = 'none';
+    document.getElementById('loginOverlay').classList.add('show');
+  }
+
   function closeLoginOverlay(){
     document.getElementById('loginOverlay').classList.remove('show');
   }
+
+  let hasShownOnboarding = false;
 
   function doLogin(){
     const email = document.getElementById('loginEmail').value.trim();
@@ -3441,6 +3508,10 @@
         document.getElementById('loginEmail').value = '';
         document.getElementById('loginPassword').value = '';
         if (pendingBusinessBtn) showPanel('business', pendingBusinessBtn);
+        if (!hasShownOnboarding){
+          hasShownOnboarding = true;
+          document.getElementById('onboardOverlay').classList.remove('hide');
+        }
       })
       .catch(err => {
         errorEl.style.display = 'block';
@@ -3452,6 +3523,66 @@
     auth.signOut().then(() => {
       document.querySelectorAll('.switcher button')[0].click();
     });
+  }
+
+  function openChangePasswordOverlay(){
+    document.getElementById('cpCurrentPassword').value = '';
+    document.getElementById('cpNewPassword').value = '';
+    document.getElementById('cpConfirmPassword').value = '';
+    document.getElementById('cpError').style.display = 'none';
+    document.getElementById('cpSuccess').style.display = 'none';
+    document.getElementById('changePasswordOverlay').classList.add('show');
+  }
+
+  function closeChangePasswordOverlay(){
+    document.getElementById('changePasswordOverlay').classList.remove('show');
+  }
+
+  function doChangePassword(){
+    const currentPassword = document.getElementById('cpCurrentPassword').value;
+    const newPassword = document.getElementById('cpNewPassword').value;
+    const confirmPassword = document.getElementById('cpConfirmPassword').value;
+    const errorEl = document.getElementById('cpError');
+    const successEl = document.getElementById('cpSuccess');
+    errorEl.style.display = 'none';
+    successEl.style.display = 'none';
+
+    const user = auth.currentUser;
+    if (!user){
+      errorEl.style.display = 'block';
+      errorEl.textContent = 'את לא מחוברת כרגע.';
+      return;
+    }
+    if (!currentPassword || !newPassword || !confirmPassword){
+      errorEl.style.display = 'block';
+      errorEl.textContent = 'יש למלא את כל השדות.';
+      return;
+    }
+    if (newPassword.length < 6){
+      errorEl.style.display = 'block';
+      errorEl.textContent = 'הסיסמה החדשה חייבת להכיל לפחות 6 תווים.';
+      return;
+    }
+    if (newPassword !== confirmPassword){
+      errorEl.style.display = 'block';
+      errorEl.textContent = 'הסיסמה החדשה ואימות הסיסמה אינם תואמים.';
+      return;
+    }
+
+    const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+    user.reauthenticateWithCredential(credential)
+      .then(() => user.updatePassword(newPassword))
+      .then(() => {
+        successEl.style.display = 'block';
+        successEl.textContent = 'הסיסמה עודכנה בהצלחה!';
+        document.getElementById('cpCurrentPassword').value = '';
+        document.getElementById('cpNewPassword').value = '';
+        document.getElementById('cpConfirmPassword').value = '';
+      })
+      .catch(err => {
+        errorEl.style.display = 'block';
+        errorEl.textContent = 'עדכון נכשל — ' + (err.code === 'auth/wrong-password' ? 'הסיסמה הנוכחית שגויה.' : err.code);
+      });
   }
 </script>
 
