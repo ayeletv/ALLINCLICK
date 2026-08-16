@@ -186,6 +186,19 @@
     color:var(--wine); margin:14px 0 6px; padding-bottom:4px;
     border-bottom:1px solid #E4DACB;
   }
+  .svc-cat-accordion{
+    display:flex; align-items:center; gap:8px;
+    margin:8px 0 0; padding:12px 14px;
+    border:1.5px solid #E4DACB;
+    border-radius:14px;
+    cursor:pointer;
+    transition:all 0.2s ease;
+  }
+  .svc-cat-accordion span:first-child{flex:1; font-size:14px;}
+  .svc-cat-count{font-family:'Heebo'; font-weight:400; font-size:11.5px; color:#8A8178;}
+  .svc-cat-arrow{font-size:16px; color:#8A8178; transition:transform 0.2s ease;}
+  .svc-cat-accordion.open{border-color:var(--wine); background:#FBEFEF;}
+  .svc-cat-accordion.open .svc-cat-arrow{transform:rotate(90deg); color:var(--wine);}
   #svcManageList .svc-cat-header{
     color:var(--gold-soft);
     border-bottom-color:rgba(245,238,228,0.15);
@@ -2606,24 +2619,39 @@
     renderCategories();
   }
 
+  let expandedCategory = null;
+
   function renderServices(){
     const custList = document.getElementById('custSvcList');
     custList.innerHTML = '';
+
+    const selSvcNow = services[selectedSvcIndex];
+    if (expandedCategory === null && selSvcNow) expandedCategory = selSvcNow.category;
+
     categories.forEach(cat => {
       const catServices = services.filter(s => s.category === cat);
       if (!catServices.length) return;
+      const isOpen = expandedCategory === cat;
+
       const header = document.createElement('div');
-      header.className = 'svc-cat-header';
-      header.textContent = cat;
+      header.className = 'svc-cat-header svc-cat-accordion' + (isOpen ? ' open' : '');
+      header.innerHTML = `<span>${cat}</span><span class="svc-cat-count">${catServices.length} טיפולים</span><span class="svc-cat-arrow">›</span>`;
+      header.onclick = () => {
+        expandedCategory = isOpen ? null : cat;
+        renderServices();
+      };
       custList.appendChild(header);
-      catServices.forEach(s => {
-        const i = services.indexOf(s);
-        const el = document.createElement('div');
-        el.className = 'svc-card' + (i === selectedSvcIndex ? ' selected' : '');
-        el.innerHTML = `<span>${s.name}</span><span>${s.price} ש"ח · ${s.duration} דק'</span>`;
-        el.onclick = () => { selectedSvcIndex = i; renderServices(); if (typeof renderAvailableSlots === 'function') renderAvailableSlots(); if (typeof renderMiniCal === 'function') renderMiniCal(); };
-        custList.appendChild(el);
-      });
+
+      if (isOpen){
+        catServices.forEach(s => {
+          const i = services.indexOf(s);
+          const el = document.createElement('div');
+          el.className = 'svc-card' + (i === selectedSvcIndex ? ' selected' : '');
+          el.innerHTML = `<span>${s.name}</span><span>${s.price} ש"ח · ${s.duration} דק'</span>`;
+          el.onclick = () => { selectedSvcIndex = i; renderServices(); if (typeof renderAvailableSlots === 'function') renderAvailableSlots(); if (typeof renderMiniCal === 'function') renderMiniCal(); };
+          custList.appendChild(el);
+        });
+      }
     });
 
     const noticeEl = document.getElementById('svcBillingNotice');
