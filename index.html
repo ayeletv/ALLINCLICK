@@ -1326,9 +1326,9 @@
 
     <div id="sub-overview" class="subpanel active">
       <div class="stat-row">
-        <div class="stat"><div class="num mono">7</div><div class="lbl">תורים היום</div></div>
-        <div class="stat"><div class="num mono">3</div><div class="lbl">מקומות פנויים</div></div>
-        <div class="stat"><div class="num mono">890 ₪</div><div class="lbl">הכנסה צפויה</div></div>
+        <div class="stat"><div class="num mono" id="statApptsToday">0</div><div class="lbl">תורים היום</div></div>
+        <div class="stat"><div class="num mono" id="statOpenSlots">0</div><div class="lbl">מקומות פנויים</div></div>
+        <div class="stat"><div class="num mono" id="statRevenue">0 ₪</div><div class="lbl">הכנסה צפויה</div></div>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
         <button class="template-btn" onclick="openMyDayView()">🖨️ תצוגת היום שלי</button>
@@ -1480,7 +1480,7 @@
         <input type="file" id="logoFile" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
         <div style="flex:1; min-width:200px;">
           <div class="label" style="margin-bottom:6px;">שם העסק</div>
-          <input type="text" id="bizNameInput" class="field-dark" placeholder="שם העסק שלך" value="הסלון שלי" oninput="updateBranding()">
+          <input type="text" id="bizNameInput" class="field-dark" placeholder="שם העסק שלך" value="" oninput="updateBranding()">
           <div class="label" style="margin:12px 0 6px;">טלפון ליצירת קשר (להתייעצות)</div>
           <input type="tel" id="bizPhoneInput" class="field-dark" placeholder="050-0000000" oninput="updateBranding()">
         </div>
@@ -1551,11 +1551,11 @@
       <div class="notif-card">
         <div class="notif-tag">מייל אוטומטי</div>
         <h4>התור שלך אושר</h4>
-        <p>היי נועה, נקבע לך תור למניקור ג'ל ביום שלישי בשעה 09:00. לביטול או שינוי מועד, לחצי כאן.</p>
+        <p>היי [שם הלקוחה], נקבע לך תור ל[שם השירות] ביום שלישי בשעה 09:00. לביטול או שינוי מועד, לחצי כאן.</p>
       </div>
       <div class="notif-card">
         <div class="notif-tag">SMS תזכורת</div>
-        <div class="sms-bubble">תזכורת: מחר 09:00 תור למניקור ג'ל. להגעה השיבי 1, לביטול השיבי 2.</div>
+        <div class="sms-bubble">תזכורת: מחר 09:00 תור ל[שם השירות]. להגעה השיבי 1, לביטול השיבי 2.</div>
       </div>
     </div>
   </div>
@@ -1926,7 +1926,7 @@
     renderReportOutput(computeRealRangeReport(fromD, toD));
   }
 
-  let branding = { name: 'הסלון שלי', logo: null, phone: '' };
+  let branding = { name: '', logo: null, phone: '' };
 
   function updateBranding(){
     branding.name = document.getElementById('bizNameInput').value.trim() || 'הסלון שלי';
@@ -2478,10 +2478,51 @@
       col.appendChild(body);
       calEl.appendChild(col);
     });
+
+    renderOverviewStats();
+  }
+
+  function renderOverviewStats(){
+    const apptsEl = document.getElementById('statApptsToday');
+    const slotsEl2 = document.getElementById('statOpenSlots');
+    const revEl = document.getElementById('statRevenue');
+    if (!apptsEl || !slotsEl2 || !revEl) return;
+
+    const now = new Date();
+    const dow = now.getDay();
+    const dayKey = weekdayKeys[dow];
+
+    const todaysAppts = weekAppointments.filter(a => a.day === dayKey);
+    const revenue = todaysAppts.reduce((sum, a) => {
+      const svcMatch = services.find(s => s.name === a.service);
+      return sum + (svcMatch ? svcMatch.price : 0);
+    }, 0);
+
+    let openSlots = 0;
+    staff.forEach((s, idx) => {
+      const hoursToday = s.hours && s.hours[dow];
+      if (!hoursToday || !hoursToday.open) return;
+      const openMin = timeToMinutes(hoursToday.from);
+      const closeMin = timeToMinutes(hoursToday.to);
+      const busy = weekAppointments
+        .filter(a => a.day === dayKey && a.staff === idx)
+        .map(a => {
+          const s2 = timeToMinutes(a.time);
+          return [s2, s2 + a.dur];
+        });
+      for (let t = openMin; t + 30 <= closeMin; t += 30){
+        const end = t + 30;
+        const free = busy.every(([bs, be]) => end <= bs || t >= be);
+        if (free) openSlots++;
+      }
+    });
+
+    apptsEl.textContent = todaysAppts.length;
+    slotsEl2.textContent = openSlots;
+    revEl.textContent = revenue.toLocaleString('he-IL') + ' ₪';
   }
 
   renderStaffFilterRow();
-  renderWeekCal();
   renderClients();
 
   let overviewViewMode = 'week';
@@ -2780,6 +2821,7 @@
   renderCategories();
   renderServices();
   renderReports('week');
+  renderWeekCal();
 
   let whatsNewItems = [];
 
