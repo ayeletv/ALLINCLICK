@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>הכל בקליק — תורים בלי לחכות בתור</title>
+<title>רותי זולברג — מכון קוסמטיקה ויופי | קביעת תורים אונליין</title>
+<meta name="description" content="רותי זולברג, מכון קוסמטיקה ויופי — טיפולי פנים, אפילציה, וצבע. קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Suez+One&family=Heebo:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -94,6 +95,17 @@
     animation:fadeUp 0.9s ease forwards 0.4s;
   }
   .hero .tagline b{color:var(--ivory); font-weight:500;}
+  .hero-biz-name{
+    font-family:'Suez One', serif;
+    font-weight:400;
+    font-size:clamp(20px, 3vw, 30px);
+    letter-spacing:0;
+    color:var(--gold-soft);
+    margin-top:1.2rem;
+    opacity:0;
+    animation:fadeUp 0.9s ease forwards 0.5s;
+  }
+  .hero-biz-name.show{display:block !important;}
   .scroll-hint{
     margin-top:4rem;
     font-size:13px;
@@ -1209,6 +1221,7 @@
 <section class="hero">
   <h1 class="serif">הכל <span>בקליק</span></h1>
   <p class="tagline"><b>הכל במקום אחד, בלי מאמץ.</b></p>
+  <p class="hero-biz-name" id="heroBizName" style="display:none;"></p>
   <div class="scroll-hint">
     <span>גלילה למטה</span>
     <div class="line"></div>
@@ -1562,7 +1575,7 @@
 </section>
 
 <footer>
-  נבנה כדמו ל<span class="brand">הכל בקליק</span> — מערכת תורים עצמאית ללא שיחות טלפון
+  <span class="brand">הכל בקליק</span> — ניהול תורים, לקוחות וצוות במקום אחד
   <div style="margin-top:10px;"><a href="#" onclick="openLoginOverlayDirect(); return false;" style="color:var(--ivory-dim); font-size:11px; text-decoration:underline;">כניסת בעלת עסק</a></div>
 </footer>
 
@@ -1966,6 +1979,16 @@
     const phoneInputEl = document.getElementById('bizPhoneInput');
     if (nameInputEl && document.activeElement !== nameInputEl) nameInputEl.value = branding.name;
     if (phoneInputEl && document.activeElement !== phoneInputEl) phoneInputEl.value = branding.phone || '';
+
+    const heroBizNameEl = document.getElementById('heroBizName');
+    if (heroBizNameEl){
+      if (branding.name && branding.name.trim()){
+        heroBizNameEl.textContent = branding.name.trim();
+        heroBizNameEl.classList.add('show');
+      } else {
+        heroBizNameEl.classList.remove('show');
+      }
+    }
   }
   renderBranding();
 
