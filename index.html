@@ -1941,6 +1941,17 @@
 
   let branding = { name: '', logo: null, phone: '' };
 
+  function sendEmail(to, subject, text){
+    if (!to) return;
+    const fromName = (branding.name || 'הכל בקליק').trim();
+    const fromAddress = 'appointments@rutizolberg.com';
+    db.collection('mail').add({
+      to: to,
+      from: `${fromName} <${fromAddress}>`,
+      message: { subject: subject, text: text }
+    }).catch(err => console.error('Email send failed:', err));
+  }
+
   function updateBranding(){
     branding.name = document.getElementById('bizNameInput').value.trim() || 'הסלון שלי';
     branding.phone = document.getElementById('bizPhoneInput').value.trim();
@@ -2004,6 +2015,7 @@
   renderBranding();
 
   let clients = [];
+  const birthdayEmailsSentToday = new Set();
   let newClientPhoto = null;
   let inactivityThresholdDays = 21;
 
@@ -2022,10 +2034,15 @@
 
   function sendMissYouMessage(i){
     const c = clients[i];
+    if (c.email){
+      sendEmail(c.email, 'מתגעגעים אלייך!', `היי ${c.name}, שמנו לב שלא ראינו אותך כבר זמן מה — נשמח לראותך שוב בקרוב!`);
+    }
     const resultEl = document.getElementById('clientMissYouResult-' + i);
     if (resultEl){
       resultEl.style.display = 'block';
-      resultEl.textContent = `✓ נשלחה הודעת "מתגעגעים אלייך" ל-${c.name} — במייל (עם תמונה) וב-SMS (טקסט)`;
+      resultEl.textContent = c.email
+        ? `✓ נשלחה הודעת "מתגעגעים אלייך" ל-${c.name} במייל`
+        : `לא נשלחה הודעה — אין כתובת מייל שמורה ל-${c.name}`;
     }
   }
 
@@ -2035,7 +2052,7 @@
       .filter(({ c }) => c.daysSinceVisit !== null && c.daysSinceVisit !== undefined && c.daysSinceVisit >= inactivityThresholdDays);
     inactiveIdx.forEach(({ i }) => sendMissYouMessage(i));
     const alertEl = document.getElementById('missYouAlert');
-    alertEl.innerHTML = `✓ &nbsp;<span>נשלחה הודעת "מתגעגעים אלייך" ל-${inactiveIdx.length} לקוחות — במייל (עם תמונה) וב-SMS (טקסט).</span>`;
+    alertEl.innerHTML = `✓ &nbsp;<span>נשלחה הודעת "מתגעגעים אלייך" ל-${inactiveIdx.length} לקוחות (למי שיש כתובת מייל שמורה).</span>`;
   }
 
   const hebrewMonths = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
@@ -2100,7 +2117,14 @@
       const isInactive = c.daysSinceVisit !== null && c.daysSinceVisit !== undefined && c.daysSinceVisit >= inactivityThresholdDays;
       if (isInactive) inactiveClients.push(c.name);
       const isBday = isBirthdayToday(c.birthday);
-      if (isBday) birthdayClients.push(c.name);
+      if (isBday){
+        birthdayClients.push(c.name);
+        const todayKey = c.name + '-' + new Date().toISOString().slice(0, 10);
+        if (c.email && !birthdayEmailsSentToday.has(todayKey)){
+          birthdayEmailsSentToday.add(todayKey);
+          sendEmail(c.email, 'מזל טוב מ' + (branding.name || 'הכל בקליק') + '!', `היי ${c.name}, מזל טוב ליום ההולדת שלך! מאחלים לך יום נפלא, ומחכים לראותך אצלנו בקרוב.`);
+        }
+      }
       if (searchTerm){
         const nameMatch = c.name.toLowerCase().includes(searchTerm);
         const phoneMatch = (c.phone || '').replace(/[^0-9]/g, '').includes(searchTerm.replace(/[^0-9]/g, ''));
@@ -2169,7 +2193,7 @@
     const bdayAlertEl = document.getElementById('birthdayAlert');
     if (birthdayClients.length){
       bdayAlertEl.classList.add('show');
-      bdayAlertEl.innerHTML = `🎂 &nbsp;<span>מזל טוב! היום יום ההולדת של ${birthdayClients.join(', ')} — הודעת "יום הולדת שמח, בואי לפנק את עצמך" נשלחה אליהן אוטומטית במייל (עם תמונה) וב-SMS (טקסט).</span>`;
+      bdayAlertEl.innerHTML = `🎂 &nbsp;<span>מזל טוב! היום יום ההולדת של ${birthdayClients.join(', ')} — הודעת "מזל טוב" נשלחה אוטומטית במייל (למי שיש כתובת מייל שמורה).</span>`;
     } else {
       bdayAlertEl.classList.remove('show');
     }
@@ -2281,15 +2305,16 @@
 
   function sendBroadcast(){
     const msg = document.getElementById('broadcastMessage').value.trim();
-    const withEmail = clients.filter(c => c.email && c.email.trim()).length;
+    const clientsWithEmail = clients.filter(c => c.email && c.email.trim());
     const resultEl = document.getElementById('broadcastResult');
     if (!msg){
       resultEl.style.display = 'block';
       resultEl.textContent = 'יש לכתוב תוכן להודעה לפני השליחה.';
       return;
     }
+    clientsWithEmail.forEach(c => sendEmail(c.email, (branding.name || 'הכל בקליק') + ' — עדכון', msg));
     resultEl.style.display = 'block';
-    resultEl.innerHTML = `✓ &nbsp;ההודעה${broadcastPhoto ? ' (עם התמונה המצורפת)' : ''} נשלחה ל-${withEmail} לקוחות במייל.`;
+    resultEl.innerHTML = `✓ &nbsp;ההודעה נשלחה ל-${clientsWithEmail.length} לקוחות במייל.`;
   }
 
 
@@ -3228,14 +3253,17 @@
 
     const phoneDigits = phoneVal.replace(/[^0-9]/g, '');
     const existingClient = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phoneDigits);
+    let customerEmail = '';
     if (existingClient){
       existingClient.name = clientNameVal;
       existingClient.visits = (existingClient.visits || 0) + 1;
       existingClient.daysSinceVisit = 0;
+      customerEmail = existingClient.email || '';
     } else {
       const ftpEmail = document.getElementById('ftpEmail').value.trim();
       const ftpBirthday = document.getElementById('ftpBirthday').value || null;
       clients.push({ name: clientNameVal, phone: phoneVal.trim(), email: ftpEmail, photo: null, visits: 1, daysSinceVisit: 0, note: '', birthday: ftpBirthday });
+      customerEmail = ftpEmail;
     }
     if (typeof renderClients === 'function') renderClients();
 
@@ -3252,13 +3280,22 @@
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderMiniCal === 'function') renderMiniCal();
 
+    if (customerEmail){
+      const dateLabel = bookingSelectedDate.getDate() + ' ב' + hebrewMonths[bookingSelectedDate.getMonth()];
+      sendEmail(
+        customerEmail,
+        'התור שלך אושר',
+        `היי ${clientNameVal}, נקבע לך תור ל${svc ? svc.name : 'שירות'} בתאריך ${dateLabel} בשעה ${selectedSlot}${emp ? ' אצל ' + emp.name : ''}. לביטול או שינוי מועד, ניתן לפנות אלינו.`
+      );
+    }
+
     const gcalUrl = buildGoogleCalendarUrl(bookingSelectedDate, selectedSlot, svc ? (svc.duration || 30) : 30, svc ? svc.name : 'תור', emp ? emp.name : '');
 
     document.getElementById('bookingFormWrap').style.display = 'none';
     const apptEl = document.getElementById('myAppointment');
     apptEl.style.display = 'block';
     apptEl.innerHTML = `
-      <div class="status-dot">✓ מאושר — מייל ו-SMS נשלחו</div>
+      <div class="status-dot">✓ מאושר${customerEmail ? ' — אישור נשלח למייל' : ''}</div>
       <h4>${svc ? svc.name : 'שירות'}</h4>
       <div class="appt-meta">${bookingSelectedDate.getDate()} ב${hebrewMonths[bookingSelectedDate.getMonth()]} (${hebrewDateStr(bookingSelectedDate)}), ${selectedSlot}${svc ? ' · ' + svc.price + ' ש"ח' : ''}${emp ? ' · אצל ' + emp.name : ''}</div>
       <div class="appt-meta" style="margin-top:2px;">תזכורת באמצעות: ${reminderText}</div>
@@ -3307,10 +3344,23 @@
   }
 
   function cancelAppointment(){
+    const apptBeingCancelled = currentBookedAppointment;
     removeCurrentBookedAppointment();
+
+    if (apptBeingCancelled){
+      const client = clients.find(c => c.name === apptBeingCancelled.client);
+      if (client && client.email){
+        sendEmail(
+          client.email,
+          'התור שלך בוטל',
+          `היי ${apptBeingCancelled.client}, התור שלך ל${apptBeingCancelled.service} ב-${apptBeingCancelled.time} בוטל בהצלחה. נשמח לראותך שוב בקרוב!`
+        );
+      }
+    }
+
     const apptEl = document.getElementById('myAppointment');
     apptEl.innerHTML = `
-      <div class="waitlist-confirmed">✓ &nbsp;התור בוטל. נשלחה הודעת ביטול למייל ול-SMS.</div>
+      <div class="waitlist-confirmed">✓ &nbsp;התור בוטל.</div>
       <div class="my-appt-actions" style="margin-top:14px;">
         <button onclick="rescheduleAppointment()">קביעת תור חדש</button>
       </div>`;
