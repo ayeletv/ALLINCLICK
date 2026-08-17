@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>רותי זולברג — מכון קוסמטיקה ויופי | קביעת תורים אונליין</title>
-<meta name="description" content="רותי זולברג, מכון קוסמטיקה ויופי — טיפולי פנים, אפילציה, וצבע. קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
+<title>הכל בקליק — קביעת תורים אונליין</title>
+<meta name="description" content="קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Suez+One&family=Heebo:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1988,6 +1988,17 @@
       } else {
         heroBizNameEl.classList.remove('show');
       }
+    }
+
+    const bizNameTrimmed = (branding.name || '').trim();
+    document.title = bizNameTrimmed
+      ? bizNameTrimmed + ' — קביעת תורים אונליין'
+      : 'הכל בקליק — קביעת תורים אונליין';
+    const metaDescEl = document.querySelector('meta[name="description"]');
+    if (metaDescEl){
+      metaDescEl.setAttribute('content', bizNameTrimmed
+        ? bizNameTrimmed + ' — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.'
+        : 'קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.');
     }
   }
   renderBranding();
