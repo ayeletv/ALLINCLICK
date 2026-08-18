@@ -940,6 +940,39 @@
     overflow:hidden;
   }
   .client-history .ov-agenda-row{padding:8px 12px; font-size:12.5px;}
+  .visit-row{
+    padding:10px 12px;
+    border-bottom:1px solid rgba(245,238,228,0.08);
+  }
+  .visit-row:last-child{border-bottom:none;}
+  .visit-row-head{
+    display:flex; align-items:center; gap:10px;
+    font-size:12.5px; margin-bottom:6px;
+  }
+  .visit-row-head .t{font-family:'JetBrains Mono'; color:var(--gold-soft);}
+  .visit-row-head .visit-svc{flex:1;}
+  .visit-row-head .visit-date{color:var(--ivory-dim); font-size:11.5px;}
+  .visit-status-actions{display:flex; gap:6px; margin-bottom:6px;}
+  .visit-status-btn{
+    background:var(--ink); border:1px solid rgba(245,238,228,0.15);
+    color:var(--ivory-dim); border-radius:8px; padding:4px 10px;
+    font-family:'Heebo'; font-size:11.5px; cursor:pointer;
+  }
+  .visit-status-btn.active-yes{background:rgba(124,148,115,0.25); border-color:var(--sage); color:var(--sage);}
+  .visit-status-btn.active-no{background:rgba(155,44,66,0.2); border-color:var(--wine); color:#E9A9BA;}
+  .visit-note{
+    width:100%;
+    background:var(--ink);
+    color:var(--ivory);
+    border:1px solid rgba(245,238,228,0.12);
+    border-radius:8px;
+    padding:6px 8px;
+    font-family:'Heebo';
+    font-size:12px;
+    resize:vertical;
+    min-height:30px;
+  }
+  .visit-note::placeholder{color:var(--ivory-dim);}
   .client-add-row{
     display:flex;
     align-items:center;
@@ -1241,6 +1274,9 @@
       <div class="phone-screen">
         <div class="phone-product-tag">הכל בקליק</div>
         <div class="phone-brand" id="phoneBrand"></div>
+        <div style="text-align:center; margin-bottom:10px;">
+          <a href="#" onclick="openApptLookup(); return false;" style="font-size:12px; color:#8A8178; text-decoration:underline;">יש לך תור קיים? לחיצה לבדיקה</a>
+        </div>
 
         <div id="bookingFormWrap">
           <div class="step-dots" id="stepDots">
@@ -1306,6 +1342,7 @@
               <label><input type="radio" name="reminderChannel" value="both"> שניהם</label>
             </div>
             <div id="reminderChoiceError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש לבחור ערוץ תזכורת לפני קביעת התור</div>
+            <p style="font-size:11.5px; color:#8A8178; margin:6px 0 4px; line-height:1.5;">שימי לב: ביטול או שינוי מועד בפחות מ-24 שעות לפני התור עלול לחייב בתשלום.</p>
             <div class="step-nav">
               <button class="step-back" onclick="goToStep(2)">חזרה</button>
               <button class="cta" style="flex:1;" onclick="confirmBooking()">אישור תור</button>
@@ -1329,7 +1366,7 @@
       <button onclick="showSub('broadcast', this)"><i class="ti ti-send"></i> הודעות ללקוחות</button>
       <button onclick="showSub('staff', this)"><i class="ti ti-users-group"></i> צוות</button>
       <button onclick="showSub('reports', this)"><i class="ti ti-chart-line"></i> דוחות</button>
-      <button onclick="showSub('branding', this)"><i class="ti ti-palette"></i> מיתוג</button>
+      <button onclick="showSub('settings', this)"><i class="ti ti-settings"></i> הגדרות</button>
       <button onclick="showSub('services', this)"><i class="ti ti-scissors"></i> השירותים שלי</button>
       <button onclick="showSub('categories', this)"><i class="ti ti-category"></i> קטגוריות</button>
       <button onclick="showSub('whatsnewadmin', this)"><i class="ti ti-sparkles"></i> מה חדש</button>
@@ -1346,7 +1383,6 @@
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
         <button class="template-btn" onclick="openMyDayView()">🖨️ תצוגת היום שלי</button>
         <button class="template-btn" onclick="openManualBookingModal()">➕ הוספת תור ידנית</button>
-        <button class="template-btn" onclick="openChangePasswordOverlay()">🔑 שינוי סיסמה</button>
         <button class="template-btn" onclick="doLogout()" style="margin-inline-start:auto;">🚪 התנתקות</button>
       </div>
       <div class="label" style="margin:8px 0 10px;" id="calSectionLabel">היומן השבועי</div>
@@ -1385,6 +1421,9 @@
     </div>
 
     <div id="sub-clients" class="subpanel">
+      <div class="label" style="margin-bottom:10px;">רשימת המתנה (<span id="waitlistCount">0</span>)</div>
+      <div class="client-list" id="waitlistAdminList" style="margin-bottom:26px;"></div>
+
       <div class="inv-email-row">
         <span class="label" style="margin:0;">סמני "לא הגיעה זמן רב" אחרי (ימים)</span>
         <input type="number" id="inactivityThreshold" value="21" style="width:70px;" oninput="updateInactivityThreshold()">
@@ -1484,7 +1523,18 @@
       <div class="popular-list" id="popularList"></div>
     </div>
 
-    <div id="sub-branding" class="subpanel">
+    <div id="sub-settings" class="subpanel">
+      <div class="label" style="margin-bottom:10px;">אבטחה</div>
+      <div style="display:flex; flex-direction:column; gap:10px; max-width:380px; margin-bottom:28px;">
+        <input type="password" id="cpCurrentPassword" class="field-dark" placeholder="סיסמה נוכחית">
+        <input type="password" id="cpNewPassword" class="field-dark" placeholder="סיסמה חדשה">
+        <input type="password" id="cpConfirmPassword" class="field-dark" placeholder="אימות סיסמה חדשה">
+        <div id="cpError" style="display:none; color:var(--wine); font-size:13px;"></div>
+        <div id="cpSuccess" style="display:none; color:#3E5C36; font-size:13px;"></div>
+        <button class="template-btn" style="width:fit-content;" onclick="doChangePassword()">🔑 עדכון סיסמה</button>
+      </div>
+
+      <div class="label" style="margin-bottom:10px;">מיתוג</div>
       <div class="brand-editor">
         <div class="brand-logo-upload" id="logoUpload" onclick="document.getElementById('logoFile').click()">
           <span id="logoPlaceholder">+ לוגו</span>
@@ -1500,6 +1550,9 @@
       </div>
       <div class="label" style="margin:22px 0 10px;">כך זה ייראה ללקוחה</div>
       <div class="brand-preview" id="brandPreview"></div>
+
+      <div class="label" style="margin:28px 0 10px;">חשבון</div>
+      <button class="template-btn" onclick="doLogout()">🚪 התנתקות</button>
     </div>
 
     <div id="sub-services" class="subpanel">
@@ -1541,6 +1594,14 @@
       </div>
       <div class="staff-filter-row" id="hoursStaffPicker"></div>
       <div class="hours-list" id="hoursList"></div>
+      <div id="closedDatesSection" style="margin-top:24px; display:none;">
+        <div class="label" style="margin-bottom:10px;">ימים סגורים (חג, חופשה)</div>
+        <div class="client-list" id="closedDatesList"></div>
+        <div class="client-add-row">
+          <input type="date" id="newClosedDate">
+          <button class="cta" style="width:auto; margin-top:0;" onclick="addClosedDate()">הוספת יום סגור</button>
+        </div>
+      </div>
     </div>
 
     <div id="sub-inventory" class="subpanel">
@@ -1595,6 +1656,22 @@
   </div>
 </div>
 
+<div id="apptLookupOverlay" class="myday-overlay">
+  <div class="myday-sheet">
+    <div class="myday-header">
+      <h3>בדיקת תור קיים</h3>
+      <div class="myday-actions">
+        <button onclick="closeApptLookup()">✕ סגירה</button>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <input type="tel" id="lookupPhone" class="field" placeholder="050-0000000">
+      <button class="cta" onclick="searchMyAppointment()">חיפוש</button>
+      <div id="lookupResult"></div>
+    </div>
+  </div>
+</div>
+
 <div id="manualBookingOverlay" class="myday-overlay">
   <div class="myday-sheet">
     <div class="myday-header">
@@ -1633,24 +1710,7 @@
   </div>
 </div>
 
-<div id="changePasswordOverlay" class="myday-overlay">
-  <div class="myday-sheet">
-    <div class="myday-header">
-      <h3>שינוי סיסמה</h3>
-      <div class="myday-actions">
-        <button onclick="closeChangePasswordOverlay()">✕ סגירה</button>
-      </div>
-    </div>
-    <div style="display:flex; flex-direction:column; gap:10px;">
-      <input type="password" id="cpCurrentPassword" class="field" placeholder="סיסמה נוכחית">
-      <input type="password" id="cpNewPassword" class="field" placeholder="סיסמה חדשה">
-      <input type="password" id="cpConfirmPassword" class="field" placeholder="אימות סיסמה חדשה">
-      <div id="cpError" style="display:none; color:var(--wine); font-size:13px;"></div>
-      <div id="cpSuccess" style="display:none; color:#3E5C36; font-size:13px;"></div>
-      <button class="cta" onclick="doChangePassword()">עדכון סיסמה</button>
-    </div>
-  </div>
-</div>
+
 
 <div id="onboardOverlay" class="onboard-overlay hide">
   <div class="onboard-sheet">
@@ -1802,7 +1862,7 @@
       return;
     }
 
-    weekAppointments.push({ day: dayKey, date: dateVal, time: timeVal, dur, client: name, service: svc.name, staff: staffIdx });
+    weekAppointments.push({ id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000), day: dayKey, date: dateVal, time: timeVal, dur, client: name, service: svc.name, staff: staffIdx, status: 'pending', note: '' });
 
     if (phone && !clients.some(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, ''))){
       clients.push({ name, phone, email: '', photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
@@ -1944,15 +2004,50 @@
 
   let branding = { name: '', logo: null, phone: '' };
 
-  function sendEmail(to, subject, text){
+  const pendingEmailQueue = {};
+
+  function sendEmail(to, subject, text, imageDataUrl){
     if (!to) return;
+    if (!pendingEmailQueue[to]) pendingEmailQueue[to] = { items: [], timer: null };
+    const queue = pendingEmailQueue[to];
+    queue.items.push({ subject, text, imageDataUrl: imageDataUrl || null });
+    clearTimeout(queue.timer);
+    queue.timer = setTimeout(() => flushEmailQueue(to), 5000);
+  }
+
+  function textToHtmlBlock(text, imageDataUrl){
+    const escaped = (text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+    const imgHtml = imageDataUrl ? `<img src="${imageDataUrl}" style="max-width:100%; border-radius:8px; margin-bottom:12px; display:block;">` : '';
+    return `${imgHtml}<p style="font-family:sans-serif; font-size:15px; line-height:1.6; direction:rtl; text-align:right;">${escaped}</p>`;
+  }
+
+  function flushEmailQueue(to){
+    const queue = pendingEmailQueue[to];
+    if (!queue || !queue.items.length) return;
+
     const fromName = (branding.name || 'הכל בקליק').trim();
     const fromAddress = 'appointments@rutizolberg.com';
-    db.collection('mail').add({
+
+    let subject, text, html;
+    if (queue.items.length === 1){
+      subject = queue.items[0].subject;
+      text = queue.items[0].text;
+      html = textToHtmlBlock(queue.items[0].text, queue.items[0].imageDataUrl);
+    } else {
+      subject = 'כמה עדכונים מ' + fromName;
+      text = queue.items.map(item => `${item.subject}:\n${item.text}`).join('\n\n———\n\n');
+      html = queue.items.map(item => `<h3 style="font-family:sans-serif; direction:rtl; text-align:right;">${item.subject}</h3>` + textToHtmlBlock(item.text, item.imageDataUrl)).join('<hr style="margin:16px 0; border:none; border-top:1px solid #eee;">');
+    }
+
+    const payload = {
       to: to,
       from: `${fromName} <${fromAddress}>`,
-      message: { subject: subject, text: text }
-    }).catch(err => console.error('Email send failed:', err));
+      message: { subject: subject, text: text, html: html }
+    };
+
+    db.collection('mail').add(payload).catch(err => console.error('Email send failed:', err));
+
+    delete pendingEmailQueue[to];
   }
 
   function updateBranding(){
@@ -2160,7 +2255,19 @@
             <button class="template-btn small" data-action="book">📅 קביעת תור לפעם הבאה</button>
           </div>
           <div class="client-history" style="display:none;">
-            ${history.length ? history.map(a => `<div class="ov-agenda-row"><span class="t">${a.time}</span><span>${a.service}</span><span style="color:var(--ivory-dim); font-size:12px;">${formatHistoryDate(a)}</span></div>`).join('') : '<p style="color:var(--ivory-dim); font-size:13px;">אין עדיין היסטוריית טיפולים.</p>'}
+            ${history.length ? history.map(a => `
+              <div class="visit-row" data-appt-id="${a.id || ''}">
+                <div class="visit-row-head">
+                  <span class="t">${a.time}</span>
+                  <span class="visit-svc">${a.service}</span>
+                  <span class="visit-date">${formatHistoryDate(a)}</span>
+                </div>
+                <div class="visit-status-actions">
+                  <button class="visit-status-btn${a.status === 'completed' ? ' active-yes' : ''}" data-status="completed">✓ הגיעה</button>
+                  <button class="visit-status-btn${a.status === 'no-show' ? ' active-no' : ''}" data-status="no-show">✗ לא הגיעה</button>
+                </div>
+                <textarea class="visit-note" placeholder="הערה על הטיפול הזה...">${a.note || ''}</textarea>
+              </div>`).join('') : '<p style="color:var(--ivory-dim); font-size:13px;">אין עדיין היסטוריית טיפולים.</p>'}
           </div>
           ${isInactive ? `<button class="template-btn" style="margin-top:8px;" onclick="sendMissYouMessage(${i})">💌 שליחת הודעת געגוע</button><div id="clientMissYouResult-${i}" class="waitlist-confirmed" style="display:none; margin-top:8px;"></div>` : ''}
         </div>`;
@@ -2182,6 +2289,21 @@
       });
       row.querySelector('.svc-del').onclick = () => { clients.splice(i, 1); renderClients(); if (typeof renderBroadcastCount === 'function') renderBroadcastCount(); };
       row.querySelector('.client-note').oninput = (e) => { c.note = e.target.value; };
+      row.querySelectorAll('.visit-row').forEach(visitEl => {
+        const apptId = visitEl.dataset.apptId;
+        const appt = weekAppointments.find(a => a.id === apptId);
+        if (!appt) return;
+        visitEl.querySelectorAll('.visit-status-btn').forEach(btn => {
+          btn.onclick = () => {
+            appt.status = appt.status === btn.dataset.status ? 'pending' : btn.dataset.status;
+            visitEl.querySelectorAll('.visit-status-btn').forEach(b => b.classList.remove('active-yes', 'active-no'));
+            if (appt.status === 'completed') btn.classList.add('active-yes');
+            if (appt.status === 'no-show') btn.classList.add('active-no');
+          };
+        });
+        const noteEl = visitEl.querySelector('.visit-note');
+        if (noteEl) noteEl.oninput = (e) => { appt.note = e.target.value; };
+      });
       listEl.appendChild(row);
     });
 
@@ -2315,9 +2437,9 @@
       resultEl.textContent = 'יש לכתוב תוכן להודעה לפני השליחה.';
       return;
     }
-    clientsWithEmail.forEach(c => sendEmail(c.email, (branding.name || 'הכל בקליק') + ' — עדכון', msg));
+    clientsWithEmail.forEach(c => sendEmail(c.email, (branding.name || 'הכל בקליק') + ' — עדכון', msg, broadcastPhoto));
     resultEl.style.display = 'block';
-    resultEl.innerHTML = `✓ &nbsp;ההודעה נשלחה ל-${clientsWithEmail.length} לקוחות במייל.`;
+    resultEl.innerHTML = `✓ &nbsp;ההודעה${broadcastPhoto ? ' (עם התמונה המצורפת)' : ''} נשלחה ל-${clientsWithEmail.length} לקוחות במייל.`;
   }
 
 
@@ -2407,7 +2529,7 @@
     const roleEl = document.getElementById('newStaffRole');
     const name = nameEl.value.trim();
     if (!name) return;
-    staff.push({ name, role: roleEl.value.trim() || 'צוות', photo: newStaffPhoto, hours: makeDefaultHours() });
+    staff.push({ name, role: roleEl.value.trim() || 'צוות', photo: newStaffPhoto, hours: makeDefaultHours(), closedDates: [] });
     nameEl.value = ''; roleEl.value = '';
     newStaffPhoto = null;
     document.getElementById('staffPhotoPreview').style.display = 'none';
@@ -2444,6 +2566,52 @@
   function timeToMinutes(t){
     const [h, m] = t.split(':').map(Number);
     return h * 60 + m;
+  }
+
+  function setApptStatus(appt, status, refreshFn){
+    appt.status = status;
+    if (typeof refreshFn === 'function') refreshFn();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof renderClients === 'function') renderClients();
+  }
+
+  function promptApptNote(appt, refreshFn){
+    const note = prompt('הערה לטיפול זה (תישמר בהיסטוריית הלקוחה):', appt.note || '');
+    if (note !== null){
+      appt.note = note;
+      if (typeof refreshFn === 'function') refreshFn();
+      if (typeof renderClients === 'function') renderClients();
+    }
+  }
+
+  function renderApptListInto(containerEl, appts, refreshFn){
+    if (!containerEl) return;
+    if (!appts.length){
+      containerEl.innerHTML = '<p style="color:var(--ivory-dim); font-size:14px;">אין תורים ביום זה.</p>';
+      return;
+    }
+    containerEl.innerHTML = '';
+    appts.forEach(a => {
+      const empName = (staff[a.staff] && staff[a.staff].name) || '';
+      const status = a.status || 'pending';
+      const row = document.createElement('div');
+      row.className = 'appt-status-row';
+      row.innerHTML = `
+        <div class="appt-status-main">
+          <span class="t">${a.time}</span>
+          <span>${a.client} · ${a.service}${empName ? ' · ' + empName : ''}</span>
+        </div>
+        <div class="appt-status-actions">
+          <button class="appt-status-btn ${status === 'completed' ? 'active-ok' : ''}" data-action="completed">✓ הגיעה</button>
+          <button class="appt-status-btn ${status === 'no-show' ? 'active-bad' : ''}" data-action="no-show">✗ לא הגיעה</button>
+          <button class="appt-status-btn" data-action="note">📝 הערה${a.note ? ' ✓' : ''}</button>
+        </div>
+        ${a.note ? `<div class="appt-note-preview">${a.note}</div>` : ''}`;
+      row.querySelector('[data-action="completed"]').onclick = () => setApptStatus(a, 'completed', () => renderApptListInto(containerEl, appts, refreshFn));
+      row.querySelector('[data-action="no-show"]').onclick = () => setApptStatus(a, 'no-show', () => renderApptListInto(containerEl, appts, refreshFn));
+      row.querySelector('[data-action="note"]').onclick = () => promptApptNote(a, () => renderApptListInto(containerEl, appts, refreshFn));
+      containerEl.appendChild(row);
+    });
   }
 
   function renderStaffFilterRow(){
@@ -2814,16 +2982,24 @@
     updateBillingNotice();
   }
 
+  function toWhatsappNumber(phone){
+    let digits = (phone || '').replace(/[^0-9]/g, '');
+    if (digits.startsWith('0')) digits = digits.slice(1);
+    return '972' + digits;
+  }
+
   function updateBillingNotice(){
     const noticeEl = document.getElementById('svcBillingNotice');
     if (!noticeEl) return;
     const selSvc = services[selectedSvcIndex];
     if (selSvc){
       noticeEl.classList.add('show');
-      const phoneLink = branding.phone
-        ? ` <a href="tel:${branding.phone.replace(/[^0-9+]/g,'')}" class="notice-phone-link">📞 ${branding.phone}</a>`
-        : '';
-      noticeEl.innerHTML = `<b>לתשומת ליבך:</b>הטיפול יחויב לפי הבחירה שלך — ${selSvc.name}, ${selSvc.duration} דק׳, ${selSvc.price} ש"ח. אם יש לך ספק לגבי משך הטיפול המתאים לך, מוזמנת להתקשר להתייעצות לפני קביעת התור.${phoneLink}`;
+      let contactLinks = '';
+      if (branding.phone){
+        contactLinks += ` <a href="tel:${branding.phone.replace(/[^0-9+]/g,'')}" class="notice-phone-link">📞 ${branding.phone}</a>`;
+        contactLinks += ` <a href="https://wa.me/${toWhatsappNumber(branding.phone)}" target="_blank" rel="noopener" class="notice-phone-link">💬 וואטסאפ</a>`;
+      }
+      noticeEl.innerHTML = `<b>לתשומת ליבך:</b>הטיפול יחויב לפי הבחירה שלך — ${selSvc.name}, ${selSvc.duration} דק׳, ${selSvc.price} ש"ח. אם יש לך ספק לגבי משך הטיפול המתאים לך, מוזמנת להתקשר להתייעצות לפני קביעת התור.${contactLinks}`;
     } else {
       noticeEl.classList.remove('show');
     }
@@ -2968,11 +3144,19 @@
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
 
+  function isDateClosedForStaff(staffIdx, date){
+    const s = staff[staffIdx];
+    if (!s || !s.closedDates) return false;
+    const dateStr = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    return s.closedDates.includes(dateStr);
+  }
+
   function hasAnySlot(cellDate){
     const svc = services[selectedSvcIndex];
     const dow = cellDate.getDay();
     const dayInfo = staff[selectedStaffIndex] && staff[selectedStaffIndex].hours[dow];
     if (!svc || !dayInfo || !dayInfo.open) return false;
+    if (isDateClosedForStaff(selectedStaffIndex, cellDate)) return false;
 
     const dayKey = weekdayKeys[dow];
     let openMin = timeToMinutes(dayInfo.from);
@@ -3023,7 +3207,7 @@
       const cellDate = new Date(calViewYear, calViewMonth, d);
       const dow = cellDate.getDay();
       const isPast = cellDate < todayMidnight;
-      const isClosedDay = !(staff[selectedStaffIndex] && staff[selectedStaffIndex].hours[dow].open);
+      const isClosedDay = !(staff[selectedStaffIndex] && staff[selectedStaffIndex].hours[dow].open) || isDateClosedForStaff(selectedStaffIndex, cellDate);
       const noSlots = !isPast && !isClosedDay && !hasAnySlot(cellDate);
       const cell = document.createElement('div');
       cell.className = 'cal-day-cell';
@@ -3069,6 +3253,10 @@
     const isToday = sameDate(bookingSelectedDate, todayMidnight);
     if (!svc || !dayInfo || !dayInfo.open){
       slotsEl.innerHTML = '<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">אין שעות פעילות ביום זה</div>';
+      return;
+    }
+    if (isDateClosedForStaff(selectedStaffIndex, bookingSelectedDate)){
+      slotsEl.innerHTML = '<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">העובדת לא זמינה ביום זה (חג/חופשה)</div>';
       return;
     }
 
@@ -3158,21 +3346,83 @@
     }
   }
 
+  let waitlist = [];
+
+  function renderWaitlistAdmin(){
+    const listEl = document.getElementById('waitlistAdminList');
+    const countEl = document.getElementById('waitlistCount');
+    if (!listEl) return;
+    if (countEl) countEl.textContent = waitlist.length;
+    listEl.innerHTML = '';
+    if (!waitlist.length){
+      listEl.innerHTML = '<p style="color:var(--ivory-dim); font-size:13px;">אין בקשות ברשימת המתנה כרגע.</p>';
+      return;
+    }
+    waitlist.forEach((w, i) => {
+      const parts = w.date.split('-').map(Number);
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      const dateLabel = d.getDate() + ' ב' + hebrewMonths[d.getMonth()];
+      const row = document.createElement('div');
+      row.className = 'client-card';
+      row.innerHTML = `
+        <div class="client-info">
+          <div class="name-row">
+            <div>
+              <h4>${w.name}</h4>
+              <div class="phone">${w.phone} · ${w.service}${w.staffName ? ' · אצל ' + w.staffName : ''}</div>
+              <div class="visits">מעוניינת ב-${dateLabel}, סביב ${w.requestedTime}</div>
+            </div>
+            <button class="svc-del" aria-label="הסרה מרשימת המתנה">✕</button>
+          </div>
+        </div>`;
+      row.querySelector('.svc-del').onclick = () => {
+        waitlist.splice(i, 1);
+        renderWaitlistAdmin();
+      };
+      listEl.appendChild(row);
+    });
+  }
+
   function showWaitlistPrompt(time, reason){
     document.getElementById('waitlistBox').innerHTML = `
       <div class="waitlist-prompt">
         השעה ${time} לא זמינה — ${reason || 'תפוסה כרגע.'}
+        <input type="text" id="wlName" class="field" style="margin-top:8px;" placeholder="שם מלא">
+        <input type="tel" id="wlPhone" class="field" placeholder="050-0000000">
+        <div id="wlError" style="display:none; color:var(--wine); font-size:12px; margin-bottom:6px;">יש למלא שם ומספר טלפון תקין</div>
         <div><button onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
       </div>`;
   }
 
   function joinWaitlist(time){
+    const nameEl = document.getElementById('wlName');
+    const phoneEl = document.getElementById('wlPhone');
+    const errorEl = document.getElementById('wlError');
+    const name = nameEl.value.trim();
+    const phone = phoneEl.value.trim();
+    if (!name || !isValidIsraeliPhone(phone)){
+      errorEl.style.display = 'block';
+      return;
+    }
+    const svc = services[selectedSvcIndex];
+    const emp = staff[selectedStaffIndex];
+    const dateStr = bookingSelectedDate.getFullYear() + '-' + String(bookingSelectedDate.getMonth()+1).padStart(2,'0') + '-' + String(bookingSelectedDate.getDate()).padStart(2,'0');
+    waitlist.push({
+      id: 'wl_' + Date.now() + '_' + Math.floor(Math.random()*10000),
+      name, phone,
+      service: svc ? svc.name : '',
+      staffName: emp ? emp.name : '',
+      date: dateStr,
+      requestedTime: time
+    });
+    if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
     document.getElementById('waitlistBox').innerHTML = `
-      <div class="waitlist-confirmed">✓ &nbsp;נרשמת לרשימת ההמתנה ל-${time}. נשלח לך הודעה אם יתפנה מקום.</div>`;
+      <div class="waitlist-confirmed">✓ &nbsp;נרשמת לרשימת ההמתנה ל-${time}. נעדכן אותך אם יתפנה מקום.</div>`;
   }
 
   renderMiniCal();
   renderAvailableSlots();
+  renderWaitlistAdmin();
 
   function isValidIsraeliPhone(phone){
     const digits = (phone || '').replace(/[^0-9]/g, '');
@@ -3261,6 +3511,35 @@
 
     const phoneDigits = phoneVal.replace(/[^0-9]/g, '');
     const existingClient = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phoneDigits);
+
+    if (existingClient){
+      const fmt = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const targetDateStr = fmt(bookingSelectedDate);
+      const currentSvcName = svc ? svc.name : '';
+
+      const sameDaySameSvcConflict = weekAppointments.find(a => a.client === existingClient.name && a.date === targetDateStr && a.service === currentSvcName);
+      if (sameDaySameSvcConflict){
+        document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">יש לך כבר תור ל${sameDaySameSvcConflict.service} ביום זה (${sameDaySameSvcConflict.time}). לא ניתן לקבוע תור נוסף לאותו טיפול באותו יום — אם רוצה לשנות את השעה, יש לבטל את הקיים קודם.</div>`;
+        return;
+      }
+
+      const sameDayOtherSvcConflict = weekAppointments.find(a => a.client === existingClient.name && a.date === targetDateStr);
+      if (sameDayOtherSvcConflict){
+        const proceed = confirm(`שימי לב: יש לך כבר תור ל${sameDayOtherSvcConflict.service} באותו יום (${sameDayOtherSvcConflict.time}). להמשיך ולקבוע גם את התור הזה?`);
+        if (!proceed) return;
+      }
+
+      const prevDate = new Date(bookingSelectedDate);
+      prevDate.setDate(prevDate.getDate() - 1);
+      const nextDate = new Date(bookingSelectedDate);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const adjacentConflict = weekAppointments.find(a => a.client === existingClient.name && (a.date === fmt(prevDate) || a.date === fmt(nextDate)));
+      if (adjacentConflict){
+        const proceed = confirm(`שימי לב: יש לך כבר תור נוסף ל${adjacentConflict.service} בתאריך ${adjacentConflict.date} (${adjacentConflict.time}). להמשיך ולקבוע גם את התור הזה?`);
+        if (!proceed) return;
+      }
+    }
+
     let customerEmail = '';
     if (existingClient){
       existingClient.name = clientNameVal;
@@ -3276,13 +3555,16 @@
     if (typeof renderClients === 'function') renderClients();
 
     currentBookedAppointment = {
+      id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000),
       day: dayKey,
       date: bookingSelectedDate.getFullYear() + '-' + String(bookingSelectedDate.getMonth()+1).padStart(2,'0') + '-' + String(bookingSelectedDate.getDate()).padStart(2,'0'),
       time: selectedSlot,
       dur: svc ? (svc.duration || 30) : 30,
       client: clientNameVal,
       service: svc ? svc.name : 'שירות',
-      staff: selectedStaffIndex
+      staff: selectedStaffIndex,
+      status: 'pending',
+      note: ''
     };
     weekAppointments.push(currentBookedAppointment);
     if (typeof renderWeekCal === 'function') renderWeekCal();
@@ -3374,6 +3656,68 @@
       </div>`;
   }
 
+  function openApptLookup(){
+    document.getElementById('lookupPhone').value = '';
+    document.getElementById('lookupResult').innerHTML = '';
+    document.getElementById('apptLookupOverlay').classList.add('show');
+  }
+
+  function closeApptLookup(){
+    document.getElementById('apptLookupOverlay').classList.remove('show');
+  }
+
+  function searchMyAppointment(){
+    const phone = document.getElementById('lookupPhone').value.trim();
+    const resultEl = document.getElementById('lookupResult');
+    if (!isValidIsraeliPhone(phone)){
+      resultEl.innerHTML = '<p style="color:var(--wine); font-size:13px;">יש להזין מספר טלפון תקין.</p>';
+      return;
+    }
+    const digits = phone.replace(/[^0-9]/g, '');
+    const client = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits);
+    if (!client){
+      resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצאה לקוחה עם מספר טלפון זה.</p>';
+      return;
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const upcoming = weekAppointments
+      .filter(a => a.client === client.name && a.date)
+      .map(a => {
+        const parts = a.date.split('-').map(Number);
+        return Object.assign({}, a, { dateObj: new Date(parts[0], parts[1] - 1, parts[2]) });
+      })
+      .filter(a => a.dateObj >= today)
+      .sort((a, b) => a.dateObj - b.dateObj);
+
+    if (!upcoming.length){
+      resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצא תור עתידי למספר טלפון זה.</p>';
+      return;
+    }
+    closeApptLookup();
+    renderLookedUpAppointment(upcoming[0]);
+  }
+
+  function renderLookedUpAppointment(appt){
+    currentBookedAppointment = appt;
+    document.getElementById('bookingFormWrap').style.display = 'none';
+    const apptEl = document.getElementById('myAppointment');
+    apptEl.style.display = 'block';
+    const parts = appt.date.split('-').map(Number);
+    const apptDate = new Date(parts[0], parts[1] - 1, parts[2]);
+    const emp = staff[appt.staff];
+    const gcalUrl = buildGoogleCalendarUrl(apptDate, appt.time, appt.dur || 30, appt.service, emp ? emp.name : '');
+    apptEl.innerHTML = `
+      <div class="status-dot">✓ נמצא תור קיים</div>
+      <h4>${appt.service}</h4>
+      <div class="appt-meta">${apptDate.getDate()} ב${hebrewMonths[apptDate.getMonth()]} (${hebrewDateStr(apptDate)}), ${appt.time}${emp ? ' · אצל ' + emp.name : ''}</div>
+      <a href="${gcalUrl}" target="_blank" rel="noopener" class="gcal-link">📅 הוספה ליומן Google</a>
+      <div class="my-appt-actions">
+        <button onclick="rescheduleAppointment()">שינוי מועד</button>
+        <button class="danger" onclick="cancelAppointment()">ביטול תור</button>
+      </div>`;
+  }
+
   function showPanel(name, btn){
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById('panel-' + name).classList.add('active');
@@ -3393,6 +3737,7 @@
   function renderHoursStaffPicker(){
     const pickerEl = document.getElementById('hoursStaffPicker');
     const noStaffMsgEl = document.getElementById('hoursNoStaffMsg');
+    const closedDatesSection = document.getElementById('closedDatesSection');
     if (!pickerEl) return;
 
     if (!staff.length){
@@ -3400,12 +3745,14 @@
       pickerEl.style.display = 'none';
       const hoursList = document.getElementById('hoursList');
       if (hoursList){ hoursList.style.display = 'none'; hoursList.innerHTML = ''; }
+      if (closedDatesSection) closedDatesSection.style.display = 'none';
       return;
     }
     if (noStaffMsgEl) noStaffMsgEl.style.display = 'none';
     pickerEl.style.display = 'flex';
     const hoursList = document.getElementById('hoursList');
     if (hoursList) hoursList.style.display = 'block';
+    if (closedDatesSection) closedDatesSection.style.display = 'block';
 
     pickerEl.innerHTML = '';
     staff.forEach((s, i) => {
@@ -3413,9 +3760,58 @@
       chip.className = 'staff-filter-chip' + (hoursEditorStaffIndex === i ? ' active' : '');
       const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
       chip.innerHTML = `<div class="avatar">${avatarHtml}</div><span>${s.name}</span>`;
-      chip.onclick = () => { hoursEditorStaffIndex = i; renderHoursStaffPicker(); renderHoursEditor(); };
+      chip.onclick = () => { hoursEditorStaffIndex = i; renderHoursStaffPicker(); renderHoursEditor(); renderClosedDates(); };
       pickerEl.appendChild(chip);
     });
+    renderClosedDates();
+  }
+
+  function renderClosedDates(){
+    const listEl = document.getElementById('closedDatesList');
+    if (!listEl || !staff[hoursEditorStaffIndex]) return;
+    if (!staff[hoursEditorStaffIndex].closedDates) staff[hoursEditorStaffIndex].closedDates = [];
+    const dates = staff[hoursEditorStaffIndex].closedDates;
+    listEl.innerHTML = '';
+    if (!dates.length){
+      listEl.innerHTML = '<p style="color:var(--ivory-dim); font-size:13px;">אין ימים סגורים מוגדרים.</p>';
+      return;
+    }
+    dates.slice().sort().forEach(dateStr => {
+      const row = document.createElement('div');
+      row.className = 'client-card';
+      const parts = dateStr.split('-').map(Number);
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      const label = d.getDate() + ' ב' + hebrewMonths[d.getMonth()] + ' ' + parts[0];
+      row.innerHTML = `
+        <div class="client-info">
+          <div class="name-row">
+            <h4>${label}</h4>
+            <button class="svc-del" aria-label="הסרת יום סגור">✕</button>
+          </div>
+        </div>`;
+      row.querySelector('.svc-del').onclick = () => {
+        const idx = staff[hoursEditorStaffIndex].closedDates.indexOf(dateStr);
+        if (idx !== -1) staff[hoursEditorStaffIndex].closedDates.splice(idx, 1);
+        renderClosedDates();
+        if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+        if (typeof renderMiniCal === 'function') renderMiniCal();
+      };
+      listEl.appendChild(row);
+    });
+  }
+
+  function addClosedDate(){
+    const input = document.getElementById('newClosedDate');
+    const dateVal = input.value;
+    if (!dateVal || !staff[hoursEditorStaffIndex]) return;
+    if (!staff[hoursEditorStaffIndex].closedDates) staff[hoursEditorStaffIndex].closedDates = [];
+    if (!staff[hoursEditorStaffIndex].closedDates.includes(dateVal)){
+      staff[hoursEditorStaffIndex].closedDates.push(dateVal);
+    }
+    input.value = '';
+    renderClosedDates();
+    if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+    if (typeof renderMiniCal === 'function') renderMiniCal();
   }
 
   function renderHoursEditor(){
@@ -3545,7 +3941,7 @@
     const payload = {
       branding, clients, inactivityThresholdDays, customTemplates,
       staff, weekAppointments, categories, services, whatsNewItems,
-      invAlertEmail, inventory,
+      invAlertEmail, inventory, waitlist,
       savedAt: new Date().toISOString()
     };
     CLOUD_DOC.set(payload).catch(err => console.error('Cloud save failed:', err));
@@ -3564,6 +3960,7 @@
     if (typeof renderCustomTemplates === 'function') renderCustomTemplates();
     if (typeof renderMiniCal === 'function') renderMiniCal();
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+    if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
   }
 
   CLOUD_DOC.get().then(doc => {
@@ -3583,6 +3980,7 @@
     if (data.whatsNewItems) whatsNewItems = data.whatsNewItems;
     if (typeof data.invAlertEmail === 'string') invAlertEmail = data.invAlertEmail;
     if (data.inventory) inventory = data.inventory;
+    if (data.waitlist) waitlist = data.waitlist;
     rerenderEverything();
     console.log('Loaded saved data from the cloud.');
   }).catch(err => {
@@ -3659,19 +4057,6 @@
     auth.signOut().then(() => {
       document.querySelectorAll('.switcher button')[0].click();
     });
-  }
-
-  function openChangePasswordOverlay(){
-    document.getElementById('cpCurrentPassword').value = '';
-    document.getElementById('cpNewPassword').value = '';
-    document.getElementById('cpConfirmPassword').value = '';
-    document.getElementById('cpError').style.display = 'none';
-    document.getElementById('cpSuccess').style.display = 'none';
-    document.getElementById('changePasswordOverlay').classList.add('show');
-  }
-
-  function closeChangePasswordOverlay(){
-    document.getElementById('changePasswordOverlay').classList.remove('show');
   }
 
   function doChangePassword(){
