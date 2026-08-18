@@ -1536,6 +1536,9 @@
 
     <div id="sub-hours" class="subpanel">
       <div class="label" style="margin-bottom:10px;">שעות הפעילות של:</div>
+      <div id="hoursNoStaffMsg" style="display:none; color:var(--ivory-dim); font-size:14px; padding:20px; border:1px dashed rgba(245,238,228,0.2); border-radius:12px; text-align:center;">
+        עדיין לא הוספת אף עובדת. עוברים לטאב <b style="color:var(--gold-soft);">"צוות"</b> ומוסיפים לפחות עובדת אחת (אפשר גם את עצמך) — ואז אפשר לחזור לכאן ולהגדיר לה שעות פעילות.
+      </div>
       <div class="staff-filter-row" id="hoursStaffPicker"></div>
       <div class="hours-list" id="hoursList"></div>
     </div>
@@ -2359,10 +2362,13 @@
         staff.splice(i, 1);
         if (selectedStaffIndex >= staff.length) selectedStaffIndex = 0;
         if (typeof selectedStaffFilter === 'number' && selectedStaffFilter >= staff.length) selectedStaffFilter = 'all';
+        if (typeof hoursEditorStaffIndex !== 'undefined' && hoursEditorStaffIndex >= staff.length) hoursEditorStaffIndex = 0;
         renderStaff();
         renderStaffPicker();
         if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
         if (typeof renderWeekCal === 'function') renderWeekCal();
+        if (typeof renderHoursStaffPicker === 'function') renderHoursStaffPicker();
+        if (typeof renderHoursEditor === 'function') renderHoursEditor();
       };
       listEl.appendChild(row);
     });
@@ -2409,6 +2415,8 @@
     renderStaff();
     if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
     if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof renderHoursStaffPicker === 'function') renderHoursStaffPicker();
+    if (typeof renderHoursEditor === 'function') renderHoursEditor();
   }
   renderStaff();
 
@@ -3384,7 +3392,21 @@
 
   function renderHoursStaffPicker(){
     const pickerEl = document.getElementById('hoursStaffPicker');
+    const noStaffMsgEl = document.getElementById('hoursNoStaffMsg');
     if (!pickerEl) return;
+
+    if (!staff.length){
+      if (noStaffMsgEl) noStaffMsgEl.style.display = 'block';
+      pickerEl.style.display = 'none';
+      const hoursList = document.getElementById('hoursList');
+      if (hoursList){ hoursList.style.display = 'none'; hoursList.innerHTML = ''; }
+      return;
+    }
+    if (noStaffMsgEl) noStaffMsgEl.style.display = 'none';
+    pickerEl.style.display = 'flex';
+    const hoursList = document.getElementById('hoursList');
+    if (hoursList) hoursList.style.display = 'block';
+
     pickerEl.innerHTML = '';
     staff.forEach((s, i) => {
       const chip = document.createElement('div');
