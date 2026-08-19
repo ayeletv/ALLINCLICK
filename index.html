@@ -27,6 +27,19 @@
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
     auth = firebase.auth();
+    // Sign every visitor in anonymously (invisible — no login screen, no prompt).
+    // This is NOT the business-owner login (that's still email/password below).
+    // The only reason this exists: Firestore security rules can then require
+    // "request.auth != null" instead of being wide open to the whole internet.
+    // A real visitor's browser always gets this anonymous token automatically;
+    // a bot/scanner hitting the database directly over the raw API — the exact
+    // way the site's data has been getting wiped — will not have one, and will
+    // be rejected. If this fails (e.g. Anonymous sign-in isn't enabled yet in
+    // the Firebase console), we deliberately do nothing else here — the rest of
+    // the app keeps working exactly as before under the current rules.
+    auth.signInAnonymously().catch(err => {
+      console.error('Anonymous sign-in failed (only matters once Firestore rules require auth):', err);
+    });
   } catch (e) {
     console.error('Firebase failed to initialize — cloud sync and login will be unavailable:', e);
     const unavailable = () => Promise.reject(new Error('Firebase unavailable'));
@@ -4378,7 +4391,9 @@
   let isLoggedIn = false;
   let pendingBusinessBtn = null;
   auth.onAuthStateChanged(user => {
-    isLoggedIn = !!user;
+    // A signed-in anonymous visitor still counts as "no owner logged in" —
+    // only a real email/password account should unlock the business panel.
+    isLoggedIn = !!user && !user.isAnonymous;
     const btn = document.getElementById('businessTabBtn');
     if (btn) btn.style.display = isLoggedIn ? '' : 'none';
     const notifBtn = document.getElementById('notifTabBtn');
@@ -4429,6 +4444,10 @@
   }
   function doLogout(){
     auth.signOut().then(() => {
+      // Immediately re-establish an anonymous session so this browser tab keeps
+      // read/write access to the cloud data (booking flow, etc.) after the owner
+      // logs out — otherwise every request would start failing permission checks.
+      auth.signInAnonymously().catch(err => console.error('Re-sign-in after logout failed:', err));
       document.querySelectorAll('.switcher button')[0].click();
     });
   }
