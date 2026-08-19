@@ -10,7 +10,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Suez+One&family=Heebo:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/1.66.0/iconfont/tabler-icons.min.css">
-
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
@@ -29,9 +28,6 @@
     db = firebase.firestore();
     auth = firebase.auth();
   } catch (e) {
-    // If Firebase fails to load (ad-blocker, network issue, CDN outage), the rest of the
-    // app should still run — with cloud sync and login simply unavailable — instead of
-    // leaving the whole page broken.
     console.error('Firebase failed to initialize — cloud sync and login will be unavailable:', e);
     const unavailable = () => Promise.reject(new Error('Firebase unavailable'));
     db = { collection: () => ({ doc: () => ({ get: unavailable, set: unavailable, add: unavailable }) }) };
@@ -60,8 +56,6 @@
   }
   .serif{font-family:'Suez One', serif; font-weight:400;}
   .mono{font-family:'JetBrains Mono', monospace;}
-
-  /* HERO */
   .hero{
     min-height:92vh;
     display:flex;
@@ -136,8 +130,6 @@
     .hero *{animation:none !important; opacity:1 !important;}
     .scroll-hint .line{animation:none;}
   }
-
-  /* DEMO SECTION */
   .stage{
     max-width:1040px;
     margin:0 auto;
@@ -149,7 +141,6 @@
   }
   .stage-head .kicker{font-family:'JetBrains Mono'; font-size:12px; letter-spacing:0.1em; color:var(--wine); text-transform:uppercase;}
   .stage-head h2{font-size:clamp(30px,4vw,46px); font-weight:700; margin-top:0.6rem;}
-
   .switcher{
     display:flex;
     justify-content:center;
@@ -181,11 +172,8 @@
     background:var(--wine);
     color:var(--ivory);
   }
-
   .panel{display:none; animation:fadeUp 0.5s ease forwards;}
   .panel.active{display:block;}
-
-  /* CUSTOMER VIEW */
   .phone{
     max-width:380px;
     margin:0 auto;
@@ -236,7 +224,6 @@
     color:var(--wine); font-family:'Heebo'; font-size:13px; font-weight:500;
     cursor:pointer; padding:0;
   }
-
   #svcManageList .svc-cat-header{
     color:var(--gold-soft);
     border-bottom-color:rgba(245,238,228,0.15);
@@ -277,7 +264,6 @@
     background:#FBEFEF;
   }
   .svc-card.selected span:last-child{color:var(--wine);}
-
   .slot-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:22px;}
   .slot{
     position:relative;
@@ -304,7 +290,6 @@
   .slot.selected::before{background:var(--wine);}
   .slot.booked{color:#B8AFA2; background:#F3EEE6;}
   .slot.booked::before{background:#D8CFC0;}
-
   .field{
     width:100%;
     border:1.5px solid #E4DACB;
@@ -335,7 +320,6 @@
   .cta:active{transform:scale(0.98);}
   .staff-picker{display:flex; gap:10px; overflow-x:auto; padding-bottom:4px;}
   .mini-cal{margin-bottom:16px;}
-
   .day-nav-header{
     display:flex; justify-content:space-between; align-items:center;
     margin-bottom:16px;
@@ -351,7 +335,6 @@
     cursor:pointer;
   }
   .day-nav-header span{font-family:'Suez One'; font-weight:400; font-size:16px; color:var(--ivory);}
-
   #overviewMonthWrap .mini-cal-header{color:var(--ivory-dim);}
   #overviewMonthWrap .mini-cal-header button{border-color:rgba(245,238,228,0.2); color:var(--ivory-dim); background:var(--ink-2);}
   #overviewMonthWrap .mini-cal-weekdays{color:var(--ivory-dim);}
@@ -369,7 +352,6 @@
   }
   .ov-agenda-row:last-child{border-bottom:none;}
   .ov-agenda-row .t{font-family:'JetBrains Mono'; color:var(--gold-soft);}
-
   .mini-cal-header{
     display:flex; align-items:center; justify-content:space-between;
     margin-bottom:8px;
@@ -424,7 +406,6 @@
   .staff-chip .avatar img{width:100%; height:100%; object-fit:cover;}
   .staff-chip span{font-size:11px; color:#6B6259; max-width:60px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .staff-chip.selected span{color:var(--wine); font-weight:500;}
-
   .step-dots{display:flex; justify-content:center; gap:8px; margin-bottom:18px;}
   .step-dot{width:8px; height:8px; border-radius:50%; background:#E4DACB;}
   .step-dot.active{background:var(--wine); width:20px; border-radius:4px;}
@@ -441,7 +422,6 @@
     font-size:14px;
     cursor:pointer;
   }
-
   .first-time-perks{
     background:#FBF6E8;
     border:1.5px solid #E8CE7A;
@@ -452,7 +432,6 @@
   .ftp-title{font-size:13px; color:#7A6320; margin-bottom:10px; line-height:1.5;}
   .first-time-perks .field{margin-bottom:8px;}
   .first-time-perks .field:last-child{margin-bottom:0;}
-
   .reminder-choice{
     display:flex; gap:14px; flex-wrap:wrap;
     margin-bottom:6px;
@@ -464,7 +443,6 @@
     color:#4A443D;
   }
   .reminder-choice input[type="radio"]{width:auto; margin:0;}
-
   .confirm-msg{
     display:none;
     align-items:center;
@@ -538,8 +516,6 @@
     background:#fff;
   }
   .my-appt-actions .danger{color:var(--wine); border-color:#E8C3CB;}
-
-  /* BUSINESS VIEW */
   .stat-row{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:24px;}
   .stat{
     background:var(--ink-2);
@@ -549,7 +525,6 @@
   }
   .stat .num{font-family:'Suez One'; font-size:34px; font-weight:400; color:var(--gold-soft);}
   .stat .lbl{font-size:13px; color:var(--ivory-dim); margin-top:4px;}
-
   .board{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow:hidden;}
   .row{
     display:grid;
@@ -565,8 +540,6 @@
   .badge{font-size:12px; padding:4px 12px; border-radius:999px; width:fit-content;}
   .badge.confirmed{background:rgba(124,148,115,0.2); color:var(--sage);}
   .badge.open{background:rgba(201,162,39,0.15); color:var(--gold-soft);}
-
-  /* NOTIFICATIONS VIEW */
   .notif-grid{display:flex; flex-direction:column; gap:18px; max-width:520px; margin:0 auto;}
   .notif-card{
     border:1px solid rgba(245,238,228,0.12);
@@ -587,8 +560,6 @@
     max-width:90%;
     margin-right:auto;
   }
-
-  /* WHAT'S NEW VIEW */
   .new-grid{display:flex; flex-direction:column; gap:14px; max-width:560px; margin:0 auto;}
   .new-card{
     display:flex;
@@ -618,8 +589,6 @@
     margin-inline-start:auto;
     white-space:nowrap;
   }
-
-  /* BUSINESS SUB-TABS */
   .subswitcher{
     display:flex;
     gap:8px;
@@ -645,7 +614,6 @@
   }
   .subpanel{display:none;}
   .subpanel.active{display:block; animation:fadeUp 0.4s ease forwards;}
-
   .inner-switcher{
     display:flex; gap:8px; margin-bottom:1.5rem; flex-wrap:wrap;
   }
@@ -659,8 +627,6 @@
   }
   .inner-subpanel{display:none;}
   .inner-subpanel.active{display:block; animation:fadeUp 0.4s ease forwards;}
-
-  /* HOURS EDITOR */
   .hours-list{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow:hidden;}
   .hours-row{
     display:grid;
@@ -711,7 +677,6 @@
   .hours-row.closed .hours-range{opacity:0.3; pointer-events:none;}
   .hours-row.closed .hours-range::before{content:'סגור'; color:var(--ivory-dim); font-family:'Heebo';}
   .hours-row.closed .hours-range select{display:none;}
-
   .inv-email-row{
     display:flex; align-items:center; gap:10px; flex-wrap:wrap;
     margin-bottom:16px;
@@ -726,7 +691,6 @@
     font-size:13px;
     min-width:200px;
   }
-  /* INVENTORY */
   .inv-alert{
     display:none;
     align-items:flex-start;
@@ -787,8 +751,6 @@
   }
   .badge.low{background:rgba(155,44,66,0.2); color:#E9A9BA;}
   .badge.ok{background:rgba(124,148,115,0.2); color:var(--sage);}
-
-  /* BROADCAST */
   .broadcast-box{max-width:520px;}
   .template-row{display:flex; gap:8px; flex-wrap:wrap;}
   .custom-tpl-form{display:flex; flex-direction:column; gap:8px; max-width:400px;}
@@ -821,8 +783,6 @@
   .template-btn:hover{background:rgba(201,162,39,0.2);}
   .broadcast-footer{display:flex; align-items:center; justify-content:space-between; margin-top:14px; gap:12px; flex-wrap:wrap;}
   .broadcast-count{font-size:13px; color:var(--ivory-dim);}
-
-  /* SERVICE MANAGEMENT */
   .svc-manage-list{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow:hidden; margin-bottom:20px;}
   .svc-manage-row{
     display:flex;
@@ -863,8 +823,6 @@
   }
   .svc-add-row input::placeholder{color:var(--ivory-dim);}
   .svc-add-row .cta{flex:0 0 auto; padding:11px 24px;}
-
-  /* REPORTS */
   .bar-chart{
     display:flex;
     align-items:flex-end;
@@ -897,8 +855,6 @@
   .popular-row .pop-bar-track{flex:1; height:8px; background:rgba(245,238,228,0.1); border-radius:99px; overflow:hidden;}
   .popular-row .pop-bar-fill{height:100%; background:var(--sage); border-radius:99px;}
   .popular-row .pop-count{flex:0 0 34px; text-align:left; font-family:'JetBrains Mono'; color:var(--ivory-dim); font-size:13px;}
-
-  /* CLIENTS & STAFF */
   .client-list{display:flex; flex-direction:column; gap:12px; margin-bottom:20px;}
   .client-card{
     display:flex;
@@ -1022,8 +978,6 @@
   .client-add-row .cta{flex:0 0 auto; padding:11px 24px;}
   .brand-logo-upload.small{width:44px; height:44px; flex-shrink:0;}
   .brand-logo-upload.small span{font-size:10px;}
-
-  /* WEEKLY CALENDAR */
   .staff-filter-row{display:flex; gap:14px; overflow-x:auto; margin-bottom:20px; padding-bottom:4px;}
   .staff-filter-chip{
     display:flex; flex-direction:column; align-items:center; gap:6px;
@@ -1047,7 +1001,6 @@
   .staff-filter-chip .avatar img{width:100%; height:100%; object-fit:cover;}
   .staff-filter-chip span{font-size:11px; color:var(--ivory-dim);}
   .staff-filter-chip.active span{color:var(--ivory);}
-
   .week-cal-wrap{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow-x:auto; scroll-behavior:smooth;}
   .week-cal{display:flex; min-width:820px; scroll-snap-type:x proximity;}
   .cal-hours-col{width:52px; flex-shrink:0; padding-top:56px;}
@@ -1087,8 +1040,6 @@
     box-shadow:0 0 0 1px rgba(28,23,25,0.1);
   }
   .cal-appt b{font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-
-  /* BRANDING */
   .brand-editor{display:flex; align-items:center; gap:20px; flex-wrap:wrap;}
   .brand-logo-upload{
     width:76px; height:76px;
@@ -1133,7 +1084,6 @@
   }
   .brand-preview .logo-dot img{width:100%; height:100%; object-fit:cover;}
   .brand-preview .biz-name{font-family:'Suez One'; font-weight:400; font-size:16px; color:var(--ivory);}
-
   .phone-product-tag{
     font-family:'JetBrains Mono';
     font-size:11px;
@@ -1159,13 +1109,11 @@
   }
   .phone-brand .logo-dot img{width:100%; height:100%; object-fit:cover;}
   .phone-brand .biz-name{font-family:'Suez One'; font-weight:400; font-size:16px; color:var(--ink);}
-
   @media (max-width:640px){
     .hours-row{grid-template-columns:70px auto 1fr; padding:12px 14px;}
     .inv-row{grid-template-columns:1.1fr 100px 60px 60px; padding:10px 12px; font-size:12px;}
     .new-card{flex-wrap:wrap;}
   }
-
   footer{
     text-align:center;
     padding:5vh 6vw 6vh;
@@ -1174,14 +1122,11 @@
     border-top:1px solid rgba(245,238,228,0.08);
   }
   footer .brand{color:var(--gold-soft); font-family:'Suez One'; font-style:normal;}
-
   @media (max-width:640px){
     .stat-row{grid-template-columns:1fr;}
     .row{grid-template-columns:60px 1fr 1fr; font-size:13px;}
     .row .badge-col{display:none;}
   }
-
-  /* MY DAY OVERLAY */
   .myday-overlay{
     display:none;
     position:fixed; inset:0;
@@ -1226,8 +1171,6 @@
     padding:8px 0; border-bottom:1px solid #EEE7DC; font-size:13px;
   }
   .arrival-history-row:last-child{border-bottom:none;}
-
-  /* ONBOARDING */
   .onboard-overlay{
     display:flex;
     position:fixed; inset:0;
@@ -1251,7 +1194,6 @@
   .onboard-list{list-style:none; display:flex; flex-direction:column; gap:8px; margin-bottom:22px;}
   .onboard-list li{font-size:13px; color:var(--ivory-dim); line-height:1.5;}
   .onboard-list li b{color:var(--gold-soft); font-weight:500;}
-
   .search-input{
     width:100%;
     background:var(--ink-2);
@@ -1264,20 +1206,17 @@
     margin-bottom:14px;
   }
   .search-input::placeholder{color:var(--ivory-dim);}
-
   .switcher button i, .subswitcher button i, .onboard-list i, .template-btn i{
     margin-inline-end:4px;
     vertical-align:-2px;
     font-size:15px;
   }
-
   @media print{
     body > *:not(#myDayOverlay){display:none !important;}
     .myday-overlay{position:static !important; background:none !important; padding:0 !important; display:block !important;}
     .myday-sheet{max-height:none !important; box-shadow:none !important;}
     .no-print, .myday-actions{display:none !important;}
   }
-
   @media (max-width:480px){
     .myday-sheet, .onboard-sheet{padding:18px;}
     .onboard-list li{font-size:12px;}
@@ -1287,7 +1226,6 @@
     .broadcast-box, .custom-tpl-form{max-width:100%;}
     .stage{padding:6vh 4vw 8vh;}
   }
-
   .admin-toast{
     position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
     background:rgba(36,31,29,.97); color:var(--ivory); border:1px solid rgba(197,163,94,.45);
@@ -1308,11 +1246,9 @@
     border-radius:8px; border:1px solid rgba(245,238,228,.16); color:var(--ivory);
     background:rgba(245,238,228,.06); text-decoration:none; cursor:pointer; font:inherit;
   }
-
 </style>
 </head>
 <body>
-
 <section class="hero">
   <h1 class="serif">הכל <span>בקליק</span></h1>
   <p class="tagline"><b>הכל במקום אחד, בלי מאמץ.</b></p>
@@ -1322,7 +1258,6 @@
     <div class="line"></div>
   </div>
 </section>
-
 <section class="stage">
   <div class="switcher">
     <button class="active" onclick="showPanel('customer', this)"><i class="ti ti-calendar-event"></i> קביעת תור</button>
@@ -1330,7 +1265,6 @@
     <button id="businessTabBtn" onclick="handleBusinessTabClick(this)" style="display:none;"><i class="ti ti-briefcase"></i> לבעלת העסק</button>
     <button id="notifTabBtn" onclick="showPanel('notif', this)" style="display:none;"><i class="ti ti-bell"></i> ההתראות</button>
   </div>
-
   <div id="panel-customer" class="panel active">
     <div class="phone">
       <div class="phone-screen">
@@ -1339,14 +1273,12 @@
         <div style="text-align:center; margin-bottom:10px;">
           <a href="#" onclick="openApptLookup(); return false;" style="font-size:12px; color:#8A8178; text-decoration:underline;">יש לך תור קיים? לחיצה לבדיקה</a>
         </div>
-
         <div id="bookingFormWrap">
           <div class="step-dots" id="stepDots">
             <span class="step-dot active" data-step="1"></span>
             <span class="step-dot" data-step="2"></span>
             <span class="step-dot" data-step="3"></span>
           </div>
-
           <div class="booking-step active" id="bstep-1">
             <div id="catGridView">
               <div class="label">בחירת טיפול</div>
@@ -1362,7 +1294,6 @@
               <button class="cta" onclick="goToStep(2)">המשך</button>
             </div>
           </div>
-
           <div class="booking-step" id="bstep-2">
             <div class="label">בחירת יום</div>
             <div class="mini-cal" id="miniCal">
@@ -1384,7 +1315,6 @@
               <button class="cta" style="flex:1;" onclick="goToStep(3)">המשך</button>
             </div>
           </div>
-
           <div class="booking-step" id="bstep-3">
             <div class="label">פרטי קשר</div>
             <input class="field" id="bookingNameInput" placeholder="שם מלא">
@@ -1411,16 +1341,13 @@
             </div>
           </div>
         </div>
-
         <div id="myAppointment" class="my-appt" style="display:none;"></div>
       </div>
     </div>
   </div>
-
   <div id="panel-whatsnew" class="panel">
     <div class="new-grid" id="whatsNewList"></div>
   </div>
-
   <div id="panel-business" class="panel">
     <div class="subswitcher">
       <button class="active" onclick="showSub('overview', this)"><i class="ti ti-layout-dashboard"></i> סקירה</button>
@@ -1431,7 +1358,6 @@
       <button onclick="showSub('whatsnewadmin', this)"><i class="ti ti-sparkles"></i> מה חדש</button>
       <button onclick="showSub('settings', this)"><i class="ti ti-settings"></i> הגדרות</button>
     </div>
-
     <div id="sub-overview" class="subpanel active">
       <div class="inner-switcher">
         <button class="active" onclick="showInnerTab('sub-overview', 'inner-overview-calendar', this)">יומן</button>
@@ -1482,7 +1408,6 @@
         <div id="ovDayAgendaList"></div>
       </div>
       </div>
-
       <div id="inner-overview-reports" class="inner-subpanel">
         <div class="subswitcher" style="margin-bottom:1.5rem;">
           <button class="active" onclick="showReportRange('week', this)">השבוע</button>
@@ -1509,17 +1434,14 @@
         <div class="popular-list" id="popularList"></div>
       </div>
     </div>
-
     <div id="sub-clients" class="subpanel">
       <div class="inner-switcher">
         <button class="active" onclick="showInnerTab('sub-clients', 'inner-clients', this)">לקוחות</button>
         <button onclick="showInnerTab('sub-clients', 'inner-broadcast', this)">הודעות ללקוחות</button>
       </div>
-
       <div id="inner-clients" class="inner-subpanel active">
         <div class="label" style="margin-bottom:10px;">רשימת המתנה (<span id="waitlistCount">0</span>)</div>
         <div class="client-list" id="waitlistAdminList" style="margin-bottom:26px;"></div>
-
         <div class="inv-email-row">
           <span class="label" style="margin:0;">סמני "לא הגיעה זמן רב" אחרי (ימים)</span>
           <input type="number" id="inactivityThreshold" value="21" style="width:70px;" oninput="updateInactivityThreshold()">
@@ -1541,7 +1463,6 @@
           <button class="cta" style="width:auto; margin-top:0;" onclick="addClient()">הוספת לקוחה</button>
         </div>
       </div>
-
       <div id="inner-broadcast" class="inner-subpanel">
         <div class="broadcast-box">
           <div class="label" style="margin-bottom:6px;">תבנית מהירה</div>
@@ -1552,24 +1473,20 @@
             <button class="template-btn" onclick="fillTemplate('holiday')">🎉 חג שמח</button>
           </div>
           <div class="template-row" id="customTemplateRow" style="margin-top:8px;"></div>
-
           <div class="label" style="margin:14px 0 6px;">הוספת תבנית משלך</div>
           <div class="custom-tpl-form">
             <input type="text" id="newTplLabel" placeholder="שם קצר (למשל: תזכורת חג)">
             <textarea id="newTplContent" class="client-note" style="min-height:60px;" placeholder="תוכן התבנית..."></textarea>
             <button class="cta" style="width:auto; margin-top:0;" onclick="addCustomTemplate()">שמירת תבנית</button>
           </div>
-
           <div class="label" style="margin:16px 0 6px;">תמונה מצורפת (אופציונלי)</div>
           <div class="brand-logo-upload" id="broadcastPhotoUpload" onclick="document.getElementById('broadcastPhotoFile').click()" style="width:100%; height:120px; border-radius:12px;">
             <span id="broadcastPhotoPlaceholder">+ הוספת תמונה</span>
             <img id="broadcastPhotoPreview" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:12px;">
           </div>
           <input type="file" id="broadcastPhotoFile" accept="image/*" style="display:none;" onchange="handleBroadcastPhotoUpload(event)">
-
           <div class="label" style="margin:16px 0 6px;">תוכן ההודעה</div>
           <textarea id="broadcastMessage" class="client-note" style="min-height:100px;" placeholder="כתבי כאן את ההודעה שתישלח לכל הלקוחות..."></textarea>
-
           <div class="broadcast-footer">
             <span id="broadcastCount" class="broadcast-count"></span>
             <button class="cta" style="width:auto; margin-top:0;" onclick="sendBroadcast()">שליחה לכל הלקוחות</button>
@@ -1578,13 +1495,11 @@
         </div>
       </div>
     </div>
-
     <div id="sub-staff" class="subpanel">
       <div class="inner-switcher">
         <button class="active" onclick="showInnerTab('sub-staff', 'inner-staff', this)">צוות</button>
         <button onclick="showInnerTab('sub-staff', 'inner-hours', this)">שעות פעילות</button>
       </div>
-
       <div id="inner-staff" class="inner-subpanel active">
         <input type="text" id="staffSearch" class="search-input" placeholder="חיפוש עובדת לפי שם..." oninput="renderStaff()">
         <div class="client-list" id="staffList"></div>
@@ -1599,7 +1514,6 @@
           <button class="cta" style="width:auto; margin-top:0;" onclick="addStaff()">הוספת עובדת</button>
         </div>
       </div>
-
       <div id="inner-hours" class="inner-subpanel">
         <div class="label" style="margin-bottom:10px;">שעות הפעילות של:</div>
         <div id="hoursNoStaffMsg" style="display:none; color:var(--ivory-dim); font-size:14px; padding:20px; border:1px dashed rgba(245,238,228,0.2); border-radius:12px; text-align:center;">
@@ -1617,7 +1531,6 @@
         </div>
       </div>
     </div>
-
     <div id="sub-settings" class="subpanel">
       <div class="label" style="margin-bottom:10px;">אבטחה</div>
       <div style="display:flex; flex-direction:column; gap:10px; max-width:380px; margin-bottom:28px;">
@@ -1628,7 +1541,6 @@
         <div id="cpSuccess" style="display:none; color:#3E5C36; font-size:13px;"></div>
         <button class="template-btn" style="width:fit-content;" onclick="doChangePassword()">🔑 עדכון סיסמה</button>
       </div>
-
       <div class="label" style="margin-bottom:10px;">מיתוג</div>
       <div class="brand-editor">
         <div class="brand-logo-upload" id="logoUpload" onclick="document.getElementById('logoFile').click()">
@@ -1641,21 +1553,20 @@
           <input type="text" id="bizNameInput" class="field-dark" placeholder="שם העסק שלך" value="" oninput="updateBranding()">
           <div class="label" style="margin:12px 0 6px;">טלפון ליצירת קשר (להתייעצות)</div>
           <input type="tel" id="bizPhoneInput" class="field-dark" placeholder="050-0000000" oninput="updateBranding()">
+          <div class="label" style="margin:12px 0 6px;">מייל שלך לקבלת התראה כשנקבע/מבוטל תור</div>
+          <input type="email" id="bizNotifyEmailInput" class="field-dark" placeholder="you@example.com" oninput="updateBranding()">
         </div>
       </div>
       <div class="label" style="margin:22px 0 10px;">כך זה ייראה ללקוחה</div>
       <div class="brand-preview" id="brandPreview"></div>
-
       <div class="label" style="margin:28px 0 10px;">חשבון</div>
       <button class="template-btn" onclick="doLogout()">🚪 התנתקות</button>
     </div>
-
     <div id="sub-servicesgroup" class="subpanel">
       <div class="inner-switcher">
         <button class="active" onclick="showInnerTab('sub-servicesgroup', 'inner-services', this)">השירותים שלי</button>
         <button onclick="showInnerTab('sub-servicesgroup', 'inner-categories', this)">קטגוריות</button>
       </div>
-
       <div id="inner-services" class="inner-subpanel active">
         <div class="svc-manage-list" id="svcManageList"></div>
         <div class="svc-add-row">
@@ -1666,7 +1577,6 @@
           <button class="cta" style="width:auto; margin-top:0;" onclick="addService()">הוספת שירות</button>
         </div>
       </div>
-
       <div id="inner-categories" class="inner-subpanel">
         <div class="label" style="margin-bottom:10px;">קטגוריות ראשיות</div>
         <div class="client-list" id="categoryList"></div>
@@ -1676,7 +1586,6 @@
         </div>
       </div>
     </div>
-
     <div id="sub-whatsnewadmin" class="subpanel">
       <div class="client-list" id="whatsNewAdminList"></div>
       <div class="custom-tpl-form">
@@ -1688,7 +1597,6 @@
         <button class="cta" style="width:auto; margin-top:0;" onclick="addWhatsNew()">הוספת עדכון</button>
       </div>
     </div>
-
     <div id="sub-inventory" class="subpanel">
       <div class="inv-email-row">
         <span class="label" style="margin:0;">מייל לקבלת התראות מלאי</span>
@@ -1707,7 +1615,6 @@
       </div>
     </div>
   </div>
-
   <div id="panel-notif" class="panel">
     <div class="notif-grid">
       <div class="notif-card">
@@ -1722,12 +1629,10 @@
     </div>
   </div>
 </section>
-
 <footer>
   <span class="brand">הכל בקליק</span> — ניהול תורים, לקוחות וצוות במקום אחד
   <div style="margin-top:10px;"><a href="#" onclick="openLoginOverlayDirect(); return false;" style="color:var(--ivory-dim); font-size:11px; text-decoration:underline;">כניסת בעלת עסק</a></div>
 </footer>
-
 <div id="myDayOverlay" class="myday-overlay">
   <div class="myday-sheet">
     <div class="myday-header no-print">
@@ -1740,7 +1645,6 @@
     <div id="myDayList" class="myday-list"></div>
   </div>
 </div>
-
 <div id="clientArrivalOverlay" class="myday-overlay">
   <div class="myday-sheet">
     <div class="myday-header">
@@ -1752,7 +1656,6 @@
     <div id="clientArrivalContent"></div>
   </div>
 </div>
-
 <div id="apptLookupOverlay" class="myday-overlay">
   <div class="myday-sheet">
     <div class="myday-header">
@@ -1768,7 +1671,6 @@
     </div>
   </div>
 </div>
-
 <div id="manualBookingOverlay" class="myday-overlay">
   <div class="myday-sheet">
     <div class="myday-header">
@@ -1789,9 +1691,7 @@
     </div>
   </div>
 </div>
-
 <div id="adminToast" class="admin-toast" role="status" aria-live="polite"></div>
-
 <div id="loginOverlay" class="myday-overlay">
   <div class="myday-sheet">
     <div class="myday-header">
@@ -1808,9 +1708,6 @@
     </div>
   </div>
 </div>
-
-
-
 <div id="onboardOverlay" class="onboard-overlay hide">
   <div class="onboard-sheet">
     <h3>ברוכה הבאה ל"הכל בקליק" 👋</h3>
@@ -1827,12 +1724,10 @@
     <button class="cta" style="width:auto; padding:12px 28px;" onclick="closeOnboarding()">הבנתי, בואו נתחיל</button>
   </div>
 </div>
-
 <script>
   function closeOnboarding(){
     document.getElementById('onboardOverlay').classList.add('hide');
   }
-
   function openMyDayView(){
     const now = new Date();
     const dow = now.getDay();
@@ -1840,11 +1735,9 @@
     const dayName = days[dow].name;
     const dateStr = now.getDate() + ' ב' + hebrewMonths[now.getMonth()];
     document.getElementById('myDayTitle').textContent = `היום שלי — יום ${dayName}, ${dateStr}`;
-
     const todays = weekAppointments
       .filter(a => a.date === formatDateKey(now))
       .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
-
     const listEl = document.getElementById('myDayList');
     if (!todays.length){
       listEl.innerHTML = '<p style="color:#8A8178; font-size:14px;">אין תורים היום.</p>';
@@ -1854,14 +1747,11 @@
         return `<div class="myday-row"><span class="t">${a.time}</span><span>${a.client} · ${a.service}</span><span class="who">${empName}</span></div>`;
       }).join('');
     }
-
     document.getElementById('myDayOverlay').classList.add('show');
   }
-
   function closeMyDayView(){
     document.getElementById('myDayOverlay').classList.remove('show');
   }
-
   function renderMbServiceOptions(preselectIndex){
     const svcSelect = document.getElementById('mbService');
     if (!svcSelect) return;
@@ -1878,7 +1768,6 @@
     });
     svcSelect.innerHTML = html;
   }
-
   function mostFrequentServiceIndexFor(clientName){
     if (!clientName) return null;
     const counts = {};
@@ -1893,17 +1782,14 @@
     const idx = services.findIndex(s => s.name === bestService);
     return idx !== -1 ? idx : null;
   }
-
   function openManualBookingModal(opts){
     opts = opts || {};
     const suggestedSvcIdx = opts.serviceIndex !== undefined
       ? opts.serviceIndex
       : mostFrequentServiceIndexFor(opts.clientName);
     renderMbServiceOptions(suggestedSvcIdx !== null && suggestedSvcIdx !== undefined ? suggestedSvcIdx : 0);
-
     const staffSelect = document.getElementById('mbStaff');
     staffSelect.innerHTML = staff.map((s, i) => `<option value="${i}" ${opts.staff === i ? 'selected' : ''}>${s.name}</option>`).join('');
-
     const targetDate = opts.date || new Date();
     const yyyy = targetDate.getFullYear();
     const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
@@ -1915,19 +1801,15 @@
     document.getElementById('mbClientName').value = opts.clientName || '';
     document.getElementById('mbClientPhone').value = opts.clientPhone || '';
     document.getElementById('mbError').style.display = 'none';
-
     document.getElementById('manualBookingOverlay').classList.add('show');
     renderManualBookingSlots();
   }
-
   document.getElementById('mbService')?.addEventListener('change', renderManualBookingSlots);
   document.getElementById('mbStaff')?.addEventListener('change', renderManualBookingSlots);
   document.getElementById('mbDate')?.addEventListener('change', renderManualBookingSlots);
-
   function closeManualBookingModal(){
     document.getElementById('manualBookingOverlay').classList.remove('show');
   }
-
   function renderManualBookingSlots(){
     const dateVal = document.getElementById('mbDate')?.value;
     const svcIdx = parseInt(document.getElementById('mbService')?.value);
@@ -1969,12 +1851,9 @@
     });
     hint.textContent = options.length ? 'מוצגות כאן רק שעות פנויות, בדיוק כמו בקביעת תור ללקוחה.' : 'אין שעות פנויות ביום הזה. אפשר לבחור יום אחר.';
   }
-
   function minutesToTimeGlobal(m){
     return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
   }
-
-
   function showAdminToast(message, duration){
     const el = document.getElementById('adminToast');
     if (!el) { alert(message); return; }
@@ -1983,7 +1862,6 @@
     clearTimeout(window.__adminToastTimer);
     window.__adminToastTimer = setTimeout(() => el.classList.remove('show'), duration || 3200);
   }
-
   function getWaitlistMatchesForAppointment(appt){
     if (!appt || !appt.date) return [];
     const apptStart = timeToMinutes(appt.time || '00:00');
@@ -1996,7 +1874,11 @@
       return requested >= apptStart && requested < apptEnd;
     });
   }
-
+  function findClientEmailByPhone(phone){
+    const digits = (phone || '').replace(/[^0-9]/g, '');
+    const match = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits);
+    return match && match.email ? match.email : '';
+  }
   function renderWaitlistMatchAlert(matches, appt){
     if (!matches || !matches.length) return;
     const existing = document.getElementById('waitlistMatchAlert');
@@ -2012,11 +1894,16 @@
     box.innerHTML = `<strong>🔔 התפנה מקום!</strong><div style="font-size:13px;margin-top:5px;">התפנה תור ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}.</div>`;
     matches.forEach(w => {
       const digits = (w.phone || '').replace(/[^0-9]/g,'');
-      const msg = encodeURIComponent(`היי ${w.name}, התפנה תור ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}. אם תרצי, אפשר לקבוע אותו כאן: ${getSiteUrl()}`);
+      const smsMsg = encodeURIComponent(`היי ${w.name}, התפנה תור ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}. אם תרצי, אפשר לקבוע אותו כאן: ${getSiteUrl()}`);
+      const clientEmail = findClientEmailByPhone(w.phone);
+      if (clientEmail){
+        sendEmail(clientEmail, 'התפנה תור אצלנו!', `היי ${w.name}, התפנה תור ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}. אם תרצי, אפשר לקבוע אותו כאן:\n${getSiteUrl()}`);
+      }
       const row = document.createElement('div');
       row.className='wl-match';
-      row.innerHTML = `<div><b>${w.name}</b> · ${w.phone}</div><div class="wl-actions">
-        <a href="https://wa.me/${digits}?text=${msg}" target="_blank" rel="noopener">💬 שליחת WhatsApp</a>
+      row.innerHTML = `<div><b>${w.name}</b> · ${w.phone}${clientEmail ? ' · נשלח גם מייל אוטומטית' : ''}</div><div class="wl-actions">
+        <a href="sms:${digits}?body=${smsMsg}">💬 שליחת SMS</a>
+        <a href="tel:${digits}">📞 התקשרות</a>
         <button type="button">✓ סימון כטופלה</button>
       </div>`;
       row.querySelector('button').onclick=()=>{
@@ -2031,7 +1918,6 @@
     });
     host.prepend(box);
   }
-
   function cancelAdminAppointment(appt){
     if (!appt) return;
     const confirmed = confirm(`לבטל את התור של ${appt.client} ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}?`);
@@ -2047,7 +1933,6 @@
     showAdminToast('✓ התור בוטל בהצלחה');
     if (matches.length) renderWaitlistMatchAlert(matches, appt);
   }
-
   function submitManualBooking(){
     const name = document.getElementById('mbClientName').value.trim();
     const phone = document.getElementById('mbClientPhone').value.trim();
@@ -2056,19 +1941,16 @@
     const dateVal = document.getElementById('mbDate').value;
     const timeVal = document.getElementById('mbTime').value;
     const errorEl = document.getElementById('mbError');
-
     if (!name || !dateVal || !timeVal || isNaN(svcIdx) || isNaN(staffIdx)){
       errorEl.style.display = 'block';
       errorEl.textContent = 'יש למלא שם, תאריך, שעה, שירות ועובדת.';
       return;
     }
-
     const svc = services[svcIdx];
     const dateParts = dateVal.split('-').map(Number);
     const apptDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
     const dayKey = weekdayKeys[apptDate.getDay()];
     const dur = svc.duration || 30;
-
     const startMin = timeToMinutes(timeVal);
     const endMin = startMin + dur;
     const conflict = weekAppointments.some(a => {
@@ -2082,7 +1964,6 @@
       errorEl.textContent = `יש כבר תור חופף לעובדת זו באותו זמן.`;
       return;
     }
-
     const manualAppointment = {
       id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000),
       day: dayKey,
@@ -2096,41 +1977,44 @@
       note: ''
     };
     weekAppointments.push(manualAppointment);
-
     if (phone && !clients.some(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, ''))){
       clients.push({ name, phone, email: '', photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
-      if (typeof renderClients === 'function') renderClients();
     }
-
-    if (typeof renderWeekCal === 'function') renderWeekCal();
-    if (typeof renderMiniCal === 'function') renderMiniCal();
-    if (typeof renderOverviewDayView === 'function') {
-      ovCurrentDayDate = new Date(apptDate.getFullYear(), apptDate.getMonth(), apptDate.getDate());
-      renderOverviewDayView();
-    }
-    if (typeof renderOverviewMonthCal === 'function') {
-      ovCalViewYear = apptDate.getFullYear();
-      ovCalViewMonth = apptDate.getMonth();
-      renderOverviewMonthCal();
-    }
-    if (typeof renderClients === 'function') renderClients();
     if (typeof saveState === 'function') saveState();
-
-    const bookedClient = clients.find(c => (c.phone || '').replace(/[^0-9]/g,'') === phone.replace(/[^0-9]/g,''));
-    if (bookedClient && bookedClient.email){
-      const dateLabel = apptDate.getDate() + ' ב' + hebrewMonths[apptDate.getMonth()];
-      sendEmail(
-        bookedClient.email,
-        'התור שלך אושר',
-        getAppointmentEmailText(name, svc.name, dateLabel, timeVal, staff[staffIdx] ? staff[staffIdx].name : '', 'התור נקבע עבורך על ידי העסק.')
-      );
-    }
-
+    // The appointment is saved at this point — show the success feedback and close
+    // the modal right away. Everything below is just refreshing the various views
+    // and sending the optional email; it's wrapped in try/catch so that if any one
+    // of those secondary steps fails, it can never hide the fact that the booking
+    // itself succeeded (which is exactly what caused a click on "אישור" to look
+    // like it did nothing, leading to a second click and a false "conflict" error).
     closeManualBookingModal();
     showAdminToast('✓ התור נוסף ואושר בהצלחה');
-    
+    try {
+      if (typeof renderClients === 'function') renderClients();
+      if (typeof renderWeekCal === 'function') renderWeekCal();
+      if (typeof renderMiniCal === 'function') renderMiniCal();
+      if (typeof renderOverviewDayView === 'function') {
+        ovCurrentDayDate = new Date(apptDate.getFullYear(), apptDate.getMonth(), apptDate.getDate());
+        renderOverviewDayView();
+      }
+      if (typeof renderOverviewMonthCal === 'function') {
+        ovCalViewYear = apptDate.getFullYear();
+        ovCalViewMonth = apptDate.getMonth();
+        renderOverviewMonthCal();
+      }
+      const bookedClient = clients.find(c => (c.phone || '').replace(/[^0-9]/g,'') === phone.replace(/[^0-9]/g,''));
+      if (bookedClient && bookedClient.email){
+        const dateLabel = apptDate.getDate() + ' ב' + hebrewMonths[apptDate.getMonth()];
+        sendEmail(
+          bookedClient.email,
+          'התור שלך אושר',
+          getAppointmentEmailText(name, svc.name, dateLabel, timeVal, staff[staffIdx] ? staff[staffIdx].name : '', 'התור נקבע עבורך על ידי העסק.')
+        );
+      }
+    } catch (e) {
+      console.error('Manual booking: refreshing the views after save failed (the appointment itself was saved fine):', e);
+    }
   }
-
   function showReportRange(range, btn){
     document.querySelectorAll('#sub-reports .subswitcher button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -2148,12 +2032,10 @@
       renderReports(range);
     }
   }
-
   function renderReportOutput(data){
     document.getElementById('repRevenue').textContent = data.revenue;
     document.getElementById('repCount').textContent = data.count;
     document.getElementById('repAvg').textContent = data.avg;
-
     const maxVal = Math.max(...data.bars.map(b => b.val), 1);
     const chartEl = document.getElementById('revChart');
     chartEl.innerHTML = '';
@@ -2164,7 +2046,6 @@
       col.innerHTML = `<div class="bar-fill" style="height:${height}%;"></div><span class="bar-lbl">${b.lbl}</span>`;
       chartEl.appendChild(col);
     });
-
     const maxCount = Math.max(...data.popular.map(p => p.count), 1);
     const popEl = document.getElementById('popularList');
     popEl.innerHTML = '';
@@ -2179,16 +2060,13 @@
       popEl.appendChild(row);
     });
   }
-
   function computeRealRangeReport(fromD, toD){
     const totalDays = Math.round((toD - fromD) / 86400000) + 1;
     const useWeekly = totalDays > 14;
     const bars = [];
     const popularMap = {};
     let totalRevenue = 0, totalCount = 0;
-
     let weekBucketRevenue = 0, weekIndex = 1;
-
     for (let i = 0; i < totalDays; i++){
       const d = new Date(fromD);
       d.setDate(fromD.getDate() + i);
@@ -2196,7 +2074,6 @@
       const dayKey = weekdayKeys[dow];
       const dayAppts = weekAppointments.filter(a => a.date === formatDateKey(d));
       let dayRevenue = 0;
-
       dayAppts.forEach(a => {
         const svcMatch = services.find(s => s.name === a.service);
         const price = svcMatch ? svcMatch.price : 0;
@@ -2205,7 +2082,6 @@
         totalCount += 1;
         popularMap[a.service] = (popularMap[a.service] || 0) + 1;
       });
-
       if (!useWeekly){
         bars.push({ lbl: d.getDate() + '/' + (d.getMonth()+1), val: dayRevenue });
       } else {
@@ -2217,12 +2093,10 @@
         }
       }
     }
-
     const popular = Object.entries(popularMap)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
-
     return {
       revenue: totalRevenue.toLocaleString('he-IL') + ' ₪',
       count: totalCount,
@@ -2231,7 +2105,6 @@
       popular
     };
   }
-
   function renderReports(range){
     const today = new Date();
     let fromD, toD;
@@ -2244,25 +2117,19 @@
     }
     renderReportOutput(computeRealRangeReport(fromD, toD));
   }
-
   function renderCustomRangeReport(){
     const fromVal = document.getElementById('reportFromDate').value;
     const toVal = document.getElementById('reportToDate').value;
     if (!fromVal || !toVal) return;
-
     const fromParts = fromVal.split('-').map(Number);
     const toParts = toVal.split('-').map(Number);
     const fromD = new Date(fromParts[0], fromParts[1]-1, fromParts[2]);
     const toD = new Date(toParts[0], toParts[1]-1, toParts[2]);
     if (toD < fromD) return;
-
     renderReportOutput(computeRealRangeReport(fromD, toD));
   }
-
-  let branding = { name: '', logo: null, phone: '' };
-
+  let branding = { name: '', logo: null, phone: '', notifyEmail: '' };
   const pendingEmailQueue = {};
-
   function sendEmail(to, subject, text, imageDataUrl){
     if (!to) return;
     if (!pendingEmailQueue[to]) pendingEmailQueue[to] = { items: [], timer: null };
@@ -2271,20 +2138,16 @@
     clearTimeout(queue.timer);
     queue.timer = setTimeout(() => flushEmailQueue(to), 5000);
   }
-
   function textToHtmlBlock(text, imageDataUrl){
     const escaped = (text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
     const imgHtml = imageDataUrl ? `<img src="${imageDataUrl}" style="max-width:100%; border-radius:8px; margin-bottom:12px; display:block;">` : '';
     return `${imgHtml}<p style="font-family:sans-serif; font-size:15px; line-height:1.6; direction:rtl; text-align:right;">${escaped}</p>`;
   }
-
   function flushEmailQueue(to){
     const queue = pendingEmailQueue[to];
     if (!queue || !queue.items.length) return;
-
     const fromName = (branding.name || 'הכל בקליק').trim();
     const fromAddress = 'appointments@rutizolberg.com';
-
     let subject, text, html;
     if (queue.items.length === 1){
       subject = queue.items[0].subject;
@@ -2295,25 +2158,22 @@
       text = queue.items.map(item => `${item.subject}:\n${item.text}`).join('\n\n———\n\n');
       html = queue.items.map(item => `<h3 style="font-family:sans-serif; direction:rtl; text-align:right;">${item.subject}</h3>` + textToHtmlBlock(item.text, item.imageDataUrl)).join('<hr style="margin:16px 0; border:none; border-top:1px solid #eee;">');
     }
-
     const payload = {
       to: to,
       from: `${fromName} <${fromAddress}>`,
       message: { subject: subject, text: text, html: html }
     };
-
     db.collection('mail').add(payload).catch(err => console.error('Email send failed:', err));
-
     delete pendingEmailQueue[to];
   }
-
   function updateBranding(){
     branding.name = document.getElementById('bizNameInput').value.trim() || 'הסלון שלי';
     branding.phone = document.getElementById('bizPhoneInput').value.trim();
+    const notifyEmailEl = document.getElementById('bizNotifyEmailInput');
+    if (notifyEmailEl) branding.notifyEmail = notifyEmailEl.value.trim();
     renderBranding();
     if (typeof renderServices === 'function') renderServices();
   }
-
   function handleLogoUpload(event){
     const file = event.target.files[0];
     if (!file) return;
@@ -2327,25 +2187,22 @@
     };
     reader.readAsDataURL(file);
   }
-
   function renderBranding(){
     const logoHtml = branding.logo
       ? `<img src="${branding.logo}">`
       : branding.name.trim().charAt(0);
-
     document.getElementById('brandPreview').innerHTML = `
       <div class="logo-dot">${logoHtml}</div>
       <span class="biz-name">${branding.name}</span>`;
-
     document.getElementById('phoneBrand').innerHTML = `
       <div class="logo-dot">${logoHtml}</div>
       <span class="biz-name">${branding.name}</span>`;
-
     const nameInputEl = document.getElementById('bizNameInput');
     const phoneInputEl = document.getElementById('bizPhoneInput');
     if (nameInputEl && document.activeElement !== nameInputEl) nameInputEl.value = branding.name;
     if (phoneInputEl && document.activeElement !== phoneInputEl) phoneInputEl.value = branding.phone || '';
-
+    const notifyEmailInputEl = document.getElementById('bizNotifyEmailInput');
+    if (notifyEmailInputEl && document.activeElement !== notifyEmailInputEl) notifyEmailInputEl.value = branding.notifyEmail || '';
     const heroBizNameEl = document.getElementById('heroBizName');
     if (heroBizNameEl){
       if (branding.name && branding.name.trim()){
@@ -2355,7 +2212,6 @@
         heroBizNameEl.classList.remove('show');
       }
     }
-
     const bizNameTrimmed = (branding.name || '').trim();
     document.title = bizNameTrimmed
       ? bizNameTrimmed + ' — קביעת תורים אונליין'
@@ -2368,17 +2224,14 @@
     }
   }
   renderBranding();
-
   let clients = [];
   const birthdayEmailsSentToday = new Set();
   let newClientPhoto = null;
   let inactivityThresholdDays = 21;
-
   function updateInactivityThreshold(){
     inactivityThresholdDays = parseInt(document.getElementById('inactivityThreshold').value) || 21;
     renderClients();
   }
-
   function formatLastVisit(days){
     if (days === null || days === undefined) return '—';
     if (days === 0) return 'היום';
@@ -2386,7 +2239,6 @@
     if (days < 30) return `לפני ${Math.round(days / 7)} שבועות`;
     return `לפני ${Math.round(days / 30)} חודשים`;
   }
-
   function sendMissYouMessage(i){
     const c = clients[i];
     if (c.email){
@@ -2400,7 +2252,6 @@
         : `לא נשלחה הודעה — אין כתובת מייל שמורה ל-${c.name}`;
     }
   }
-
   function sendMissYouToAll(){
     const inactiveIdx = clients
       .map((c, i) => ({ c, i }))
@@ -2409,9 +2260,7 @@
     const alertEl = document.getElementById('missYouAlert');
     alertEl.innerHTML = `✓ &nbsp;<span>נשלחה הודעת "מתגעגעים אלייך" ל-${inactiveIdx.length} לקוחות (למי שיש כתובת מייל שמורה).</span>`;
   }
-
   const hebrewMonths = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
-
   function hebrewDayNumeral(n){
     if (n === 15) return 'ט״ו';
     if (n === 16) return 'ט״ז';
@@ -2426,7 +2275,6 @@
     }
     return str;
   }
-
   function hebrewDateStr(date){
     try {
       const parts = new Intl.DateTimeFormat('he-u-ca-hebrew', { day: 'numeric', month: 'long' }).formatToParts(date);
@@ -2437,20 +2285,17 @@
       return '';
     }
   }
-
   function isBirthdayToday(birthdayStr){
     if (!birthdayStr) return false;
     const b = new Date(birthdayStr);
     const now = new Date();
     return b.getMonth() === now.getMonth() && b.getDate() === now.getDate();
   }
-
   function formatBirthday(birthdayStr){
     if (!birthdayStr) return null;
     const b = new Date(birthdayStr);
     return b.getDate() + ' ב' + hebrewMonths[b.getMonth()];
   }
-
   function formatHistoryDate(a){
     if (a.date){
       const d = new Date(a.date);
@@ -2459,26 +2304,21 @@
     const dow = weekdayKeys.indexOf(a.day);
     return dow !== -1 ? 'יום ' + days[dow].name : '';
   }
-
   function getAppointmentDateOnly(appt){
     if (!appt || !appt.date) return null;
     const parts = appt.date.split('-').map(Number);
     if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
     return new Date(parts[0], parts[1] - 1, parts[2]);
   }
-
   function getTodayDateOnly(){
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
-
   function isAppointmentHistory(appt){
     const d = getAppointmentDateOnly(appt);
     if (!d) return false;
-    // Today is intentionally considered history, even if the appointment time is later today.
     return d <= getTodayDateOnly();
   }
-
   function getClientAppointments(clientName){
     return weekAppointments
       .filter(a => a.client === clientName)
@@ -2490,19 +2330,16 @@
         return timeToMinutes(b.time || '00:00') - timeToMinutes(a.time || '00:00');
       });
   }
-
   function formatAppointmentStatus(appt){
     if (appt.status === 'completed') return '<span class="badge confirmed">✓ הגיעה</span>';
     if (appt.status === 'no-show') return '<span class="badge low">✗ לא הגיעה</span>';
     return '<span class="badge open">ממתינה</span>';
   }
-
   function renderClientAppointmentRows(appointments, options){
     options = options || {};
     if (!appointments.length){
       return '<p style="color:var(--ivory-dim); font-size:13px;">' + (options.emptyText || 'אין תורים.') + '</p>';
     }
-
     return appointments.map(a => {
       if (options.upcoming){
         return `
@@ -2516,7 +2353,6 @@
             ${a.note ? `<div style="font-size:12px; color:var(--ivory-dim); margin-top:5px;">${a.note}</div>` : ''}
           </div>`;
       }
-
       return `
         <div class="visit-row" data-appt-id="${a.id || ''}">
           <div class="visit-row-head">
@@ -2532,7 +2368,6 @@
         </div>`;
     }).join('');
   }
-
   function renderClients(){
     const listEl = document.getElementById('clientList');
     listEl.innerHTML = '';
@@ -2540,7 +2375,6 @@
     const birthdayClients = [];
     const searchEl = document.getElementById('clientSearch');
     const searchTerm = searchEl ? searchEl.value.trim().toLowerCase() : '';
-
     clients.forEach((c, i) => {
       const isInactive = c.daysSinceVisit !== null && c.daysSinceVisit !== undefined && c.daysSinceVisit >= inactivityThresholdDays;
       if (isInactive) inactiveClients.push(c.name);
@@ -2559,7 +2393,6 @@
         const searchIsDigits = /\d/.test(searchTerm);
         if (!nameMatch && !(searchIsDigits && phoneMatch)) return;
       }
-
       const row = document.createElement('div');
       row.className = 'client-card';
       const avatarHtml = c.photo ? `<img src="${c.photo}">` : c.name.trim().charAt(0);
@@ -2595,7 +2428,6 @@
           </div>
           ${isInactive ? `<button class="template-btn" style="margin-top:8px;" onclick="sendMissYouMessage(${i})">💌 שליחת הודעת געגוע</button><div id="clientMissYouResult-${i}" class="waitlist-confirmed" style="display:none; margin-top:8px;"></div>` : ''}
         </div>`;
-
       row.querySelector('[data-action="history"]').onclick = () => {
         const panel = row.querySelector('[data-panel="history"]');
         const isOpen = panel.style.display !== 'none';
@@ -2617,7 +2449,6 @@
           inp.oninput = (e) => { c[e.target.dataset.field] = e.target.value; };
         }
       });
-
       row.querySelector('.svc-del').onclick = () => {
         if (allAppointments.length){
           alert(`לא ניתן למחוק את ${c.name} כי קיימים לה ${history.length ? 'תורים בהיסטוריה' : ''}${history.length && upcoming.length ? ' וגם ' : ''}${upcoming.length ? 'תורים עתידיים' : ''}. כדי לשמור על היסטוריית הלקוחה, יש להשאיר את הכרטיסייה במערכת.`);
@@ -2630,7 +2461,6 @@
         if (typeof saveState === 'function') saveState();
         if (typeof renderBroadcastCount === 'function') renderBroadcastCount();
       };
-
       row.querySelector('.client-note').oninput = (e) => { c.note = e.target.value; };
       row.querySelectorAll('[data-panel="history"] .visit-row').forEach(visitEl => {
         const apptId = visitEl.dataset.apptId;
@@ -2649,7 +2479,6 @@
       });
       listEl.appendChild(row);
     });
-
     const alertEl = document.getElementById('missYouAlert');
     if (inactiveClients.length){
       alertEl.classList.add('show');
@@ -2657,7 +2486,6 @@
     } else {
       alertEl.classList.remove('show');
     }
-
     const bdayAlertEl = document.getElementById('birthdayAlert');
     if (birthdayClients.length){
       bdayAlertEl.classList.add('show');
@@ -2665,10 +2493,8 @@
     } else {
       bdayAlertEl.classList.remove('show');
     }
-
     if (typeof renderBroadcastCount === 'function') renderBroadcastCount();
   }
-
   function handleClientPhotoUpload(event){
     const file = event.target.files[0];
     if (!file) return;
@@ -2681,7 +2507,6 @@
     };
     reader.readAsDataURL(file);
   }
-
   function addClient(){
     const nameEl = document.getElementById('newClientName');
     const phoneEl = document.getElementById('newClientPhone');
@@ -2703,9 +2528,7 @@
     document.getElementById('clientPhotoPlaceholder').style.display = 'block';
     renderClients();
   }
-
   let broadcastPhoto = null;
-
   function handleBroadcastPhotoUpload(event){
     const file = event.target.files[0];
     if (!file) return;
@@ -2718,20 +2541,16 @@
     };
     reader.readAsDataURL(file);
   }
-
   const messageTemplates = {
     shana: 'שנה טובה ומתוקה! 🍯✨\nתודה שאת חלק מהלקוחות שלנו — מאחלות לך שנה מלאה בבריאות, אושר והרבה רגעים יפים.\nמחכות לראות אותך גם השנה!',
     shabbat: 'שבת שלום! 🕯️\nמאחלות לך שבת נעימה ורגועה, מלאה במנוחה עם היקרים לך.\nנשמח לראותך שוב בקרוב!',
     birthday: 'יום הולדת שמח! 🎂🎉\nמאחלות לך שנה נפלאה, מלאה בבריאות, אושר והמון סיבות לחגוג.\nכמתנה קטנה, מגיע לך פינוק אצלנו — מחכות לראותך!',
     holiday: 'חג שמח! 🎉\nמאחלות לך ולמשפחתך חג שמח ומלא שמחה, בריאות ורגעים טובים.\nלהתראות בקרוב!'
   };
-
   function fillTemplate(key){
     document.getElementById('broadcastMessage').value = messageTemplates[key] || '';
   }
-
   let customTemplates = [];
-
   function renderCustomTemplates(){
     const rowEl = document.getElementById('customTemplateRow');
     rowEl.innerHTML = '';
@@ -2750,7 +2569,6 @@
       rowEl.appendChild(btn);
     });
   }
-
   function addCustomTemplate(){
     const labelEl = document.getElementById('newTplLabel');
     const contentEl = document.getElementById('newTplContent');
@@ -2763,14 +2581,12 @@
     renderCustomTemplates();
   }
   renderCustomTemplates();
-
   function renderBroadcastCount(){
     const countEl = document.getElementById('broadcastCount');
     if (!countEl) return;
     const withEmail = clients.filter(c => c.email && c.email.trim()).length;
     countEl.textContent = `יישלח ל-${withEmail} מתוך ${clients.length} לקוחות (עם כתובת מייל רשומה)`;
   }
-
   function sendBroadcast(){
     const msg = document.getElementById('broadcastMessage').value.trim();
     const clientsWithEmail = clients.filter(c => c.email && c.email.trim());
@@ -2784,8 +2600,6 @@
     resultEl.style.display = 'block';
     resultEl.innerHTML = `✓ &nbsp;ההודעה${broadcastPhoto ? ' (עם התמונה המצורפת)' : ''} נשלחה ל-${clientsWithEmail.length} לקוחות במייל.`;
   }
-
-
   function makeDefaultHours(){
     return [
       { open: true, from: '09:00', to: '12:00' },
@@ -2797,11 +2611,9 @@
       { open: false, from: '09:00', to: '17:00' }
     ];
   }
-
   let staff = [];
   let newStaffPhoto = null;
   let selectedStaffIndex = 0;
-
   function renderStaff(){
     const listEl = document.getElementById('staffList');
     listEl.innerHTML = '';
@@ -2839,7 +2651,6 @@
     });
     renderStaffPicker();
   }
-
   function renderStaffPicker(){
     const pickerEl = document.getElementById('staffPicker');
     if (!pickerEl) return;
@@ -2853,7 +2664,6 @@
       pickerEl.appendChild(chip);
     });
   }
-
   function handleStaffPhotoUpload(event){
     const file = event.target.files[0];
     if (!file) return;
@@ -2866,7 +2676,6 @@
     };
     reader.readAsDataURL(file);
   }
-
   function addStaff(){
     const nameEl = document.getElementById('newStaffName');
     const roleEl = document.getElementById('newStaffRole');
@@ -2884,16 +2693,13 @@
     if (typeof renderHoursEditor === 'function') renderHoursEditor();
   }
   renderStaff();
-
   const staffColors = ['#E8CE7A', '#9FBF93', '#E29AA8', '#9DBFE8', '#D9B27C'];
   const calStartHour = 8, calEndHour = 18;
-
   const weekdayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
   const weekdayLabels = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
   const nowReal = new Date();
-  const todayDow = nowReal.getDay(); // 0=Sunday ... 6=Saturday, matches days[] order below
+  const todayDow = nowReal.getDay();
   const nowMinutesReal = nowReal.getHours() * 60 + nowReal.getMinutes();
-
   const weekDays = [];
   for (let i = 0; i < 7; i++){
     const dow = (todayDow + i) % 7;
@@ -2901,23 +2707,18 @@
     d.setDate(nowReal.getDate() + i);
     weekDays.push({ key: weekdayKeys[dow], label: weekdayLabels[dow], date: String(d.getDate()), dowIndex: dow, fullDate: d });
   }
-
   let weekAppointments = [];
-
   let selectedStaffFilter = 'all';
-
   function timeToMinutes(t){
     const [h, m] = t.split(':').map(Number);
     return h * 60 + m;
   }
-
   function setApptStatus(appt, status, refreshFn){
     appt.status = status;
     if (typeof refreshFn === 'function') refreshFn();
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderClients === 'function') renderClients();
   }
-
   function promptApptNote(appt, refreshFn){
     const note = prompt('הערה לטיפול זה (תישמר בהיסטוריית הלקוחה):', appt.note || '');
     if (note !== null){
@@ -2926,7 +2727,6 @@
       if (typeof renderClients === 'function') renderClients();
     }
   }
-
   function renderApptListInto(containerEl, appts, refreshFn){
     if (!containerEl) return;
     if (!appts.length){
@@ -2958,7 +2758,6 @@
       containerEl.appendChild(row);
     });
   }
-
   function renderStaffFilterRow(){
     const rowEl = document.getElementById('staffFilterRow');
     if (!rowEl) return;
@@ -2968,7 +2767,6 @@
     allChip.innerHTML = `<div class="avatar" style="background:rgba(245,238,228,0.12); color:var(--ivory-dim);">כל</div><span>כולן</span>`;
     allChip.onclick = () => { selectedStaffFilter = 'all'; renderStaffFilterRow(); renderWeekCal(); if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal(); };
     rowEl.appendChild(allChip);
-
     staff.forEach((s, i) => {
       const chip = document.createElement('div');
       chip.className = 'staff-filter-chip' + (selectedStaffFilter === i ? ' active' : '');
@@ -2978,12 +2776,10 @@
       rowEl.appendChild(chip);
     });
   }
-
   function renderWeekCal(){
     const calEl = document.getElementById('weekCal');
     if (!calEl) return;
     calEl.innerHTML = '';
-
     const hoursCol = document.createElement('div');
     hoursCol.className = 'cal-hours-col';
     const hourBandHeight = 96;
@@ -2995,17 +2791,14 @@
       hoursCol.appendChild(lbl);
     }
     calEl.appendChild(hoursCol);
-
     weekDays.forEach((day, dayIdx) => {
       const col = document.createElement('div');
       col.className = 'cal-day-col';
       col.id = 'weekcol-' + dayIdx;
-
       const head = document.createElement('div');
       head.className = 'cal-day-head';
       head.innerHTML = `<span>${day.date}</span><b>${day.label}</b><span class="heb-date">${hebrewDateStr(day.fullDate)}</span>`;
       col.appendChild(head);
-
       const body = document.createElement('div');
       body.className = 'cal-day-body';
       body.style.height = (calEndHour - calStartHour) * hourBandHeight + 'px';
@@ -3030,55 +2823,45 @@
         body.appendChild(line);
         body.appendChild(half);
       }
-
       const dayAppts = weekAppointments
         .filter(a => a.date === formatDateKey(day.fullDate) && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
         .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
-
       const rowH = 21, rowGap = 2;
       const stackCountByHour = {};
-
       dayAppts.forEach(a => {
         const mins = timeToMinutes(a.time);
         const hourIdx = Math.floor(mins / 60) - calStartHour;
         if (hourIdx < 0 || hourIdx >= (calEndHour - calStartHour)) return;
         const stackPos = stackCountByHour[hourIdx] || 0;
         stackCountByHour[hourIdx] = stackPos + 1;
-
         const block = document.createElement('div');
         block.className = 'cal-appt';
         block.style.top = (hourIdx * hourBandHeight + stackPos * (rowH + rowGap) + 2) + 'px';
         block.style.height = rowH + 'px';
         block.style.background = staffColors[a.staff % staffColors.length];
         block.title = `${a.client} · ${a.service} · ${a.time} (${a.dur} דק')`;
-        block.innerHTML = `<b>${a.time.slice(0,5)} ${a.client}</b>`;
+        block.innerHTML = `<b>${a.time.slice(0,5)} ${a.client} · ${a.service}</b>`;
         body.appendChild(block);
       });
-
       col.appendChild(body);
       calEl.appendChild(col);
     });
-
     renderOverviewStats();
   }
-
   function renderOverviewStats(){
     const apptsEl = document.getElementById('statApptsToday');
     const slotsEl2 = document.getElementById('statOpenSlots');
     const revEl = document.getElementById('statRevenue');
     if (!apptsEl || !slotsEl2 || !revEl) return;
-
     const now = new Date();
     const dow = now.getDay();
     const dayKey = weekdayKeys[dow];
-
     const todayStr = formatDateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
     const todaysAppts = weekAppointments.filter(a => a.date === todayStr);
     const revenue = todaysAppts.reduce((sum, a) => {
       const svcMatch = services.find(s => s.name === a.service);
       return sum + (svcMatch ? svcMatch.price : 0);
     }, 0);
-
     let openSlots = 0;
     staff.forEach((s, idx) => {
       const hoursToday = s.hours && s.hours[dow];
@@ -3097,21 +2880,17 @@
         if (free) openSlots++;
       }
     });
-
     apptsEl.textContent = todaysAppts.length;
     slotsEl2.textContent = openSlots;
     revEl.textContent = revenue.toLocaleString('he-IL') + ' ₪';
   }
-
   renderStaffFilterRow();
   renderClients();
-
   let overviewViewMode = 'week';
   const ovInitDate = new Date();
   let ovCalViewYear = ovInitDate.getFullYear();
   let ovCalViewMonth = ovInitDate.getMonth();
   let ovSelectedDate = null;
-
   function setOverviewView(mode, btn){
     overviewViewMode = mode;
     document.querySelectorAll('#sub-overview .subswitcher button').forEach(b => b.classList.remove('active'));
@@ -3124,14 +2903,11 @@
     if (mode === 'month') renderOverviewMonthCal();
     if (mode === 'day') renderOverviewDayView();
   }
-
   let ovCurrentDayDate = new Date();
-
   function ovDayShift(delta){
     ovCurrentDayDate.setDate(ovCurrentDayDate.getDate() + delta);
     renderOverviewDayView();
   }
-
   function renderOverviewDayView(){
     const date = ovCurrentDayDate;
     const dow = date.getDay();
@@ -3139,11 +2915,9 @@
     const isToday = sameDate(date, new Date(nowReal.getFullYear(), nowReal.getMonth(), nowReal.getDate()));
     document.getElementById('ovDayTitle').textContent =
       (isToday ? 'היום · ' : '') + days[dow].name + ', ' + date.getDate() + ' ב' + hebrewMonths[date.getMonth()] + ' (' + hebrewDateStr(date) + ')';
-
     const dayAppts = weekAppointments
       .filter(a => a.date === formatDateKey(date) && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
       .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
-
     const listEl = document.getElementById('ovDayList');
     if (!dayAppts.length){
       listEl.innerHTML = '<p style="color:var(--ivory-dim); font-size:14px;">אין תורים ביום זה.</p>';
@@ -3154,37 +2928,31 @@
       return `<div class="ov-agenda-row"><span class="t">${a.time}</span><span>${a.client} · ${a.service}</span><span style="color:var(--ivory-dim); font-size:12px;">${empName}</span></div>`;
     }).join('') + '</div>';
   }
-
   function ovCalShiftMonth(delta){
     ovCalViewMonth += delta;
     if (ovCalViewMonth < 0){ ovCalViewMonth = 11; ovCalViewYear--; }
     if (ovCalViewMonth > 11){ ovCalViewMonth = 0; ovCalViewYear++; }
     renderOverviewMonthCal();
   }
-
   function renderOverviewMonthCal(){
     const gridEl = document.getElementById('ovCalGrid');
     const titleEl = document.getElementById('ovCalTitle');
     if (!gridEl || !titleEl) return;
     gridEl.innerHTML = '';
     titleEl.textContent = hebrewMonths[ovCalViewMonth] + ' ' + ovCalViewYear;
-
     const firstOfMonth = new Date(ovCalViewYear, ovCalViewMonth, 1);
     const daysInMonth = new Date(ovCalViewYear, ovCalViewMonth + 1, 0).getDate();
     const leadingBlanks = firstOfMonth.getDay();
-
     for (let i = 0; i < leadingBlanks; i++){
       const blank = document.createElement('div');
       blank.className = 'cal-day-cell empty';
       gridEl.appendChild(blank);
     }
-
     for (let d = 1; d <= daysInMonth; d++){
       const cellDate = new Date(ovCalViewYear, ovCalViewMonth, d);
       const dow = cellDate.getDay();
       const dayKey = weekdayKeys[dow];
-      const count = weekAppointments.filter(a => a.date === formatDateKey(date) && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter)).length;
-
+      const count = weekAppointments.filter(a => a.date === formatDateKey(cellDate) && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter)).length;
       const cell = document.createElement('div');
       cell.className = 'cal-day-cell';
       if (sameDate(cellDate, todayMidnight)) cell.classList.add('today');
@@ -3198,18 +2966,15 @@
       gridEl.appendChild(cell);
     }
   }
-
   function renderOvDayAgenda(date){
     const dow = date.getDay();
     const dayKey = weekdayKeys[dow];
     const labelEl = document.getElementById('ovDayAgendaLabel');
     const listEl = document.getElementById('ovDayAgendaList');
     labelEl.textContent = 'תורים ליום ' + days[dow].name + ', ' + date.getDate() + ' ב' + hebrewMonths[date.getMonth()] + ' (' + hebrewDateStr(date) + ')';
-
     const dayAppts = weekAppointments
       .filter(a => a.date === formatDateKey(date) && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
       .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
-
     if (!dayAppts.length){
       listEl.innerHTML = '<p style="color:var(--ivory-dim); font-size:13px;">אין תורים ביום זה.</p>';
       return;
@@ -3219,12 +2984,9 @@
       return `<div class="ov-agenda-row"><span class="t">${a.time}</span><span>${a.client} · ${a.service}</span><span style="color:var(--ivory-dim); font-size:12px;">${empName}</span></div>`;
     }).join('') + '</div>';
   }
-
   let categories = [];
-
   let services = [];
   let selectedSvcIndex = 0;
-
   function renderCategoryOptions(){
     const sel = document.getElementById('newSvcCategory');
     if (!sel) return;
@@ -3232,7 +2994,6 @@
     sel.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
     if (categories.includes(current)) sel.value = current;
   }
-
   function renderCategories(){
     const listEl = document.getElementById('categoryList');
     if (!listEl) return;
@@ -3257,7 +3018,6 @@
     });
     renderCategoryOptions();
   }
-
   function addCategory(){
     const nameEl = document.getElementById('newCategoryName');
     const name = nameEl.value.trim();
@@ -3266,11 +3026,8 @@
     nameEl.value = '';
     renderCategories();
   }
-
   let selectedCategoryForBooking = null;
-
   const catTilePalette = ['#9B2C42', '#C9A227', '#3F6B5C', '#B5654B', '#5B7C99', '#8B5FA3'];
-
   function renderCategoryGrid(){
     const gridEl = document.getElementById('catGrid');
     if (!gridEl) return;
@@ -3288,7 +3045,6 @@
       gridEl.appendChild(tile);
     });
   }
-
   function showCategoryGrid(){
     selectedCategoryForBooking = null;
     const gridView = document.getElementById('catGridView');
@@ -3296,7 +3052,6 @@
     if (gridView) gridView.style.display = 'block';
     if (svcView) svcView.style.display = 'none';
   }
-
   function showCategoryServices(cat){
     selectedCategoryForBooking = cat;
     const gridView = document.getElementById('catGridView');
@@ -3307,7 +3062,6 @@
     if (labelEl) labelEl.textContent = cat;
     renderServiceListForCategory(cat);
   }
-
   function renderServiceListForCategory(cat){
     const custList = document.getElementById('custSvcList');
     if (!custList) return;
@@ -3327,13 +3081,6 @@
     });
     updateBillingNotice();
   }
-
-  function toWhatsappNumber(phone){
-    let digits = (phone || '').replace(/[^0-9]/g, '');
-    if (digits.startsWith('0')) digits = digits.slice(1);
-    return '972' + digits;
-  }
-
   function updateBillingNotice(){
     const noticeEl = document.getElementById('svcBillingNotice');
     if (!noticeEl) return;
@@ -3343,14 +3090,13 @@
       let contactLinks = '';
       if (branding.phone){
         contactLinks += ` <a href="tel:${branding.phone.replace(/[^0-9+]/g,'')}" class="notice-phone-link">📞 ${branding.phone}</a>`;
-        contactLinks += ` <a href="https://wa.me/${toWhatsappNumber(branding.phone)}" target="_blank" rel="noopener" class="notice-phone-link">💬 וואטסאפ</a>`;
+        contactLinks += ` <a href="sms:${branding.phone.replace(/[^0-9+]/g,'')}" class="notice-phone-link">💬 SMS</a>`;
       }
       noticeEl.innerHTML = `<b>לתשומת ליבך:</b>הטיפול יחויב לפי הבחירה שלך — ${selSvc.name}, ${selSvc.duration} דק׳, ${selSvc.price} ש"ח. אם יש לך ספק לגבי משך הטיפול המתאים לך, מוזמנת להתקשר להתייעצות לפני קביעת התור.${contactLinks}`;
     } else {
       noticeEl.classList.remove('show');
     }
   }
-
   function renderServices(){
     renderCategoryGrid();
     if (selectedCategoryForBooking){
@@ -3361,7 +3107,6 @@
         showCategoryGrid();
       }
     }
-
     const manageList = document.getElementById('svcManageList');
     manageList.innerHTML = '';
     categories.forEach(cat => {
@@ -3379,10 +3124,8 @@
         manageList.appendChild(row);
       });
     });
-
     if (typeof renderMbServiceOptions === 'function') renderMbServiceOptions();
   }
-
   function addService(){
     const catEl = document.getElementById('newSvcCategory');
     const nameEl = document.getElementById('newSvcName');
@@ -3399,21 +3142,17 @@
     durationEl.value = '';
     renderServices();
   }
-
   function removeService(i){
     services.splice(i, 1);
     if (selectedSvcIndex >= services.length) selectedSvcIndex = 0;
     renderServices();
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
   }
-
   renderCategories();
   renderServices();
   renderReports('week');
   renderWeekCal();
-
   let whatsNewItems = [];
-
   function renderWhatsNew(){
     const custEl = document.getElementById('whatsNewList');
     custEl.innerHTML = whatsNewItems.map(item => `
@@ -3425,7 +3164,6 @@
         </div>
         ${item.badge ? '<div class="new-badge">חדש</div>' : ''}
       </div>`).join('');
-
     const adminEl = document.getElementById('whatsNewAdminList');
     if (!adminEl) return;
     adminEl.innerHTML = '';
@@ -3446,7 +3184,6 @@
       adminEl.appendChild(row);
     });
   }
-
   function addWhatsNew(){
     const titleEl = document.getElementById('newWnTitle');
     const descEl = document.getElementById('newWnDesc');
@@ -3461,10 +3198,8 @@
     renderWhatsNew();
   }
   renderWhatsNew();
-
   const hourOptions = [];
   for (let h = 7; h <= 21; h++) hourOptions.push(String(h).padStart(2,'0') + ':00');
-
   const days = [
     { name: 'ראשון', open: true, from: '09:00', to: '12:00' },
     { name: 'שני', open: true, from: '12:00', to: '17:00' },
@@ -3474,85 +3209,70 @@
     { name: 'שישי', open: true, from: '08:00', to: '13:00' },
     { name: 'שבת', open: false, from: '09:00', to: '17:00' }
   ];
-
   const todayMidnight = new Date(nowReal.getFullYear(), nowReal.getMonth(), nowReal.getDate());
   let bookingSelectedDate = new Date(todayMidnight);
   let calViewYear = todayMidnight.getFullYear();
   let calViewMonth = todayMidnight.getMonth();
-
   const slotStepMinutes = 15;
   const fineStepMinutes = 5;
   const minLeadMinutes = 15;
   const slotsEl = document.getElementById('slots');
   let selectedSlot = null;
-
   function formatDateKey(d){
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
-
   function sameDate(a, b){
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
-
   function isDateClosedForStaff(staffIdx, date){
     const s = staff[staffIdx];
     if (!s || !s.closedDates) return false;
     const dateStr = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
     return s.closedDates.includes(dateStr);
   }
-
   function hasAnySlot(cellDate){
     const svc = services[selectedSvcIndex];
     const dow = cellDate.getDay();
     const dayInfo = staff[selectedStaffIndex] && staff[selectedStaffIndex].hours[dow];
     if (!svc || !dayInfo || !dayInfo.open) return false;
     if (isDateClosedForStaff(selectedStaffIndex, cellDate)) return false;
-
     const dayKey = weekdayKeys[dow];
     let openMin = timeToMinutes(dayInfo.from);
     const closeMin = timeToMinutes(dayInfo.to);
     const duration = svc.duration || 30;
-
     if (sameDate(cellDate, todayMidnight)){
       const earliestStart = Math.ceil((nowMinutesReal + minLeadMinutes) / fineStepMinutes) * fineStepMinutes;
       openMin = Math.max(openMin, earliestStart);
     }
     if (openMin + duration > closeMin) return false;
-
     const busy = weekAppointments
-      .filter(a => a.date === formatDateKey(bookingSelectedDate) && a.staff === selectedStaffIndex)
+      .filter(a => a.date === formatDateKey(cellDate) && a.staff === selectedStaffIndex)
       .map(a => {
         const s = timeToMinutes(a.time);
         return [s, s + a.dur];
       });
-
     for (let t = openMin; t + duration <= closeMin; t += fineStepMinutes){
       const end = t + duration;
       if (busy.every(([bStart, bEnd]) => end <= bStart || t >= bEnd)) return true;
     }
     return false;
   }
-
   function renderMiniCal(){
     const gridEl = document.getElementById('miniCalGrid');
     const titleEl = document.getElementById('miniCalTitle');
     const prevBtn = document.getElementById('calPrevBtn');
     gridEl.innerHTML = '';
     titleEl.textContent = hebrewMonths[calViewMonth] + ' ' + calViewYear;
-
     const isCurrentMonth = (calViewYear === todayMidnight.getFullYear() && calViewMonth === todayMidnight.getMonth());
     prevBtn.disabled = isCurrentMonth;
-
     const firstOfMonth = new Date(calViewYear, calViewMonth, 1);
     const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
     const leadingBlanks = firstOfMonth.getDay();
-
     for (let i = 0; i < leadingBlanks; i++){
       const blank = document.createElement('div');
       blank.className = 'cal-day-cell empty';
       gridEl.appendChild(blank);
     }
-
     for (let d = 1; d <= daysInMonth; d++){
       const cellDate = new Date(calViewYear, calViewMonth, d);
       const dow = cellDate.getDay();
@@ -3578,24 +3298,20 @@
       }
       gridEl.appendChild(cell);
     }
-
     const dow = bookingSelectedDate.getDay();
     const dateLabel = bookingSelectedDate.getDate() + ' ב' + hebrewMonths[bookingSelectedDate.getMonth()];
     document.getElementById('slotsLabel').textContent = 'שעות פנויות — יום ' + days[dow].name + ', ' + dateLabel + ' (' + hebrewDateStr(bookingSelectedDate) + ')';
   }
-
   function calShiftMonth(delta){
     calViewMonth += delta;
     if (calViewMonth < 0){ calViewMonth = 11; calViewYear--; }
     if (calViewMonth > 11){ calViewMonth = 0; calViewYear++; }
     renderMiniCal();
   }
-
   function renderAvailableSlots(){
     slotsEl.innerHTML = '';
     document.getElementById('waitlistBox').innerHTML = '';
     selectedSlot = null;
-
     const svc = services[selectedSvcIndex];
     const dow = bookingSelectedDate.getDay();
     const dayInfo = staff[selectedStaffIndex] && staff[selectedStaffIndex].hours[dow];
@@ -3609,47 +3325,36 @@
       slotsEl.innerHTML = '<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">העובדת לא זמינה ביום זה (חג/חופשה)</div>';
       return;
     }
-
     let openMin = timeToMinutes(dayInfo.from);
     const closeMin = timeToMinutes(dayInfo.to);
     const duration = svc.duration || 30;
-
     if (isToday){
       const earliestStart = Math.ceil((nowMinutesReal + minLeadMinutes) / fineStepMinutes) * fineStepMinutes;
       openMin = Math.max(openMin, earliestStart);
     }
-
     if (openMin + duration > closeMin){
       slotsEl.innerHTML = '<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">היום כבר נגמרו השעות הפנויות</div>';
       return;
     }
-
     const busy = weekAppointments
       .filter(a => a.date === formatDateKey(bookingSelectedDate) && a.staff === selectedStaffIndex)
       .map(a => {
         const s = timeToMinutes(a.time);
         return [s, s + a.dur];
       });
-
     const fits = (start, dur) => {
       const end = start + dur;
       if (end > closeMin) return false;
       return busy.every(([bStart, bEnd]) => end <= bStart || start >= bEnd);
     };
-
     const findConflict = (start, dur) => {
       const end = start + dur;
       return busy.find(([bStart, bEnd]) => !(end <= bStart || start >= bEnd));
     };
-
     const minutesToTime = (m) => String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0');
-
     let firstFree = null;
     const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
     for (let bucketStart = firstBucket; bucketStart + duration <= closeMin; bucketStart += slotStepMinutes){
-      // scan finely within this quarter-hour bucket for the earliest moment the service actually fits —
-      // this lands on the quarter-hour mark itself whenever possible, and only drifts a few minutes
-      // when that's the only way to use a short gap left by a previous appointment.
       let chosenTime = null;
       const bucketEnd = bucketStart + slotStepMinutes;
       for (let t = Math.max(bucketStart, openMin); t < bucketEnd && t + duration <= closeMin; t += fineStepMinutes){
@@ -3686,7 +3391,6 @@
       }
       slotsEl.appendChild(d);
     }
-
     if (firstFree){
       selectedSlot = firstFree;
       const firstEl = Array.from(slotsEl.children).find(el => el.textContent === firstFree);
@@ -3697,9 +3401,7 @@
       document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">אין כרגע שעות פנויות ביום הזה. אם תרצי, אפשר להצטרף לרשימת ההמתנה ולקבל עדכון אם יתפנה מקום.<div style="margin-top:8px;"><button onclick="showWaitlistPrompt('${wlTime}', 'אין כרגע שעות פנויות ביום הזה.')">הצטרפות לרשימת ההמתנה</button></div></div>`;
     }
   }
-
   let waitlist = [];
-
   function renderWaitlistAdmin(){
     const listEl = document.getElementById('waitlistAdminList');
     const countEl = document.getElementById('waitlistCount');
@@ -3735,7 +3437,6 @@
       listEl.appendChild(row);
     });
   }
-
   function showWaitlistPrompt(time, reason){
     document.getElementById('waitlistBox').innerHTML = `
       <div class="waitlist-prompt">
@@ -3746,7 +3447,6 @@
         <div><button onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
       </div>`;
   }
-
   function joinWaitlist(time){
     const nameEl = document.getElementById('wlName');
     const phoneEl = document.getElementById('wlPhone');
@@ -3773,23 +3473,19 @@
     document.getElementById('waitlistBox').innerHTML = `
       <div class="waitlist-confirmed">✓ &nbsp;נרשמת לרשימת ההמתנה ל-${time}. נעדכן אותך אם יתפנה מקום.</div>`;
   }
-
   renderMiniCal();
   renderAvailableSlots();
   renderWaitlistAdmin();
-
   function isValidIsraeliPhone(phone){
     const digits = (phone || '').replace(/[^0-9]/g, '');
     return /^0\d{8,9}$/.test(digits);
   }
-
   document.getElementById('bookingNameInput').addEventListener('input', function(){
     if (this.value.trim()){
       document.getElementById('bookingNameError').style.display = 'none';
       this.style.borderColor = '';
     }
   });
-
   document.getElementById('bookingPhoneInput').addEventListener('input', function(){
     if (isValidIsraeliPhone(this.value)){
       document.getElementById('bookingPhoneError').style.display = 'none';
@@ -3815,27 +3511,22 @@
     document.getElementById('firstTimePerks').style.display = 'none';
     welcomeEl.style.display = 'none';
   });
-
   document.querySelectorAll('input[name="reminderChannel"]').forEach(function(radio){
     radio.addEventListener('change', function(){
       document.getElementById('reminderChoiceError').style.display = 'none';
     });
   });
-
   function getSiteUrl(){
     return window.location.href.split('#')[0];
   }
-
   function getAppointmentEmailText(name, service, dateLabel, time, staffName, actionText){
     return `היי ${name}, נקבע לך תור ל${service} בתאריך ${dateLabel} בשעה ${time}${staffName ? ' אצל ' + staffName : ''}. ${actionText || 'לביטול או שינוי מועד, ניתן לפנות אלינו.'}\n\nלניהול התור, לביטול או לקביעת תור נוסף:\n${getSiteUrl()}`;
   }
-
-  function confirmBooking(){
+  async function confirmBooking(){
     if (!selectedSlot){
       document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">לא נבחרה שעה פנויה ליום זה — יש לבחור יום אחר עם זמינות, או שירות/עובדת אחרת.</div>`;
       return;
     }
-
     const nameInput = document.getElementById('bookingNameInput');
     const nameErrorEl = document.getElementById('bookingNameError');
     if (!nameInput.value.trim()){
@@ -3846,7 +3537,6 @@
     }
     nameErrorEl.style.display = 'none';
     nameInput.style.borderColor = '';
-
     const phoneVal = document.getElementById('bookingPhoneInput').value;
     const errorEl = document.getElementById('bookingPhoneError');
     if (!isValidIsraeliPhone(phoneVal)){
@@ -3855,7 +3545,6 @@
       return;
     }
     errorEl.style.display = 'none';
-
     const reminderInput = document.querySelector('input[name="reminderChannel"]:checked');
     const reminderErrorEl = document.getElementById('reminderChoiceError');
     if (!reminderInput){
@@ -3865,20 +3554,47 @@
     reminderErrorEl.style.display = 'none';
     const reminderLabels = { sms: 'SMS', call: 'שיחת טלפון', both: 'SMS ושיחת טלפון' };
     const reminderText = reminderLabels[reminderInput.value];
-
+    // Re-check against the cloud right before committing — this page may have been
+    // open for a while, and in the meantime the business owner (or another customer)
+    // may have taken this exact slot. Without this, this browser would still think
+    // the slot is free and create a double-booked appointment.
+    const confirmBtnEl = document.querySelector('[onclick="confirmBooking()"]');
+    const confirmBtnOrigText = confirmBtnEl ? confirmBtnEl.textContent : '';
+    if (confirmBtnEl){ confirmBtnEl.disabled = true; confirmBtnEl.textContent = 'בודקת זמינות...'; }
+    try {
+      const freshDoc = await CLOUD_DOC.get();
+      if (freshDoc.exists && freshDoc.data().weekAppointments){
+        weekAppointments = freshDoc.data().weekAppointments;
+      }
+    } catch (e) {
+      console.error('Availability re-check failed, proceeding with last-known data:', e);
+    }
+    if (confirmBtnEl){ confirmBtnEl.disabled = false; confirmBtnEl.textContent = confirmBtnOrigText || 'אישור תור'; }
+    const dateKeyForSlot = bookingSelectedDate.getFullYear() + '-' + String(bookingSelectedDate.getMonth()+1).padStart(2,'0') + '-' + String(bookingSelectedDate.getDate()).padStart(2,'0');
+    const slotDur = (services[selectedSvcIndex] && services[selectedSvcIndex].duration) || 30;
+    const slotStartMin = timeToMinutes(selectedSlot);
+    const slotEndMin = slotStartMin + slotDur;
+    const slotNowTaken = weekAppointments.some(a => {
+      if (a.staff !== selectedStaffIndex || a.date !== dateKeyForSlot) return false;
+      const aStart = timeToMinutes(a.time);
+      const aEnd = aStart + a.dur;
+      return !(slotEndMin <= aStart || slotStartMin >= aEnd);
+    });
+    if (slotNowTaken){
+      if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+      document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">מצטערים, השעה הזו נתפסה ממש עכשיו על ידי מישהי אחרת. נא לבחור שעה פנויה אחרת מהרשימה המעודכנת.</div>`;
+      return;
+    }
     const svc = services[selectedSvcIndex];
     const emp = staff[selectedStaffIndex];
     const clientNameVal = document.getElementById('bookingNameInput').value.trim() || 'לקוחה';
     const dayKey = weekdayKeys[bookingSelectedDate.getDay()];
-
     const phoneDigits = phoneVal.replace(/[^0-9]/g, '');
     const existingClient = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phoneDigits);
-
     if (existingClient){
       const fmt = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
       const targetDateStr = fmt(bookingSelectedDate);
       const currentSvcName = svc ? svc.name : '';
-
       const sameDaySameSvcConflict = weekAppointments.find(a => a.client === existingClient.name && a.date === targetDateStr && a.service === currentSvcName);
       if (sameDaySameSvcConflict && sameDaySameSvcConflict.time === selectedSlot){
         document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">כבר קיים לך תור זהה בדיוק באותה שעה. יש לבחור שעה אחרת.</div>`;
@@ -3888,13 +3604,11 @@
         const proceed = confirm(`שימי לב: יש לך כבר תור ל${sameDaySameSvcConflict.service} באותו יום (${sameDaySameSvcConflict.time}). להמשיך ולקבוע תור נוסף?`);
         if (!proceed) return;
       }
-
       const sameDayOtherSvcConflict = weekAppointments.find(a => a.client === existingClient.name && a.date === targetDateStr);
       if (sameDayOtherSvcConflict && (!sameDaySameSvcConflict || sameDayOtherSvcConflict.id !== sameDaySameSvcConflict.id)){
         const proceed = confirm(`שימי לב: יש לך כבר תור נוסף באותו יום (${sameDayOtherSvcConflict.time}). להמשיך ולקבוע גם את התור הזה?`);
         if (!proceed) return;
       }
-
       const prevDate = new Date(bookingSelectedDate);
       prevDate.setDate(prevDate.getDate() - 1);
       const nextDate = new Date(bookingSelectedDate);
@@ -3905,11 +3619,9 @@
         if (!proceed) return;
       }
     }
-
     let customerEmail = '';
     const appointmentDateOnly = new Date(bookingSelectedDate.getFullYear(), bookingSelectedDate.getMonth(), bookingSelectedDate.getDate());
     const isTodayOrPastBooking = appointmentDateOnly <= getTodayDateOnly();
-
     if (existingClient){
       existingClient.name = clientNameVal;
       if (isTodayOrPastBooking) existingClient.visits = (existingClient.visits || 0) + 1;
@@ -3921,7 +3633,6 @@
       clients.push({ name: clientNameVal, phone: phoneVal.trim(), email: ftpEmail, photo: null, visits: isTodayOrPastBooking ? 1 : 0, daysSinceVisit: isTodayOrPastBooking ? 0 : null, note: '', birthday: ftpBirthday });
       customerEmail = ftpEmail;
     }
-
     currentBookedAppointment = {
       id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000),
       day: dayKey,
@@ -3935,22 +3646,14 @@
       note: ''
     };
     weekAppointments.push(currentBookedAppointment);
-    if (typeof renderWeekCal === 'function') renderWeekCal();
-    if (typeof renderMiniCal === 'function') renderMiniCal();
-    if (typeof renderClients === 'function') renderClients();
     if (typeof saveState === 'function') saveState();
-
-    if (customerEmail){
-      const dateLabel = bookingSelectedDate.getDate() + ' ב' + hebrewMonths[bookingSelectedDate.getMonth()];
-      sendEmail(
-        customerEmail,
-        'התור שלך אושר',
-        getAppointmentEmailText(clientNameVal, svc ? svc.name : 'שירות', dateLabel, selectedSlot, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:')
-      );
-    }
-
-    const gcalUrl = buildGoogleCalendarUrl(bookingSelectedDate, selectedSlot, svc ? (svc.duration || 30) : 30, svc ? svc.name : 'תור', emp ? emp.name : '');
-
+    // The appointment is saved at this point — show the confirmation screen right
+    // away. Everything below (refreshing the calendar views, sending the customer
+    // email and the owner-notification email) is secondary and wrapped in
+    // try/catch, so a failure there can never leave the customer staring at the
+    // booking form wondering whether anything happened.
+    let gcalUrl = '#';
+    try { gcalUrl = buildGoogleCalendarUrl(bookingSelectedDate, selectedSlot, svc ? (svc.duration || 30) : 30, svc ? svc.name : 'תור', emp ? emp.name : ''); } catch(e){ console.error('Calendar link build failed:', e); }
     document.getElementById('bookingFormWrap').style.display = 'none';
     const apptEl = document.getElementById('myAppointment');
     apptEl.style.display = 'block';
@@ -3965,8 +3668,30 @@
         <button class="danger" onclick="cancelAppointment()">ביטול תור</button>
       </div>
       <button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
+    try {
+      if (typeof renderWeekCal === 'function') renderWeekCal();
+      if (typeof renderMiniCal === 'function') renderMiniCal();
+      if (typeof renderClients === 'function') renderClients();
+      if (customerEmail){
+        const dateLabel = bookingSelectedDate.getDate() + ' ב' + hebrewMonths[bookingSelectedDate.getMonth()];
+        sendEmail(
+          customerEmail,
+          'התור שלך אושר',
+          getAppointmentEmailText(clientNameVal, svc ? svc.name : 'שירות', dateLabel, selectedSlot, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:')
+        );
+      }
+      if (branding.notifyEmail){
+        const ownerDateLabel = bookingSelectedDate.getDate() + ' ב' + hebrewMonths[bookingSelectedDate.getMonth()];
+        sendEmail(
+          branding.notifyEmail,
+          'נקבע תור חדש',
+          `נקבע תור חדש דרך האתר:\n\nלקוחה: ${clientNameVal}\nטלפון: ${phoneVal}\nשירות: ${svc ? svc.name : 'שירות'}\nתאריך: ${ownerDateLabel} (${currentBookedAppointment.date})\nשעה: ${selectedSlot}${emp ? '\nעובדת: ' + emp.name : ''}`
+        );
+      }
+    } catch (e) {
+      console.error('confirmBooking: post-confirmation refresh/notify failed (appointment itself was saved fine):', e);
+    }
   }
-
   function buildGoogleCalendarUrl(date, timeStr, durationMin, title, staffName){
     const [h, m] = timeStr.split(':').map(Number);
     const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), h, m);
@@ -3976,9 +3701,7 @@
     const details = staffName ? encodeURIComponent('תור אצל ' + staffName) : '';
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmt(start)}/${fmt(end)}&details=${details}`;
   }
-
   let currentBookedAppointment = null;
-
   function removeCurrentBookedAppointment(){
     if (!currentBookedAppointment) return;
     const idx = weekAppointments.indexOf(currentBookedAppointment);
@@ -3987,7 +3710,6 @@
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderMiniCal === 'function') renderMiniCal();
   }
-
   function goToStep(n){
     document.querySelectorAll('.booking-step').forEach(s => s.classList.remove('active'));
     document.getElementById('bstep-' + n).classList.add('active');
@@ -3995,7 +3717,6 @@
       d.classList.toggle('active', parseInt(d.dataset.step) === n);
     });
   }
-
   function rescheduleAppointment(){
     removeCurrentBookedAppointment();
     document.getElementById('myAppointment').style.display = 'none';
@@ -4003,33 +3724,27 @@
     goToStep(1);
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
   }
-
   function bookAdditionalAppointment(){
     // Start a completely new booking while keeping the same customer's details.
     const previousAppointment = currentBookedAppointment;
     const previousClient = previousAppointment ? clients.find(c => c.name === previousAppointment.client) : null;
     currentBookedAppointment = null;
     selectedSlot = null;
-
     document.getElementById('myAppointment').style.display = 'none';
     document.getElementById('bookingFormWrap').style.display = 'block';
-
     if (previousClient){
       const name = document.getElementById('bookingNameInput');
       const phone = document.getElementById('bookingPhoneInput');
       if (name) name.value = previousClient.name || '';
       if (phone) phone.value = previousClient.phone || '';
     }
-
     goToStep(1);
     if (typeof showCategoryGrid === 'function') showCategoryGrid();
     if (typeof renderMiniCal === 'function') renderMiniCal();
   }
-
   function cancelAppointment(){
     const apptBeingCancelled = currentBookedAppointment;
     removeCurrentBookedAppointment();
-
     if (apptBeingCancelled){
       const client = clients.find(c => c.name === apptBeingCancelled.client);
       if (client && client.email){
@@ -4039,8 +3754,14 @@
           `היי ${apptBeingCancelled.client}, התור שלך ל${apptBeingCancelled.service} ב-${apptBeingCancelled.time} בוטל בהצלחה. נשמח לראותך שוב בקרוב!\n\nלקביעת תור חדש:\n${getSiteUrl()}`
         );
       }
+      if (branding.notifyEmail){
+        sendEmail(
+          branding.notifyEmail,
+          'תור בוטל',
+          `לקוחה ביטלה תור דרך האתר:\n\nלקוחה: ${apptBeingCancelled.client}\nשירות: ${apptBeingCancelled.service}\nתאריך: ${apptBeingCancelled.date}\nשעה: ${apptBeingCancelled.time}`
+        );
+      }
     }
-
     const apptEl = document.getElementById('myAppointment');
     apptEl.innerHTML = `
       <div class="waitlist-confirmed">✓ &nbsp;התור בוטל.</div>
@@ -4048,23 +3769,33 @@
         <button onclick="rescheduleAppointment()">קביעת תור חדש</button>
       </div>`;
   }
-
   function openApptLookup(){
     document.getElementById('lookupPhone').value = '';
     document.getElementById('lookupResult').innerHTML = '';
     document.getElementById('apptLookupOverlay').classList.add('show');
   }
-
   function closeApptLookup(){
     document.getElementById('apptLookupOverlay').classList.remove('show');
   }
-
-  function searchMyAppointment(){
+  async function searchMyAppointment(){
     const phone = document.getElementById('lookupPhone').value.trim();
     const resultEl = document.getElementById('lookupResult');
     if (!isValidIsraeliPhone(phone)){
       resultEl.innerHTML = '<p style="color:var(--wine); font-size:13px;">יש להזין מספר טלפון תקין.</p>';
       return;
+    }
+    // Refresh from the cloud first — this page may have been open for a while, and
+    // an appointment added or changed since then (e.g. by the business owner)
+    // otherwise wouldn't show up here.
+    resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">מחפשת...</p>';
+    try {
+      const freshDoc = await CLOUD_DOC.get();
+      if (freshDoc.exists){
+        if (freshDoc.data().clients) clients = freshDoc.data().clients;
+        if (freshDoc.data().weekAppointments) weekAppointments = freshDoc.data().weekAppointments;
+      }
+    } catch (e) {
+      console.error('Appointment lookup refresh failed, searching with last-known data:', e);
     }
     const digits = phone.replace(/[^0-9]/g, '');
     const client = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits);
@@ -4083,7 +3814,6 @@
       .filter(entry => entry.dateObj >= today)
       .sort((a, b) => a.dateObj - b.dateObj)
       .map(entry => entry.appt);
-
     if (!upcoming.length){
       resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצא תור עתידי למספר טלפון זה.</p>';
       return;
@@ -4091,7 +3821,6 @@
     closeApptLookup();
     renderLookedUpAppointment(upcoming[0]);
   }
-
   function renderLookedUpAppointment(appt){
     currentBookedAppointment = appt;
     document.getElementById('bookingFormWrap').style.display = 'none';
@@ -4112,21 +3841,17 @@
       </div>
       <button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
   }
-
   /* ===== "Client arriving now" live popup for the business owner ===== */
   const shownArrivalPopups = new Set();
   let arrivalQueue = [];
   const ARRIVAL_GRACE_MINUTES = 10; // catches appointments even if the previous popup kept you busy for a while
-
   function checkForArrivingClient(){
     if (typeof isLoggedIn === 'undefined' || !isLoggedIn) return;
-
     const now = new Date();
     const dow = now.getDay();
     const dayKey = weekdayKeys[dow];
     const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
-
     const matches = weekAppointments.filter(a => {
       if (a.day !== dayKey) return false;
       if (a.date && a.date !== todayStr) return false;
@@ -4135,31 +3860,26 @@
       const apptMinutes = timeToMinutes(a.time);
       return apptMinutes <= nowMinutes && apptMinutes >= nowMinutes - ARRIVAL_GRACE_MINUTES;
     });
-
     matches.forEach(m => {
       const key = m.id || (m.client + '_' + m.time + '_' + todayStr);
       shownArrivalPopups.add(key);
       arrivalQueue.push(m);
     });
-
     if (!document.getElementById('clientArrivalOverlay').classList.contains('show')){
       showNextArrivalInQueue();
     }
   }
-
   function showNextArrivalInQueue(){
     if (!arrivalQueue.length) return;
     const next = arrivalQueue.shift();
     showClientArrivalPopup(next);
   }
-
   function showClientArrivalPopup(appt){
     const client = clients.find(c => c.name === appt.client);
     const emp = staff[appt.staff];
     const history = weekAppointments.filter(a => a !== appt && a.client === appt.client);
     const contentEl = document.getElementById('clientArrivalContent');
     const queueNote = arrivalQueue.length ? `<p style="color:#8A8178; font-size:12px; margin-top:10px;">עוד ${arrivalQueue.length} לקוחה/ות ממתינות בתור להצגה</p>` : '';
-
     contentEl.innerHTML = `
       <div class="arrival-name">${appt.client}</div>
       <div class="arrival-meta">${appt.service} · ${appt.time}${emp ? ' · אצל ' + emp.name : ''}</div>
@@ -4171,38 +3891,31 @@
         <button class="danger" onclick="markArrivalStatus('${appt.id || ''}', 'no-show')">✗ לא הגיעה</button>
       </div>
       ${queueNote}`;
-
     document.getElementById('clientArrivalOverlay').classList.add('show');
   }
-
   function markArrivalStatus(apptId, status){
     const appt = weekAppointments.find(a => a.id === apptId);
     if (appt) appt.status = status;
     closeClientArrivalOverlay();
     if (typeof renderClients === 'function') renderClients();
   }
-
   function closeClientArrivalOverlay(){
     document.getElementById('clientArrivalOverlay').classList.remove('show');
     setTimeout(showNextArrivalInQueue, 400);
   }
-
   setInterval(checkForArrivingClient, 20000);
-
   function showPanel(name, btn){
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById('panel-' + name).classList.add('active');
     document.querySelectorAll('.switcher button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }
-
   function showSub(name, btn){
     document.querySelectorAll('.subpanel').forEach(p => p.classList.remove('active'));
     document.getElementById('sub-' + name).classList.add('active');
     document.querySelectorAll('.subswitcher button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }
-
   function showInnerTab(containerId, innerId, btn){
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -4211,15 +3924,12 @@
     container.querySelectorAll('.inner-switcher button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }
-
   let hoursEditorStaffIndex = 0;
-
   function renderHoursStaffPicker(){
     const pickerEl = document.getElementById('hoursStaffPicker');
     const noStaffMsgEl = document.getElementById('hoursNoStaffMsg');
     const closedDatesSection = document.getElementById('closedDatesSection');
     if (!pickerEl) return;
-
     if (!staff.length){
       if (noStaffMsgEl) noStaffMsgEl.style.display = 'block';
       pickerEl.style.display = 'none';
@@ -4233,7 +3943,6 @@
     const hoursList = document.getElementById('hoursList');
     if (hoursList) hoursList.style.display = 'block';
     if (closedDatesSection) closedDatesSection.style.display = 'block';
-
     pickerEl.innerHTML = '';
     staff.forEach((s, i) => {
       const chip = document.createElement('div');
@@ -4245,7 +3954,6 @@
     });
     renderClosedDates();
   }
-
   function renderClosedDates(){
     const listEl = document.getElementById('closedDatesList');
     if (!listEl || !staff[hoursEditorStaffIndex]) return;
@@ -4279,7 +3987,6 @@
       listEl.appendChild(row);
     });
   }
-
   function addClosedDate(){
     const input = document.getElementById('newClosedDate');
     const dateVal = input.value;
@@ -4293,21 +4000,17 @@
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
     if (typeof renderMiniCal === 'function') renderMiniCal();
   }
-
   function renderHoursEditor(){
     const hoursList = document.getElementById('hoursList');
     if (!hoursList || !staff[hoursEditorStaffIndex]) return;
     hoursList.innerHTML = '';
     const hours = staff[hoursEditorStaffIndex].hours;
-
     days.forEach((day, i) => {
       const dayHours = hours[i];
       const row = document.createElement('div');
       row.className = 'hours-row' + (dayHours.open ? '' : ' closed');
-
       const fromOptions = hourOptions.map(h => `<option value="${h}" ${h===dayHours.from?'selected':''}>${h}</option>`).join('');
       const toOptions = hourOptions.map(h => `<option value="${h}" ${h===dayHours.to?'selected':''}>${h}</option>`).join('');
-
       row.innerHTML = `
         <span class="day">${day.name}</span>
         <div class="toggle${dayHours.open ? ' on' : ''}"></div>
@@ -4316,7 +4019,6 @@
           <span>עד</span>
           <select>${toOptions}</select>
         </div>`;
-
       row.querySelector('.toggle').onclick = () => {
         dayHours.open = !dayHours.open;
         row.classList.toggle('closed');
@@ -4324,7 +4026,6 @@
         if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
         if (typeof renderMiniCal === 'function') renderMiniCal();
       };
-
       row.querySelectorAll('select').forEach((sel, si) => {
         sel.onchange = () => {
           if (si === 0) dayHours.from = sel.value; else dayHours.to = sel.value;
@@ -4332,33 +4033,24 @@
           if (typeof renderMiniCal === 'function') renderMiniCal();
         };
       });
-
       hoursList.appendChild(row);
     });
   }
-
   renderHoursStaffPicker();
   renderHoursEditor();
-
-
   let invAlertEmail = '';
-
   function updateInvAlertEmail(){
     invAlertEmail = document.getElementById('invAlertEmail').value.trim();
     renderInventory();
   }
-
   let inventory = [];
-
   function renderInventory(){
     const listEl = document.getElementById('invList');
     listEl.innerHTML = '';
     const lowItems = [];
-
     inventory.forEach((item, i) => {
       const low = item.stock <= item.threshold;
       if (low) lowItems.push(item.name + ' (נותרו ' + item.stock + ')');
-
       const row = document.createElement('div');
       row.className = 'inv-row';
       row.innerHTML = `
@@ -4370,7 +4062,6 @@
         </div>
         <input type="number" class="threshold" value="${item.threshold}">
         <span style="display:flex; align-items:center; gap:6px;"><span class="badge ${low ? 'low' : 'ok'}">${low ? 'נמוך' : 'תקין'}</span><button class="svc-del" aria-label="מחיקת מוצר">✕</button></span>`;
-
       const btns = row.querySelectorAll('.stock-btn');
       btns[0].onclick = () => { if (item.stock > 0) item.stock--; renderInventory(); };
       btns[1].onclick = () => { item.stock++; renderInventory(); };
@@ -4382,10 +4073,8 @@
         inventory.splice(i, 1);
         renderInventory();
       };
-
       listEl.appendChild(row);
     });
-
     const alertEl = document.getElementById('invAlert');
     if (lowItems.length){
       alertEl.classList.add('show');
@@ -4398,7 +4087,6 @@
     }
   }
   renderInventory();
-
   function addInventoryItem(){
     const nameEl = document.getElementById('newInvName');
     const stockEl = document.getElementById('newInvStock');
@@ -4413,11 +4101,9 @@
     thresholdEl.value = '';
     renderInventory();
   }
-
   /* ===== CLOUD SYNC (Firestore) ===== */
   let cloudLoadComplete = false;
   const CLOUD_DOC = db.collection('business').doc('default');
-
   function saveState(){
     if (!cloudLoadComplete) return;
     const payload = {
@@ -4426,9 +4112,25 @@
       invAlertEmail, inventory, waitlist,
       savedAt: new Date().toISOString()
     };
-    CLOUD_DOC.set(payload).catch(err => console.error('Cloud save failed:', err));
+    // merge:true so that a background/stale tab (e.g. an old tab left open from
+    // before a site update) never wipes out fields it doesn't know about — it can
+    // only overwrite the fields it actually sends, never delete unrelated ones.
+    CLOUD_DOC.set(payload, { merge: true }).catch(err => console.error('Cloud save failed:', err));
   }
-
+  function applyCloudData(data){
+    if (data.branding) branding = data.branding;
+    if (data.clients) clients = data.clients;
+    if (typeof data.inactivityThresholdDays === 'number') inactivityThresholdDays = data.inactivityThresholdDays;
+    if (data.customTemplates) customTemplates = data.customTemplates;
+    if (data.staff) staff = data.staff;
+    if (data.weekAppointments) weekAppointments = data.weekAppointments;
+    if (data.categories) categories = data.categories;
+    if (data.services) services = data.services;
+    if (data.whatsNewItems) whatsNewItems = data.whatsNewItems;
+    if (typeof data.invAlertEmail === 'string') invAlertEmail = data.invAlertEmail;
+    if (data.inventory) inventory = data.inventory;
+    if (data.waitlist) waitlist = data.waitlist;
+  }
   function rerenderEverything(){
     if (typeof renderCategories === 'function') renderCategories();
     if (typeof renderServices === 'function') renderServices();
@@ -4449,26 +4151,13 @@
     if (typeof renderOverviewDayView === 'function') renderOverviewDayView();
     if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal();
   }
-
   CLOUD_DOC.get().then(doc => {
     if (!doc.exists){
       console.log('No saved data yet in the cloud — using demo starter data.');
       cloudLoadComplete = true;
       return;
     }
-    const data = doc.data();
-    if (data.branding) branding = data.branding;
-    if (data.clients) clients = data.clients;
-    if (typeof data.inactivityThresholdDays === 'number') inactivityThresholdDays = data.inactivityThresholdDays;
-    if (data.customTemplates) customTemplates = data.customTemplates;
-    if (data.staff) staff = data.staff;
-    if (data.weekAppointments) weekAppointments = data.weekAppointments;
-    if (data.categories) categories = data.categories;
-    if (data.services) services = data.services;
-    if (data.whatsNewItems) whatsNewItems = data.whatsNewItems;
-    if (typeof data.invAlertEmail === 'string') invAlertEmail = data.invAlertEmail;
-    if (data.inventory) inventory = data.inventory;
-    if (data.waitlist) waitlist = data.waitlist;
+    applyCloudData(doc.data());
     rerenderEverything();
     cloudLoadComplete = true;
     console.log('Loaded saved data from the cloud.');
@@ -4476,18 +4165,32 @@
     console.error('Cloud load failed — staying with local demo data:', err);
     cloudLoadComplete = true;
   });
-
   // Autosave every few seconds, and once more right before the page closes —
   // this covers every edit anywhere in the app without needing to hook each one individually.
   // Guarded by cloudLoadComplete above so we never overwrite real saved data with an
   // empty in-memory state before the initial load has had a chance to finish.
-  setInterval(saveState, 4000);
+  // Also skipped while the tab is in the background (document.hidden) — a tab that's
+  // sitting unused (e.g. an old tab left open from before a new version was pasted in,
+  // or a customer who opened the booking page and stepped away) should not keep
+  // re-saving its old in-memory snapshot every 4 seconds and overwrite newer data that
+  // was added elsewhere in the meantime.
+  setInterval(() => { if (!document.hidden) saveState(); }, 4000);
   window.addEventListener('beforeunload', saveState);
-
+  // When a background tab becomes visible again, refresh from the cloud first —
+  // this is the other half of the protection above: before that tab resumes
+  // autosaving, it picks up whatever the current real data is, instead of
+  // immediately overwriting it with whatever it had loaded before it was hidden.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || !cloudLoadComplete) return;
+    CLOUD_DOC.get().then(doc => {
+      if (!doc.exists) return;
+      applyCloudData(doc.data());
+      rerenderEverything();
+    }).catch(err => console.error('Refresh on tab return failed:', err));
+  });
   /* ===== AUTH (business owner login) ===== */
   let isLoggedIn = false;
   let pendingBusinessBtn = null;
-
   auth.onAuthStateChanged(user => {
     isLoggedIn = !!user;
     const btn = document.getElementById('businessTabBtn');
@@ -4495,7 +4198,6 @@
     const notifBtn = document.getElementById('notifTabBtn');
     if (notifBtn) notifBtn.style.display = isLoggedIn ? '' : 'none';
   });
-
   function handleBusinessTabClick(btn){
     if (isLoggedIn){
       showPanel('business', btn);
@@ -4505,7 +4207,6 @@
     document.getElementById('loginError').style.display = 'none';
     document.getElementById('loginOverlay').classList.add('show');
   }
-
   function openLoginOverlayDirect(){
     if (isLoggedIn){
       handleBusinessTabClick(document.getElementById('businessTabBtn'));
@@ -4515,19 +4216,15 @@
     document.getElementById('loginError').style.display = 'none';
     document.getElementById('loginOverlay').classList.add('show');
   }
-
   function closeLoginOverlay(){
     document.getElementById('loginOverlay').classList.remove('show');
   }
-
   let hasShownOnboarding = false;
-
   function doLogin(){
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
     const errorEl = document.getElementById('loginError');
     errorEl.style.display = 'none';
-
     auth.signInWithEmailAndPassword(email, password)
       .then(() => {
         closeLoginOverlay();
@@ -4544,13 +4241,11 @@
         errorEl.textContent = 'התחברות נכשלה — בדקי את המייל והסיסמה (' + err.code + ')';
       });
   }
-
   function doLogout(){
     auth.signOut().then(() => {
       document.querySelectorAll('.switcher button')[0].click();
     });
   }
-
   function doChangePassword(){
     const currentPassword = document.getElementById('cpCurrentPassword').value;
     const newPassword = document.getElementById('cpNewPassword').value;
@@ -4559,7 +4254,6 @@
     const successEl = document.getElementById('cpSuccess');
     errorEl.style.display = 'none';
     successEl.style.display = 'none';
-
     const user = auth.currentUser;
     if (!user){
       errorEl.style.display = 'block';
@@ -4581,7 +4275,6 @@
       errorEl.textContent = 'הסיסמה החדשה ואימות הסיסמה אינם תואמים.';
       return;
     }
-
     const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
     user.reauthenticateWithCredential(credential)
       .then(() => user.updatePassword(newPassword))
@@ -4598,6 +4291,5 @@
       });
   }
 </script>
-
 </body>
 </html>
