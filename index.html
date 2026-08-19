@@ -634,6 +634,20 @@
   .subpanel{display:none;}
   .subpanel.active{display:block; animation:fadeUp 0.4s ease forwards;}
 
+  .inner-switcher{
+    display:flex; gap:8px; margin-bottom:1.5rem; flex-wrap:wrap;
+  }
+  .inner-switcher button{
+    background:none; border:1px solid rgba(245,238,228,0.15); color:var(--ivory-dim);
+    font-family:'Heebo'; font-size:13px; font-weight:500; padding:8px 18px;
+    border-radius:999px; cursor:pointer; transition:all 0.2s ease;
+  }
+  .inner-switcher button.active{
+    background:var(--sage); border-color:var(--sage); color:var(--ink);
+  }
+  .inner-subpanel{display:none;}
+  .inner-subpanel.active{display:block; animation:fadeUp 0.4s ease forwards;}
+
   /* HOURS EDITOR */
   .hours-list{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow:hidden;}
   .hours-row{
@@ -1363,18 +1377,19 @@
     <div class="subswitcher">
       <button class="active" onclick="showSub('overview', this)"><i class="ti ti-layout-dashboard"></i> סקירה</button>
       <button onclick="showSub('clients', this)"><i class="ti ti-users"></i> לקוחות</button>
-      <button onclick="showSub('broadcast', this)"><i class="ti ti-send"></i> הודעות ללקוחות</button>
       <button onclick="showSub('staff', this)"><i class="ti ti-users-group"></i> צוות</button>
-      <button onclick="showSub('reports', this)"><i class="ti ti-chart-line"></i> דוחות</button>
-      <button onclick="showSub('settings', this)"><i class="ti ti-settings"></i> הגדרות</button>
-      <button onclick="showSub('services', this)"><i class="ti ti-scissors"></i> השירותים שלי</button>
-      <button onclick="showSub('categories', this)"><i class="ti ti-category"></i> קטגוריות</button>
-      <button onclick="showSub('whatsnewadmin', this)"><i class="ti ti-sparkles"></i> מה חדש</button>
-      <button onclick="showSub('hours', this)"><i class="ti ti-clock"></i> שעות פעילות</button>
+      <button onclick="showSub('servicesgroup', this)"><i class="ti ti-scissors"></i> שירותים</button>
       <button onclick="showSub('inventory', this)"><i class="ti ti-package"></i> מלאי</button>
+      <button onclick="showSub('whatsnewadmin', this)"><i class="ti ti-sparkles"></i> מה חדש</button>
+      <button onclick="showSub('settings', this)"><i class="ti ti-settings"></i> הגדרות</button>
     </div>
 
     <div id="sub-overview" class="subpanel active">
+      <div class="inner-switcher">
+        <button class="active" onclick="showInnerTab('sub-overview', 'inner-overview-calendar', this)">יומן</button>
+        <button onclick="showInnerTab('sub-overview', 'inner-overview-reports', this)">דוחות</button>
+      </div>
+      <div id="inner-overview-calendar" class="inner-subpanel active">
       <div class="stat-row">
         <div class="stat"><div class="num mono" id="statApptsToday">0</div><div class="lbl">תורים היום</div></div>
         <div class="stat"><div class="num mono" id="statOpenSlots">0</div><div class="lbl">מקומות פנויים</div></div>
@@ -1418,109 +1433,141 @@
         <div class="label" style="margin:20px 0 10px;" id="ovDayAgendaLabel">בחרי יום כדי לראות תורים</div>
         <div id="ovDayAgendaList"></div>
       </div>
+      </div>
+
+      <div id="inner-overview-reports" class="inner-subpanel">
+        <div class="subswitcher" style="margin-bottom:1.5rem;">
+          <button class="active" onclick="showReportRange('week', this)">השבוע</button>
+          <button onclick="showReportRange('month', this)">החודש</button>
+          <button onclick="showReportRange('custom', this)">טווח מותאם אישית</button>
+        </div>
+        <div id="customRangeControls" style="display:none; margin-bottom:1.5rem;">
+          <div class="inv-email-row">
+            <span class="label" style="margin:0;">מתאריך</span>
+            <input type="date" id="reportFromDate" class="search-input" style="margin:0; width:auto;">
+            <span class="label" style="margin:0;">עד תאריך</span>
+            <input type="date" id="reportToDate" class="search-input" style="margin:0; width:auto;">
+            <button class="cta" style="width:auto; margin-top:0;" onclick="renderCustomRangeReport()">הצגת דוח</button>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="num mono" id="repRevenue">3,240 ₪</div><div class="lbl">הכנסה</div></div>
+          <div class="stat"><div class="num mono" id="repCount">27</div><div class="lbl">תורים</div></div>
+          <div class="stat"><div class="num mono" id="repAvg">120 ₪</div><div class="lbl">ממוצע לתור</div></div>
+        </div>
+        <div class="label" style="margin:8px 0 10px;">הכנסה לפי יום</div>
+        <div class="bar-chart" id="revChart"></div>
+        <div class="label" style="margin:24px 0 10px;">השירותים הכי מבוקשים</div>
+        <div class="popular-list" id="popularList"></div>
+      </div>
     </div>
 
     <div id="sub-clients" class="subpanel">
-      <div class="label" style="margin-bottom:10px;">רשימת המתנה (<span id="waitlistCount">0</span>)</div>
-      <div class="client-list" id="waitlistAdminList" style="margin-bottom:26px;"></div>
-
-      <div class="inv-email-row">
-        <span class="label" style="margin:0;">סמני "לא הגיעה זמן רב" אחרי (ימים)</span>
-        <input type="number" id="inactivityThreshold" value="21" style="width:70px;" oninput="updateInactivityThreshold()">
+      <div class="inner-switcher">
+        <button class="active" onclick="showInnerTab('sub-clients', 'inner-clients', this)">לקוחות</button>
+        <button onclick="showInnerTab('sub-clients', 'inner-broadcast', this)">הודעות ללקוחות</button>
       </div>
-      <div class="inv-alert" id="missYouAlert"></div>
-      <div class="inv-alert bday" id="birthdayAlert"></div>
-      <input type="text" id="clientSearch" class="search-input" placeholder="חיפוש לקוחה לפי שם או טלפון..." oninput="renderClients()">
-      <div class="client-list" id="clientList"></div>
-      <div class="client-add-row">
-        <div class="brand-logo-upload small" id="clientPhotoUpload" onclick="document.getElementById('clientPhotoFile').click()">
-          <span id="clientPhotoPlaceholder">+ תמונה</span>
-          <img id="clientPhotoPreview" style="display:none;">
+
+      <div id="inner-clients" class="inner-subpanel active">
+        <div class="label" style="margin-bottom:10px;">רשימת המתנה (<span id="waitlistCount">0</span>)</div>
+        <div class="client-list" id="waitlistAdminList" style="margin-bottom:26px;"></div>
+
+        <div class="inv-email-row">
+          <span class="label" style="margin:0;">סמני "לא הגיעה זמן רב" אחרי (ימים)</span>
+          <input type="number" id="inactivityThreshold" value="21" style="width:70px;" oninput="updateInactivityThreshold()">
         </div>
-        <input type="file" id="clientPhotoFile" accept="image/*" style="display:none;" onchange="handleClientPhotoUpload(event)">
-        <input type="text" id="newClientName" placeholder="שם הלקוחה">
-        <input type="text" id="newClientPhone" placeholder="050-0000000">
-        <input type="email" id="newClientEmail" placeholder="אימייל">
-        <input type="date" id="newClientBirthday" placeholder="תאריך לידה">
-        <button class="cta" style="width:auto; margin-top:0;" onclick="addClient()">הוספת לקוחה</button>
+        <div class="inv-alert" id="missYouAlert"></div>
+        <div class="inv-alert bday" id="birthdayAlert"></div>
+        <input type="text" id="clientSearch" class="search-input" placeholder="חיפוש לקוחה לפי שם או טלפון..." oninput="renderClients()">
+        <div class="client-list" id="clientList"></div>
+        <div class="client-add-row">
+          <div class="brand-logo-upload small" id="clientPhotoUpload" onclick="document.getElementById('clientPhotoFile').click()">
+            <span id="clientPhotoPlaceholder">+ תמונה</span>
+            <img id="clientPhotoPreview" style="display:none;">
+          </div>
+          <input type="file" id="clientPhotoFile" accept="image/*" style="display:none;" onchange="handleClientPhotoUpload(event)">
+          <input type="text" id="newClientName" placeholder="שם הלקוחה">
+          <input type="text" id="newClientPhone" placeholder="050-0000000">
+          <input type="email" id="newClientEmail" placeholder="אימייל">
+          <input type="date" id="newClientBirthday" placeholder="תאריך לידה">
+          <button class="cta" style="width:auto; margin-top:0;" onclick="addClient()">הוספת לקוחה</button>
+        </div>
       </div>
-    </div>
 
-    <div id="sub-broadcast" class="subpanel">
-      <div class="broadcast-box">
-        <div class="label" style="margin-bottom:6px;">תבנית מהירה</div>
-        <div class="template-row">
-          <button class="template-btn" onclick="fillTemplate('shana')">🍯 שנה טובה</button>
-          <button class="template-btn" onclick="fillTemplate('shabbat')">🕯️ שבת שלום</button>
-          <button class="template-btn" onclick="fillTemplate('birthday')">🎂 יום הולדת שמח</button>
-          <button class="template-btn" onclick="fillTemplate('holiday')">🎉 חג שמח</button>
+      <div id="inner-broadcast" class="inner-subpanel">
+        <div class="broadcast-box">
+          <div class="label" style="margin-bottom:6px;">תבנית מהירה</div>
+          <div class="template-row">
+            <button class="template-btn" onclick="fillTemplate('shana')">🍯 שנה טובה</button>
+            <button class="template-btn" onclick="fillTemplate('shabbat')">🕯️ שבת שלום</button>
+            <button class="template-btn" onclick="fillTemplate('birthday')">🎂 יום הולדת שמח</button>
+            <button class="template-btn" onclick="fillTemplate('holiday')">🎉 חג שמח</button>
+          </div>
+          <div class="template-row" id="customTemplateRow" style="margin-top:8px;"></div>
+
+          <div class="label" style="margin:14px 0 6px;">הוספת תבנית משלך</div>
+          <div class="custom-tpl-form">
+            <input type="text" id="newTplLabel" placeholder="שם קצר (למשל: תזכורת חג)">
+            <textarea id="newTplContent" class="client-note" style="min-height:60px;" placeholder="תוכן התבנית..."></textarea>
+            <button class="cta" style="width:auto; margin-top:0;" onclick="addCustomTemplate()">שמירת תבנית</button>
+          </div>
+
+          <div class="label" style="margin:16px 0 6px;">תמונה מצורפת (אופציונלי)</div>
+          <div class="brand-logo-upload" id="broadcastPhotoUpload" onclick="document.getElementById('broadcastPhotoFile').click()" style="width:100%; height:120px; border-radius:12px;">
+            <span id="broadcastPhotoPlaceholder">+ הוספת תמונה</span>
+            <img id="broadcastPhotoPreview" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:12px;">
+          </div>
+          <input type="file" id="broadcastPhotoFile" accept="image/*" style="display:none;" onchange="handleBroadcastPhotoUpload(event)">
+
+          <div class="label" style="margin:16px 0 6px;">תוכן ההודעה</div>
+          <textarea id="broadcastMessage" class="client-note" style="min-height:100px;" placeholder="כתבי כאן את ההודעה שתישלח לכל הלקוחות..."></textarea>
+
+          <div class="broadcast-footer">
+            <span id="broadcastCount" class="broadcast-count"></span>
+            <button class="cta" style="width:auto; margin-top:0;" onclick="sendBroadcast()">שליחה לכל הלקוחות</button>
+          </div>
+          <div id="broadcastResult" class="waitlist-confirmed" style="display:none; margin-top:14px;"></div>
         </div>
-        <div class="template-row" id="customTemplateRow" style="margin-top:8px;"></div>
-
-        <div class="label" style="margin:14px 0 6px;">הוספת תבנית משלך</div>
-        <div class="custom-tpl-form">
-          <input type="text" id="newTplLabel" placeholder="שם קצר (למשל: תזכורת חג)">
-          <textarea id="newTplContent" class="client-note" style="min-height:60px;" placeholder="תוכן התבנית..."></textarea>
-          <button class="cta" style="width:auto; margin-top:0;" onclick="addCustomTemplate()">שמירת תבנית</button>
-        </div>
-
-        <div class="label" style="margin:16px 0 6px;">תמונה מצורפת (אופציונלי)</div>
-        <div class="brand-logo-upload" id="broadcastPhotoUpload" onclick="document.getElementById('broadcastPhotoFile').click()" style="width:100%; height:120px; border-radius:12px;">
-          <span id="broadcastPhotoPlaceholder">+ הוספת תמונה</span>
-          <img id="broadcastPhotoPreview" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:12px;">
-        </div>
-        <input type="file" id="broadcastPhotoFile" accept="image/*" style="display:none;" onchange="handleBroadcastPhotoUpload(event)">
-
-        <div class="label" style="margin:16px 0 6px;">תוכן ההודעה</div>
-        <textarea id="broadcastMessage" class="client-note" style="min-height:100px;" placeholder="כתבי כאן את ההודעה שתישלח לכל הלקוחות..."></textarea>
-
-        <div class="broadcast-footer">
-          <span id="broadcastCount" class="broadcast-count"></span>
-          <button class="cta" style="width:auto; margin-top:0;" onclick="sendBroadcast()">שליחה לכל הלקוחות</button>
-        </div>
-        <div id="broadcastResult" class="waitlist-confirmed" style="display:none; margin-top:14px;"></div>
       </div>
     </div>
 
     <div id="sub-staff" class="subpanel">
-      <input type="text" id="staffSearch" class="search-input" placeholder="חיפוש עובדת לפי שם..." oninput="renderStaff()">
-      <div class="client-list" id="staffList"></div>
-      <div class="client-add-row">
-        <div class="brand-logo-upload small" id="staffPhotoUpload" onclick="document.getElementById('staffPhotoFile').click()">
-          <span id="staffPhotoPlaceholder">+ תמונה</span>
-          <img id="staffPhotoPreview" style="display:none;">
-        </div>
-        <input type="file" id="staffPhotoFile" accept="image/*" style="display:none;" onchange="handleStaffPhotoUpload(event)">
-        <input type="text" id="newStaffName" placeholder="שם העובדת">
-        <input type="text" id="newStaffRole" placeholder="תפקיד (למשל: מניקוריסטית)">
-        <button class="cta" style="width:auto; margin-top:0;" onclick="addStaff()">הוספת עובדת</button>
+      <div class="inner-switcher">
+        <button class="active" onclick="showInnerTab('sub-staff', 'inner-staff', this)">צוות</button>
+        <button onclick="showInnerTab('sub-staff', 'inner-hours', this)">שעות פעילות</button>
       </div>
-    </div>
 
-    <div id="sub-reports" class="subpanel">
-      <div class="subswitcher" style="margin-bottom:1.5rem;">
-        <button class="active" onclick="showReportRange('week', this)">השבוע</button>
-        <button onclick="showReportRange('month', this)">החודש</button>
-        <button onclick="showReportRange('custom', this)">טווח מותאם אישית</button>
-      </div>
-      <div id="customRangeControls" style="display:none; margin-bottom:1.5rem;">
-        <div class="inv-email-row">
-          <span class="label" style="margin:0;">מתאריך</span>
-          <input type="date" id="reportFromDate" class="search-input" style="margin:0; width:auto;">
-          <span class="label" style="margin:0;">עד תאריך</span>
-          <input type="date" id="reportToDate" class="search-input" style="margin:0; width:auto;">
-          <button class="cta" style="width:auto; margin-top:0;" onclick="renderCustomRangeReport()">הצגת דוח</button>
+      <div id="inner-staff" class="inner-subpanel active">
+        <input type="text" id="staffSearch" class="search-input" placeholder="חיפוש עובדת לפי שם..." oninput="renderStaff()">
+        <div class="client-list" id="staffList"></div>
+        <div class="client-add-row">
+          <div class="brand-logo-upload small" id="staffPhotoUpload" onclick="document.getElementById('staffPhotoFile').click()">
+            <span id="staffPhotoPlaceholder">+ תמונה</span>
+            <img id="staffPhotoPreview" style="display:none;">
+          </div>
+          <input type="file" id="staffPhotoFile" accept="image/*" style="display:none;" onchange="handleStaffPhotoUpload(event)">
+          <input type="text" id="newStaffName" placeholder="שם העובדת">
+          <input type="text" id="newStaffRole" placeholder="תפקיד (למשל: מניקוריסטית)">
+          <button class="cta" style="width:auto; margin-top:0;" onclick="addStaff()">הוספת עובדת</button>
         </div>
       </div>
-      <div class="stat-row">
-        <div class="stat"><div class="num mono" id="repRevenue">3,240 ₪</div><div class="lbl">הכנסה</div></div>
-        <div class="stat"><div class="num mono" id="repCount">27</div><div class="lbl">תורים</div></div>
-        <div class="stat"><div class="num mono" id="repAvg">120 ₪</div><div class="lbl">ממוצע לתור</div></div>
+
+      <div id="inner-hours" class="inner-subpanel">
+        <div class="label" style="margin-bottom:10px;">שעות הפעילות של:</div>
+        <div id="hoursNoStaffMsg" style="display:none; color:var(--ivory-dim); font-size:14px; padding:20px; border:1px dashed rgba(245,238,228,0.2); border-radius:12px; text-align:center;">
+          עדיין לא הוספת אף עובדת. עוברים לתת-טאב <b style="color:var(--gold-soft);">"צוות"</b> ומוסיפים לפחות עובדת אחת (אפשר גם את עצמך) — ואז אפשר לחזור לכאן ולהגדיר לה שעות פעילות.
+        </div>
+        <div class="staff-filter-row" id="hoursStaffPicker"></div>
+        <div class="hours-list" id="hoursList"></div>
+        <div id="closedDatesSection" style="margin-top:24px; display:none;">
+          <div class="label" style="margin-bottom:10px;">ימים סגורים (חג, חופשה)</div>
+          <div class="client-list" id="closedDatesList"></div>
+          <div class="client-add-row">
+            <input type="date" id="newClosedDate">
+            <button class="cta" style="width:auto; margin-top:0;" onclick="addClosedDate()">הוספת יום סגור</button>
+          </div>
+        </div>
       </div>
-      <div class="label" style="margin:8px 0 10px;">הכנסה לפי יום</div>
-      <div class="bar-chart" id="revChart"></div>
-      <div class="label" style="margin:24px 0 10px;">השירותים הכי מבוקשים</div>
-      <div class="popular-list" id="popularList"></div>
     </div>
 
     <div id="sub-settings" class="subpanel">
@@ -1555,23 +1602,30 @@
       <button class="template-btn" onclick="doLogout()">🚪 התנתקות</button>
     </div>
 
-    <div id="sub-services" class="subpanel">
-      <div class="svc-manage-list" id="svcManageList"></div>
-      <div class="svc-add-row">
-        <select id="newSvcCategory" class="field-dark"></select>
-        <input type="text" id="newSvcName" placeholder="שם השירות (למשל: לייזר ידיים)">
-        <input type="number" id="newSvcPrice" placeholder="מחיר בש&quot;ח">
-        <input type="number" id="newSvcDuration" placeholder="משך בדקות">
-        <button class="cta" style="width:auto; margin-top:0;" onclick="addService()">הוספת שירות</button>
+    <div id="sub-servicesgroup" class="subpanel">
+      <div class="inner-switcher">
+        <button class="active" onclick="showInnerTab('sub-servicesgroup', 'inner-services', this)">השירותים שלי</button>
+        <button onclick="showInnerTab('sub-servicesgroup', 'inner-categories', this)">קטגוריות</button>
       </div>
-    </div>
 
-    <div id="sub-categories" class="subpanel">
-      <div class="label" style="margin-bottom:10px;">קטגוריות ראשיות</div>
-      <div class="client-list" id="categoryList"></div>
-      <div class="client-add-row">
-        <input type="text" id="newCategoryName" placeholder="שם קטגוריה (למשל: לייזר)">
-        <button class="cta" style="width:auto; margin-top:0;" onclick="addCategory()">הוספת קטגוריה</button>
+      <div id="inner-services" class="inner-subpanel active">
+        <div class="svc-manage-list" id="svcManageList"></div>
+        <div class="svc-add-row">
+          <select id="newSvcCategory" class="field-dark"></select>
+          <input type="text" id="newSvcName" placeholder="שם השירות (למשל: לייזר ידיים)">
+          <input type="number" id="newSvcPrice" placeholder="מחיר בש&quot;ח">
+          <input type="number" id="newSvcDuration" placeholder="משך בדקות">
+          <button class="cta" style="width:auto; margin-top:0;" onclick="addService()">הוספת שירות</button>
+        </div>
+      </div>
+
+      <div id="inner-categories" class="inner-subpanel">
+        <div class="label" style="margin-bottom:10px;">קטגוריות ראשיות</div>
+        <div class="client-list" id="categoryList"></div>
+        <div class="client-add-row">
+          <input type="text" id="newCategoryName" placeholder="שם קטגוריה (למשל: לייזר)">
+          <button class="cta" style="width:auto; margin-top:0;" onclick="addCategory()">הוספת קטגוריה</button>
+        </div>
       </div>
     </div>
 
@@ -1584,23 +1638,6 @@
           <input type="checkbox" id="newWnBadge" style="width:auto;"> להציג תג "חדש"
         </label>
         <button class="cta" style="width:auto; margin-top:0;" onclick="addWhatsNew()">הוספת עדכון</button>
-      </div>
-    </div>
-
-    <div id="sub-hours" class="subpanel">
-      <div class="label" style="margin-bottom:10px;">שעות הפעילות של:</div>
-      <div id="hoursNoStaffMsg" style="display:none; color:var(--ivory-dim); font-size:14px; padding:20px; border:1px dashed rgba(245,238,228,0.2); border-radius:12px; text-align:center;">
-        עדיין לא הוספת אף עובדת. עוברים לטאב <b style="color:var(--gold-soft);">"צוות"</b> ומוסיפים לפחות עובדת אחת (אפשר גם את עצמך) — ואז אפשר לחזור לכאן ולהגדיר לה שעות פעילות.
-      </div>
-      <div class="staff-filter-row" id="hoursStaffPicker"></div>
-      <div class="hours-list" id="hoursList"></div>
-      <div id="closedDatesSection" style="margin-top:24px; display:none;">
-        <div class="label" style="margin-bottom:10px;">ימים סגורים (חג, חופשה)</div>
-        <div class="client-list" id="closedDatesList"></div>
-        <div class="client-add-row">
-          <input type="date" id="newClosedDate">
-          <button class="cta" style="width:auto; margin-top:0;" onclick="addClosedDate()">הוספת יום סגור</button>
-        </div>
       </div>
     </div>
 
@@ -1717,16 +1754,13 @@
     <h3>ברוכה הבאה ל"הכל בקליק" 👋</h3>
     <p class="onboard-sub">הנה מה שכל טאב עושה:</p>
     <ul class="onboard-list">
-      <li><i class="ti ti-layout-dashboard"></i> <b>סקירה</b> — היומן השבועי שלך, לפי עובדת</li>
-      <li><i class="ti ti-users"></i> <b>לקוחות</b> — כרטיסיות לקוחות, הערות, ומעקב מי לא הגיעה זמן רב</li>
-      <li><i class="ti ti-users-group"></i> <b>צוות</b> — ניהול העובדות בעסק</li>
-      <li><i class="ti ti-chart-line"></i> <b>דוחות</b> — הכנסות ושירותים פופולריים לאורך זמן</li>
-      <li><i class="ti ti-palette"></i> <b>מיתוג</b> — לוגו ושם העסק כפי שהלקוחה רואה</li>
-      <li><i class="ti ti-scissors"></i> <b>השירותים שלי</b> — הוספה ועריכה של שירותים ומחירים</li>
-      <li><i class="ti ti-sparkles"></i> <b>מה חדש</b> — עדכונים ומבצעים שהלקוחה רואה</li>
-      <li><i class="ti ti-clock"></i> <b>שעות פעילות</b> — מתי את זמינה לתורים</li>
+      <li><i class="ti ti-layout-dashboard"></i> <b>סקירה</b> — היומן שלך (שבועי/יומי/חודשי) ותת-טאב <b>דוחות</b> להכנסות ושירותים פופולריים</li>
+      <li><i class="ti ti-users"></i> <b>לקוחות</b> — כרטיסיות לקוחות, רשימת המתנה, ותת-טאב <b>הודעות ללקוחות</b> לשליחת עדכונים וברכות</li>
+      <li><i class="ti ti-users-group"></i> <b>צוות</b> — ניהול העובדות ותת-טאב <b>שעות פעילות</b> (כולל ימים סגורים)</li>
+      <li><i class="ti ti-scissors"></i> <b>שירותים</b> — הוספה ועריכה של שירותים ותת-טאב <b>קטגוריות</b> לארגון שלהם</li>
       <li><i class="ti ti-package"></i> <b>מלאי</b> — מעקב מוצרים והתראות מלאי נמוך</li>
-      <li><i class="ti ti-send"></i> <b>הודעות ללקוחות</b> — שליחת הודעות וברכות לכולן</li>
+      <li><i class="ti ti-sparkles"></i> <b>מה חדש</b> — עדכונים ומבצעים שהלקוחה רואה</li>
+      <li><i class="ti ti-settings"></i> <b>הגדרות</b> — שינוי סיסמה, לוגו ושם העסק כפי שהלקוחה רואה</li>
     </ul>
     <button class="cta" style="width:auto; padding:12px 28px;" onclick="closeOnboarding()">הבנתי, בואו נתחיל</button>
   </div>
@@ -3729,6 +3763,15 @@
     document.querySelectorAll('.subpanel').forEach(p => p.classList.remove('active'));
     document.getElementById('sub-' + name).classList.add('active');
     document.querySelectorAll('.subswitcher button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function showInnerTab(containerId, innerId, btn){
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.querySelectorAll('.inner-subpanel').forEach(p => p.classList.remove('active'));
+    document.getElementById(innerId).classList.add('active');
+    container.querySelectorAll('.inner-switcher button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }
 
