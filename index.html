@@ -1327,13 +1327,15 @@
               <input class="field" id="ftpEmail" type="email" placeholder="אימייל (אופציונלי)">
               <input class="field" id="ftpBirthday" type="date" placeholder="תאריך לידה (אופציונלי)">
             </div>
-            <div class="label" style="margin-top:10px;">איך תרצי לקבל תזכורת?</div>
+            <div class="label" style="margin-top:10px;">איך תרצי לקבל תזכורת? (אפשר לבחור יותר מאחת)</div>
             <div class="reminder-choice" id="reminderChoice">
-              <label><input type="radio" name="reminderChannel" value="sms"> SMS</label>
-              <label><input type="radio" name="reminderChannel" value="call"> שיחת טלפון</label>
-              <label><input type="radio" name="reminderChannel" value="both"> שניהם</label>
+              <label><input type="checkbox" name="reminderChannel" value="sms"> SMS</label>
+              <label><input type="checkbox" name="reminderChannel" value="call"> שיחת טלפון</label>
+              <label><input type="checkbox" name="reminderChannel" value="email"> מייל</label>
             </div>
-            <div id="reminderChoiceError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש לבחור ערוץ תזכורת לפני קביעת התור</div>
+            <div id="reminderChoiceError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש לבחור לפחות ערוץ תזכורת אחד לפני קביעת התור</div>
+            <input class="field" id="reminderEmailInput" type="email" placeholder="כתובת מייל לתזכורות" style="display:none; margin-top:8px;">
+            <div id="reminderEmailError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין כתובת מייל כדי לקבל תזכורות במייל</div>
             <p style="font-size:11.5px; color:#8A8178; margin:6px 0 4px; line-height:1.5;">שימי לב: ביטול או שינוי מועד בפחות מ-24 שעות לפני התור עלול לחייב בתשלום.</p>
             <div class="step-nav">
               <button class="step-back" onclick="goToStep(2)">חזרה</button>
@@ -1553,8 +1555,6 @@
           <input type="text" id="bizNameInput" class="field-dark" placeholder="שם העסק שלך" value="" oninput="updateBranding()">
           <div class="label" style="margin:12px 0 6px;">טלפון ליצירת קשר (להתייעצות)</div>
           <input type="tel" id="bizPhoneInput" class="field-dark" placeholder="050-0000000" oninput="updateBranding()">
-          <div class="label" style="margin:12px 0 6px;">מייל שלך לקבלת התראה כשנקבע/מבוטל תור</div>
-          <input type="email" id="bizNotifyEmailInput" class="field-dark" placeholder="you@example.com" oninput="updateBranding()">
         </div>
       </div>
       <div class="label" style="margin:22px 0 10px;">כך זה ייראה ללקוחה</div>
@@ -1879,6 +1879,58 @@
     const match = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits);
     return match && match.email ? match.email : '';
   }
+  function bookWaitlistMatch(w, appt){
+    const newStart = timeToMinutes(appt.time);
+    const newEnd = newStart + (appt.dur || 30);
+    const conflict = weekAppointments.some(a => {
+      if (a.staff !== appt.staff || a.date !== appt.date) return false;
+      const aStart = timeToMinutes(a.time), aEnd = aStart + (a.dur || 30);
+      return !(newEnd <= aStart || newStart >= aEnd);
+    });
+    if (conflict){
+      showAdminToast('השעה הזו כבר נתפסה בינתיים — אי אפשר לקבוע אליה תור נוסף.');
+      return false;
+    }
+    const newAppt = {
+      id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000),
+      day: appt.day,
+      date: appt.date,
+      time: appt.time,
+      dur: appt.dur || 30,
+      client: w.name,
+      service: appt.service,
+      staff: appt.staff,
+      status: 'pending',
+      note: ''
+    };
+    weekAppointments.push(newAppt);
+    if (w.phone && !clients.some(c => (c.phone || '').replace(/[^0-9]/g, '') === (w.phone || '').replace(/[^0-9]/g, ''))){
+      clients.push({ name: w.name, phone: w.phone, email: '', photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
+    }
+    if (typeof saveState === 'function') saveState();
+    showAdminToast(`✓ התור נקבע ל${w.name} בהצלחה`);
+    try {
+      if (typeof renderWeekCal === 'function') renderWeekCal();
+      if (typeof renderMiniCal === 'function') renderMiniCal();
+      if (typeof renderClients === 'function') renderClients();
+      if (typeof renderOverviewDayView === 'function') renderOverviewDayView();
+      if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal();
+      const clientEmail = findClientEmailByPhone(w.phone);
+      if (clientEmail){
+        const dParts = appt.date.split('-').map(Number);
+        const apptDateObj = new Date(dParts[0], dParts[1] - 1, dParts[2]);
+        const dateLabel = apptDateObj.getDate() + ' ב' + hebrewMonths[apptDateObj.getMonth()];
+        sendEmail(
+          clientEmail,
+          'התור שלך אושר',
+          getAppointmentEmailText(w.name, appt.service, dateLabel, appt.time, staff[appt.staff] ? staff[appt.staff].name : '', 'התור נקבע עבורך על ידי העסק מרשימת ההמתנה.')
+        );
+      }
+    } catch (e) {
+      console.error('bookWaitlistMatch: post-booking refresh/notify failed (appointment itself was saved fine):', e);
+    }
+    return true;
+  }
   function renderWaitlistMatchAlert(matches, appt){
     if (!matches || !matches.length) return;
     const existing = document.getElementById('waitlistMatchAlert');
@@ -1902,18 +1954,23 @@
       const row = document.createElement('div');
       row.className='wl-match';
       row.innerHTML = `<div><b>${w.name}</b> · ${w.phone}${clientEmail ? ' · נשלח גם מייל אוטומטית' : ''}</div><div class="wl-actions">
+        <button type="button" class="wl-book-btn">📅 קביעת התור עבורה</button>
         <a href="sms:${digits}?body=${smsMsg}">💬 שליחת SMS</a>
         <a href="tel:${digits}">📞 התקשרות</a>
-        <button type="button">✓ סימון כטופלה</button>
+        <button type="button" class="wl-dismiss-btn">✓ סימון כטופלה</button>
       </div>`;
-      row.querySelector('button').onclick=()=>{
-        const idx=waitlist.indexOf(w);
-        if(idx!==-1) waitlist.splice(idx,1);
+      const removeFromWaitlistAndRow = () => {
+        const idx = waitlist.indexOf(w);
+        if (idx !== -1) waitlist.splice(idx, 1);
         renderWaitlistAdmin();
-        if(typeof saveState==='function') saveState();
+        if (typeof saveState === 'function') saveState();
         row.remove();
-        if(!box.querySelector('.wl-match')) box.remove();
+        if (!box.querySelector('.wl-match')) box.remove();
       };
+      row.querySelector('.wl-book-btn').onclick = () => {
+        if (bookWaitlistMatch(w, appt)) removeFromWaitlistAndRow();
+      };
+      row.querySelector('.wl-dismiss-btn').onclick = removeFromWaitlistAndRow;
       box.appendChild(row);
     });
     host.prepend(box);
@@ -2128,7 +2185,7 @@
     if (toD < fromD) return;
     renderReportOutput(computeRealRangeReport(fromD, toD));
   }
-  let branding = { name: '', logo: null, phone: '', notifyEmail: '' };
+  let branding = { name: '', logo: null, phone: '' };
   const pendingEmailQueue = {};
   function sendEmail(to, subject, text, imageDataUrl){
     if (!to) return;
@@ -2169,8 +2226,6 @@
   function updateBranding(){
     branding.name = document.getElementById('bizNameInput').value.trim() || 'הסלון שלי';
     branding.phone = document.getElementById('bizPhoneInput').value.trim();
-    const notifyEmailEl = document.getElementById('bizNotifyEmailInput');
-    if (notifyEmailEl) branding.notifyEmail = notifyEmailEl.value.trim();
     renderBranding();
     if (typeof renderServices === 'function') renderServices();
   }
@@ -2201,8 +2256,6 @@
     const phoneInputEl = document.getElementById('bizPhoneInput');
     if (nameInputEl && document.activeElement !== nameInputEl) nameInputEl.value = branding.name;
     if (phoneInputEl && document.activeElement !== phoneInputEl) phoneInputEl.value = branding.phone || '';
-    const notifyEmailInputEl = document.getElementById('bizNotifyEmailInput');
-    if (notifyEmailInputEl && document.activeElement !== notifyEmailInputEl) notifyEmailInputEl.value = branding.notifyEmail || '';
     const heroBizNameEl = document.getElementById('heroBizName');
     if (heroBizNameEl){
       if (branding.name && branding.name.trim()){
@@ -2563,8 +2616,10 @@
       };
       btn.querySelector('.tpl-del').onclick = (e) => {
         e.stopPropagation();
+        if (!confirm(`למחוק את התבנית "${tpl.label}"?`)) return;
         customTemplates.splice(i, 1);
         renderCustomTemplates();
+        if (typeof saveState === 'function') saveState();
       };
       rowEl.appendChild(btn);
     });
@@ -2636,6 +2691,12 @@
           </div>
         </div>`;
       row.querySelector('.svc-del').onclick = () => {
+        const apptCount = weekAppointments.filter(a => a.staff === i).length;
+        if (apptCount){
+          alert(`אי אפשר למחוק את ${s.name} כי יש לה ${apptCount} תורים במערכת (כולל היסטוריה). קודם צריך למחוק את כל התורים שלה, ואז אפשר יהיה למחוק אותה.`);
+          return;
+        }
+        if (!confirm(`למחוק את ${s.name}?`)) return;
         staff.splice(i, 1);
         if (selectedStaffIndex >= staff.length) selectedStaffIndex = 0;
         if (typeof selectedStaffFilter === 'number' && selectedStaffFilter >= staff.length) selectedStaffFilter = 'all';
@@ -2646,6 +2707,7 @@
         if (typeof renderWeekCal === 'function') renderWeekCal();
         if (typeof renderHoursStaffPicker === 'function') renderHoursStaffPicker();
         if (typeof renderHoursEditor === 'function') renderHoursEditor();
+        if (typeof saveState === 'function') saveState();
       };
       listEl.appendChild(row);
     });
@@ -3010,9 +3072,16 @@
           </div>
         </div>`;
       row.querySelector('.svc-del').onclick = () => {
+        if (count){
+          alert(`אי אפשר למחוק את הקטגוריה "${cat}" כי יש בה ${count} שירותים. קודם צריך למחוק (או להעביר לקטגוריה אחרת) את כל השירותים שבה, ואז אפשר יהיה למחוק את הקטגוריה עצמה.`);
+          return;
+        }
+        if (!confirm(`למחוק את הקטגוריה "${cat}"?`)) return;
         categories.splice(i, 1);
         renderCategories();
         renderCategoryOptions();
+        if (typeof renderServices === 'function') renderServices();
+        if (typeof saveState === 'function') saveState();
       };
       listEl.appendChild(row);
     });
@@ -3143,10 +3212,13 @@
     renderServices();
   }
   function removeService(i){
+    const svc = services[i];
+    if (!confirm(`למחוק את השירות "${svc ? svc.name : ''}"?`)) return;
     services.splice(i, 1);
     if (selectedSvcIndex >= services.length) selectedSvcIndex = 0;
     renderServices();
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+    if (typeof saveState === 'function') saveState();
   }
   renderCategories();
   renderServices();
@@ -3180,7 +3252,12 @@
             <button class="svc-del" aria-label="מחיקת עדכון">✕</button>
           </div>
         </div>`;
-      row.querySelector('.svc-del').onclick = () => { whatsNewItems.splice(i, 1); renderWhatsNew(); };
+      row.querySelector('.svc-del').onclick = () => {
+        if (!confirm(`למחוק את העדכון "${item.title}"?`)) return;
+        whatsNewItems.splice(i, 1);
+        renderWhatsNew();
+        if (typeof saveState === 'function') saveState();
+      };
       adminEl.appendChild(row);
     });
   }
@@ -3430,6 +3507,7 @@
           </div>
         </div>`;
       row.querySelector('.svc-del').onclick = () => {
+        if (!confirm(`להסיר את ${w.name} מרשימת ההמתנה?`)) return;
         waitlist.splice(i, 1);
         renderWaitlistAdmin();
         if (typeof saveState === 'function') saveState();
@@ -3486,6 +3564,18 @@
       this.style.borderColor = '';
     }
   });
+  function updateReminderEmailVisibility(){
+    const emailChecked = !!document.querySelector('input[name="reminderChannel"][value="email"]:checked');
+    const emailInput = document.getElementById('reminderEmailInput');
+    if (!emailInput) return;
+    if (!emailChecked){ emailInput.style.display = 'none'; return; }
+    const digits = document.getElementById('bookingPhoneInput').value.replace(/[^0-9]/g, '');
+    const match = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits);
+    if (match && match.email){ emailInput.style.display = 'none'; return; }
+    const perksEl = document.getElementById('firstTimePerks');
+    if (perksEl && perksEl.style.display !== 'none'){ emailInput.style.display = 'none'; return; }
+    emailInput.style.display = 'block';
+  }
   document.getElementById('bookingPhoneInput').addEventListener('input', function(){
     if (isValidIsraeliPhone(this.value)){
       document.getElementById('bookingPhoneError').style.display = 'none';
@@ -3502,18 +3592,23 @@
         welcomeEl.style.display = 'block';
         welcomeEl.textContent = `✓ ברוכה שובך, ${match.name}! מילאנו את הפרטים שלך אוטומטית.`;
         perksEl.style.display = 'none';
+        updateReminderEmailVisibility();
         return;
       }
       welcomeEl.style.display = 'none';
       perksEl.style.display = 'block';
+      updateReminderEmailVisibility();
       return;
     }
     document.getElementById('firstTimePerks').style.display = 'none';
     welcomeEl.style.display = 'none';
+    updateReminderEmailVisibility();
   });
   document.querySelectorAll('input[name="reminderChannel"]').forEach(function(radio){
     radio.addEventListener('change', function(){
       document.getElementById('reminderChoiceError').style.display = 'none';
+      document.getElementById('reminderEmailError').style.display = 'none';
+      updateReminderEmailVisibility();
     });
   });
   function getSiteUrl(){
@@ -3545,15 +3640,16 @@
       return;
     }
     errorEl.style.display = 'none';
-    const reminderInput = document.querySelector('input[name="reminderChannel"]:checked');
+    const reminderChecked = Array.from(document.querySelectorAll('input[name="reminderChannel"]:checked'));
     const reminderErrorEl = document.getElementById('reminderChoiceError');
-    if (!reminderInput){
+    if (!reminderChecked.length){
       reminderErrorEl.style.display = 'block';
       return;
     }
     reminderErrorEl.style.display = 'none';
-    const reminderLabels = { sms: 'SMS', call: 'שיחת טלפון', both: 'SMS ושיחת טלפון' };
-    const reminderText = reminderLabels[reminderInput.value];
+    const reminderLabels = { sms: 'SMS', call: 'שיחת טלפון', email: 'מייל' };
+    const reminderChannels = reminderChecked.map(cb => cb.value);
+    const reminderText = reminderChannels.map(v => reminderLabels[v]).join(' + ');
     // Re-check against the cloud right before committing — this page may have been
     // open for a while, and in the meantime the business owner (or another customer)
     // may have taken this exact slot. Without this, this browser would still think
@@ -3591,6 +3687,19 @@
     const dayKey = weekdayKeys[bookingSelectedDate.getDay()];
     const phoneDigits = phoneVal.replace(/[^0-9]/g, '');
     const existingClient = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phoneDigits);
+    // If email was chosen as a reminder channel, make sure there's actually an email
+    // to send to — either already on file, from the first-time perks field, or from
+    // the dedicated reminder-email field that appears when it's needed.
+    if (reminderChannels.includes('email') && !(existingClient && existingClient.email)){
+      const ftpEmailEl = document.getElementById('ftpEmail');
+      const reminderEmailEl = document.getElementById('reminderEmailInput');
+      const providedEmail = (reminderEmailEl && reminderEmailEl.value.trim()) || (ftpEmailEl && ftpEmailEl.value.trim()) || '';
+      if (!providedEmail){
+        document.getElementById('reminderEmailError').style.display = 'block';
+        if (reminderEmailEl) reminderEmailEl.style.display = 'block';
+        return;
+      }
+    }
     if (existingClient){
       const fmt = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
       const targetDateStr = fmt(bookingSelectedDate);
@@ -3626,12 +3735,20 @@
       existingClient.name = clientNameVal;
       if (isTodayOrPastBooking) existingClient.visits = (existingClient.visits || 0) + 1;
       if (isTodayOrPastBooking) existingClient.daysSinceVisit = 0;
+      if (!existingClient.email){
+        const reminderEmailEl = document.getElementById('reminderEmailInput');
+        const enteredEmail = reminderEmailEl ? reminderEmailEl.value.trim() : '';
+        if (enteredEmail) existingClient.email = enteredEmail;
+      }
       customerEmail = existingClient.email || '';
     } else {
       const ftpEmail = document.getElementById('ftpEmail').value.trim();
+      const reminderEmailEl = document.getElementById('reminderEmailInput');
+      const reminderEmailVal = reminderEmailEl ? reminderEmailEl.value.trim() : '';
+      const finalEmail = ftpEmail || reminderEmailVal;
       const ftpBirthday = document.getElementById('ftpBirthday').value || null;
-      clients.push({ name: clientNameVal, phone: phoneVal.trim(), email: ftpEmail, photo: null, visits: isTodayOrPastBooking ? 1 : 0, daysSinceVisit: isTodayOrPastBooking ? 0 : null, note: '', birthday: ftpBirthday });
-      customerEmail = ftpEmail;
+      clients.push({ name: clientNameVal, phone: phoneVal.trim(), email: finalEmail, photo: null, visits: isTodayOrPastBooking ? 1 : 0, daysSinceVisit: isTodayOrPastBooking ? 0 : null, note: '', birthday: ftpBirthday });
+      customerEmail = finalEmail;
     }
     currentBookedAppointment = {
       id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000),
@@ -3643,7 +3760,8 @@
       service: svc ? svc.name : 'שירות',
       staff: selectedStaffIndex,
       status: 'pending',
-      note: ''
+      note: '',
+      reminderChannels: reminderChannels
     };
     weekAppointments.push(currentBookedAppointment);
     if (typeof saveState === 'function') saveState();
@@ -3678,14 +3796,6 @@
           customerEmail,
           'התור שלך אושר',
           getAppointmentEmailText(clientNameVal, svc ? svc.name : 'שירות', dateLabel, selectedSlot, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:')
-        );
-      }
-      if (branding.notifyEmail){
-        const ownerDateLabel = bookingSelectedDate.getDate() + ' ב' + hebrewMonths[bookingSelectedDate.getMonth()];
-        sendEmail(
-          branding.notifyEmail,
-          'נקבע תור חדש',
-          `נקבע תור חדש דרך האתר:\n\nלקוחה: ${clientNameVal}\nטלפון: ${phoneVal}\nשירות: ${svc ? svc.name : 'שירות'}\nתאריך: ${ownerDateLabel} (${currentBookedAppointment.date})\nשעה: ${selectedSlot}${emp ? '\nעובדת: ' + emp.name : ''}`
         );
       }
     } catch (e) {
@@ -3754,13 +3864,6 @@
           `היי ${apptBeingCancelled.client}, התור שלך ל${apptBeingCancelled.service} ב-${apptBeingCancelled.time} בוטל בהצלחה. נשמח לראותך שוב בקרוב!\n\nלקביעת תור חדש:\n${getSiteUrl()}`
         );
       }
-      if (branding.notifyEmail){
-        sendEmail(
-          branding.notifyEmail,
-          'תור בוטל',
-          `לקוחה ביטלה תור דרך האתר:\n\nלקוחה: ${apptBeingCancelled.client}\nשירות: ${apptBeingCancelled.service}\nתאריך: ${apptBeingCancelled.date}\nשעה: ${apptBeingCancelled.time}`
-        );
-      }
     }
     const apptEl = document.getElementById('myAppointment');
     apptEl.innerHTML = `
@@ -3819,27 +3922,70 @@
       return;
     }
     closeApptLookup();
-    renderLookedUpAppointment(upcoming[0]);
+    // Show every upcoming appointment for this phone number, not just the soonest
+    // one — otherwise a customer with more than one booking only ever sees one of
+    // them here, which looks like the others were lost.
+    renderLookedUpAppointment(upcoming);
   }
-  function renderLookedUpAppointment(appt){
-    currentBookedAppointment = appt;
+  let lookedUpAppointmentsList = [];
+  function renderLookedUpAppointment(apptOrList){
+    const list = Array.isArray(apptOrList) ? apptOrList : [apptOrList];
+    lookedUpAppointmentsList = list;
+    currentBookedAppointment = list[0] || null;
     document.getElementById('bookingFormWrap').style.display = 'none';
     const apptEl = document.getElementById('myAppointment');
     apptEl.style.display = 'block';
-    const parts = appt.date.split('-').map(Number);
-    const apptDate = new Date(parts[0], parts[1] - 1, parts[2]);
-    const emp = staff[appt.staff];
-    const gcalUrl = buildGoogleCalendarUrl(apptDate, appt.time, appt.dur || 30, appt.service, emp ? emp.name : '');
-    apptEl.innerHTML = `
-      <div class="status-dot">✓ נמצא תור קיים</div>
-      <h4>${appt.service}</h4>
-      <div class="appt-meta">${apptDate.getDate()} ב${hebrewMonths[apptDate.getMonth()]} (${hebrewDateStr(apptDate)}), ${appt.time}${emp ? ' · אצל ' + emp.name : ''}</div>
-      <a href="${gcalUrl}" target="_blank" rel="noopener" class="gcal-link">📅 הוספה ליומן Google</a>
-      <div class="my-appt-actions">
-        <button onclick="rescheduleAppointment()">שינוי מועד</button>
-        <button class="danger" onclick="cancelAppointment()">ביטול תור</button>
-      </div>
-      <button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
+    if (!list.length){
+      apptEl.innerHTML = `
+        <div class="waitlist-confirmed">אין לך יותר תורים עתידיים.</div>
+        <button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור חדש</button>`;
+      return;
+    }
+    apptEl.innerHTML = list.map((appt, idx) => {
+      const parts = appt.date.split('-').map(Number);
+      const apptDate = new Date(parts[0], parts[1] - 1, parts[2]);
+      const emp = staff[appt.staff];
+      const gcalUrl = buildGoogleCalendarUrl(apptDate, appt.time, appt.dur || 30, appt.service, emp ? emp.name : '');
+      return `
+      <div class="my-appt-card" style="${idx > 0 ? 'margin-top:14px; padding-top:14px; border-top:1px solid rgba(245,238,228,0.12);' : ''}">
+        <div class="status-dot">✓ ${list.length > 1 ? `תור ${idx + 1} מתוך ${list.length}` : 'נמצא תור קיים'}</div>
+        <h4>${appt.service}</h4>
+        <div class="appt-meta">${apptDate.getDate()} ב${hebrewMonths[apptDate.getMonth()]} (${hebrewDateStr(apptDate)}), ${appt.time}${emp ? ' · אצל ' + emp.name : ''}</div>
+        <a href="${gcalUrl}" target="_blank" rel="noopener" class="gcal-link">📅 הוספה ליומן Google</a>
+        <div class="my-appt-actions">
+          <button onclick="rescheduleListedAppointment(${idx})">שינוי מועד</button>
+          <button class="danger" onclick="cancelListedAppointment(${idx})">ביטול תור</button>
+        </div>
+      </div>`;
+    }).join('') + `<button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
+  }
+  function rescheduleListedAppointment(idx){
+    currentBookedAppointment = lookedUpAppointmentsList[idx];
+    lookedUpAppointmentsList = [];
+    rescheduleAppointment();
+  }
+  function cancelListedAppointment(idx){
+    const appt = lookedUpAppointmentsList[idx];
+    if (!appt) return;
+    const pos = weekAppointments.indexOf(appt);
+    if (pos !== -1) weekAppointments.splice(pos, 1);
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof renderMiniCal === 'function') renderMiniCal();
+    if (typeof saveState === 'function') saveState();
+    try {
+      const client = clients.find(c => c.name === appt.client);
+      if (client && client.email){
+        sendEmail(
+          client.email,
+          'התור שלך בוטל',
+          `היי ${appt.client}, התור שלך ל${appt.service} ב-${appt.time} בוטל בהצלחה. נשמח לראותך שוב בקרוב!\n\nלקביעת תור חדש:\n${getSiteUrl()}`
+        );
+      }
+    } catch (e) {
+      console.error('cancelListedAppointment: notification failed (cancellation itself succeeded):', e);
+    }
+    const remaining = lookedUpAppointmentsList.filter(a => a !== appt);
+    renderLookedUpAppointment(remaining);
   }
   /* ===== "Client arriving now" live popup for the business owner ===== */
   const shownArrivalPopups = new Set();
@@ -3978,6 +4124,7 @@
           </div>
         </div>`;
       row.querySelector('.svc-del').onclick = () => {
+        if (!confirm(`להסיר את הסגירה בתאריך ${label}? היום הזה יחזור להיות זמין לקביעת תורים.`)) return;
         const idx = staff[hoursEditorStaffIndex].closedDates.indexOf(dateStr);
         if (idx !== -1) staff[hoursEditorStaffIndex].closedDates.splice(idx, 1);
         renderClosedDates();
@@ -4070,8 +4217,10 @@
         renderInventory();
       };
       row.querySelector('.svc-del').onclick = () => {
+        if (!confirm(`למחוק את המוצר "${item.name}" מהמלאי?`)) return;
         inventory.splice(i, 1);
         renderInventory();
+        if (typeof saveState === 'function') saveState();
       };
       listEl.appendChild(row);
     });
