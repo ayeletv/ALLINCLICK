@@ -4104,6 +4104,7 @@
   /* ===== CLOUD SYNC (Firestore) ===== */
   let cloudLoadComplete = false;
   const CLOUD_DOC = db.collection('business').doc('default');
+  let lastBackupDateKey = '';
   function saveState(){
     if (!cloudLoadComplete) return;
     const payload = {
@@ -4116,6 +4117,16 @@
     // before a site update) never wipes out fields it doesn't know about — it can
     // only overwrite the fields it actually sends, never delete unrelated ones.
     CLOUD_DOC.set(payload, { merge: true }).catch(err => console.error('Cloud save failed:', err));
+    // Also keep one automatic backup snapshot per calendar day, in a separate
+    // "backups" subcollection (business/default/backups/YYYY-MM-DD). If the live
+    // document is ever wiped or corrupted for any reason, a recent day's backup can
+    // be opened in the Firebase console and copied back into business/default by
+    // hand — better than having no way at all to recover real client/appointment data.
+    const backupDateKey = payload.savedAt.slice(0, 10);
+    if (backupDateKey !== lastBackupDateKey){
+      lastBackupDateKey = backupDateKey;
+      CLOUD_DOC.collection('backups').doc(backupDateKey).set(payload).catch(err => console.error('Backup save failed:', err));
+    }
   }
   function applyCloudData(data){
     if (data.branding) branding = data.branding;
@@ -4151,20 +4162,46 @@
     if (typeof renderOverviewDayView === 'function') renderOverviewDayView();
     if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal();
   }
-  CLOUD_DOC.get().then(doc => {
-    if (!doc.exists){
-      console.log('No saved data yet in the cloud — using demo starter data.');
+  let cloudLoadRetryCount = 0;
+  function showCloudErrorBanner(){
+    if (document.getElementById('cloudErrorBanner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'cloudErrorBanner';
+    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#9B2C42; color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
+    banner.textContent = '⚠ אין כרגע חיבור לענן — שינויים לא יישמרו עד שהחיבור יחזור. מומלץ לרענן את הדף.';
+    document.body.prepend(banner);
+  }
+  function hideCloudErrorBanner(){
+    const banner = document.getElementById('cloudErrorBanner');
+    if (banner) banner.remove();
+  }
+  function loadCloudData(){
+    CLOUD_DOC.get().then(doc => {
+      hideCloudErrorBanner();
+      cloudLoadRetryCount = 0;
+      if (!doc.exists){
+        console.log('No saved data yet in the cloud — using demo starter data.');
+        cloudLoadComplete = true;
+        return;
+      }
+      applyCloudData(doc.data());
+      rerenderEverything();
       cloudLoadComplete = true;
-      return;
-    }
-    applyCloudData(doc.data());
-    rerenderEverything();
-    cloudLoadComplete = true;
-    console.log('Loaded saved data from the cloud.');
-  }).catch(err => {
-    console.error('Cloud load failed — staying with local demo data:', err);
-    cloudLoadComplete = true;
-  });
+      console.log('Loaded saved data from the cloud.');
+    }).catch(err => {
+      // Deliberately NOT setting cloudLoadComplete = true here. Doing so on a
+      // failed load is exactly what used to cause full data loss: the app would
+      // sit on blank in-memory defaults, then a few seconds later the autosave
+      // would write those blank defaults over the real saved data in the cloud.
+      // Instead: keep saving disabled, show a visible warning, and keep retrying.
+      console.error('Cloud load failed — will keep retrying, autosave stays OFF until it succeeds:', err);
+      showCloudErrorBanner();
+      cloudLoadRetryCount++;
+      const delay = Math.min(30000, 3000 * cloudLoadRetryCount);
+      setTimeout(loadCloudData, delay);
+    });
+  }
+  loadCloudData();
   // Autosave every few seconds, and once more right before the page closes —
   // this covers every edit anywhere in the app without needing to hook each one individually.
   // Guarded by cloudLoadComplete above so we never overwrite real saved data with an
