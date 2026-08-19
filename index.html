@@ -966,6 +966,8 @@
     overflow:hidden;
   }
   .client-history .ov-agenda-row{padding:8px 12px; font-size:12.5px;}
+  .client-upcoming{border-color:rgba(201,162,39,0.18);}
+  .upcoming-visit-row .upcoming-meta{display:flex; align-items:center; gap:8px; margin-top:7px; font-size:12px; color:var(--ivory-dim);}
   .visit-row{
     padding:10px 12px;
     border-bottom:1px solid rgba(245,238,228,0.08);
@@ -1816,7 +1818,7 @@
     document.getElementById('myDayTitle').textContent = `היום שלי — יום ${dayName}, ${dateStr}`;
 
     const todays = weekAppointments
-      .filter(a => a.day === dayKey)
+      .filter(a => a.date === formatDateKey(now))
       .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 
     const listEl = document.getElementById('myDayList');
@@ -1921,7 +1923,7 @@
     const startMin = timeToMinutes(timeVal);
     const endMin = startMin + dur;
     const conflict = weekAppointments.some(a => {
-      if (a.day !== dayKey || a.staff !== staffIdx) return false;
+      if (a.day !== dayKey || a.date !== dateVal || a.staff !== staffIdx) return false;
       const aStart = timeToMinutes(a.time);
       const aEnd = aStart + a.dur;
       return !(endMin <= aStart || startMin >= aEnd);
@@ -1932,7 +1934,19 @@
       return;
     }
 
-    weekAppointments.push({ id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000), day: dayKey, date: dateVal, time: timeVal, dur, client: name, service: svc.name, staff: staffIdx, status: 'pending', note: '' });
+    const manualAppointment = {
+      id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000),
+      day: dayKey,
+      date: dateVal,
+      time: timeVal,
+      dur,
+      client: name,
+      service: svc.name,
+      staff: staffIdx,
+      status: 'pending',
+      note: ''
+    };
+    weekAppointments.push(manualAppointment);
 
     if (phone && !clients.some(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, ''))){
       clients.push({ name, phone, email: '', photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
@@ -1941,6 +1955,17 @@
 
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderMiniCal === 'function') renderMiniCal();
+    if (typeof renderOverviewDayView === 'function') {
+      ovCurrentDayDate = new Date(apptDate.getFullYear(), apptDate.getMonth(), apptDate.getDate());
+      renderOverviewDayView();
+    }
+    if (typeof renderOverviewMonthCal === 'function') {
+      ovCalViewYear = apptDate.getFullYear();
+      ovCalViewMonth = apptDate.getMonth();
+      renderOverviewMonthCal();
+    }
+    if (typeof renderClients === 'function') renderClients();
+    if (typeof saveState === 'function') saveState();
     closeManualBookingModal();
   }
 
@@ -2007,7 +2032,7 @@
       d.setDate(fromD.getDate() + i);
       const dow = d.getDay();
       const dayKey = weekdayKeys[dow];
-      const dayAppts = weekAppointments.filter(a => a.day === dayKey);
+      const dayAppts = weekAppointments.filter(a => a.date === formatDateKey(d));
       let dayRevenue = 0;
 
       dayAppts.forEach(a => {
@@ -2273,6 +2298,79 @@
     return dow !== -1 ? 'יום ' + days[dow].name : '';
   }
 
+  function getAppointmentDateOnly(appt){
+    if (!appt || !appt.date) return null;
+    const parts = appt.date.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+
+  function getTodayDateOnly(){
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  function isAppointmentHistory(appt){
+    const d = getAppointmentDateOnly(appt);
+    if (!d) return false;
+    // Today is intentionally considered history, even if the appointment time is later today.
+    return d <= getTodayDateOnly();
+  }
+
+  function getClientAppointments(clientName){
+    return weekAppointments
+      .filter(a => a.client === clientName)
+      .sort((a, b) => {
+        const da = getAppointmentDateOnly(a) || new Date(0);
+        const db = getAppointmentDateOnly(b) || new Date(0);
+        const dateDiff = db - da;
+        if (dateDiff !== 0) return dateDiff;
+        return timeToMinutes(b.time || '00:00') - timeToMinutes(a.time || '00:00');
+      });
+  }
+
+  function formatAppointmentStatus(appt){
+    if (appt.status === 'completed') return '<span class="badge confirmed">✓ הגיעה</span>';
+    if (appt.status === 'no-show') return '<span class="badge low">✗ לא הגיעה</span>';
+    return '<span class="badge open">ממתינה</span>';
+  }
+
+  function renderClientAppointmentRows(appointments, options){
+    options = options || {};
+    if (!appointments.length){
+      return '<p style="color:var(--ivory-dim); font-size:13px;">' + (options.emptyText || 'אין תורים.') + '</p>';
+    }
+
+    return appointments.map(a => {
+      if (options.upcoming){
+        return `
+          <div class="visit-row upcoming-visit-row" data-appt-id="${a.id || ''}">
+            <div class="visit-row-head">
+              <span class="t">${a.time || ''}</span>
+              <span class="visit-svc">${a.service || 'שירות'}</span>
+              <span class="visit-date">${formatHistoryDate(a)}</span>
+            </div>
+            <div class="upcoming-meta">${a.staff !== undefined && staff[a.staff] ? 'אצל ' + staff[a.staff].name + ' · ' : ''}${formatAppointmentStatus(a)}</div>
+            ${a.note ? `<div style="font-size:12px; color:var(--ivory-dim); margin-top:5px;">${a.note}</div>` : ''}
+          </div>`;
+      }
+
+      return `
+        <div class="visit-row" data-appt-id="${a.id || ''}">
+          <div class="visit-row-head">
+            <span class="t">${a.time || ''}</span>
+            <span class="visit-svc">${a.service || 'שירות'}</span>
+            <span class="visit-date">${formatHistoryDate(a)}</span>
+          </div>
+          <div class="visit-status-actions">
+            <button class="visit-status-btn${a.status === 'completed' ? ' active-yes' : ''}" data-status="completed">✓ הגיעה</button>
+            <button class="visit-status-btn${a.status === 'no-show' ? ' active-no' : ''}" data-status="no-show">✗ לא הגיעה</button>
+          </div>
+          <textarea class="visit-note" placeholder="הערה על הטיפול הזה...">${a.note || ''}</textarea>
+        </div>`;
+    }).join('');
+  }
+
   function renderClients(){
     const listEl = document.getElementById('clientList');
     listEl.innerHTML = '';
@@ -2303,7 +2401,9 @@
       const row = document.createElement('div');
       row.className = 'client-card';
       const avatarHtml = c.photo ? `<img src="${c.photo}">` : c.name.trim().charAt(0);
-      const history = weekAppointments.filter(a => a.client === c.name);
+      const allAppointments = getClientAppointments(c.name);
+      const history = allAppointments.filter(isAppointmentHistory);
+      const upcoming = allAppointments.filter(a => !isAppointmentHistory(a));
       row.innerHTML = `
         <div class="client-avatar">${avatarHtml}</div>
         <div class="client-info">
@@ -2315,34 +2415,32 @@
                 <input class="client-mini-input" data-field="email" type="email" value="${c.email || ''}" placeholder="אימייל">
                 <span class="bday-field-wrap"><span class="bday-label">🎂 יום הולדת:</span><input class="client-mini-input" data-field="birthday" type="date" value="${c.birthday || ''}"></span>
               </div>
-              <div class="visits">${c.visits} ביקורים · אחרון ${formatLastVisit(c.daysSinceVisit)}${isInactive ? ' <span class="badge low" style="margin-inline-start:6px;">לא הגיעה זמן רב</span>' : ''}${isBday ? ' <span class="badge" style="background:rgba(201,162,39,0.2); color:var(--gold-soft); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : ''}</div>
+              <div class="visits">${c.visits || 0} ביקורים · אחרון ${formatLastVisit(c.daysSinceVisit)}${isInactive ? ' <span class="badge low" style="margin-inline-start:6px;">לא הגיעה זמן רב</span>' : ''}${isBday ? ' <span class="badge" style="background:rgba(201,162,39,0.2); color:var(--gold-soft); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : ''}</div>
             </div>
             <button class="svc-del" aria-label="מחיקת לקוחה">✕</button>
           </div>
-          <textarea class="client-note" placeholder="הערה אישית (העדפות, רגישויות...)">${c.note}</textarea>
+          <textarea class="client-note" placeholder="הערה אישית (העדפות, רגישויות...)">${c.note || ''}</textarea>
           <div class="client-action-row">
             <button class="template-btn small" data-action="history">📋 היסטוריית טיפולים (${history.length})</button>
-            <button class="template-btn small" data-action="book">📅 קביעת תור לפעם הבאה</button>
+            <button class="template-btn small" data-action="upcoming">📅 תורות עתידיים (${upcoming.length})</button>
+            <button class="template-btn small" data-action="book">➕ קביעת תור נוסף</button>
           </div>
-          <div class="client-history" style="display:none;">
-            ${history.length ? history.map(a => `
-              <div class="visit-row" data-appt-id="${a.id || ''}">
-                <div class="visit-row-head">
-                  <span class="t">${a.time}</span>
-                  <span class="visit-svc">${a.service}</span>
-                  <span class="visit-date">${formatHistoryDate(a)}</span>
-                </div>
-                <div class="visit-status-actions">
-                  <button class="visit-status-btn${a.status === 'completed' ? ' active-yes' : ''}" data-status="completed">✓ הגיעה</button>
-                  <button class="visit-status-btn${a.status === 'no-show' ? ' active-no' : ''}" data-status="no-show">✗ לא הגיעה</button>
-                </div>
-                <textarea class="visit-note" placeholder="הערה על הטיפול הזה...">${a.note || ''}</textarea>
-              </div>`).join('') : '<p style="color:var(--ivory-dim); font-size:13px;">אין עדיין היסטוריית טיפולים.</p>'}
+          <div class="client-history" data-panel="history" style="display:none;">
+            ${renderClientAppointmentRows(history, { emptyText: 'אין עדיין היסטוריית טיפולים.' })}
+          </div>
+          <div class="client-history client-upcoming" data-panel="upcoming" style="display:none;">
+            ${renderClientAppointmentRows(upcoming, { upcoming: true, emptyText: 'אין תורים עתידיים.' })}
           </div>
           ${isInactive ? `<button class="template-btn" style="margin-top:8px;" onclick="sendMissYouMessage(${i})">💌 שליחת הודעת געגוע</button><div id="clientMissYouResult-${i}" class="waitlist-confirmed" style="display:none; margin-top:8px;"></div>` : ''}
         </div>`;
-      row.querySelector('[data-action="history"]').onclick = (e) => {
-        const panel = row.querySelector('.client-history');
+
+      row.querySelector('[data-action="history"]').onclick = () => {
+        const panel = row.querySelector('[data-panel="history"]');
+        const isOpen = panel.style.display !== 'none';
+        panel.style.display = isOpen ? 'none' : 'block';
+      };
+      row.querySelector('[data-action="upcoming"]').onclick = () => {
+        const panel = row.querySelector('[data-panel="upcoming"]');
         const isOpen = panel.style.display !== 'none';
         panel.style.display = isOpen ? 'none' : 'block';
       };
@@ -2357,9 +2455,22 @@
           inp.oninput = (e) => { c[e.target.dataset.field] = e.target.value; };
         }
       });
-      row.querySelector('.svc-del').onclick = () => { clients.splice(i, 1); renderClients(); if (typeof renderBroadcastCount === 'function') renderBroadcastCount(); };
+
+      row.querySelector('.svc-del').onclick = () => {
+        if (allAppointments.length){
+          alert(`לא ניתן למחוק את ${c.name} כי קיימים לה ${history.length ? 'תורים בהיסטוריה' : ''}${history.length && upcoming.length ? ' וגם ' : ''}${upcoming.length ? 'תורים עתידיים' : ''}. כדי לשמור על היסטוריית הלקוחה, יש להשאיר את הכרטיסייה במערכת.`);
+          return;
+        }
+        const confirmed = confirm(`האם את בטוחה שברצונך למחוק את הלקוחה ${c.name}?`);
+        if (!confirmed) return;
+        clients.splice(i, 1);
+        renderClients();
+        if (typeof saveState === 'function') saveState();
+        if (typeof renderBroadcastCount === 'function') renderBroadcastCount();
+      };
+
       row.querySelector('.client-note').oninput = (e) => { c.note = e.target.value; };
-      row.querySelectorAll('.visit-row').forEach(visitEl => {
+      row.querySelectorAll('[data-panel="history"] .visit-row').forEach(visitEl => {
         const apptId = visitEl.dataset.apptId;
         const appt = weekAppointments.find(a => a.id === apptId);
         if (!appt) return;
@@ -2757,7 +2868,7 @@
       }
 
       const dayAppts = weekAppointments
-        .filter(a => a.day === day.key && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
+        .filter(a => a.date === formatDateKey(day.fullDate) && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
         .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 
       const rowH = 21, rowGap = 2;
@@ -2797,7 +2908,8 @@
     const dow = now.getDay();
     const dayKey = weekdayKeys[dow];
 
-    const todaysAppts = weekAppointments.filter(a => a.day === dayKey);
+    const todayStr = formatDateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+    const todaysAppts = weekAppointments.filter(a => a.date === todayStr);
     const revenue = todaysAppts.reduce((sum, a) => {
       const svcMatch = services.find(s => s.name === a.service);
       return sum + (svcMatch ? svcMatch.price : 0);
@@ -2865,7 +2977,7 @@
       (isToday ? 'היום · ' : '') + days[dow].name + ', ' + date.getDate() + ' ב' + hebrewMonths[date.getMonth()] + ' (' + hebrewDateStr(date) + ')';
 
     const dayAppts = weekAppointments
-      .filter(a => a.day === dayKey && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
+      .filter(a => a.date === formatDateKey(date) && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
       .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 
     const listEl = document.getElementById('ovDayList');
@@ -2907,7 +3019,7 @@
       const cellDate = new Date(ovCalViewYear, ovCalViewMonth, d);
       const dow = cellDate.getDay();
       const dayKey = weekdayKeys[dow];
-      const count = weekAppointments.filter(a => a.day === dayKey && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter)).length;
+      const count = weekAppointments.filter(a => a.date === formatDateKey(date) && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter)).length;
 
       const cell = document.createElement('div');
       cell.className = 'cal-day-cell';
@@ -2931,7 +3043,7 @@
     labelEl.textContent = 'תורים ליום ' + days[dow].name + ', ' + date.getDate() + ' ב' + hebrewMonths[date.getMonth()] + ' (' + hebrewDateStr(date) + ')';
 
     const dayAppts = weekAppointments
-      .filter(a => a.day === dayKey && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
+      .filter(a => a.date === formatDateKey(date) && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
       .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 
     if (!dayAppts.length){
@@ -3210,6 +3322,10 @@
   const slotsEl = document.getElementById('slots');
   let selectedSlot = null;
 
+  function formatDateKey(d){
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
   function sameDate(a, b){
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
@@ -3240,7 +3356,7 @@
     if (openMin + duration > closeMin) return false;
 
     const busy = weekAppointments
-      .filter(a => a.day === dayKey && a.staff === selectedStaffIndex)
+      .filter(a => a.date === formatDateKey(bookingSelectedDate) && a.staff === selectedStaffIndex)
       .map(a => {
         const s = timeToMinutes(a.time);
         return [s, s + a.dur];
@@ -3345,7 +3461,7 @@
     }
 
     const busy = weekAppointments
-      .filter(a => a.day === dayKey && a.staff === selectedStaffIndex)
+      .filter(a => a.date === formatDateKey(bookingSelectedDate) && a.staff === selectedStaffIndex)
       .map(a => {
         const s = timeToMinutes(a.time);
         return [s, s + a.dur];
@@ -3588,14 +3704,18 @@
       const currentSvcName = svc ? svc.name : '';
 
       const sameDaySameSvcConflict = weekAppointments.find(a => a.client === existingClient.name && a.date === targetDateStr && a.service === currentSvcName);
-      if (sameDaySameSvcConflict){
-        document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">יש לך כבר תור ל${sameDaySameSvcConflict.service} ביום זה (${sameDaySameSvcConflict.time}). לא ניתן לקבוע תור נוסף לאותו טיפול באותו יום — אם רוצה לשנות את השעה, יש לבטל את הקיים קודם.</div>`;
+      if (sameDaySameSvcConflict && sameDaySameSvcConflict.time === selectedSlot){
+        document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">כבר קיים לך תור זהה בדיוק באותה שעה. יש לבחור שעה אחרת.</div>`;
         return;
+      }
+      if (sameDaySameSvcConflict){
+        const proceed = confirm(`שימי לב: יש לך כבר תור ל${sameDaySameSvcConflict.service} באותו יום (${sameDaySameSvcConflict.time}). להמשיך ולקבוע תור נוסף?`);
+        if (!proceed) return;
       }
 
       const sameDayOtherSvcConflict = weekAppointments.find(a => a.client === existingClient.name && a.date === targetDateStr);
-      if (sameDayOtherSvcConflict){
-        const proceed = confirm(`שימי לב: יש לך כבר תור ל${sameDayOtherSvcConflict.service} באותו יום (${sameDayOtherSvcConflict.time}). להמשיך ולקבוע גם את התור הזה?`);
+      if (sameDayOtherSvcConflict && (!sameDaySameSvcConflict || sameDayOtherSvcConflict.id !== sameDaySameSvcConflict.id)){
+        const proceed = confirm(`שימי לב: יש לך כבר תור נוסף באותו יום (${sameDayOtherSvcConflict.time}). להמשיך ולקבוע גם את התור הזה?`);
         if (!proceed) return;
       }
 
@@ -3611,15 +3731,18 @@
     }
 
     let customerEmail = '';
+    const appointmentDateOnly = new Date(bookingSelectedDate.getFullYear(), bookingSelectedDate.getMonth(), bookingSelectedDate.getDate());
+    const isTodayOrPastBooking = appointmentDateOnly <= getTodayDateOnly();
+
     if (existingClient){
       existingClient.name = clientNameVal;
-      existingClient.visits = (existingClient.visits || 0) + 1;
-      existingClient.daysSinceVisit = 0;
+      if (isTodayOrPastBooking) existingClient.visits = (existingClient.visits || 0) + 1;
+      if (isTodayOrPastBooking) existingClient.daysSinceVisit = 0;
       customerEmail = existingClient.email || '';
     } else {
       const ftpEmail = document.getElementById('ftpEmail').value.trim();
       const ftpBirthday = document.getElementById('ftpBirthday').value || null;
-      clients.push({ name: clientNameVal, phone: phoneVal.trim(), email: ftpEmail, photo: null, visits: 1, daysSinceVisit: 0, note: '', birthday: ftpBirthday });
+      clients.push({ name: clientNameVal, phone: phoneVal.trim(), email: ftpEmail, photo: null, visits: isTodayOrPastBooking ? 1 : 0, daysSinceVisit: isTodayOrPastBooking ? 0 : null, note: '', birthday: ftpBirthday });
       customerEmail = ftpEmail;
     }
 
@@ -3639,6 +3762,7 @@
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderMiniCal === 'function') renderMiniCal();
     if (typeof renderClients === 'function') renderClients();
+    if (typeof saveState === 'function') saveState();
 
     if (customerEmail){
       const dateLabel = bookingSelectedDate.getDate() + ' ב' + hebrewMonths[bookingSelectedDate.getMonth()];
@@ -3705,10 +3829,25 @@
   }
 
   function bookAdditionalAppointment(){
+    // Start a completely new booking while keeping the same customer's details.
+    const previousAppointment = currentBookedAppointment;
+    const previousClient = previousAppointment ? clients.find(c => c.name === previousAppointment.client) : null;
+    currentBookedAppointment = null;
+    selectedSlot = null;
+
     document.getElementById('myAppointment').style.display = 'none';
     document.getElementById('bookingFormWrap').style.display = 'block';
+
+    if (previousClient){
+      const name = document.getElementById('bookingNameInput');
+      const phone = document.getElementById('bookingPhoneInput');
+      if (name) name.value = previousClient.name || '';
+      if (phone) phone.value = previousClient.phone || '';
+    }
+
     goToStep(1);
     if (typeof showCategoryGrid === 'function') showCategoryGrid();
+    if (typeof renderMiniCal === 'function') renderMiniCal();
   }
 
   function cancelAppointment(){
