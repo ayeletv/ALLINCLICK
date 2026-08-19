@@ -1287,6 +1287,28 @@
     .broadcast-box, .custom-tpl-form{max-width:100%;}
     .stage{padding:6vh 4vw 8vh;}
   }
+
+  .admin-toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:rgba(36,31,29,.97); color:var(--ivory); border:1px solid rgba(197,163,94,.45);
+    border-radius:12px; padding:12px 18px; font-size:14px; z-index:100000;
+    box-shadow:0 12px 35px rgba(0,0,0,.35); opacity:0; pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease; direction:rtl; text-align:center;
+  }
+  .admin-toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .waitlist-match-alert{
+    margin-top:12px; padding:12px; border:1px solid rgba(197,163,94,.35);
+    border-radius:12px; background:rgba(197,163,94,.07); direction:rtl;
+  }
+  .waitlist-match-alert .wl-match{padding:8px 0; border-top:1px solid rgba(245,238,228,.08);}
+  .waitlist-match-alert .wl-match:first-child{border-top:0;}
+  .waitlist-match-alert .wl-actions{display:flex; gap:7px; flex-wrap:wrap; margin-top:7px;}
+  .waitlist-match-alert .wl-actions a,.waitlist-match-alert .wl-actions button{
+    display:inline-flex; align-items:center; justify-content:center; padding:7px 10px;
+    border-radius:8px; border:1px solid rgba(245,238,228,.16); color:var(--ivory);
+    background:rgba(245,238,228,.06); text-decoration:none; cursor:pointer; font:inherit;
+  }
+
 </style>
 </head>
 <body>
@@ -1761,12 +1783,14 @@
       <select id="mbService" class="field"></select>
       <select id="mbStaff" class="field"></select>
       <input type="date" id="mbDate" class="field">
-      <input type="time" id="mbTime" class="field">
+      <select id="mbTime" class="field"><option value="">בחרי שעה</option></select><div id="mbSlotsHint" style="font-size:12px;color:#8A8178;margin-top:-4px;"></div>
       <div id="mbError" style="display:none; color:var(--wine); font-size:13px;"></div>
       <button class="cta" onclick="submitManualBooking()">הוספת תור</button>
     </div>
   </div>
 </div>
+
+<div id="adminToast" class="admin-toast" role="status" aria-live="polite"></div>
 
 <div id="loginOverlay" class="myday-overlay">
   <div class="myday-sheet">
@@ -1893,10 +1917,135 @@
     document.getElementById('mbError').style.display = 'none';
 
     document.getElementById('manualBookingOverlay').classList.add('show');
+    renderManualBookingSlots();
   }
+
+  document.getElementById('mbService')?.addEventListener('change', renderManualBookingSlots);
+  document.getElementById('mbStaff')?.addEventListener('change', renderManualBookingSlots);
+  document.getElementById('mbDate')?.addEventListener('change', renderManualBookingSlots);
 
   function closeManualBookingModal(){
     document.getElementById('manualBookingOverlay').classList.remove('show');
+  }
+
+  function renderManualBookingSlots(){
+    const dateVal = document.getElementById('mbDate')?.value;
+    const svcIdx = parseInt(document.getElementById('mbService')?.value);
+    const staffIdx = parseInt(document.getElementById('mbStaff')?.value);
+    const timeSelect = document.getElementById('mbTime');
+    const hint = document.getElementById('mbSlotsHint');
+    if (!timeSelect || !dateVal || isNaN(svcIdx) || isNaN(staffIdx)) return;
+    const svc = services[svcIdx];
+    const emp = staff[staffIdx];
+    const parts = dateVal.split('-').map(Number);
+    const dateObj = new Date(parts[0], parts[1]-1, parts[2]);
+    const dayKey = weekdayKeys[dateObj.getDay()];
+    const dayInfo = emp && emp.hours ? emp.hours[dateObj.getDay()] : null;
+    const duration = svc ? (svc.duration || 30) : 30;
+    timeSelect.innerHTML = '<option value="">בחרי שעה פנויה</option>';
+    if (!svc || !emp || !dayInfo || !dayInfo.open || isDateClosedForStaff(staffIdx, dateObj)){
+      hint.textContent = 'אין שעות פעילות/זמינות לעובדת זו ביום שנבחר.';
+      return;
+    }
+    let openMin = timeToMinutes(dayInfo.from);
+    const closeMin = timeToMinutes(dayInfo.to);
+    const today = new Date(); today.setHours(0,0,0,0);
+    if (sameDate(dateObj, today)){
+      const now = new Date();
+      const earliest = Math.ceil((now.getHours()*60 + now.getMinutes() + minLeadMinutes) / fineStepMinutes) * fineStepMinutes;
+      openMin = Math.max(openMin, earliest);
+    }
+    const busy = weekAppointments.filter(a => a.date === dateVal && a.staff === staffIdx).map(a => {
+      const st = timeToMinutes(a.time); return [st, st + (a.dur || 30)];
+    });
+    const options = [];
+    for (let t = Math.ceil(openMin / fineStepMinutes) * fineStepMinutes; t + duration <= closeMin; t += fineStepMinutes){
+      const end = t + duration;
+      const free = busy.every(([bs,be]) => end <= bs || t >= be);
+      if (free) options.push(minutesToTimeGlobal(t));
+    }
+    options.forEach(time => {
+      const opt = document.createElement('option'); opt.value = time; opt.textContent = time; timeSelect.appendChild(opt);
+    });
+    hint.textContent = options.length ? 'מוצגות כאן רק שעות פנויות, בדיוק כמו בקביעת תור ללקוחה.' : 'אין שעות פנויות ביום הזה. אפשר לבחור יום אחר.';
+  }
+
+  function minutesToTimeGlobal(m){
+    return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+  }
+
+
+  function showAdminToast(message, duration){
+    const el = document.getElementById('adminToast');
+    if (!el) { alert(message); return; }
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(window.__adminToastTimer);
+    window.__adminToastTimer = setTimeout(() => el.classList.remove('show'), duration || 3200);
+  }
+
+  function getWaitlistMatchesForAppointment(appt){
+    if (!appt || !appt.date) return [];
+    const apptStart = timeToMinutes(appt.time || '00:00');
+    const apptEnd = apptStart + (appt.dur || 30);
+    return waitlist.filter(w => {
+      if (w.date !== appt.date) return false;
+      if (w.service && w.service !== appt.service) return false;
+      if (w.staffName && staff[appt.staff] && w.staffName !== staff[appt.staff].name) return false;
+      const requested = timeToMinutes(w.requestedTime || '00:00');
+      return requested >= apptStart && requested < apptEnd;
+    });
+  }
+
+  function renderWaitlistMatchAlert(matches, appt){
+    if (!matches || !matches.length) return;
+    const existing = document.getElementById('waitlistMatchAlert');
+    if (existing) existing.remove();
+    const host = document.querySelector('#sub-waitlist') || document.querySelector('[id*="waitlist"]')?.parentElement;
+    if (!host) {
+      showAdminToast(`התפנה מקום לתור ${appt.service} ב-${appt.time}. יש לקוחה ברשימת ההמתנה.`);
+      return;
+    }
+    const box = document.createElement('div');
+    box.id = 'waitlistMatchAlert';
+    box.className = 'waitlist-match-alert';
+    box.innerHTML = `<strong>🔔 התפנה מקום!</strong><div style="font-size:13px;margin-top:5px;">התפנה תור ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}.</div>`;
+    matches.forEach(w => {
+      const digits = (w.phone || '').replace(/[^0-9]/g,'');
+      const msg = encodeURIComponent(`היי ${w.name}, התפנה תור ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}. אם תרצי, אפשר לקבוע אותו כאן: ${getSiteUrl()}`);
+      const row = document.createElement('div');
+      row.className='wl-match';
+      row.innerHTML = `<div><b>${w.name}</b> · ${w.phone}</div><div class="wl-actions">
+        <a href="https://wa.me/${digits}?text=${msg}" target="_blank" rel="noopener">💬 שליחת WhatsApp</a>
+        <button type="button">✓ סימון כטופלה</button>
+      </div>`;
+      row.querySelector('button').onclick=()=>{
+        const idx=waitlist.indexOf(w);
+        if(idx!==-1) waitlist.splice(idx,1);
+        renderWaitlistAdmin();
+        if(typeof saveState==='function') saveState();
+        row.remove();
+        if(!box.querySelector('.wl-match')) box.remove();
+      };
+      box.appendChild(row);
+    });
+    host.prepend(box);
+  }
+
+  function cancelAdminAppointment(appt){
+    if (!appt) return;
+    const confirmed = confirm(`לבטל את התור של ${appt.client} ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}?`);
+    if (!confirmed) return;
+    const matches = getWaitlistMatchesForAppointment(appt);
+    const idx = weekAppointments.findIndex(a => a.id === appt.id);
+    if (idx !== -1) weekAppointments.splice(idx,1);
+    if (typeof renderWeekCal==='function') renderWeekCal();
+    if (typeof renderClients==='function') renderClients();
+    if (typeof renderOverviewDayView==='function') renderOverviewDayView();
+    if (typeof renderOverviewMonthCal==='function') renderOverviewMonthCal();
+    if (typeof saveState==='function') saveState();
+    showAdminToast('✓ התור בוטל בהצלחה');
+    if (matches.length) renderWaitlistMatchAlert(matches, appt);
   }
 
   function submitManualBooking(){
@@ -1966,7 +2115,20 @@
     }
     if (typeof renderClients === 'function') renderClients();
     if (typeof saveState === 'function') saveState();
+
+    const bookedClient = clients.find(c => (c.phone || '').replace(/[^0-9]/g,'') === phone.replace(/[^0-9]/g,''));
+    if (bookedClient && bookedClient.email){
+      const dateLabel = apptDate.getDate() + ' ב' + hebrewMonths[apptDate.getMonth()];
+      sendEmail(
+        bookedClient.email,
+        'התור שלך אושר',
+        getAppointmentEmailText(name, svc.name, dateLabel, timeVal, staff[staffIdx] ? staff[staffIdx].name : '', 'התור נקבע עבורך על ידי העסק.')
+      );
+    }
+
     closeManualBookingModal();
+    showAdminToast('✓ התור נוסף ואושר בהצלחה');
+    
   }
 
   function showReportRange(range, btn){
@@ -2786,11 +2948,13 @@
           <button class="appt-status-btn ${status === 'completed' ? 'active-ok' : ''}" data-action="completed">✓ הגיעה</button>
           <button class="appt-status-btn ${status === 'no-show' ? 'active-bad' : ''}" data-action="no-show">✗ לא הגיעה</button>
           <button class="appt-status-btn" data-action="note">📝 הערה${a.note ? ' ✓' : ''}</button>
+          <button class="appt-status-btn" data-action="cancel" style="border-color:rgba(190,80,80,.35);">ביטול</button>
         </div>
         ${a.note ? `<div class="appt-note-preview">${a.note}</div>` : ''}`;
       row.querySelector('[data-action="completed"]').onclick = () => setApptStatus(a, 'completed', () => renderApptListInto(containerEl, appts, refreshFn));
       row.querySelector('[data-action="no-show"]').onclick = () => setApptStatus(a, 'no-show', () => renderApptListInto(containerEl, appts, refreshFn));
       row.querySelector('[data-action="note"]').onclick = () => promptApptNote(a, () => renderApptListInto(containerEl, appts, refreshFn));
+      row.querySelector('[data-action="cancel"]').onclick = () => cancelAdminAppointment(a);
       containerEl.appendChild(row);
     });
   }
@@ -3528,7 +3692,9 @@
       const firstEl = Array.from(slotsEl.children).find(el => el.textContent === firstFree);
       if (firstEl) firstEl.classList.add('selected');
     } else {
-      slotsEl.innerHTML += '<div style="grid-column:1/-1; font-size:13px; color:#8A8178; margin-top:6px;">אין שעות פנויות עם משך הטיפול הזה היום</div>';
+      slotsEl.innerHTML += '<div style="grid-column:1/-1; font-size:13px; color:#8A8178; margin-top:6px;">אין שעות פנויות עם משך הטיפול הזה היום.</div>';
+      const wlTime = (openMin < closeMin) ? minutesToTime(openMin) : 'השעות הפנויות ביום זה';
+      document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">אין כרגע שעות פנויות ביום הזה. אם תרצי, אפשר להצטרף לרשימת ההמתנה ולקבל עדכון אם יתפנה מקום.<div style="margin-top:8px;"><button onclick="showWaitlistPrompt('${wlTime}', 'אין כרגע שעות פנויות ביום הזה.')">הצטרפות לרשימת ההמתנה</button></div></div>`;
     }
   }
 
@@ -3564,6 +3730,7 @@
       row.querySelector('.svc-del').onclick = () => {
         waitlist.splice(i, 1);
         renderWaitlistAdmin();
+        if (typeof saveState === 'function') saveState();
       };
       listEl.appendChild(row);
     });
@@ -3602,6 +3769,7 @@
       requestedTime: time
     });
     if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
+    if (typeof saveState === 'function') saveState();
     document.getElementById('waitlistBox').innerHTML = `
       <div class="waitlist-confirmed">✓ &nbsp;נרשמת לרשימת ההמתנה ל-${time}. נעדכן אותך אם יתפנה מקום.</div>`;
   }
@@ -3653,6 +3821,14 @@
       document.getElementById('reminderChoiceError').style.display = 'none';
     });
   });
+
+  function getSiteUrl(){
+    return window.location.href.split('#')[0];
+  }
+
+  function getAppointmentEmailText(name, service, dateLabel, time, staffName, actionText){
+    return `היי ${name}, נקבע לך תור ל${service} בתאריך ${dateLabel} בשעה ${time}${staffName ? ' אצל ' + staffName : ''}. ${actionText || 'לביטול או שינוי מועד, ניתן לפנות אלינו.'}\n\nלניהול התור, לביטול או לקביעת תור נוסף:\n${getSiteUrl()}`;
+  }
 
   function confirmBooking(){
     if (!selectedSlot){
@@ -3769,7 +3945,7 @@
       sendEmail(
         customerEmail,
         'התור שלך אושר',
-        `היי ${clientNameVal}, נקבע לך תור ל${svc ? svc.name : 'שירות'} בתאריך ${dateLabel} בשעה ${selectedSlot}${emp ? ' אצל ' + emp.name : ''}. לביטול או שינוי מועד, ניתן לפנות אלינו.`
+        getAppointmentEmailText(clientNameVal, svc ? svc.name : 'שירות', dateLabel, selectedSlot, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:')
       );
     }
 
@@ -3860,7 +4036,7 @@
         sendEmail(
           client.email,
           'התור שלך בוטל',
-          `היי ${apptBeingCancelled.client}, התור שלך ל${apptBeingCancelled.service} ב-${apptBeingCancelled.time} בוטל בהצלחה. נשמח לראותך שוב בקרוב!`
+          `היי ${apptBeingCancelled.client}, התור שלך ל${apptBeingCancelled.service} ב-${apptBeingCancelled.time} בוטל בהצלחה. נשמח לראותך שוב בקרוב!\n\nלקביעת תור חדש:\n${getSiteUrl()}`
         );
       }
     }
