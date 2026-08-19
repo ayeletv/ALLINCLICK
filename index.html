@@ -23,9 +23,20 @@
     messagingSenderId: "737599524118",
     appId: "1:737599524118:web:d0cf35be864f1e773c9437"
   };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-  const auth = firebase.auth();
+  let db, auth;
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+  } catch (e) {
+    // If Firebase fails to load (ad-blocker, network issue, CDN outage), the rest of the
+    // app should still run — with cloud sync and login simply unavailable — instead of
+    // leaving the whole page broken.
+    console.error('Firebase failed to initialize — cloud sync and login will be unavailable:', e);
+    const unavailable = () => Promise.reject(new Error('Firebase unavailable'));
+    db = { collection: () => ({ doc: () => ({ get: unavailable, set: unavailable, add: unavailable }) }) };
+    auth = { onAuthStateChanged: () => {}, signInWithEmailAndPassword: unavailable, signOut: unavailable, currentUser: null };
+  }
 </script>
 <style>
   :root{
@@ -1201,6 +1212,18 @@
   .myday-row:last-child{border-bottom:none;}
   .myday-row .t{font-family:'JetBrains Mono'; font-weight:500; color:var(--wine);}
   .myday-row .who{color:#8A8178; font-size:12px;}
+  .arrival-name{font-family:'Suez One'; font-weight:400; font-size:20px; margin-bottom:4px;}
+  .arrival-meta{color:#8A8178; font-size:13px; margin-bottom:14px;}
+  .arrival-section-label{font-size:12px; color:#8A8178; text-transform:uppercase; letter-spacing:0.03em; margin:14px 0 6px;}
+  .arrival-note-box{
+    background:#F3ECE0; border-radius:10px; padding:10px 12px;
+    font-size:13.5px; color:var(--ink); margin-bottom:6px;
+  }
+  .arrival-history-row{
+    display:flex; justify-content:space-between; gap:10px;
+    padding:8px 0; border-bottom:1px solid #EEE7DC; font-size:13px;
+  }
+  .arrival-history-row:last-child{border-bottom:none;}
 
   /* ONBOARDING */
   .onboard-overlay{
@@ -1691,6 +1714,18 @@
       </div>
     </div>
     <div id="myDayList" class="myday-list"></div>
+  </div>
+</div>
+
+<div id="clientArrivalOverlay" class="myday-overlay">
+  <div class="myday-sheet">
+    <div class="myday-header">
+      <h3>🔔 הלקוחה הבאה</h3>
+      <div class="myday-actions">
+        <button onclick="closeClientArrivalOverlay()">✕ סגירה</button>
+      </div>
+    </div>
+    <div id="clientArrivalContent"></div>
   </div>
 </div>
 
@@ -3587,7 +3622,6 @@
       clients.push({ name: clientNameVal, phone: phoneVal.trim(), email: ftpEmail, photo: null, visits: 1, daysSinceVisit: 0, note: '', birthday: ftpBirthday });
       customerEmail = ftpEmail;
     }
-    if (typeof renderClients === 'function') renderClients();
 
     currentBookedAppointment = {
       id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000),
@@ -3604,6 +3638,7 @@
     weekAppointments.push(currentBookedAppointment);
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderMiniCal === 'function') renderMiniCal();
+    if (typeof renderClients === 'function') renderClients();
 
     if (customerEmail){
       const dateLabel = bookingSelectedDate.getDate() + ' ב' + hebrewMonths[bookingSelectedDate.getMonth()];
@@ -3728,10 +3763,11 @@
       .filter(a => a.client === client.name && a.date)
       .map(a => {
         const parts = a.date.split('-').map(Number);
-        return Object.assign({}, a, { dateObj: new Date(parts[0], parts[1] - 1, parts[2]) });
+        return { appt: a, dateObj: new Date(parts[0], parts[1] - 1, parts[2]) };
       })
-      .filter(a => a.dateObj >= today)
-      .sort((a, b) => a.dateObj - b.dateObj);
+      .filter(entry => entry.dateObj >= today)
+      .sort((a, b) => a.dateObj - b.dateObj)
+      .map(entry => entry.appt);
 
     if (!upcoming.length){
       resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצא תור עתידי למספר טלפון זה.</p>';
@@ -3761,6 +3797,82 @@
       </div>
       <button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
   }
+
+  /* ===== "Client arriving now" live popup for the business owner ===== */
+  const shownArrivalPopups = new Set();
+  let arrivalQueue = [];
+  const ARRIVAL_GRACE_MINUTES = 10; // catches appointments even if the previous popup kept you busy for a while
+
+  function checkForArrivingClient(){
+    if (typeof isLoggedIn === 'undefined' || !isLoggedIn) return;
+
+    const now = new Date();
+    const dow = now.getDay();
+    const dayKey = weekdayKeys[dow];
+    const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const matches = weekAppointments.filter(a => {
+      if (a.day !== dayKey) return false;
+      if (a.date && a.date !== todayStr) return false;
+      const key = a.id || (a.client + '_' + a.time + '_' + todayStr);
+      if (shownArrivalPopups.has(key)) return false;
+      const apptMinutes = timeToMinutes(a.time);
+      return apptMinutes <= nowMinutes && apptMinutes >= nowMinutes - ARRIVAL_GRACE_MINUTES;
+    });
+
+    matches.forEach(m => {
+      const key = m.id || (m.client + '_' + m.time + '_' + todayStr);
+      shownArrivalPopups.add(key);
+      arrivalQueue.push(m);
+    });
+
+    if (!document.getElementById('clientArrivalOverlay').classList.contains('show')){
+      showNextArrivalInQueue();
+    }
+  }
+
+  function showNextArrivalInQueue(){
+    if (!arrivalQueue.length) return;
+    const next = arrivalQueue.shift();
+    showClientArrivalPopup(next);
+  }
+
+  function showClientArrivalPopup(appt){
+    const client = clients.find(c => c.name === appt.client);
+    const emp = staff[appt.staff];
+    const history = weekAppointments.filter(a => a !== appt && a.client === appt.client);
+    const contentEl = document.getElementById('clientArrivalContent');
+    const queueNote = arrivalQueue.length ? `<p style="color:#8A8178; font-size:12px; margin-top:10px;">עוד ${arrivalQueue.length} לקוחה/ות ממתינות בתור להצגה</p>` : '';
+
+    contentEl.innerHTML = `
+      <div class="arrival-name">${appt.client}</div>
+      <div class="arrival-meta">${appt.service} · ${appt.time}${emp ? ' · אצל ' + emp.name : ''}</div>
+      ${client && client.note ? `<div class="arrival-section-label">הערה כללית</div><div class="arrival-note-box">${client.note}</div>` : ''}
+      <div class="arrival-section-label">היסטוריית טיפולים (${history.length})</div>
+      ${history.length ? history.map(h => `<div class="arrival-history-row"><span>${h.service} · ${formatHistoryDate(h)}</span><span style="color:#8A8178;">${h.note || ''}</span></div>`).join('') : '<p style="color:#8A8178; font-size:13px;">אין עדיין היסטוריה.</p>'}
+      <div class="my-appt-actions" style="margin-top:16px;">
+        <button onclick="markArrivalStatus('${appt.id || ''}', 'completed')">✓ הגיעה</button>
+        <button class="danger" onclick="markArrivalStatus('${appt.id || ''}', 'no-show')">✗ לא הגיעה</button>
+      </div>
+      ${queueNote}`;
+
+    document.getElementById('clientArrivalOverlay').classList.add('show');
+  }
+
+  function markArrivalStatus(apptId, status){
+    const appt = weekAppointments.find(a => a.id === apptId);
+    if (appt) appt.status = status;
+    closeClientArrivalOverlay();
+    if (typeof renderClients === 'function') renderClients();
+  }
+
+  function closeClientArrivalOverlay(){
+    document.getElementById('clientArrivalOverlay').classList.remove('show');
+    setTimeout(showNextArrivalInQueue, 400);
+  }
+
+  setInterval(checkForArrivingClient, 20000);
 
   function showPanel(name, btn){
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -3988,9 +4100,11 @@
   }
 
   /* ===== CLOUD SYNC (Firestore) ===== */
+  let cloudLoadComplete = false;
   const CLOUD_DOC = db.collection('business').doc('default');
 
   function saveState(){
+    if (!cloudLoadComplete) return;
     const payload = {
       branding, clients, inactivityThresholdDays, customTemplates,
       staff, weekAppointments, categories, services, whatsNewItems,
@@ -4016,11 +4130,15 @@
     if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
     if (typeof renderHoursStaffPicker === 'function') renderHoursStaffPicker();
     if (typeof renderHoursEditor === 'function') renderHoursEditor();
+    if (typeof renderReports === 'function') renderReports('week');
+    if (typeof renderOverviewDayView === 'function') renderOverviewDayView();
+    if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal();
   }
 
   CLOUD_DOC.get().then(doc => {
     if (!doc.exists){
       console.log('No saved data yet in the cloud — using demo starter data.');
+      cloudLoadComplete = true;
       return;
     }
     const data = doc.data();
@@ -4037,13 +4155,17 @@
     if (data.inventory) inventory = data.inventory;
     if (data.waitlist) waitlist = data.waitlist;
     rerenderEverything();
+    cloudLoadComplete = true;
     console.log('Loaded saved data from the cloud.');
   }).catch(err => {
     console.error('Cloud load failed — staying with local demo data:', err);
+    cloudLoadComplete = true;
   });
 
   // Autosave every few seconds, and once more right before the page closes —
   // this covers every edit anywhere in the app without needing to hook each one individually.
+  // Guarded by cloudLoadComplete above so we never overwrite real saved data with an
+  // empty in-memory state before the initial load has had a chance to finish.
   setInterval(saveState, 4000);
   window.addEventListener('beforeunload', saveState);
 
