@@ -3628,7 +3628,8 @@
       <div class="my-appt-actions">
         <button onclick="rescheduleAppointment()">שינוי מועד</button>
         <button class="danger" onclick="cancelAppointment()">ביטול תור</button>
-      </div>`;
+      </div>
+      <button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
   }
 
   function buildGoogleCalendarUrl(date, timeStr, durationMin, title, staffName){
@@ -3666,6 +3667,13 @@
     document.getElementById('bookingFormWrap').style.display = 'block';
     goToStep(1);
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+  }
+
+  function bookAdditionalAppointment(){
+    document.getElementById('myAppointment').style.display = 'none';
+    document.getElementById('bookingFormWrap').style.display = 'block';
+    goToStep(1);
+    if (typeof showCategoryGrid === 'function') showCategoryGrid();
   }
 
   function cancelAppointment(){
@@ -3750,7 +3758,8 @@
       <div class="my-appt-actions">
         <button onclick="rescheduleAppointment()">שינוי מועד</button>
         <button class="danger" onclick="cancelAppointment()">ביטול תור</button>
-      </div>`;
+      </div>
+      <button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
   }
 
   function showPanel(name, btn){
