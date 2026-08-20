@@ -122,7 +122,11 @@
     animation:fadeUp 0.9s ease forwards 0.25s;
   }
   .hero h1 span{color:var(--wine);}
-  .hero .tagline{
+  /* Platform tagline line ("הכל בקליק — הכל במקום אחד...").
+     By default (no business name set) this acts as the big primary heading via .primary.
+     Once a business name is set, #heroBizName becomes the primary <h1> and this line
+     shrinks down into a secondary line underneath it. */
+  .hero-platform-line{
     font-size:clamp(18px, 2.4vw, 26px);
     color:var(--ivory-dim);
     margin-top:1.6rem;
@@ -130,18 +134,27 @@
     opacity:0;
     animation:fadeUp 0.9s ease forwards 0.4s;
   }
-  .hero .tagline b{color:var(--ivory); font-weight:500;}
-  .hero-biz-name{
+  .hero-platform-line .accent{color:var(--wine); font-weight:500;}
+  .hero-platform-line.primary{
     font-family:'Suez One', serif;
+    font-size:clamp(52px, 10vw, 116px);
     font-weight:400;
-    font-size:clamp(20px, 3vw, 30px);
-    letter-spacing:0;
-    color:var(--gold-soft);
-    margin-top:1.2rem;
-    opacity:0;
-    animation:fadeUp 0.9s ease forwards 0.5s;
+    line-height:0.95;
+    letter-spacing:-0.01em;
+    color:var(--ivory);
+    max-width:none;
+    margin-top:0;
   }
-  .hero-biz-name.show{display:block !important;}
+  .hero-platform-line.primary .accent{color:var(--wine); font-weight:400;}
+  #heroBizName{
+    font-size:clamp(52px, 10vw, 116px);
+    font-weight:400;
+    line-height:0.95;
+    letter-spacing:-0.01em;
+    color:var(--ivory);
+    opacity:0;
+    animation:fadeUp 0.9s ease forwards 0.25s;
+  }
   .scroll-hint{
     margin-top:4rem;
     font-size:13px;
@@ -1280,9 +1293,8 @@
 </head>
 <body>
 <section class="hero">
-  <h1 class="serif">הכל <span>בקליק</span></h1>
-  <p class="tagline"><b>הכל במקום אחד, בלי מאמץ.</b></p>
-  <p class="hero-biz-name" id="heroBizName" style="display:none;"></p>
+  <h1 class="serif" id="heroBizName" style="display:none;"></h1>
+  <p class="hero-platform-line" id="heroPlatformLine"><span class="accent">הכל בקליק</span> — הכל במקום אחד, בלי מאמץ</p>
   <div class="scroll-hint">
     <span>גלילה למטה</span>
     <div class="line"></div>
@@ -1892,7 +1904,11 @@
       const st = timeToMinutes(a.time); return [st, st + (a.dur || 30)];
     });
     const options = [];
-    for (let t = Math.ceil(openMin / fineStepMinutes) * fineStepMinutes; t + duration <= closeMin; t += fineStepMinutes){
+    // Step by the same quarter-hour grid the customer-facing calendar uses
+    // (slotStepMinutes), not every 5 minutes — a 5-minute grid buries the
+    // dropdown in dozens of near-duplicate options that don't match what the
+    // real calendar looks like.
+    for (let t = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes; t + duration <= closeMin; t += slotStepMinutes){
       const end = t + duration;
       const free = busy.every(([bs,be]) => end <= bs || t >= be);
       if (free) options.push(minutesToTimeGlobal(t));
@@ -2257,7 +2273,8 @@
   function flushEmailQueue(to){
     const queue = pendingEmailQueue[to];
     if (!queue || !queue.items.length) return;
-    const fromName = (branding.name || 'הכל בקליק').trim();
+    const bizNameForEmail = (branding.name || '').trim();
+    const fromName = bizNameForEmail ? `${bizNameForEmail} — הכל בקליק` : 'הכל בקליק';
     const fromAddress = 'appointments@rutizolberg.com';
     let subject, text, html;
     if (queue.items.length === 1){
@@ -2311,12 +2328,17 @@
     if (nameInputEl && document.activeElement !== nameInputEl) nameInputEl.value = branding.name;
     if (phoneInputEl && document.activeElement !== phoneInputEl) phoneInputEl.value = branding.phone || '';
     const heroBizNameEl = document.getElementById('heroBizName');
-    if (heroBizNameEl){
+    const heroPlatformLineEl = document.getElementById('heroPlatformLine');
+    if (heroBizNameEl && heroPlatformLineEl){
       if (branding.name && branding.name.trim()){
+        // Business name set: it becomes the big primary heading, platform line shrinks below it.
         heroBizNameEl.textContent = branding.name.trim();
-        heroBizNameEl.classList.add('show');
+        heroBizNameEl.style.display = 'block';
+        heroPlatformLineEl.classList.remove('primary');
       } else {
-        heroBizNameEl.classList.remove('show');
+        // No business name yet: platform line itself becomes the big primary heading.
+        heroBizNameEl.style.display = 'none';
+        heroPlatformLineEl.classList.add('primary');
       }
     }
     const bizNameTrimmed = (branding.name || '').trim();
@@ -2802,14 +2824,30 @@
         <div class="client-avatar">${avatarHtml}</div>
         <div class="client-info">
           <div class="name-row">
-            <div>
-              <h4>${s.name}</h4>
-              <div class="role-tag">${s.role}</div>
+            <div style="flex:1;">
+              <input class="staff-name-input field" value="${s.name}" placeholder="שם העובדת" style="font-family:'Suez One',serif; font-size:16px; margin-bottom:4px;">
+              <input class="staff-role-input field" value="${s.role}" placeholder="תפקיד">
             </div>
             <button class="svc-del" aria-label="מחיקת עובדת">✕</button>
           </div>
           ${catChecksHtml}
         </div>`;
+      row.querySelector('.staff-name-input').oninput = (e) => {
+        const val = e.target.value.trim();
+        if (val) s.name = val;
+      };
+      row.querySelector('.staff-name-input').onblur = (e) => {
+        if (!e.target.value.trim()) e.target.value = s.name;
+        if (typeof saveState === 'function') saveState();
+        // The avatar letter and every staff picker/filter chip show the name —
+        // refresh them now that the edit is done, without disturbing the input
+        // the admin might still be typing in elsewhere on the card.
+        if (typeof renderStaffPicker === 'function') renderStaffPicker();
+        if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
+        if (typeof renderWeekCal === 'function') renderWeekCal();
+      };
+      row.querySelector('.staff-role-input').oninput = (e) => { s.role = e.target.value; };
+      row.querySelector('.staff-role-input').onblur = () => { if (typeof saveState === 'function') saveState(); };
       row.querySelectorAll('.staff-cat-check').forEach(cb => {
         cb.onchange = () => {
           const cat = cb.dataset.cat;
@@ -3226,10 +3264,36 @@
       row.innerHTML = `
         <div class="client-info">
           <div class="name-row">
-            <div><h4>${cat}</h4><div class="phone">${count} שירותים בקטגוריה זו</div></div>
+            <div style="flex:1;"><input class="cat-name-input field" value="${cat}" style="font-family:'Suez One',serif; font-size:16px; margin-bottom:4px;"><div class="phone">${count} שירותים בקטגוריה זו</div></div>
             <button class="svc-del" aria-label="מחיקת קטגוריה">✕</button>
           </div>
         </div>`;
+      row.querySelector('.cat-name-input').onchange = (e) => {
+        const newName = e.target.value.trim();
+        if (!newName){ e.target.value = cat; return; }
+        if (newName === cat) return;
+        if (categories.includes(newName)){
+          alert(`כבר קיימת קטגוריה בשם "${newName}".`);
+          e.target.value = cat;
+          return;
+        }
+        // Renaming a category has to cascade everywhere it's referenced by
+        // name — the services that belong to it, and every staff member's
+        // list of categories she's set up to perform — otherwise the rename
+        // would silently disconnect them all.
+        categories[i] = newName;
+        services.forEach(s => { if (s.category === cat) s.category = newName; });
+        staff.forEach(s => {
+          if (!Array.isArray(s.categories)) return;
+          const idx = s.categories.indexOf(cat);
+          if (idx !== -1) s.categories[idx] = newName;
+        });
+        renderCategories();
+        renderCategoryOptions();
+        if (typeof renderServices === 'function') renderServices();
+        if (typeof renderStaff === 'function') renderStaff();
+        if (typeof saveState === 'function') saveState();
+      };
       row.querySelector('.svc-del').onclick = () => {
         if (count){
           alert(`אי אפשר למחוק את הקטגוריה "${cat}" כי יש בה ${count} שירותים. קודם צריך למחוק (או להעביר לקטגוריה אחרת) את כל השירותים שבה, ואז אפשר יהיה למחוק את הקטגוריה עצמה.`);
@@ -4556,6 +4620,29 @@
   let cloudLoadComplete = false;
   const CLOUD_DOC = db.collection('business').doc('default');
   let lastBackupDateKey = '';
+  // The single biggest real source of data loss in this app: this tab (or another
+  // tab/device — a phone left open while the computer is also open, or vice versa)
+  // holds a full in-memory COPY of business/default. Autosave writes that whole copy
+  // back every few seconds. If two tabs are open around the same time, whichever one
+  // saves LAST wins completely, silently discarding whatever the other tab/device had
+  // just added — even though neither tab did anything wrong. lastKnownSavedAt tracks
+  // the "savedAt" timestamp this tab's in-memory data was last known to match on the
+  // server; saveState() checks it in a transaction before writing, so a tab that has
+  // fallen behind (because another device saved first) reloads the fresh data instead
+  // of blindly overwriting it.
+  let lastKnownSavedAt = null;
+  function showSyncNotice(){
+    let el = document.getElementById('cloudSyncNotice');
+    if (!el){
+      el = document.createElement('div');
+      el.id = 'cloudSyncNotice';
+      el.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#2c6e49; color:#fff; text-align:center; padding:9px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
+      document.body.prepend(el);
+    }
+    el.textContent = '🔄 עודכנו נתונים ממכשיר/חלון אחר — המידע כאן התרענן אוטומטית. אם ממש עכשיו שינית משהו, כדאי לבדוק שהוא נשמר.';
+    clearTimeout(el._hideTimer);
+    el._hideTimer = setTimeout(() => { if (el && el.parentNode) el.remove(); }, 9000);
+  }
   function saveState(){
     if (!cloudLoadComplete) return;
     const payload = {
@@ -4564,20 +4651,48 @@
       invAlertEmail, inventory, waitlist,
       savedAt: new Date().toISOString()
     };
-    // merge:true so that a background/stale tab (e.g. an old tab left open from
-    // before a site update) never wipes out fields it doesn't know about — it can
-    // only overwrite the fields it actually sends, never delete unrelated ones.
-    CLOUD_DOC.set(payload, { merge: true }).catch(err => console.error('Cloud save failed:', err));
-    // Also keep one automatic backup snapshot per calendar day, in a separate
-    // "backups" subcollection (business/default/backups/YYYY-MM-DD). If the live
-    // document is ever wiped or corrupted for any reason, a recent day's backup can
-    // be opened in the Firebase console and copied back into business/default by
-    // hand — better than having no way at all to recover real client/appointment data.
-    const backupDateKey = payload.savedAt.slice(0, 10);
-    if (backupDateKey !== lastBackupDateKey){
-      lastBackupDateKey = backupDateKey;
-      CLOUD_DOC.collection('backups').doc(backupDateKey).set(payload).catch(err => console.error('Backup save failed:', err));
-    }
+    // Optimistic-concurrency check inside a transaction: only commit this tab's
+    // full snapshot if the server's savedAt still matches what this tab last loaded.
+    // If another tab/device saved in between, abort this write (do NOT overwrite
+    // their newer data with our stale copy) and pull their fresh data in instead.
+    db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
+      const serverData = doc.exists ? doc.data() : null;
+      const serverSavedAt = serverData ? (serverData.savedAt || null) : null;
+      if (lastKnownSavedAt !== null && serverSavedAt !== lastKnownSavedAt){
+        const err = new Error('stale-conflict');
+        err.staleConflict = true;
+        err.freshData = serverData;
+        throw err;
+      }
+      // merge:true so a background/stale tab never wipes out fields it doesn't know
+      // about — it can only overwrite the fields it actually sends, never delete
+      // unrelated ones.
+      tx.set(CLOUD_DOC, payload, { merge: true });
+    })).then(() => {
+      lastKnownSavedAt = payload.savedAt;
+      // Also keep one automatic backup snapshot per calendar day, in a separate
+      // "backups" subcollection (business/default/backups/YYYY-MM-DD). If the live
+      // document is ever wiped or corrupted for any reason, a recent day's backup can
+      // be opened in the Firebase console and copied back into business/default by
+      // hand — better than having no way at all to recover real client/appointment data.
+      const backupDateKey = payload.savedAt.slice(0, 10);
+      if (backupDateKey !== lastBackupDateKey){
+        lastBackupDateKey = backupDateKey;
+        CLOUD_DOC.collection('backups').doc(backupDateKey).set(payload).catch(err => console.error('Backup save failed:', err));
+      }
+    }).catch(err => {
+      if (err && err.staleConflict){
+        console.warn('Save skipped — newer data exists from another tab/device. Reloading fresh data instead of overwriting it.');
+        if (err.freshData){
+          applyCloudData(err.freshData);
+          rerenderEverything();
+          lastKnownSavedAt = err.freshData.savedAt || lastKnownSavedAt;
+          showSyncNotice();
+        }
+        return;
+      }
+      console.error('Cloud save failed:', err);
+    });
   }
   function applyCloudData(data){
     if (data.branding) branding = data.branding;
@@ -4637,6 +4752,7 @@
       }
       applyCloudData(doc.data());
       rerenderEverything();
+      lastKnownSavedAt = doc.data().savedAt || null;
       cloudLoadComplete = true;
       console.log('Loaded saved data from the cloud.');
     }).catch(err => {
@@ -4681,6 +4797,7 @@
       if (!doc.exists) return;
       applyCloudData(doc.data());
       rerenderEverything();
+      lastKnownSavedAt = doc.data().savedAt || null;
     }).catch(err => console.error('Refresh on tab return failed:', err));
   });
   /* ===== AUTH (business owner login) ===== */
