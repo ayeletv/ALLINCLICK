@@ -112,30 +112,34 @@
     display:inline-block;
     margin-bottom:2.2rem;
     opacity:0;
-    animation:fadeUp 0.8s ease forwards 0.1s;
   }
+  .hero.fonts-ready .eyebrow{ animation:fadeUp 0.8s ease forwards 0.1s; }
   .hero h1{
     font-size:clamp(52px, 10vw, 116px);
     font-weight:400;
     line-height:0.95;
     letter-spacing:-0.01em;
     opacity:0;
-    animation:fadeUp 0.9s ease forwards 0.25s;
   }
+  .hero.fonts-ready h1{ animation:fadeUp 0.9s ease forwards 0.25s; }
   .hero h1 span{color:var(--wine);}
   /* Platform tagline line ("הכל בקליק — הכל במקום אחד...").
      By default (no business name set) this acts as the big primary heading via .primary.
      Once a business name is set, #heroBizName becomes the primary <h1> and this line
-     shrinks down into a secondary line underneath it. */
+     shrinks down into a secondary line underneath it.
+     Its contents are split into two inline spans (accent = "הכל בקליק", reveal-rest =
+     everything after it) so the two can be revealed one after the other instead of
+     all at once — see the .fonts-ready staging below and revealHero() in the script. */
   .hero-platform-line{
     font-size:clamp(18px, 2.4vw, 26px);
     color:var(--ivory);
     margin-top:1.6rem;
     max-width:640px;
-    opacity:0;
-    animation:fadeUp 0.9s ease forwards 0.4s;
   }
-  .hero-platform-line .accent{color:var(--gold-soft); font-weight:500;}
+  .hero-platform-line .accent{color:var(--gold-soft); font-weight:500; display:inline-block; opacity:0;}
+  .hero-platform-line .reveal-rest{display:inline-block; opacity:0;}
+  .hero.fonts-ready .hero-platform-line .accent{ animation:fadeUp 0.6s ease forwards 0.25s; }
+  .hero.fonts-ready .hero-platform-line .reveal-rest{ animation:fadeUp 0.7s ease forwards 0.55s; }
   .hero-platform-line .click-logo{vertical-align:-4px; margin:0 4px;}
   .hero-platform-line.primary{
     font-family:'Suez One', serif;
@@ -155,8 +159,8 @@
     letter-spacing:-0.01em;
     color:var(--wine);
     opacity:0;
-    animation:fadeUp 0.9s ease forwards 0.25s;
   }
+  .hero.fonts-ready #heroBizName{ animation:fadeUp 0.9s ease forwards 0.25s; }
   .scroll-hint{
     margin-top:4rem;
     font-size:13px;
@@ -166,8 +170,8 @@
     align-items:center;
     gap:8px;
     opacity:0;
-    animation:fadeUp 0.9s ease forwards 0.6s;
   }
+  .hero.fonts-ready .scroll-hint{ animation:fadeUp 0.9s ease forwards 1.1s; }
   .scroll-hint .line{width:1px; height:38px; background:linear-gradient(var(--gold), transparent); animation:pulse 2s ease-in-out infinite;}
   @keyframes fadeUp{from{opacity:0; transform:translateY(18px);} to{opacity:1; transform:translateY(0);}}
   @keyframes pulse{0%,100%{opacity:0.3;} 50%{opacity:1;}}
@@ -1308,12 +1312,42 @@
 <body>
 <section class="hero">
   <h1 class="serif" id="heroBizName" style="display:none;"></h1>
-  <p class="hero-platform-line" id="heroPlatformLine"><span class="accent">הכל בקליק</span> <svg class="click-logo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#9B2C42" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg> הכל במקום אחד, בלי מאמץ</p>
+  <p class="hero-platform-line" id="heroPlatformLine"><span class="accent">הכל בקליק</span> <span class="reveal-rest"><svg class="click-logo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#9B2C42" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg> הכל במקום אחד, בלי מאמץ</span></p>
   <div class="scroll-hint">
     <span>גלילה למטה</span>
     <div class="line"></div>
   </div>
 </section>
+<script>
+  // Reveals the hero text (see the .fonts-ready CSS rules above) only once the custom
+  // fonts have actually finished loading, instead of the moment the page paints.
+  // Without this, the huge heading briefly renders in the browser's fallback serif
+  // font (wrong size/shape) and then visibly reflows into "Suez One" a beat later —
+  // that jarring resize is the "ugly flash that then settles" effect. Runs as an
+  // isolated inline script right after the hero markup so it fires as early as
+  // possible, independent of the much larger app script further down the page.
+  (function(){
+    var heroEl = document.querySelector('.hero');
+    if (!heroEl) return;
+    var revealed = false;
+    function reveal(){
+      if (revealed) return;
+      revealed = true;
+      heroEl.classList.add('fonts-ready');
+    }
+    try {
+      if (document.fonts && document.fonts.ready){
+        Promise.race([
+          document.fonts.ready,
+          new Promise(function(resolve){ setTimeout(resolve, 1000); })
+        ]).then(reveal);
+      } else {
+        setTimeout(reveal, 300);
+      }
+    } catch (e) { reveal(); }
+    setTimeout(reveal, 1800); // absolute safety net — never leave the hero invisible
+  })();
+</script>
 <section class="stage">
   <div class="switcher">
     <button class="active" onclick="showPanel('customer', this)"><i class="ti ti-calendar-event"></i> קביעת תור</button>
@@ -1741,7 +1775,9 @@
       <select id="mbService" class="field"></select>
       <label style="font-size:12px; color:var(--ivory-dim); margin-bottom:-4px;">משך הטיפול (בדקות) — אפשר לשנות במיוחד ללקוחה הזו</label>
       <input type="number" id="mbDuration" class="field" min="5" step="5" placeholder="משך בדקות">
-      <select id="mbStaff" class="field"></select>
+      <div class="label" style="margin-top:4px;">בחירת עובדת — בדיוק כמו אצל הלקוחה</div>
+      <input type="hidden" id="mbStaff">
+      <div class="staff-picker" id="mbStaffPicker"></div>
       <input type="hidden" id="mbDate">
       <div class="label" style="margin-top:4px;">בחירת יום — בדיוק כמו היומן שהלקוחה רואה</div>
       <div class="mini-cal" id="mbMiniCal" style="max-width:420px;">
@@ -1851,9 +1887,11 @@
     mbRefreshCalendarAndSlots();
   }
   // Duration/service/staff all affect which days actually have room for this specific
-  // booking, so anything that changes them needs to redraw both the mini-calendar
-  // (which days look open/closed) and the slot grid for the currently selected day.
+  // booking, so anything that changes them needs to redraw the staff picker (who's
+  // even capable of this service), the mini-calendar (which days look open/closed),
+  // and the slot grid for the currently selected day.
   function mbRefreshCalendarAndSlots(){
+    if (typeof renderMbStaffPicker === 'function') renderMbStaffPicker();
     if (typeof renderMbCal === 'function') renderMbCal();
     renderManualBookingSlots();
   }
@@ -1881,8 +1919,10 @@
     const preselectedSvc = services[finalSvcIdx];
     const durInput = document.getElementById('mbDuration');
     if (durInput) durInput.value = opts.duration || (preselectedSvc ? preselectedSvc.duration : 30) || 30;
-    const staffSelect = document.getElementById('mbStaff');
-    staffSelect.innerHTML = staff.map((s, i) => `<option value="${i}" ${opts.staff === i ? 'selected' : ''}>${s.name}</option>`).join('');
+    // Staff is chosen via the same chip picker the client uses (renderMbStaffPicker,
+    // called from mbRefreshCalendarAndSlots below) — mbSelectedStaffIndex drives it,
+    // and it validates/falls back to a capable staff member for the chosen service.
+    mbSelectedStaffIndex = opts.staff !== undefined ? opts.staff : 'any';
     const targetDate = opts.date || new Date();
     // The date is chosen via the same real mini-calendar the client sees (see
     // renderMbCal() below) — mbSelectedDate/mbCalViewYear/mbCalViewMonth drive it,
@@ -1900,14 +1940,15 @@
   }
   document.getElementById('mbService')?.addEventListener('change', mbServiceChanged);
   document.getElementById('mbDuration')?.addEventListener('input', mbRefreshCalendarAndSlots);
-  document.getElementById('mbStaff')?.addEventListener('change', mbRefreshCalendarAndSlots);
   function closeManualBookingModal(){
     document.getElementById('manualBookingOverlay').classList.remove('show');
   }
   function renderManualBookingSlots(){
     const dateVal = document.getElementById('mbDate')?.value;
     const svcIdx = parseInt(document.getElementById('mbService')?.value);
-    const staffIdx = parseInt(document.getElementById('mbStaff')?.value);
+    const staffValRaw = document.getElementById('mbStaff')?.value;
+    const isAny = staffValRaw === 'any';
+    const staffIdx = isAny ? null : parseInt(staffValRaw);
     const timeInput = document.getElementById('mbTime');
     const gridEl = document.getElementById('mbSlotGrid');
     const hint = document.getElementById('mbSlotsHint');
@@ -1915,42 +1956,30 @@
     const previouslySelected = timeInput.value;
     gridEl.innerHTML = '';
     timeInput.value = '';
-    if (!dateVal || isNaN(svcIdx) || isNaN(staffIdx)){ if (hint) hint.textContent = ''; return; }
+    // Rebuilt from scratch every render — maps each displayed time string to the
+    // staff member it would actually be booked with, so submitManualBooking() can
+    // resolve "לא משנה לי מי" to a concrete person at submit time.
+    mbSlotStaffAssignment = {};
+    if (!dateVal || isNaN(svcIdx) || (!isAny && isNaN(staffIdx))){ if (hint) hint.textContent = ''; return; }
     const svc = services[svcIdx];
-    const emp = staff[staffIdx];
+    if (!svc){ if (hint) hint.textContent = ''; return; }
     const parts = dateVal.split('-').map(Number);
     const dateObj = new Date(parts[0], parts[1]-1, parts[2]);
-    const dayInfo = emp && emp.hours ? emp.hours[dateObj.getDay()] : null;
     // The admin can override the treatment duration for this specific booking
     // (e.g. a client who needs 20 min for a service normally set to 10 min) —
     // the slots below are computed using that overridden duration, not the
     // service's default, whenever the admin has changed it.
     const overrideDur = parseInt(document.getElementById('mbDuration')?.value);
-    const duration = !isNaN(overrideDur) && overrideDur > 0 ? overrideDur : (svc ? (svc.duration || 30) : 30);
-    if (!svc || !emp || !dayInfo || !dayInfo.open || isDateClosedForStaff(staffIdx, dateObj)){
-      if (hint) hint.textContent = 'אין שעות פעילות/זמינות לעובדת זו ביום שנבחר.';
-      return;
-    }
-    let openMin = timeToMinutes(dayInfo.from);
-    const closeMin = timeToMinutes(dayInfo.to);
-    if (sameDate(dateObj, todayMidnight)){
-      const now = new Date();
-      const earliest = Math.ceil((now.getHours()*60 + now.getMinutes() + minLeadMinutes) / slotStepMinutes) * slotStepMinutes;
-      openMin = Math.max(openMin, earliest);
-    }
-    const busy = weekAppointments.filter(a => a.date === dateVal && a.staff === staffIdx).map(a => {
-      const st = timeToMinutes(a.time); return [st, st + (a.dur || 30)];
-    });
+    const duration = !isNaN(overrideDur) && overrideDur > 0 ? overrideDur : (svc.duration || 30);
     // Rendered as real clickable slot buttons (the same "slot" look the client sees
     // on the booking calendar), not a plain dropdown — stepping by the same
     // quarter-hour grid the customer-facing calendar uses (slotStepMinutes).
     let anyAvailable = false;
-    for (let t = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes; t + duration <= closeMin; t += slotStepMinutes){
-      const end = t + duration;
-      const free = busy.every(([bs,be]) => end <= bs || t >= be);
-      if (!free) continue;
+
+    function addSlot(t, resolvedStaffIdx){
       anyAvailable = true;
       const timeStr = minutesToTimeGlobal(t);
+      mbSlotStaffAssignment[timeStr] = resolvedStaffIdx;
       const d = document.createElement('div');
       d.className = 'slot' + (timeStr === previouslySelected ? ' selected' : '');
       d.textContent = timeStr;
@@ -1961,6 +1990,74 @@
       };
       gridEl.appendChild(d);
       if (timeStr === previouslySelected) timeInput.value = timeStr;
+    }
+
+    if (isAny){
+      // Union available slots across every staff member capable of this service —
+      // mirrors the customer-facing "לא משנה לי מי" flow (hasAnySlot/renderAvailableSlotsAny).
+      const capableIndices = getCapableStaffIndices(svc.category);
+      if (!capableIndices.length){
+        if (hint) hint.textContent = 'אין עובדת המתאימה לשירות זה.';
+        return;
+      }
+      const perStaffWindow = {};
+      const perStaffBusy = {};
+      let openMin = Infinity, closeMin = -Infinity;
+      capableIndices.forEach(idx => {
+        const emp = staff[idx];
+        const dayInfo = emp && emp.hours ? emp.hours[dateObj.getDay()] : null;
+        if (!emp || !dayInfo || !dayInfo.open || isDateClosedForStaff(idx, dateObj)) return;
+        let staffOpenMin = timeToMinutes(dayInfo.from);
+        const staffCloseMin = timeToMinutes(dayInfo.to);
+        if (sameDate(dateObj, todayMidnight)){
+          const now = new Date();
+          const earliest = Math.ceil((now.getHours()*60 + now.getMinutes() + minLeadMinutes) / slotStepMinutes) * slotStepMinutes;
+          staffOpenMin = Math.max(staffOpenMin, earliest);
+        }
+        perStaffWindow[idx] = [staffOpenMin, staffCloseMin];
+        perStaffBusy[idx] = weekAppointments.filter(a => a.date === dateVal && a.staff === idx).map(a => {
+          const st = timeToMinutes(a.time); return [st, st + (a.dur || 30)];
+        });
+        openMin = Math.min(openMin, staffOpenMin);
+        closeMin = Math.max(closeMin, staffCloseMin);
+      });
+      if (openMin === Infinity){
+        if (hint) hint.textContent = 'אין שעות פעילות/זמינות ביום שנבחר.';
+        return;
+      }
+      for (let t = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes; t + duration <= closeMin; t += slotStepMinutes){
+        const end = t + duration;
+        const freeStaffIdx = capableIndices.find(idx => {
+          const win = perStaffWindow[idx];
+          if (!win || t < win[0] || end > win[1]) return false;
+          return (perStaffBusy[idx] || []).every(([bs,be]) => end <= bs || t >= be);
+        });
+        if (freeStaffIdx === undefined) continue;
+        addSlot(t, freeStaffIdx);
+      }
+    } else {
+      const emp = staff[staffIdx];
+      const dayInfo = emp && emp.hours ? emp.hours[dateObj.getDay()] : null;
+      if (!emp || !dayInfo || !dayInfo.open || isDateClosedForStaff(staffIdx, dateObj)){
+        if (hint) hint.textContent = 'אין שעות פעילות/זמינות לעובדת זו ביום שנבחר.';
+        return;
+      }
+      let openMin = timeToMinutes(dayInfo.from);
+      const closeMin = timeToMinutes(dayInfo.to);
+      if (sameDate(dateObj, todayMidnight)){
+        const now = new Date();
+        const earliest = Math.ceil((now.getHours()*60 + now.getMinutes() + minLeadMinutes) / slotStepMinutes) * slotStepMinutes;
+        openMin = Math.max(openMin, earliest);
+      }
+      const busy = weekAppointments.filter(a => a.date === dateVal && a.staff === staffIdx).map(a => {
+        const st = timeToMinutes(a.time); return [st, st + (a.dur || 30)];
+      });
+      for (let t = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes; t + duration <= closeMin; t += slotStepMinutes){
+        const end = t + duration;
+        const free = busy.every(([bs,be]) => end <= bs || t >= be);
+        if (!free) continue;
+        addSlot(t, staffIdx);
+      }
     }
     if (hint) hint.textContent = anyAvailable ? 'מוצגות כאן רק שעות פנויות, בדיוק כמו בקביעת תור ללקוחה.' : 'אין שעות פנויות ביום הזה. אפשר לבחור יום אחר בלוח השנה.';
   }
@@ -2062,7 +2159,7 @@
       const smsMsg = encodeURIComponent(`היי ${w.name}, התפנה תור ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}. אם תרצי, אפשר לקבוע אותו כאן: ${getSiteUrl()}`);
       const clientEmail = findClientEmailByPhone(w.phone);
       if (clientEmail){
-        sendEmail(clientEmail, 'התפנה תור אצלנו!', `היי ${w.name}, התפנה תור ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}. אם תרצי, אפשר לקבוע אותו כאן:\n${getSiteUrl()}`);
+        sendEmail(clientEmail, 'התפנה תור אצלנו!', `היי ${w.name}, התפנה תור ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}. אם תרצי, אפשר לקבוע אותו כאן:\n${getSiteUrl()}\n\nאם זה כבר לא רלוונטי לך, אפשר להסיר את עצמך מרשימת ההמתנה כאן:\n${buildWaitlistCancelLink(w.id)}`);
       }
       const row = document.createElement('div');
       row.className='wl-match';
@@ -2107,11 +2204,11 @@
     const name = document.getElementById('mbClientName').value.trim();
     const phone = document.getElementById('mbClientPhone').value.trim();
     const svcIdx = parseInt(document.getElementById('mbService').value);
-    const staffIdx = parseInt(document.getElementById('mbStaff').value);
+    const staffValRaw = document.getElementById('mbStaff').value;
     const dateVal = document.getElementById('mbDate').value;
     const timeVal = document.getElementById('mbTime').value;
     const errorEl = document.getElementById('mbError');
-    if (!name || !dateVal || !timeVal || isNaN(svcIdx) || isNaN(staffIdx)){
+    if (!name || !dateVal || !timeVal || isNaN(svcIdx) || !staffValRaw){
       errorEl.style.display = 'block';
       errorEl.textContent = 'יש למלא שם, תאריך, שעה, שירות ועובדת.';
       return;
@@ -2126,16 +2223,44 @@
     const dur = !isNaN(overrideDurVal) && overrideDurVal > 0 ? overrideDurVal : (svc.duration || 30);
     const startMin = timeToMinutes(timeVal);
     const endMin = startMin + dur;
-    const conflict = weekAppointments.some(a => {
-      if (a.day !== dayKey || a.date !== dateVal || a.staff !== staffIdx) return false;
-      const aStart = timeToMinutes(a.time);
-      const aEnd = aStart + a.dur;
-      return !(endMin <= aStart || startMin >= aEnd);
-    });
-    if (conflict){
-      errorEl.style.display = 'block';
-      errorEl.textContent = `יש כבר תור חופף לעובדת זו באותו זמן.`;
-      return;
+    const isStillFree = idx => {
+      if (idx === undefined || idx === null || isNaN(idx)) return false;
+      const conflict = weekAppointments.some(a => {
+        if (a.day !== dayKey || a.date !== dateVal || a.staff !== idx) return false;
+        const aStart = timeToMinutes(a.time);
+        const aEnd = aStart + a.dur;
+        return !(endMin <= aStart || startMin >= aEnd);
+      });
+      return !conflict;
+    };
+    // "לא משנה לי מי" isn't a real staff member — resolve it to whichever capable
+    // staff member is actually free at this exact time, mirroring confirmBooking()'s
+    // resolution of the customer-facing "any staff" option. We prefer the staff
+    // member the slot was displayed as (mbSlotStaffAssignment), but re-validate
+    // against the current weekAppointments in case something changed since the
+    // slots were drawn on screen.
+    let staffIdx;
+    if (staffValRaw === 'any'){
+      const assignedIdx = mbSlotStaffAssignment[timeVal];
+      staffIdx = isStillFree(assignedIdx) ? assignedIdx : getCapableStaffIndices(svc.category).find(isStillFree);
+      if (staffIdx === undefined){
+        errorEl.style.display = 'block';
+        errorEl.textContent = 'אף עובדת מתאימה כבר לא פנויה בשעה זו — נא לבחור שעה אחרת.';
+        if (typeof renderManualBookingSlots === 'function') renderManualBookingSlots();
+        return;
+      }
+    } else {
+      staffIdx = parseInt(staffValRaw);
+      if (isNaN(staffIdx)){
+        errorEl.style.display = 'block';
+        errorEl.textContent = 'יש למלא שם, תאריך, שעה, שירות ועובדת.';
+        return;
+      }
+      if (!isStillFree(staffIdx)){
+        errorEl.style.display = 'block';
+        errorEl.textContent = `יש כבר תור חופף לעובדת זו באותו זמן.`;
+        return;
+      }
     }
     const manualAppointment = {
       id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000),
@@ -3743,6 +3868,57 @@
   let mbCalViewYear = todayMidnight.getFullYear();
   let mbCalViewMonth = todayMidnight.getMonth();
   let mbSelectedDate = new Date(todayMidnight);
+  // Which staff member is selected for a manual booking — a number, or 'any' for
+  // "לא משנה לי מי", exactly like selectedStaffIndex in the customer-facing flow.
+  // Kept separate from selectedStaffIndex for the same isolation reason as the rest
+  // of the manual-booking state above.
+  let mbSelectedStaffIndex = 'any';
+  // Which concrete staff member a given "any"-mode slot time actually resolves to —
+  // mirrors slotStaffAssignment in the customer flow. submitManualBooking() reads
+  // this when mbSelectedStaffIndex is 'any' to know who to actually book.
+  let mbSlotStaffAssignment = {};
+  function renderMbStaffPicker(){
+    const pickerEl = document.getElementById('mbStaffPicker');
+    if (!pickerEl) return;
+    pickerEl.innerHTML = '';
+    const svcIdx = parseInt(document.getElementById('mbService')?.value);
+    const svc = services[svcIdx];
+    const cat = svc ? svc.category : null;
+    const capableIndices = getCapableStaffIndices(cat);
+    if (mbSelectedStaffIndex !== 'any' && !capableIndices.includes(mbSelectedStaffIndex)){
+      mbSelectedStaffIndex = capableIndices.length > 1 ? 'any' : (capableIndices[0] !== undefined ? capableIndices[0] : 0);
+    }
+    const mbStaffInput = document.getElementById('mbStaff');
+    if (mbStaffInput) mbStaffInput.value = mbSelectedStaffIndex;
+    if (capableIndices.length > 1){
+      const anyChip = document.createElement('div');
+      anyChip.className = 'staff-chip' + (mbSelectedStaffIndex === 'any' ? ' selected' : '');
+      anyChip.innerHTML = `<div class="avatar" style="background:rgba(245,238,228,0.12); color:var(--ivory-dim);">✦</div><span>לא משנה לי מי</span>`;
+      anyChip.onclick = () => {
+        mbSelectedStaffIndex = 'any';
+        if (mbStaffInput) mbStaffInput.value = 'any';
+        renderMbStaffPicker();
+        if (typeof renderMbCal === 'function') renderMbCal();
+        renderManualBookingSlots();
+      };
+      pickerEl.appendChild(anyChip);
+    }
+    capableIndices.forEach(i => {
+      const s = staff[i];
+      const chip = document.createElement('div');
+      chip.className = 'staff-chip' + (i === mbSelectedStaffIndex ? ' selected' : '');
+      const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
+      chip.innerHTML = `<div class="avatar">${avatarHtml}</div><span>${s.name}</span>`;
+      chip.onclick = () => {
+        mbSelectedStaffIndex = i;
+        if (mbStaffInput) mbStaffInput.value = i;
+        renderMbStaffPicker();
+        if (typeof renderMbCal === 'function') renderMbCal();
+        renderManualBookingSlots();
+      };
+      pickerEl.appendChild(chip);
+    });
+  }
   function mbCalShiftMonth(delta){
     mbCalViewMonth += delta;
     if (mbCalViewMonth < 0){ mbCalViewMonth = 11; mbCalViewYear--; }
@@ -3772,6 +3948,12 @@
     }
     return false;
   }
+  // "לא משנה לי מי" for manual booking — a day/slot counts as available as long as
+  // at least one capable staff member is free, mirroring hasAnySlot() in the
+  // customer-facing flow.
+  function mbHasAnySlotAny(cellDate, cat, duration){
+    return getCapableStaffIndices(cat).some(idx => mbHasAnySlotForStaff(cellDate, idx, duration));
+  }
   function renderMbCal(){
     const gridEl = document.getElementById('mbCalGrid');
     const titleEl = document.getElementById('mbCalTitle');
@@ -3781,11 +3963,13 @@
     titleEl.textContent = hebrewMonths[mbCalViewMonth] + ' ' + mbCalViewYear;
     const isCurrentMonth = (mbCalViewYear === todayMidnight.getFullYear() && mbCalViewMonth === todayMidnight.getMonth());
     if (prevBtn) prevBtn.disabled = isCurrentMonth;
-    const staffIdx = parseInt(document.getElementById('mbStaff')?.value);
     const svcIdx = parseInt(document.getElementById('mbService')?.value);
     const svc = services[svcIdx];
+    const cat = svc ? svc.category : null;
     const overrideDur = parseInt(document.getElementById('mbDuration')?.value);
     const duration = !isNaN(overrideDur) && overrideDur > 0 ? overrideDur : (svc ? (svc.duration || 30) : 30);
+    const isAny = mbSelectedStaffIndex === 'any';
+    const emp = isAny ? null : staff[mbSelectedStaffIndex];
     const firstOfMonth = new Date(mbCalViewYear, mbCalViewMonth, 1);
     const daysInMonth = new Date(mbCalViewYear, mbCalViewMonth + 1, 0).getDate();
     const leadingBlanks = firstOfMonth.getDay();
@@ -3794,13 +3978,14 @@
       blank.className = 'cal-day-cell empty';
       gridEl.appendChild(blank);
     }
-    const emp = staff[staffIdx];
     for (let d = 1; d <= daysInMonth; d++){
       const cellDate = new Date(mbCalViewYear, mbCalViewMonth, d);
       const dow = cellDate.getDay();
       const isPast = cellDate < todayMidnight;
-      const isClosedDay = !emp || !(emp.hours && emp.hours[dow] && emp.hours[dow].open) || isDateClosedForStaff(staffIdx, cellDate);
-      const noSlots = !isPast && !isClosedDay && !mbHasAnySlotForStaff(cellDate, staffIdx, duration);
+      const isClosedDay = isAny
+        ? getCapableStaffIndices(cat).every(idx => !(staff[idx] && staff[idx].hours[dow] && staff[idx].hours[dow].open) || isDateClosedForStaff(idx, cellDate))
+        : !emp || !(emp.hours && emp.hours[dow] && emp.hours[dow].open) || isDateClosedForStaff(mbSelectedStaffIndex, cellDate);
+      const noSlots = !isPast && !isClosedDay && !(isAny ? mbHasAnySlotAny(cellDate, cat, duration) : mbHasAnySlotForStaff(cellDate, mbSelectedStaffIndex, duration));
       const cell = document.createElement('div');
       cell.className = 'cal-day-cell';
       if (sameDate(cellDate, todayMidnight)) cell.classList.add('today');
@@ -4051,7 +4236,34 @@
       listEl.appendChild(row);
     });
   }
+  // If the client's name/phone are already known at this point (e.g. she typed
+  // them earlier at step 3 and came back to step 2, or she's rescheduling/booking
+  // again and they were carried over — see rescheduleAppointment/bookAdditionalAppointment),
+  // there's no reason to make her type them again just to join the waitlist. Only
+  // fall back to asking when we genuinely don't know who she is yet.
   function showWaitlistPrompt(time, reason){
+    const boxEl = document.getElementById('waitlistBox');
+    const knownName = (document.getElementById('bookingNameInput')?.value || '').trim();
+    const knownPhone = (document.getElementById('bookingPhoneInput')?.value || '').trim();
+    if (knownName && isValidIsraeliPhone(knownPhone)){
+      boxEl.innerHTML = `
+        <div class="waitlist-prompt">
+          השעה ${time} לא זמינה — ${reason || 'תפוסה כרגע.'}
+          <div style="margin:8px 0; font-size:13px;">מצטרפים בשם <b class="wl-known-name"></b>, טלפון <b class="wl-known-phone"></b>.</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="wl-join-known-btn">הצטרפות לרשימת המתנה</button>
+            <button type="button" class="wl-not-me-btn" style="background:none; border:1px solid rgba(245,238,228,.2); color:var(--ivory-dim);">אלו לא הפרטים שלי</button>
+          </div>
+        </div>`;
+      boxEl.querySelector('.wl-known-name').textContent = knownName;
+      boxEl.querySelector('.wl-known-phone').textContent = knownPhone;
+      boxEl.querySelector('.wl-join-known-btn').onclick = () => joinWaitlist(time, knownName, knownPhone);
+      boxEl.querySelector('.wl-not-me-btn').onclick = () => showWaitlistPromptManual(time, reason);
+      return;
+    }
+    showWaitlistPromptManual(time, reason);
+  }
+  function showWaitlistPromptManual(time, reason){
     document.getElementById('waitlistBox').innerHTML = `
       <div class="waitlist-prompt">
         השעה ${time} לא זמינה — ${reason || 'תפוסה כרגע.'}
@@ -4061,15 +4273,21 @@
         <div><button onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
       </div>`;
   }
-  function joinWaitlist(time){
-    const nameEl = document.getElementById('wlName');
-    const phoneEl = document.getElementById('wlPhone');
-    const errorEl = document.getElementById('wlError');
-    const name = nameEl.value.trim();
-    const phone = phoneEl.value.trim();
-    if (!name || !isValidIsraeliPhone(phone)){
-      errorEl.style.display = 'block';
-      return;
+  function joinWaitlist(time, presetName, presetPhone){
+    let name, phone;
+    if (presetName !== undefined && presetPhone !== undefined){
+      name = presetName;
+      phone = presetPhone;
+    } else {
+      const nameEl = document.getElementById('wlName');
+      const phoneEl = document.getElementById('wlPhone');
+      const errorEl = document.getElementById('wlError');
+      name = nameEl.value.trim();
+      phone = phoneEl.value.trim();
+      if (!name || !isValidIsraeliPhone(phone)){
+        errorEl.style.display = 'block';
+        return;
+      }
     }
     const svc = services[selectedSvcIndex];
     const emp = selectedStaffIndex === 'any' ? null : staff[selectedStaffIndex];
@@ -4161,6 +4379,16 @@
   }
   function getAppointmentEmailText(name, service, dateLabel, time, staffName, actionText, phone){
     return `היי ${name}, נקבע לך תור ל${service} בתאריך ${dateLabel} בשעה ${time}${staffName ? ' אצל ' + staffName : ''}. ${actionText || 'לביטול או שינוי מועד, ניתן לפנות אלינו.'}\n\nלניהול התור, לביטול או לקביעת תור נוסף:\n${buildMyAppointmentLink(phone)}`;
+  }
+  // Lets a "waitlist slot opened" email give the client a real way to remove
+  // herself from the waitlist with one click — without this, a client who no
+  // longer needs the slot (booked elsewhere, changed her mind) has no way to
+  // leave on her own, and the request just sits there forever. See
+  // handleWaitlistCancelFromUrl() below, which reads this same ?cancelWaitlist=
+  // parameter when the link is opened.
+  function buildWaitlistCancelLink(id){
+    if (!id) return getSiteUrl();
+    return getSiteUrl().split('?')[0] + '?cancelWaitlist=' + encodeURIComponent(id);
   }
   async function confirmBooking(){
     if (!selectedSlot){
@@ -4404,12 +4632,23 @@
     // waiting for that slot should be notified the same way (see cancelAppointment).
     const apptBeingRescheduled = currentBookedAppointment;
     const waitlistMatches = apptBeingRescheduled ? getWaitlistMatchesForAppointment(apptBeingRescheduled) : [];
+    // She was already identified (that's how she got to "my appointment" in the
+    // first place) — carry her name/phone into the new booking so she isn't asked
+    // to type them again, including if she ends up joining a waitlist for the new
+    // time (see showWaitlistPrompt). Mirrors bookAdditionalAppointment() below.
+    const previousClient = apptBeingRescheduled ? clients.find(c => c.name === apptBeingRescheduled.client) : null;
     removeCurrentBookedAppointment();
     if (waitlistMatches.length && typeof renderWaitlistMatchAlert === 'function'){
       renderWaitlistMatchAlert(waitlistMatches, apptBeingRescheduled);
     }
     document.getElementById('myAppointment').style.display = 'none';
     document.getElementById('bookingFormWrap').style.display = 'block';
+    if (previousClient){
+      const nameEl = document.getElementById('bookingNameInput');
+      const phoneEl = document.getElementById('bookingPhoneInput');
+      if (nameEl) nameEl.value = previousClient.name || '';
+      if (phoneEl) phoneEl.value = previousClient.phone || '';
+    }
     goToStep(1);
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
   }
@@ -5020,6 +5259,49 @@
       console.error('Auto appointment lookup from link failed:', e);
     }
   }
+  // Same idea as handleAppointmentLookupFromUrl above, but for the "הסרה
+  // מרשימת ההמתנה" link sent in the "התפנה תור אצלנו" email (see
+  // buildWaitlistCancelLink) — gives a waitlisted client a genuine, no-login
+  // way to remove her own request instead of it sitting there forever with
+  // only the admin able to delete it manually.
+  let waitlistCancelFromUrlDone = false;
+  function handleWaitlistCancelFromUrl(){
+    if (waitlistCancelFromUrlDone) return;
+    waitlistCancelFromUrlDone = true;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const wlId = params.get('cancelWaitlist');
+      if (!wlId) return;
+      const idx = waitlist.findIndex(w => w && w.id === wlId);
+      if (idx === -1){
+        alert('בקשת ההמתנה הזו כבר לא קיימת (אולי כבר בוטלה, או שכבר נקבע לך תור).');
+        return;
+      }
+      const removedName = waitlist[idx].name || '';
+      if (!confirm(`להסיר את הבקשה שלך${removedName ? ' (' + removedName + ')' : ''} מרשימת ההמתנה?`)) return;
+      waitlist.splice(idx, 1);
+      if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
+      if (typeof saveState === 'function') saveState();
+      alert('הבקשה הוסרה בהצלחה.');
+    } catch (e) {
+      console.error('Waitlist cancel from link failed:', e);
+    }
+  }
+  // Waitlist entries have no self-service way to be removed by a client who
+  // simply never comes back to cancel one (booked elsewhere, no longer needs
+  // it) — without this, the list would only ever grow and clutter the admin's
+  // view forever. Once the day a client was hoping for has fully passed with
+  // no match found, the request is stale and gets cleaned up automatically on
+  // every load, on every device.
+  function pruneExpiredWaitlistEntries(){
+    if (!Array.isArray(waitlist) || !waitlist.length) return;
+    const todayKey = formatDateKey(todayMidnight);
+    const before = waitlist.length;
+    waitlist = waitlist.filter(w => w && w.date && w.date >= todayKey);
+    if (waitlist.length !== before){
+      console.log(`Removed ${before - waitlist.length} expired waitlist request(s).`);
+    }
+  }
   function loadCloudData(){
     CLOUD_DOC.get().then(doc => {
       hideCloudErrorBanner();
@@ -5029,14 +5311,22 @@
         lastLoadedSnapshot = {};
         cloudLoadComplete = true;
         handleAppointmentLookupFromUrl();
+        handleWaitlistCancelFromUrl();
         return;
       }
-      applyCloudData(doc.data());
+      const rawCloudData = doc.data();
+      applyCloudData(rawCloudData);
+      pruneExpiredWaitlistEntries();
       rerenderEverything();
-      lastLoadedSnapshot = cloneJSON(doc.data());
+      // Snapshot the ORIGINAL (pre-prune) server data as the diff baseline, not
+      // the just-pruned local state — otherwise the next autosave would see no
+      // difference and the pruned entries would never actually be removed from
+      // the cloud, just hidden locally until the page is reloaded.
+      lastLoadedSnapshot = cloneJSON(rawCloudData);
       cloudLoadComplete = true;
       console.log('Loaded saved data from the cloud.');
       handleAppointmentLookupFromUrl();
+      handleWaitlistCancelFromUrl();
     }).catch(err => {
       // Deliberately NOT setting cloudLoadComplete = true here. Doing so on a
       // failed load is exactly what used to cause full data loss: the app would
@@ -5077,9 +5367,11 @@
     if (document.hidden || !cloudLoadComplete) return;
     CLOUD_DOC.get().then(doc => {
       if (!doc.exists) return;
-      applyCloudData(doc.data());
+      const rawCloudData = doc.data();
+      applyCloudData(rawCloudData);
+      pruneExpiredWaitlistEntries();
       rerenderEverything();
-      lastLoadedSnapshot = cloneJSON(doc.data());
+      lastLoadedSnapshot = cloneJSON(rawCloudData);
     }).catch(err => console.error('Refresh on tab return failed:', err));
   });
   /* ===== AUTH (business owner login) ===== */
