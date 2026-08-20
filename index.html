@@ -135,6 +135,7 @@
     animation:fadeUp 0.9s ease forwards 0.4s;
   }
   .hero-platform-line .accent{color:var(--wine); font-weight:500;}
+  .hero-platform-line .gold-accent{color:var(--gold-soft); font-weight:500;}
   .hero-platform-line.primary{
     font-family:'Suez One', serif;
     font-size:clamp(52px, 10vw, 116px);
@@ -146,6 +147,7 @@
     margin-top:0;
   }
   .hero-platform-line.primary .accent{color:var(--wine); font-weight:400;}
+  .hero-platform-line.primary .gold-accent{color:var(--gold-soft); font-weight:400;}
   #heroBizName{
     font-size:clamp(52px, 10vw, 116px);
     font-weight:400;
@@ -1294,7 +1296,7 @@
 <body>
 <section class="hero">
   <h1 class="serif" id="heroBizName" style="display:none;"></h1>
-  <p class="hero-platform-line" id="heroPlatformLine"><span class="accent">הכל בקליק</span> — הכל במקום אחד, בלי מאמץ</p>
+  <p class="hero-platform-line" id="heroPlatformLine"><span class="accent">הכל בקליק</span> — <span class="gold-accent">הכל במקום אחד</span>, בלי מאמץ</p>
   <div class="scroll-hint">
     <span>גלילה למטה</span>
     <div class="line"></div>
@@ -4620,79 +4622,109 @@
   let cloudLoadComplete = false;
   const CLOUD_DOC = db.collection('business').doc('default');
   let lastBackupDateKey = '';
-  // The single biggest real source of data loss in this app: this tab (or another
-  // tab/device — a phone left open while the computer is also open, or vice versa)
-  // holds a full in-memory COPY of business/default. Autosave writes that whole copy
-  // back every few seconds. If two tabs are open around the same time, whichever one
-  // saves LAST wins completely, silently discarding whatever the other tab/device had
-  // just added — even though neither tab did anything wrong. lastKnownSavedAt tracks
-  // the "savedAt" timestamp this tab's in-memory data was last known to match on the
-  // server; saveState() checks it in a transaction before writing, so a tab that has
-  // fallen behind (because another device saved first) reloads the fresh data instead
-  // of blindly overwriting it.
-  let lastKnownSavedAt = null;
-  function showSyncNotice(){
-    let el = document.getElementById('cloudSyncNotice');
-    if (!el){
-      el = document.createElement('div');
-      el.id = 'cloudSyncNotice';
-      el.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#2c6e49; color:#fff; text-align:center; padding:9px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
-      document.body.prepend(el);
-    }
-    el.textContent = '🔄 עודכנו נתונים ממכשיר/חלון אחר — המידע כאן התרענן אוטומטית. אם ממש עכשיו שינית משהו, כדאי לבדוק שהוא נשמר.';
-    clearTimeout(el._hideTimer);
-    el._hideTimer = setTimeout(() => { if (el && el.parentNode) el.remove(); }, 9000);
+  // The single biggest real source of data loss in this app: this tab (and every other
+  // tab/device — a phone and a computer both open, an admin editing while a customer
+  // books at the exact same time, two browser tabs) each hold their OWN in-memory copy
+  // of business/default. The old autosave simply wrote that ENTIRE copy back every few
+  // seconds — so whichever tab happened to save last would silently erase anything
+  // another tab/device had added in the meantime (a new appointment, a new staff
+  // member), even though neither tab did anything wrong. This is normal, expected
+  // behavior for a live booking site (a customer can book from their phone at the exact
+  // moment the owner is editing categories on the computer) — so it has to be handled
+  // as a normal case, not avoided by "don't have two tabs open".
+  //
+  // The fix: lastLoadedSnapshot remembers exactly what this tab last knew to be true on
+  // the server. Every save compares its current in-memory values against that snapshot:
+  //  - A simple field (branding, categories, staff, services, etc.) is only sent if THIS
+  //    tab actually changed it since its last load. An unchanged field is left out of
+  //    the write entirely, so merge:true leaves whatever is currently on the server
+  //    (which may include another device's newer change) completely untouched.
+  //  - A list field that a customer can also add to on their own — weekAppointments,
+  //    waitlist, clients — is reconciled item-by-item against the freshest copy of the
+  //    document inside a transaction: new items this tab added are kept, items this tab
+  //    edited or removed are applied, and anything another tab/device added in the
+  //    meantime is preserved instead of being wiped out.
+  let lastLoadedSnapshot = null;
+  function cloneJSON(v){ return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
+  // Merges a list field that other sessions can also add to concurrently. keyFn must
+  // return a stable, unique string per item; if any item anywhere lacks one, item-level
+  // reconciliation isn't safe, so this tab's own array is used as-is (same behavior as
+  // before this fix, for that one save).
+  function mergeListField(serverArr, lastLoadedArr, localArr, keyFn){
+    serverArr = serverArr || []; lastLoadedArr = lastLoadedArr || []; localArr = localArr || [];
+    const allHaveKeys = serverArr.concat(lastLoadedArr, localArr).every(item => !!keyFn(item));
+    if (!allHaveKeys) return localArr;
+    const lastLoadedKeys = new Set(lastLoadedArr.map(keyFn));
+    const localByKey = new Map(localArr.map(item => [keyFn(item), item]));
+    const merged = [];
+    const seenKeys = new Set();
+    serverArr.forEach(sItem => {
+      const k = keyFn(sItem);
+      seenKeys.add(k);
+      if (lastLoadedKeys.has(k) && !localByKey.has(k)) return; // this tab deleted it since its last load
+      merged.push(localByKey.has(k) ? localByKey.get(k) : sItem);
+    });
+    localArr.forEach(lItem => {
+      const k = keyFn(lItem);
+      if (!seenKeys.has(k)){ merged.push(lItem); seenKeys.add(k); }
+    });
+    return merged;
   }
   function saveState(){
-    if (!cloudLoadComplete) return;
-    const payload = {
-      branding, clients, inactivityThresholdDays, customTemplates,
-      staff, weekAppointments, categories, services, whatsNewItems,
-      invAlertEmail, inventory, waitlist,
-      savedAt: new Date().toISOString()
+    if (!cloudLoadComplete || !lastLoadedSnapshot) return;
+    const nowIso = new Date().toISOString();
+    const simpleFields = {
+      branding, inactivityThresholdDays, customTemplates, staff,
+      categories, services, whatsNewItems, invAlertEmail, inventory
     };
-    // Optimistic-concurrency check inside a transaction: only commit this tab's
-    // full snapshot if the server's savedAt still matches what this tab last loaded.
-    // If another tab/device saved in between, abort this write (do NOT overwrite
-    // their newer data with our stale copy) and pull their fresh data in instead.
     db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
-      const serverData = doc.exists ? doc.data() : null;
-      const serverSavedAt = serverData ? (serverData.savedAt || null) : null;
-      if (lastKnownSavedAt !== null && serverSavedAt !== lastKnownSavedAt){
-        const err = new Error('stale-conflict');
-        err.staleConflict = true;
-        err.freshData = serverData;
-        throw err;
-      }
-      // merge:true so a background/stale tab never wipes out fields it doesn't know
-      // about — it can only overwrite the fields it actually sends, never delete
-      // unrelated ones.
+      const server = doc.exists ? doc.data() : {};
+      const payload = { savedAt: nowIso };
+      let hasChange = false;
+      Object.keys(simpleFields).forEach(key => {
+        const beforeJson = JSON.stringify(lastLoadedSnapshot[key]);
+        const nowJson = JSON.stringify(simpleFields[key]);
+        if (beforeJson !== nowJson){ payload[key] = simpleFields[key]; hasChange = true; }
+      });
+      const mergedAppts = mergeListField(server.weekAppointments, lastLoadedSnapshot.weekAppointments, weekAppointments, a => a && a.id);
+      if (JSON.stringify(mergedAppts) !== JSON.stringify(server.weekAppointments || [])) hasChange = true;
+      payload.weekAppointments = mergedAppts;
+      const mergedWaitlist = mergeListField(server.waitlist, lastLoadedSnapshot.waitlist, waitlist, w => w && w.id);
+      if (JSON.stringify(mergedWaitlist) !== JSON.stringify(server.waitlist || [])) hasChange = true;
+      payload.waitlist = mergedWaitlist;
+      const mergedClients = mergeListField(server.clients, lastLoadedSnapshot.clients, clients, c => c && c.phone ? 'p:' + String(c.phone).replace(/[^0-9]/g, '') : null);
+      if (JSON.stringify(mergedClients) !== JSON.stringify(server.clients || [])) hasChange = true;
+      payload.clients = mergedClients;
+      if (!hasChange) return null; // nothing this tab needs to write right now
+      // merge:true so this write only ever touches the fields present in payload —
+      // any field left out (because this tab didn't change it) is left exactly as-is
+      // on the server, no matter which other tab/device most recently wrote it.
       tx.set(CLOUD_DOC, payload, { merge: true });
-    })).then(() => {
-      lastKnownSavedAt = payload.savedAt;
+      return payload;
+    })).then(committedPayload => {
+      if (!committedPayload) return;
+      // Adopt the merged lists locally too, so this tab now agrees with the server
+      // (including any items another tab/device added that this tab hadn't seen yet).
+      weekAppointments = committedPayload.weekAppointments;
+      waitlist = committedPayload.waitlist;
+      clients = committedPayload.clients;
+      lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(committedPayload));
       // Also keep one automatic backup snapshot per calendar day, in a separate
       // "backups" subcollection (business/default/backups/YYYY-MM-DD). If the live
       // document is ever wiped or corrupted for any reason, a recent day's backup can
       // be opened in the Firebase console and copied back into business/default by
       // hand — better than having no way at all to recover real client/appointment data.
-      const backupDateKey = payload.savedAt.slice(0, 10);
+      const backupDateKey = committedPayload.savedAt.slice(0, 10);
       if (backupDateKey !== lastBackupDateKey){
         lastBackupDateKey = backupDateKey;
-        CLOUD_DOC.collection('backups').doc(backupDateKey).set(payload).catch(err => console.error('Backup save failed:', err));
+        const fullSnapshot = {
+          branding, clients, inactivityThresholdDays, customTemplates,
+          staff, weekAppointments, categories, services, whatsNewItems,
+          invAlertEmail, inventory, waitlist, savedAt: committedPayload.savedAt
+        };
+        CLOUD_DOC.collection('backups').doc(backupDateKey).set(fullSnapshot).catch(err => console.error('Backup save failed:', err));
       }
-    }).catch(err => {
-      if (err && err.staleConflict){
-        console.warn('Save skipped — newer data exists from another tab/device. Reloading fresh data instead of overwriting it.');
-        if (err.freshData){
-          applyCloudData(err.freshData);
-          rerenderEverything();
-          lastKnownSavedAt = err.freshData.savedAt || lastKnownSavedAt;
-          showSyncNotice();
-        }
-        return;
-      }
-      console.error('Cloud save failed:', err);
-    });
+    }).catch(err => console.error('Cloud save failed:', err));
   }
   function applyCloudData(data){
     if (data.branding) branding = data.branding;
@@ -4747,12 +4779,13 @@
       cloudLoadRetryCount = 0;
       if (!doc.exists){
         console.log('No saved data yet in the cloud — using demo starter data.');
+        lastLoadedSnapshot = {};
         cloudLoadComplete = true;
         return;
       }
       applyCloudData(doc.data());
       rerenderEverything();
-      lastKnownSavedAt = doc.data().savedAt || null;
+      lastLoadedSnapshot = cloneJSON(doc.data());
       cloudLoadComplete = true;
       console.log('Loaded saved data from the cloud.');
     }).catch(err => {
@@ -4797,7 +4830,7 @@
       if (!doc.exists) return;
       applyCloudData(doc.data());
       rerenderEverything();
-      lastKnownSavedAt = doc.data().savedAt || null;
+      lastLoadedSnapshot = cloneJSON(doc.data());
     }).catch(err => console.error('Refresh on tab return failed:', err));
   });
   /* ===== AUTH (business owner login) ===== */
