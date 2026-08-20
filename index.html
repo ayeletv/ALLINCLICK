@@ -33,6 +33,13 @@
     appId: "1:737599524118:web:d0cf35be864f1e773c9437"
   };
   let db, auth;
+  // Resolves once the invisible anonymous sign-in below has settled (success
+  // OR failure). The cloud-load code waits on this before its very first read,
+  // so a brand new browser session doesn't fire a Firestore read a beat before
+  // its auth token exists — which used to fail once, retry, and briefly flash
+  // the red "no cloud connection" banner even though nothing was ever at risk
+  // (no save happens until a load actually succeeds).
+  let anonAuthPromise = Promise.resolve();
   try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
@@ -47,7 +54,7 @@
     // be rejected. If this fails (e.g. Anonymous sign-in isn't enabled yet in
     // the Firebase console), we deliberately do nothing else here — the rest of
     // the app keeps working exactly as before under the current rules.
-    auth.signInAnonymously().catch(err => {
+    anonAuthPromise = auth.signInAnonymously().catch(err => {
       console.error('Anonymous sign-in failed (only matters once Firestore rules require auth):', err);
     });
   } catch (e) {
@@ -1706,6 +1713,8 @@
       <input type="text" id="mbClientName" class="field" placeholder="שם הלקוחה">
       <input type="tel" id="mbClientPhone" class="field" placeholder="050-0000000">
       <select id="mbService" class="field"></select>
+      <label style="font-size:12px; color:var(--ivory-dim); margin-bottom:-4px;">משך הטיפול (בדקות) — אפשר לשנות במיוחד ללקוחה הזו</label>
+      <input type="number" id="mbDuration" class="field" min="5" step="5" placeholder="משך בדקות">
       <select id="mbStaff" class="field"></select>
       <input type="date" id="mbDate" class="field">
       <select id="mbTime" class="field"><option value="">בחרי שעה</option></select><div id="mbSlotsHint" style="font-size:12px;color:#8A8178;margin-top:-4px;"></div>
@@ -1791,6 +1800,15 @@
     });
     svcSelect.innerHTML = html;
   }
+  // When the chosen service changes, reset the duration field to that service's
+  // default — the admin can still edit it afterward for this specific booking only.
+  function mbServiceChanged(){
+    const svcIdx = parseInt(document.getElementById('mbService')?.value);
+    const svc = services[svcIdx];
+    const durEl = document.getElementById('mbDuration');
+    if (durEl && svc) durEl.value = svc.duration || 30;
+    renderManualBookingSlots();
+  }
   function mostFrequentServiceIndexFor(clientName){
     if (!clientName) return null;
     const counts = {};
@@ -1810,7 +1828,11 @@
     const suggestedSvcIdx = opts.serviceIndex !== undefined
       ? opts.serviceIndex
       : mostFrequentServiceIndexFor(opts.clientName);
-    renderMbServiceOptions(suggestedSvcIdx !== null && suggestedSvcIdx !== undefined ? suggestedSvcIdx : 0);
+    const finalSvcIdx = suggestedSvcIdx !== null && suggestedSvcIdx !== undefined ? suggestedSvcIdx : 0;
+    renderMbServiceOptions(finalSvcIdx);
+    const preselectedSvc = services[finalSvcIdx];
+    const durInput = document.getElementById('mbDuration');
+    if (durInput) durInput.value = opts.duration || (preselectedSvc ? preselectedSvc.duration : 30) || 30;
     const staffSelect = document.getElementById('mbStaff');
     staffSelect.innerHTML = staff.map((s, i) => `<option value="${i}" ${opts.staff === i ? 'selected' : ''}>${s.name}</option>`).join('');
     const targetDate = opts.date || new Date();
@@ -1827,7 +1849,8 @@
     document.getElementById('manualBookingOverlay').classList.add('show');
     renderManualBookingSlots();
   }
-  document.getElementById('mbService')?.addEventListener('change', renderManualBookingSlots);
+  document.getElementById('mbService')?.addEventListener('change', mbServiceChanged);
+  document.getElementById('mbDuration')?.addEventListener('input', renderManualBookingSlots);
   document.getElementById('mbStaff')?.addEventListener('change', renderManualBookingSlots);
   document.getElementById('mbDate')?.addEventListener('change', renderManualBookingSlots);
   function closeManualBookingModal(){
@@ -1846,7 +1869,12 @@
     const dateObj = new Date(parts[0], parts[1]-1, parts[2]);
     const dayKey = weekdayKeys[dateObj.getDay()];
     const dayInfo = emp && emp.hours ? emp.hours[dateObj.getDay()] : null;
-    const duration = svc ? (svc.duration || 30) : 30;
+    // The admin can override the treatment duration for this specific booking
+    // (e.g. a client who needs 20 min for a service normally set to 10 min) —
+    // the slots below are computed using that overridden duration, not the
+    // service's default, whenever the admin has changed it.
+    const overrideDur = parseInt(document.getElementById('mbDuration')?.value);
+    const duration = !isNaN(overrideDur) && overrideDur > 0 ? overrideDur : (svc ? (svc.duration || 30) : 30);
     timeSelect.innerHTML = '<option value="">בחרי שעה פנויה</option>';
     if (!svc || !emp || !dayInfo || !dayInfo.open || isDateClosedForStaff(staffIdx, dateObj)){
       hint.textContent = 'אין שעות פעילות/זמינות לעובדת זו ביום שנבחר.';
@@ -2030,7 +2058,10 @@
     const dateParts = dateVal.split('-').map(Number);
     const apptDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
     const dayKey = weekdayKeys[apptDate.getDay()];
-    const dur = svc.duration || 30;
+    // Use the admin's overridden duration if she changed it for this booking,
+    // otherwise fall back to the service's normal default duration.
+    const overrideDurVal = parseInt(document.getElementById('mbDuration')?.value);
+    const dur = !isNaN(overrideDurVal) && overrideDurVal > 0 ? overrideDurVal : (svc.duration || 30);
     const startMin = timeToMinutes(timeVal);
     const endMin = startMin + dur;
     const conflict = weekAppointments.some(a => {
@@ -2393,7 +2424,14 @@
   function isAppointmentHistory(appt){
     const d = getAppointmentDateOnly(appt);
     if (!d) return false;
-    return d <= getTodayDateOnly();
+    // Strictly BEFORE today — today's own appointment is shown separately in
+    // its own "טיפול של היום" spot on the client card, not lumped into history.
+    return d < getTodayDateOnly();
+  }
+  function isAppointmentToday(appt){
+    const d = getAppointmentDateOnly(appt);
+    if (!d) return false;
+    return d.getTime() === getTodayDateOnly().getTime();
   }
   function getClientAppointments(clientName){
     return weekAppointments
@@ -2473,8 +2511,9 @@
       row.className = 'client-card';
       const avatarHtml = c.photo ? `<img src="${c.photo}">` : c.name.trim().charAt(0);
       const allAppointments = getClientAppointments(c.name);
+      const todayAppts = allAppointments.filter(isAppointmentToday);
       const history = allAppointments.filter(isAppointmentHistory);
-      const upcoming = allAppointments.filter(a => !isAppointmentHistory(a));
+      const upcoming = allAppointments.filter(a => !isAppointmentHistory(a) && !isAppointmentToday(a));
       row.innerHTML = `
         <div class="client-avatar">${avatarHtml}</div>
         <div class="client-info">
@@ -2491,6 +2530,23 @@
             <button class="svc-del" aria-label="מחיקת לקוחה">✕</button>
           </div>
           <textarea class="client-note" placeholder="הערה אישית (העדפות, רגישויות...)">${c.note || ''}</textarea>
+          ${todayAppts.length ? `
+          <div class="client-today-block" style="margin:10px 0; padding:10px; border:1px solid rgba(201,162,39,0.35); border-radius:10px; background:rgba(201,162,39,0.08);">
+            <div style="font-weight:600; font-size:13px; margin-bottom:6px;">📌 טיפול של היום</div>
+            ${todayAppts.map(a => `
+              <div class="visit-row" data-today-appt-id="${a.id || ''}" style="border:none; padding:0; margin-bottom:8px;">
+                <div class="visit-row-head">
+                  <span class="t">${a.time || ''}</span>
+                  <span class="visit-svc">${a.service || 'שירות'}</span>
+                  ${a.staff !== undefined && staff[a.staff] ? `<span class="visit-date">אצל ${staff[a.staff].name}</span>` : ''}
+                </div>
+                <div class="visit-status-actions">
+                  <button class="visit-status-btn${a.status === 'completed' ? ' active-yes' : ''}" data-status="completed">✓ הגיעה</button>
+                  <button class="visit-status-btn${a.status === 'no-show' ? ' active-no' : ''}" data-status="no-show">✗ לא הגיעה</button>
+                </div>
+                <textarea class="visit-note today-visit-note" placeholder="הערה על הטיפול של היום...">${a.note || ''}</textarea>
+              </div>`).join('')}
+          </div>` : ''}
           <div class="client-action-row">
             <button class="template-btn small" data-action="history">📋 היסטוריית טיפולים (${history.length})</button>
             <button class="template-btn small" data-action="upcoming">📅 תורות עתידיים (${upcoming.length})</button>
@@ -2552,6 +2608,22 @@
         });
         const noteEl = visitEl.querySelector('.visit-note');
         if (noteEl) noteEl.oninput = (e) => { appt.note = e.target.value; };
+      });
+      row.querySelectorAll('[data-today-appt-id]').forEach(visitEl => {
+        const apptId = visitEl.dataset.todayApptId;
+        const appt = weekAppointments.find(a => a.id === apptId);
+        if (!appt) return;
+        visitEl.querySelectorAll('.visit-status-btn').forEach(btn => {
+          btn.onclick = () => {
+            appt.status = appt.status === btn.dataset.status ? 'pending' : btn.dataset.status;
+            visitEl.querySelectorAll('.visit-status-btn').forEach(b => b.classList.remove('active-yes', 'active-no'));
+            if (appt.status === 'completed') btn.classList.add('active-yes');
+            if (appt.status === 'no-show') btn.classList.add('active-no');
+            if (typeof saveState === 'function') saveState();
+          };
+        });
+        const todayNoteEl = visitEl.querySelector('.today-visit-note');
+        if (todayNoteEl) todayNoteEl.oninput = (e) => { appt.note = e.target.value; if (typeof saveState === 'function') saveState(); };
       });
       listEl.appendChild(row);
     });
@@ -2690,6 +2762,16 @@
     ];
   }
   let staff = [];
+  // Declared here (before renderStaff's first call below) rather than further down
+  // near the category/service management code, because renderStaff() needs to
+  // reference `categories` for the staff↔category linkage UI, and `let` variables
+  // can't be read before their declaration line runs.
+  let categories = [];
+  let services = [];
+  // Also declared here (not down near the category/service management code)
+  // for the same reason — renderStaffPicker (called from renderStaff's first
+  // synchronous run) reads it, and a `let` can't be read before its own line runs.
+  let selectedCategoryForBooking = null;
   let newStaffPhoto = null;
   let selectedStaffIndex = 0;
   function renderStaff(){
@@ -2699,9 +2781,23 @@
     const searchTerm = searchEl ? searchEl.value.trim().toLowerCase() : '';
     staff.forEach((s, i) => {
       if (searchTerm && !s.name.toLowerCase().includes(searchTerm)) return;
+      // Migrate staff saved before the category-linkage feature existed: treat
+      // them as capable of every current category, so nothing that used to work
+      // suddenly becomes unbookable. Once this runs, the checkboxes below always
+      // reflect real, explicit state (no more "empty means everything" guessing).
+      if (!Array.isArray(s.categories)) s.categories = categories.slice();
       const row = document.createElement('div');
       row.className = 'client-card';
       const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
+      const catChecksHtml = categories.length ? `
+        <div class="staff-categories" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
+          ${categories.map(cat => `
+            <label style="display:flex; align-items:center; gap:4px; font-size:12px; background:rgba(245,238,228,0.08); padding:4px 8px; border-radius:8px; cursor:pointer;">
+              <input type="checkbox" class="staff-cat-check" data-cat="${cat}" ${s.categories.includes(cat) ? 'checked' : ''} style="margin:0;">
+              ${cat}
+            </label>`).join('')}
+        </div>
+        <div style="font-size:11px; color:var(--ivory-dim); margin-top:4px;">אילו תחומי טיפול העובדת הזו מבצעת — קובע אילו טיפולים לקוחות יוכלו לקבוע אצלה.</div>` : '';
       row.innerHTML = `
         <div class="client-avatar">${avatarHtml}</div>
         <div class="client-info">
@@ -2712,7 +2808,19 @@
             </div>
             <button class="svc-del" aria-label="מחיקת עובדת">✕</button>
           </div>
+          ${catChecksHtml}
         </div>`;
+      row.querySelectorAll('.staff-cat-check').forEach(cb => {
+        cb.onchange = () => {
+          const cat = cb.dataset.cat;
+          if (cb.checked){
+            if (!s.categories.includes(cat)) s.categories.push(cat);
+          } else {
+            s.categories = s.categories.filter(c => c !== cat);
+          }
+          if (typeof saveState === 'function') saveState();
+        };
+      });
       row.querySelector('.svc-del').onclick = () => {
         const apptCount = weekAppointments.filter(a => a.staff === i).length;
         if (apptCount){
@@ -2736,11 +2844,41 @@
     });
     renderStaffPicker();
   }
+  // Whether a given staff member (by index) is set up to perform a given
+  // category. Staff with no explicit categories list (shouldn't normally
+  // happen once renderStaff has run at least once — see migration there —
+  // but kept as a safe fallback) are treated as capable of everything.
+  function isStaffCapableOf(staffIdx, cat){
+    const s = staff[staffIdx];
+    if (!s) return false;
+    if (!cat) return true;
+    if (!Array.isArray(s.categories) || !s.categories.length) return true;
+    return s.categories.includes(cat);
+  }
+  function getCapableStaffIndices(cat){
+    return staff.map((_, i) => i).filter(i => isStaffCapableOf(i, cat));
+  }
   function renderStaffPicker(){
     const pickerEl = document.getElementById('staffPicker');
     if (!pickerEl) return;
     pickerEl.innerHTML = '';
-    staff.forEach((s, i) => {
+    const cat = typeof selectedCategoryForBooking !== 'undefined' ? selectedCategoryForBooking : null;
+    const capableIndices = getCapableStaffIndices(cat);
+    // If whatever was previously selected isn't valid for this category anymore
+    // (e.g. the client switched to a treatment this staff member doesn't do),
+    // fall back sensibly BEFORE drawing the chips, so the right one highlights.
+    if (selectedStaffIndex !== 'any' && !capableIndices.includes(selectedStaffIndex)){
+      selectedStaffIndex = capableIndices.length > 1 ? 'any' : (capableIndices[0] !== undefined ? capableIndices[0] : 0);
+    }
+    if (capableIndices.length > 1){
+      const anyChip = document.createElement('div');
+      anyChip.className = 'staff-chip' + (selectedStaffIndex === 'any' ? ' selected' : '');
+      anyChip.innerHTML = `<div class="avatar" style="background:rgba(245,238,228,0.12); color:var(--ivory-dim);">✦</div><span>לא משנה לי מי</span>`;
+      anyChip.onclick = () => { selectedStaffIndex = 'any'; renderStaffPicker(); if (typeof renderAvailableSlots === 'function') renderAvailableSlots(); if (typeof renderMiniCal === 'function') renderMiniCal(); };
+      pickerEl.appendChild(anyChip);
+    }
+    capableIndices.forEach(i => {
+      const s = staff[i];
       const chip = document.createElement('div');
       chip.className = 'staff-chip' + (i === selectedStaffIndex ? ' selected' : '');
       const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
@@ -2766,7 +2904,7 @@
     const roleEl = document.getElementById('newStaffRole');
     const name = nameEl.value.trim();
     if (!name) return;
-    staff.push({ name, role: roleEl.value.trim() || 'צוות', photo: newStaffPhoto, hours: makeDefaultHours(), closedDates: [] });
+    staff.push({ name, role: roleEl.value.trim() || 'צוות', photo: newStaffPhoto, hours: makeDefaultHours(), closedDates: [], categories: categories.slice() });
     nameEl.value = ''; roleEl.value = '';
     newStaffPhoto = null;
     document.getElementById('staffPhotoPreview').style.display = 'none';
@@ -3069,8 +3207,6 @@
       return `<div class="ov-agenda-row"><span class="t">${a.time}</span><span>${a.client} · ${a.service}</span><span style="color:var(--ivory-dim); font-size:12px;">${empName}</span></div>`;
     }).join('') + '</div>';
   }
-  let categories = [];
-  let services = [];
   let selectedSvcIndex = 0;
   function renderCategoryOptions(){
     const sel = document.getElementById('newSvcCategory');
@@ -3118,7 +3254,6 @@
     nameEl.value = '';
     renderCategories();
   }
-  let selectedCategoryForBooking = null;
   const catTilePalette = ['#9B2C42', '#C9A227', '#3F6B5C', '#B5654B', '#5B7C99', '#8B5FA3'];
   function renderCategoryGrid(){
     const gridEl = document.getElementById('catGrid');
@@ -3153,6 +3288,12 @@
     const labelEl = document.getElementById('catServicesLabel');
     if (labelEl) labelEl.textContent = cat;
     renderServiceListForCategory(cat);
+    // The category determines which staff members can even be picked (a staff
+    // member who doesn't do this category shouldn't show as an option) — so
+    // refresh the staff picker and everything that depends on the selection.
+    if (typeof renderStaffPicker === 'function') renderStaffPicker();
+    if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+    if (typeof renderMiniCal === 'function') renderMiniCal();
   }
   function renderServiceListForCategory(cat){
     const custList = document.getElementById('custSvcList');
@@ -3330,12 +3471,12 @@
     const dateStr = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
     return s.closedDates.includes(dateStr);
   }
-  function hasAnySlot(cellDate){
+  function hasAnySlotForStaff(cellDate, staffIdx){
     const svc = services[selectedSvcIndex];
     const dow = cellDate.getDay();
-    const dayInfo = staff[selectedStaffIndex] && staff[selectedStaffIndex].hours[dow];
+    const dayInfo = staff[staffIdx] && staff[staffIdx].hours[dow];
     if (!svc || !dayInfo || !dayInfo.open) return false;
-    if (isDateClosedForStaff(selectedStaffIndex, cellDate)) return false;
+    if (isDateClosedForStaff(staffIdx, cellDate)) return false;
     const dayKey = weekdayKeys[dow];
     let openMin = timeToMinutes(dayInfo.from);
     const closeMin = timeToMinutes(dayInfo.to);
@@ -3346,7 +3487,7 @@
     }
     if (openMin + duration > closeMin) return false;
     const busy = weekAppointments
-      .filter(a => a.date === formatDateKey(cellDate) && a.staff === selectedStaffIndex)
+      .filter(a => a.date === formatDateKey(cellDate) && a.staff === staffIdx)
       .map(a => {
         const s = timeToMinutes(a.time);
         return [s, s + a.dur];
@@ -3356,6 +3497,16 @@
       if (busy.every(([bStart, bEnd]) => end <= bStart || t >= bEnd)) return true;
     }
     return false;
+  }
+  // When the customer chose "לא משנה לי מי" (any suitable staff), a day/slot
+  // counts as available as long as AT LEAST ONE capable staff member is free —
+  // the actual assignment happens later, at booking time, in confirmBooking().
+  function hasAnySlot(cellDate){
+    if (selectedStaffIndex === 'any'){
+      const capable = getCapableStaffIndices(selectedCategoryForBooking);
+      return capable.some(idx => hasAnySlotForStaff(cellDate, idx));
+    }
+    return hasAnySlotForStaff(cellDate, selectedStaffIndex);
   }
   function renderMiniCal(){
     const gridEl = document.getElementById('miniCalGrid');
@@ -3377,7 +3528,9 @@
       const cellDate = new Date(calViewYear, calViewMonth, d);
       const dow = cellDate.getDay();
       const isPast = cellDate < todayMidnight;
-      const isClosedDay = !(staff[selectedStaffIndex] && staff[selectedStaffIndex].hours[dow].open) || isDateClosedForStaff(selectedStaffIndex, cellDate);
+      const isClosedDay = selectedStaffIndex === 'any'
+        ? getCapableStaffIndices(selectedCategoryForBooking).every(idx => !(staff[idx] && staff[idx].hours[dow].open) || isDateClosedForStaff(idx, cellDate))
+        : !(staff[selectedStaffIndex] && staff[selectedStaffIndex].hours[dow].open) || isDateClosedForStaff(selectedStaffIndex, cellDate);
       const noSlots = !isPast && !isClosedDay && !hasAnySlot(cellDate);
       const cell = document.createElement('div');
       cell.className = 'cal-day-cell';
@@ -3408,7 +3561,13 @@
     if (calViewMonth > 11){ calViewMonth = 0; calViewYear++; }
     renderMiniCal();
   }
+  // Which staff index a given available slot time was actually resolved to —
+  // only meaningful when selectedStaffIndex === 'any'. confirmBooking() reads
+  // this to know who to actually book, since "any" itself isn't a real staff.
+  let slotStaffAssignment = {};
   function renderAvailableSlots(){
+    slotStaffAssignment = {};
+    if (selectedStaffIndex === 'any') return renderAvailableSlotsAny();
     slotsEl.innerHTML = '';
     document.getElementById('waitlistBox').innerHTML = '';
     selectedSlot = null;
@@ -3467,6 +3626,7 @@
       d.className = 'slot' + (available ? '' : ' booked');
       d.textContent = timeStr;
       if (available){
+        slotStaffAssignment[timeStr] = selectedStaffIndex;
         if (firstFree === null) firstFree = timeStr;
         d.onclick = () => {
           document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
@@ -3497,6 +3657,98 @@
       if (firstEl) firstEl.classList.add('selected');
     } else {
       slotsEl.innerHTML += '<div style="grid-column:1/-1; font-size:13px; color:#8A8178; margin-top:6px;">אין שעות פנויות עם משך הטיפול הזה היום.</div>';
+      const wlTime = (openMin < closeMin) ? minutesToTime(openMin) : 'השעות הפנויות ביום זה';
+      document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">אין כרגע שעות פנויות ביום הזה. אם תרצי, אפשר להצטרף לרשימת ההמתנה ולקבל עדכון אם יתפנה מקום.<div style="margin-top:8px;"><button onclick="showWaitlistPrompt('${wlTime}', 'אין כרגע שעות פנויות ביום הזה.')">הצטרפות לרשימת ההמתנה</button></div></div>`;
+    }
+  }
+  // "לא משנה לי מי" mode: instead of one staff member's hours/appointments,
+  // look across every staff member capable of the selected category and show
+  // a slot as available if AT LEAST ONE of them is free — the specific staff
+  // actually assigned to each available time is remembered in
+  // slotStaffAssignment so confirmBooking() knows who to book it under.
+  function renderAvailableSlotsAny(){
+    slotsEl.innerHTML = '';
+    document.getElementById('waitlistBox').innerHTML = '';
+    selectedSlot = null;
+    const svc = services[selectedSvcIndex];
+    const dow = bookingSelectedDate.getDay();
+    const isToday = sameDate(bookingSelectedDate, todayMidnight);
+    const duration = svc ? (svc.duration || 30) : 30;
+    if (!svc){
+      slotsEl.innerHTML = '<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">יש לבחור שירות קודם</div>';
+      return;
+    }
+    const candidateIndices = getCapableStaffIndices(selectedCategoryForBooking);
+    const staffWindows = candidateIndices.map(idx => {
+      const emp = staff[idx];
+      const dayInfo = emp && emp.hours ? emp.hours[dow] : null;
+      if (!emp || !dayInfo || !dayInfo.open) return null;
+      if (isDateClosedForStaff(idx, bookingSelectedDate)) return null;
+      let openMin = timeToMinutes(dayInfo.from);
+      const closeMin = timeToMinutes(dayInfo.to);
+      if (isToday){
+        const earliestStart = Math.ceil((nowMinutesReal + minLeadMinutes) / fineStepMinutes) * fineStepMinutes;
+        openMin = Math.max(openMin, earliestStart);
+      }
+      const busy = weekAppointments
+        .filter(a => a.date === formatDateKey(bookingSelectedDate) && a.staff === idx)
+        .map(a => { const s = timeToMinutes(a.time); return [s, s + a.dur]; });
+      return { idx, openMin, closeMin, busy };
+    }).filter(Boolean);
+    if (!staffWindows.length){
+      slotsEl.innerHTML = '<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">אין עובדת מתאימה זמינה ביום זה לטיפול שנבחר.</div>';
+      return;
+    }
+    const openMin = Math.min(...staffWindows.map(w => w.openMin));
+    const closeMin = Math.max(...staffWindows.map(w => w.closeMin));
+    if (openMin + duration > closeMin){
+      slotsEl.innerHTML = '<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">היום כבר נגמרו השעות הפנויות</div>';
+      return;
+    }
+    const findFreeStaff = (start, dur) => {
+      const end = start + dur;
+      for (const w of staffWindows){
+        if (start < w.openMin || end > w.closeMin) continue;
+        if (w.busy.every(([bStart, bEnd]) => end <= bStart || start >= bEnd)) return w.idx;
+      }
+      return null;
+    };
+    const minutesToTime = (m) => String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0');
+    let firstFree = null;
+    const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
+    for (let bucketStart = firstBucket; bucketStart + duration <= closeMin; bucketStart += slotStepMinutes){
+      let chosenTime = null, chosenStaff = null;
+      const bucketEnd = bucketStart + slotStepMinutes;
+      for (let t = Math.max(bucketStart, openMin); t < bucketEnd && t + duration <= closeMin; t += fineStepMinutes){
+        const freeStaff = findFreeStaff(t, duration);
+        if (freeStaff !== null){ chosenTime = t; chosenStaff = freeStaff; break; }
+      }
+      const t = chosenTime !== null ? chosenTime : bucketStart;
+      const available = chosenTime !== null;
+      const timeStr = minutesToTime(t);
+      const d = document.createElement('div');
+      d.className = 'slot' + (available ? '' : ' booked');
+      d.textContent = timeStr;
+      if (available){
+        slotStaffAssignment[timeStr] = chosenStaff;
+        if (firstFree === null) firstFree = timeStr;
+        d.onclick = () => {
+          document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+          d.classList.add('selected');
+          selectedSlot = timeStr;
+          document.getElementById('waitlistBox').innerHTML = '';
+        };
+      } else {
+        d.onclick = () => showWaitlistPrompt(timeStr, 'אף עובדת מתאימה לא פנויה בשעה זו למשך הטיפול שנבחר.');
+      }
+      slotsEl.appendChild(d);
+    }
+    if (firstFree){
+      selectedSlot = firstFree;
+      const firstEl = Array.from(slotsEl.children).find(el => el.textContent === firstFree);
+      if (firstEl) firstEl.classList.add('selected');
+    } else {
+      slotsEl.innerHTML += '<div style="grid-column:1/-1; font-size:13px; color:#8A8178; margin-top:6px;">אין שעות פנויות עם משך הטיפול הזה היום, אצל אף עובדת מתאימה.</div>';
       const wlTime = (openMin < closeMin) ? minutesToTime(openMin) : 'השעות הפנויות ביום זה';
       document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">אין כרגע שעות פנויות ביום הזה. אם תרצי, אפשר להצטרף לרשימת ההמתנה ולקבל עדכון אם יתפנה מקום.<div style="margin-top:8px;"><button onclick="showWaitlistPrompt('${wlTime}', 'אין כרגע שעות פנויות ביום הזה.')">הצטרפות לרשימת ההמתנה</button></div></div>`;
     }
@@ -3559,13 +3811,13 @@
       return;
     }
     const svc = services[selectedSvcIndex];
-    const emp = staff[selectedStaffIndex];
+    const emp = selectedStaffIndex === 'any' ? null : staff[selectedStaffIndex];
     const dateStr = bookingSelectedDate.getFullYear() + '-' + String(bookingSelectedDate.getMonth()+1).padStart(2,'0') + '-' + String(bookingSelectedDate.getDate()).padStart(2,'0');
     waitlist.push({
       id: 'wl_' + Date.now() + '_' + Math.floor(Math.random()*10000),
       name, phone,
       service: svc ? svc.name : '',
-      staffName: emp ? emp.name : '',
+      staffName: selectedStaffIndex === 'any' ? '' : (emp ? emp.name : ''),
       date: dateStr,
       requestedTime: time
     });
@@ -3693,8 +3945,35 @@
     const slotDur = (services[selectedSvcIndex] && services[selectedSvcIndex].duration) || 30;
     const slotStartMin = timeToMinutes(selectedSlot);
     const slotEndMin = slotStartMin + slotDur;
+    // "לא משנה לי מי" isn't a real staff member — resolve it to whichever
+    // capable staff member is actually free at this exact time, using the
+    // just-refreshed weekAppointments (not the possibly-stale assignment that
+    // was computed when the slots were first drawn on screen).
+    let resolvedStaffIndex = selectedStaffIndex;
+    if (selectedStaffIndex === 'any'){
+      const dow = bookingSelectedDate.getDay();
+      resolvedStaffIndex = getCapableStaffIndices(selectedCategoryForBooking).find(idx => {
+        const empCandidate = staff[idx];
+        const dayInfo = empCandidate && empCandidate.hours ? empCandidate.hours[dow] : null;
+        if (!empCandidate || !dayInfo || !dayInfo.open) return false;
+        if (isDateClosedForStaff(idx, bookingSelectedDate)) return false;
+        if (slotStartMin < timeToMinutes(dayInfo.from) || slotEndMin > timeToMinutes(dayInfo.to)) return false;
+        const conflict = weekAppointments.some(a => {
+          if (a.staff !== idx || a.date !== dateKeyForSlot) return false;
+          const aStart = timeToMinutes(a.time);
+          const aEnd = aStart + a.dur;
+          return !(slotEndMin <= aStart || slotStartMin >= aEnd);
+        });
+        return !conflict;
+      });
+      if (resolvedStaffIndex === undefined){
+        if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+        document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">מצטערים, אף עובדת מתאימה כבר לא פנויה בשעה זו — היא נתפסה ממש עכשיו. נא לבחור שעה פנויה אחרת מהרשימה המעודכנת.</div>`;
+        return;
+      }
+    }
     const slotNowTaken = weekAppointments.some(a => {
-      if (a.staff !== selectedStaffIndex || a.date !== dateKeyForSlot) return false;
+      if (a.staff !== resolvedStaffIndex || a.date !== dateKeyForSlot) return false;
       const aStart = timeToMinutes(a.time);
       const aEnd = aStart + a.dur;
       return !(slotEndMin <= aStart || slotStartMin >= aEnd);
@@ -3705,7 +3984,7 @@
       return;
     }
     const svc = services[selectedSvcIndex];
-    const emp = staff[selectedStaffIndex];
+    const emp = staff[resolvedStaffIndex];
     const clientNameVal = document.getElementById('bookingNameInput').value.trim() || 'לקוחה';
     const dayKey = weekdayKeys[bookingSelectedDate.getDay()];
     const phoneDigits = phoneVal.replace(/[^0-9]/g, '');
@@ -3781,7 +4060,7 @@
       dur: svc ? (svc.duration || 30) : 30,
       client: clientNameVal,
       service: svc ? svc.name : 'שירות',
-      staff: selectedStaffIndex,
+      staff: resolvedStaffIndex,
       status: 'pending',
       note: '',
       reminderChannels: reminderChannels
@@ -4373,7 +4652,14 @@
       setTimeout(loadCloudData, delay);
     });
   }
-  loadCloudData();
+  // Wait for the anonymous sign-in (set up at the very top of the page) to
+  // settle — success or failure — before the first real Firestore read. See
+  // the comment by anonAuthPromise's declaration for why this matters.
+  if (typeof anonAuthPromise !== 'undefined' && anonAuthPromise && typeof anonAuthPromise.finally === 'function'){
+    anonAuthPromise.finally(loadCloudData);
+  } else {
+    loadCloudData();
+  }
   // Autosave every few seconds, and once more right before the page closes —
   // this covers every edit anywhere in the app without needing to hook each one individually.
   // Guarded by cloudLoadComplete above so we never overwrite real saved data with an
