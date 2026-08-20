@@ -75,6 +75,7 @@
     --gold:#C9A227;
     --gold-soft:#E8CE7A;
     --sage:#7C9473;
+    --rose:#D98CA6;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
@@ -128,14 +129,14 @@
      shrinks down into a secondary line underneath it. */
   .hero-platform-line{
     font-size:clamp(18px, 2.4vw, 26px);
-    color:var(--ivory-dim);
+    color:var(--ivory);
     margin-top:1.6rem;
     max-width:640px;
     opacity:0;
     animation:fadeUp 0.9s ease forwards 0.4s;
   }
-  .hero-platform-line .accent{color:var(--wine); font-weight:500;}
-  .hero-platform-line .gold-accent{color:var(--gold-soft); font-weight:500;}
+  .hero-platform-line .accent{color:var(--gold-soft); font-weight:500;}
+  .hero-platform-line .click-logo{vertical-align:-4px; margin:0 4px;}
   .hero-platform-line.primary{
     font-family:'Suez One', serif;
     font-size:clamp(52px, 10vw, 116px);
@@ -146,14 +147,13 @@
     max-width:none;
     margin-top:0;
   }
-  .hero-platform-line.primary .accent{color:var(--wine); font-weight:400;}
-  .hero-platform-line.primary .gold-accent{color:var(--gold-soft); font-weight:400;}
+  .hero-platform-line.primary .accent{color:var(--gold-soft); font-weight:400;}
   #heroBizName{
     font-size:clamp(52px, 10vw, 116px);
     font-weight:400;
     line-height:0.95;
     letter-spacing:-0.01em;
-    color:var(--ivory);
+    color:var(--wine);
     opacity:0;
     animation:fadeUp 0.9s ease forwards 0.25s;
   }
@@ -850,6 +850,18 @@
     transition:all 0.2s ease;
   }
   .svc-del:hover{border-color:var(--wine); color:var(--wine);}
+  .svc-edit{
+    background:none;
+    border:1px solid rgba(245,238,228,0.15);
+    color:var(--ivory-dim);
+    border-radius:8px;
+    width:30px; height:30px;
+    cursor:pointer;
+    font-size:14px;
+    transition:all 0.2s ease;
+  }
+  .svc-edit:hover{border-color:var(--gold-soft); color:var(--gold-soft);}
+  .view-tag{font-size:12px; background:rgba(245,238,228,0.08); padding:4px 8px; border-radius:8px; display:inline-block;}
   .svc-add-row{
     display:flex;
     gap:10px;
@@ -1296,7 +1308,7 @@
 <body>
 <section class="hero">
   <h1 class="serif" id="heroBizName" style="display:none;"></h1>
-  <p class="hero-platform-line" id="heroPlatformLine"><span class="accent">הכל בקליק</span> — <span class="gold-accent">הכל במקום אחד</span>, בלי מאמץ</p>
+  <p class="hero-platform-line" id="heroPlatformLine"><span class="accent">הכל בקליק</span> <svg class="click-logo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#9B2C42" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg> הכל במקום אחד, בלי מאמץ</p>
   <div class="scroll-hint">
     <span>גלילה למטה</span>
     <div class="line"></div>
@@ -1375,7 +1387,7 @@
             <div class="reminder-choice" id="reminderChoice">
               <label><input type="checkbox" name="reminderChannel" value="sms"> SMS</label>
               <label><input type="checkbox" name="reminderChannel" value="call"> שיחת טלפון</label>
-              <label><input type="checkbox" name="reminderChannel" value="email"> מייל</label>
+              <label><input type="checkbox" name="reminderChannel" value="email" checked> מייל</label>
             </div>
             <div id="reminderChoiceError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש לבחור לפחות ערוץ תזכורת אחד לפני קביעת התור</div>
             <input class="field" id="reminderEmailInput" type="email" placeholder="כתובת מייל לתזכורות" style="display:none; margin-top:8px;">
@@ -1730,8 +1742,23 @@
       <label style="font-size:12px; color:var(--ivory-dim); margin-bottom:-4px;">משך הטיפול (בדקות) — אפשר לשנות במיוחד ללקוחה הזו</label>
       <input type="number" id="mbDuration" class="field" min="5" step="5" placeholder="משך בדקות">
       <select id="mbStaff" class="field"></select>
-      <input type="date" id="mbDate" class="field">
-      <select id="mbTime" class="field"><option value="">בחרי שעה</option></select><div id="mbSlotsHint" style="font-size:12px;color:#8A8178;margin-top:-4px;"></div>
+      <input type="hidden" id="mbDate">
+      <div class="label" style="margin-top:4px;">בחירת יום — בדיוק כמו היומן שהלקוחה רואה</div>
+      <div class="mini-cal" id="mbMiniCal" style="max-width:420px;">
+        <div class="mini-cal-header">
+          <button type="button" onclick="mbCalShiftMonth(-1)" id="mbCalPrevBtn">‹</button>
+          <span id="mbCalTitle"></span>
+          <button type="button" onclick="mbCalShiftMonth(1)">›</button>
+        </div>
+        <div class="mini-cal-weekdays">
+          <span>א</span><span>ב</span><span>ג</span><span>ד</span><span>ה</span><span>ו</span><span>ש</span>
+        </div>
+        <div class="mini-cal-grid" id="mbCalGrid"></div>
+      </div>
+      <div class="label" style="margin-top:4px;">שעות פנויות</div>
+      <input type="hidden" id="mbTime">
+      <div class="slot-grid" id="mbSlotGrid"></div>
+      <div id="mbSlotsHint" style="font-size:12px;color:#8A8178;margin-top:-4px;"></div>
       <div id="mbError" style="display:none; color:var(--wine); font-size:13px;"></div>
       <button class="cta" onclick="submitManualBooking()">הוספת תור</button>
     </div>
@@ -1821,6 +1848,13 @@
     const svc = services[svcIdx];
     const durEl = document.getElementById('mbDuration');
     if (durEl && svc) durEl.value = svc.duration || 30;
+    mbRefreshCalendarAndSlots();
+  }
+  // Duration/service/staff all affect which days actually have room for this specific
+  // booking, so anything that changes them needs to redraw both the mini-calendar
+  // (which days look open/closed) and the slot grid for the currently selected day.
+  function mbRefreshCalendarAndSlots(){
+    if (typeof renderMbCal === 'function') renderMbCal();
     renderManualBookingSlots();
   }
   function mostFrequentServiceIndexFor(clientName){
@@ -1850,23 +1884,23 @@
     const staffSelect = document.getElementById('mbStaff');
     staffSelect.innerHTML = staff.map((s, i) => `<option value="${i}" ${opts.staff === i ? 'selected' : ''}>${s.name}</option>`).join('');
     const targetDate = opts.date || new Date();
-    const yyyy = targetDate.getFullYear();
-    const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
-    const dd = String(targetDate.getDate()).padStart(2, '0');
-    document.getElementById('mbDate').value = `${yyyy}-${mm}-${dd}`;
-    const today = new Date();
-    document.getElementById('mbDate').min = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    // The date is chosen via the same real mini-calendar the client sees (see
+    // renderMbCal() below) — mbSelectedDate/mbCalViewYear/mbCalViewMonth drive it,
+    // #mbDate is just a hidden field submitManualBooking() reads.
+    mbSelectedDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    mbCalViewYear = mbSelectedDate.getFullYear();
+    mbCalViewMonth = mbSelectedDate.getMonth();
+    document.getElementById('mbDate').value = formatDateKey(mbSelectedDate);
     document.getElementById('mbTime').value = opts.time || '';
     document.getElementById('mbClientName').value = opts.clientName || '';
     document.getElementById('mbClientPhone').value = opts.clientPhone || '';
     document.getElementById('mbError').style.display = 'none';
     document.getElementById('manualBookingOverlay').classList.add('show');
-    renderManualBookingSlots();
+    mbRefreshCalendarAndSlots();
   }
   document.getElementById('mbService')?.addEventListener('change', mbServiceChanged);
-  document.getElementById('mbDuration')?.addEventListener('input', renderManualBookingSlots);
-  document.getElementById('mbStaff')?.addEventListener('change', renderManualBookingSlots);
-  document.getElementById('mbDate')?.addEventListener('change', renderManualBookingSlots);
+  document.getElementById('mbDuration')?.addEventListener('input', mbRefreshCalendarAndSlots);
+  document.getElementById('mbStaff')?.addEventListener('change', mbRefreshCalendarAndSlots);
   function closeManualBookingModal(){
     document.getElementById('manualBookingOverlay').classList.remove('show');
   }
@@ -1874,14 +1908,18 @@
     const dateVal = document.getElementById('mbDate')?.value;
     const svcIdx = parseInt(document.getElementById('mbService')?.value);
     const staffIdx = parseInt(document.getElementById('mbStaff')?.value);
-    const timeSelect = document.getElementById('mbTime');
+    const timeInput = document.getElementById('mbTime');
+    const gridEl = document.getElementById('mbSlotGrid');
     const hint = document.getElementById('mbSlotsHint');
-    if (!timeSelect || !dateVal || isNaN(svcIdx) || isNaN(staffIdx)) return;
+    if (!timeInput || !gridEl) return;
+    const previouslySelected = timeInput.value;
+    gridEl.innerHTML = '';
+    timeInput.value = '';
+    if (!dateVal || isNaN(svcIdx) || isNaN(staffIdx)){ if (hint) hint.textContent = ''; return; }
     const svc = services[svcIdx];
     const emp = staff[staffIdx];
     const parts = dateVal.split('-').map(Number);
     const dateObj = new Date(parts[0], parts[1]-1, parts[2]);
-    const dayKey = weekdayKeys[dateObj.getDay()];
     const dayInfo = emp && emp.hours ? emp.hours[dateObj.getDay()] : null;
     // The admin can override the treatment duration for this specific booking
     // (e.g. a client who needs 20 min for a service normally set to 10 min) —
@@ -1889,36 +1927,42 @@
     // service's default, whenever the admin has changed it.
     const overrideDur = parseInt(document.getElementById('mbDuration')?.value);
     const duration = !isNaN(overrideDur) && overrideDur > 0 ? overrideDur : (svc ? (svc.duration || 30) : 30);
-    timeSelect.innerHTML = '<option value="">בחרי שעה פנויה</option>';
     if (!svc || !emp || !dayInfo || !dayInfo.open || isDateClosedForStaff(staffIdx, dateObj)){
-      hint.textContent = 'אין שעות פעילות/זמינות לעובדת זו ביום שנבחר.';
+      if (hint) hint.textContent = 'אין שעות פעילות/זמינות לעובדת זו ביום שנבחר.';
       return;
     }
     let openMin = timeToMinutes(dayInfo.from);
     const closeMin = timeToMinutes(dayInfo.to);
-    const today = new Date(); today.setHours(0,0,0,0);
-    if (sameDate(dateObj, today)){
+    if (sameDate(dateObj, todayMidnight)){
       const now = new Date();
-      const earliest = Math.ceil((now.getHours()*60 + now.getMinutes() + minLeadMinutes) / fineStepMinutes) * fineStepMinutes;
+      const earliest = Math.ceil((now.getHours()*60 + now.getMinutes() + minLeadMinutes) / slotStepMinutes) * slotStepMinutes;
       openMin = Math.max(openMin, earliest);
     }
     const busy = weekAppointments.filter(a => a.date === dateVal && a.staff === staffIdx).map(a => {
       const st = timeToMinutes(a.time); return [st, st + (a.dur || 30)];
     });
-    const options = [];
-    // Step by the same quarter-hour grid the customer-facing calendar uses
-    // (slotStepMinutes), not every 5 minutes — a 5-minute grid buries the
-    // dropdown in dozens of near-duplicate options that don't match what the
-    // real calendar looks like.
+    // Rendered as real clickable slot buttons (the same "slot" look the client sees
+    // on the booking calendar), not a plain dropdown — stepping by the same
+    // quarter-hour grid the customer-facing calendar uses (slotStepMinutes).
+    let anyAvailable = false;
     for (let t = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes; t + duration <= closeMin; t += slotStepMinutes){
       const end = t + duration;
       const free = busy.every(([bs,be]) => end <= bs || t >= be);
-      if (free) options.push(minutesToTimeGlobal(t));
+      if (!free) continue;
+      anyAvailable = true;
+      const timeStr = minutesToTimeGlobal(t);
+      const d = document.createElement('div');
+      d.className = 'slot' + (timeStr === previouslySelected ? ' selected' : '');
+      d.textContent = timeStr;
+      d.onclick = () => {
+        gridEl.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+        d.classList.add('selected');
+        timeInput.value = timeStr;
+      };
+      gridEl.appendChild(d);
+      if (timeStr === previouslySelected) timeInput.value = timeStr;
     }
-    options.forEach(time => {
-      const opt = document.createElement('option'); opt.value = time; opt.textContent = time; timeSelect.appendChild(opt);
-    });
-    hint.textContent = options.length ? 'מוצגות כאן רק שעות פנויות, בדיוק כמו בקביעת תור ללקוחה.' : 'אין שעות פנויות ביום הזה. אפשר לבחור יום אחר.';
+    if (hint) hint.textContent = anyAvailable ? 'מוצגות כאן רק שעות פנויות, בדיוק כמו בקביעת תור ללקוחה.' : 'אין שעות פנויות ביום הזה. אפשר לבחור יום אחר בלוח השנה.';
   }
   function minutesToTimeGlobal(m){
     return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
@@ -1992,7 +2036,7 @@
         sendEmail(
           clientEmail,
           'התור שלך אושר',
-          getAppointmentEmailText(w.name, appt.service, dateLabel, appt.time, staff[appt.staff] ? staff[appt.staff].name : '', 'התור נקבע עבורך על ידי העסק מרשימת ההמתנה.')
+          getAppointmentEmailText(w.name, appt.service, dateLabel, appt.time, staff[appt.staff] ? staff[appt.staff].name : '', 'התור נקבע עבורך על ידי העסק מרשימת ההמתנה.', w.phone)
         );
       }
     } catch (e) {
@@ -2137,7 +2181,7 @@
         sendEmail(
           bookedClient.email,
           'התור שלך אושר',
-          getAppointmentEmailText(name, svc.name, dateLabel, timeVal, staff[staffIdx] ? staff[staffIdx].name : '', 'התור נקבע עבורך על ידי העסק.')
+          getAppointmentEmailText(name, svc.name, dateLabel, timeVal, staff[staffIdx] ? staff[staffIdx].name : '', 'התור נקבע עבורך על ידי העסק.', phone)
         );
       }
     } catch (e) {
@@ -2798,6 +2842,12 @@
   let selectedCategoryForBooking = null;
   let newStaffPhoto = null;
   let selectedStaffIndex = 0;
+  // Which staff rows are currently open for editing (by index). Staff used to be
+  // permanently editable inline, which read as "always in edit mode" even when
+  // nothing was being changed. Now a row shows plain text until the pencil button
+  // opens it, and closes back to plain text after שמירה — so it's clear when you're
+  // actually editing something versus just looking at the list.
+  let editingStaffIndices = new Set();
   function renderStaff(){
     const listEl = document.getElementById('staffList');
     listEl.innerHTML = '';
@@ -2813,54 +2863,81 @@
       const row = document.createElement('div');
       row.className = 'client-card';
       const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
-      const catChecksHtml = categories.length ? `
-        <div class="staff-categories" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
-          ${categories.map(cat => `
-            <label style="display:flex; align-items:center; gap:4px; font-size:12px; background:rgba(245,238,228,0.08); padding:4px 8px; border-radius:8px; cursor:pointer;">
-              <input type="checkbox" class="staff-cat-check" data-cat="${cat}" ${s.categories.includes(cat) ? 'checked' : ''} style="margin:0;">
-              ${cat}
-            </label>`).join('')}
-        </div>
-        <div style="font-size:11px; color:var(--ivory-dim); margin-top:4px;">אילו תחומי טיפול העובדת הזו מבצעת — קובע אילו טיפולים לקוחות יוכלו לקבוע אצלה.</div>` : '';
-      row.innerHTML = `
-        <div class="client-avatar">${avatarHtml}</div>
-        <div class="client-info">
-          <div class="name-row">
-            <div style="flex:1;">
-              <input class="staff-name-input field" value="${s.name}" placeholder="שם העובדת" style="font-family:'Suez One',serif; font-size:16px; margin-bottom:4px;">
-              <input class="staff-role-input field" value="${s.role}" placeholder="תפקיד">
+      const isEditing = editingStaffIndices.has(i);
+      if (!isEditing){
+        const catsViewHtml = categories.length ? `
+          <div class="staff-categories" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
+            ${s.categories.length ? s.categories.map(cat => `<span class="view-tag">${cat}</span>`).join('') : '<span style="font-size:12px; color:var(--ivory-dim);">לא הוגדרו תחומי טיפול</span>'}
+          </div>` : '';
+        row.innerHTML = `
+          <div class="client-avatar">${avatarHtml}</div>
+          <div class="client-info">
+            <div class="name-row">
+              <div style="flex:1;">
+                <h4>${s.name}</h4>
+                <div class="phone">${s.role || ''}</div>
+              </div>
+              <button class="svc-edit" aria-label="עריכת עובדת" title="עריכה">✎</button>
+              <button class="svc-del" aria-label="מחיקת עובדת">✕</button>
             </div>
-            <button class="svc-del" aria-label="מחיקת עובדת">✕</button>
-          </div>
-          ${catChecksHtml}
-        </div>`;
-      row.querySelector('.staff-name-input').oninput = (e) => {
-        const val = e.target.value.trim();
-        if (val) s.name = val;
-      };
-      row.querySelector('.staff-name-input').onblur = (e) => {
-        if (!e.target.value.trim()) e.target.value = s.name;
-        if (typeof saveState === 'function') saveState();
-        // The avatar letter and every staff picker/filter chip show the name —
-        // refresh them now that the edit is done, without disturbing the input
-        // the admin might still be typing in elsewhere on the card.
-        if (typeof renderStaffPicker === 'function') renderStaffPicker();
-        if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
-        if (typeof renderWeekCal === 'function') renderWeekCal();
-      };
-      row.querySelector('.staff-role-input').oninput = (e) => { s.role = e.target.value; };
-      row.querySelector('.staff-role-input').onblur = () => { if (typeof saveState === 'function') saveState(); };
-      row.querySelectorAll('.staff-cat-check').forEach(cb => {
-        cb.onchange = () => {
-          const cat = cb.dataset.cat;
-          if (cb.checked){
-            if (!s.categories.includes(cat)) s.categories.push(cat);
-          } else {
-            s.categories = s.categories.filter(c => c !== cat);
-          }
-          if (typeof saveState === 'function') saveState();
+            ${catsViewHtml}
+          </div>`;
+        row.querySelector('.svc-edit').onclick = () => {
+          editingStaffIndices.add(i);
+          renderStaff();
         };
-      });
+      } else {
+        const catChecksHtml = categories.length ? `
+          <div class="staff-categories" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
+            ${categories.map(cat => `
+              <label style="display:flex; align-items:center; gap:4px; font-size:12px; background:rgba(245,238,228,0.08); padding:4px 8px; border-radius:8px; cursor:pointer;">
+                <input type="checkbox" class="staff-cat-check" data-cat="${cat}" ${s.categories.includes(cat) ? 'checked' : ''} style="margin:0;">
+                ${cat}
+              </label>`).join('')}
+          </div>
+          <div style="font-size:11px; color:var(--ivory-dim); margin-top:4px;">אילו תחומי טיפול העובדת הזו מבצעת — קובע אילו טיפולים לקוחות יוכלו לקבוע אצלה.</div>` : '';
+        row.innerHTML = `
+          <div class="client-avatar">${avatarHtml}</div>
+          <div class="client-info">
+            <div class="name-row">
+              <div style="flex:1;">
+                <input class="staff-name-input field" value="${s.name}" placeholder="שם העובדת" style="font-family:'Suez One',serif; font-size:16px; margin-bottom:4px;">
+                <input class="staff-role-input field" value="${s.role}" placeholder="תפקיד">
+              </div>
+              <button class="svc-del" aria-label="מחיקת עובדת">✕</button>
+            </div>
+            ${catChecksHtml}
+            <div style="margin-top:10px;"><button class="cta staff-save-btn" style="width:auto; padding:8px 22px; font-size:13px;">💾 שמירה</button></div>
+          </div>`;
+        row.querySelectorAll('.staff-cat-check').forEach(cb => {
+          cb.onchange = () => {
+            const cat = cb.dataset.cat;
+            if (cb.checked){
+              if (!s.categories.includes(cat)) s.categories.push(cat);
+            } else {
+              s.categories = s.categories.filter(c => c !== cat);
+            }
+          };
+        });
+        row.querySelector('.staff-save-btn').onclick = () => {
+          const nameVal = row.querySelector('.staff-name-input').value.trim();
+          const roleVal = row.querySelector('.staff-role-input').value.trim();
+          if (!nameVal){
+            alert('צריך למלא שם לעובדת.');
+            return;
+          }
+          s.name = nameVal;
+          s.role = roleVal;
+          editingStaffIndices.delete(i);
+          if (typeof saveState === 'function') saveState();
+          renderStaff();
+          // The avatar letter and every staff picker/filter chip show the name —
+          // refresh them now that the edit is done.
+          if (typeof renderStaffPicker === 'function') renderStaffPicker();
+          if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
+          if (typeof renderWeekCal === 'function') renderWeekCal();
+        };
+      }
       row.querySelector('.svc-del').onclick = () => {
         const apptCount = weekAppointments.filter(a => a.staff === i).length;
         if (apptCount){
@@ -2869,6 +2946,9 @@
         }
         if (!confirm(`למחוק את ${s.name}?`)) return;
         staff.splice(i, 1);
+        // Indices shift after a delete, so any in-progress edit state (which row's
+        // pencil is open) can no longer be trusted — safest to just close them all.
+        editingStaffIndices.clear();
         if (selectedStaffIndex >= staff.length) selectedStaffIndex = 0;
         if (typeof selectedStaffFilter === 'number' && selectedStaffFilter >= staff.length) selectedStaffFilter = 'all';
         if (typeof hoursEditorStaffIndex !== 'undefined' && hoursEditorStaffIndex >= staff.length) hoursEditorStaffIndex = 0;
@@ -3255,6 +3335,9 @@
     sel.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
     if (categories.includes(current)) sel.value = current;
   }
+  // Same view/edit toggle idea as staff — a category name only becomes an editable
+  // field once its pencil button is clicked, and closes back to plain text after שמירה.
+  let editingCategoryIndices = new Set();
   function renderCategories(){
     const listEl = document.getElementById('categoryList');
     if (!listEl) return;
@@ -3263,39 +3346,58 @@
       const count = services.filter(s => s.category === cat).length;
       const row = document.createElement('div');
       row.className = 'client-card';
-      row.innerHTML = `
-        <div class="client-info">
-          <div class="name-row">
-            <div style="flex:1;"><input class="cat-name-input field" value="${cat}" style="font-family:'Suez One',serif; font-size:16px; margin-bottom:4px;"><div class="phone">${count} שירותים בקטגוריה זו</div></div>
-            <button class="svc-del" aria-label="מחיקת קטגוריה">✕</button>
-          </div>
-        </div>`;
-      row.querySelector('.cat-name-input').onchange = (e) => {
-        const newName = e.target.value.trim();
-        if (!newName){ e.target.value = cat; return; }
-        if (newName === cat) return;
-        if (categories.includes(newName)){
-          alert(`כבר קיימת קטגוריה בשם "${newName}".`);
-          e.target.value = cat;
-          return;
-        }
-        // Renaming a category has to cascade everywhere it's referenced by
-        // name — the services that belong to it, and every staff member's
-        // list of categories she's set up to perform — otherwise the rename
-        // would silently disconnect them all.
-        categories[i] = newName;
-        services.forEach(s => { if (s.category === cat) s.category = newName; });
-        staff.forEach(s => {
-          if (!Array.isArray(s.categories)) return;
-          const idx = s.categories.indexOf(cat);
-          if (idx !== -1) s.categories[idx] = newName;
-        });
-        renderCategories();
-        renderCategoryOptions();
-        if (typeof renderServices === 'function') renderServices();
-        if (typeof renderStaff === 'function') renderStaff();
-        if (typeof saveState === 'function') saveState();
-      };
+      const isEditing = editingCategoryIndices.has(i);
+      if (!isEditing){
+        row.innerHTML = `
+          <div class="client-info">
+            <div class="name-row">
+              <div style="flex:1;"><h4>${cat}</h4><div class="phone">${count} שירותים בקטגוריה זו</div></div>
+              <button class="svc-edit" aria-label="עריכת קטגוריה" title="עריכה">✎</button>
+              <button class="svc-del" aria-label="מחיקת קטגוריה">✕</button>
+            </div>
+          </div>`;
+        row.querySelector('.svc-edit').onclick = () => {
+          editingCategoryIndices.add(i);
+          renderCategories();
+        };
+      } else {
+        row.innerHTML = `
+          <div class="client-info">
+            <div class="name-row">
+              <div style="flex:1;"><input class="cat-name-input field" value="${cat}" style="font-family:'Suez One',serif; font-size:16px; margin-bottom:4px;"><div class="phone">${count} שירותים בקטגוריה זו</div></div>
+              <button class="svc-del" aria-label="מחיקת קטגוריה">✕</button>
+            </div>
+            <div style="margin-top:10px;"><button class="cta cat-save-btn" style="width:auto; padding:8px 22px; font-size:13px;">💾 שמירה</button></div>
+          </div>`;
+        row.querySelector('.cat-save-btn').onclick = () => {
+          const input = row.querySelector('.cat-name-input');
+          const newName = input.value.trim();
+          if (!newName){ alert('צריך למלא שם לקטגוריה.'); return; }
+          if (newName !== cat && categories.includes(newName)){
+            alert(`כבר קיימת קטגוריה בשם "${newName}".`);
+            return;
+          }
+          if (newName !== cat){
+            // Renaming a category has to cascade everywhere it's referenced by
+            // name — the services that belong to it, and every staff member's
+            // list of categories she's set up to perform — otherwise the rename
+            // would silently disconnect them all.
+            categories[i] = newName;
+            services.forEach(s => { if (s.category === cat) s.category = newName; });
+            staff.forEach(s => {
+              if (!Array.isArray(s.categories)) return;
+              const idx = s.categories.indexOf(cat);
+              if (idx !== -1) s.categories[idx] = newName;
+            });
+          }
+          editingCategoryIndices.delete(i);
+          renderCategories();
+          renderCategoryOptions();
+          if (typeof renderServices === 'function') renderServices();
+          if (typeof renderStaff === 'function') renderStaff();
+          if (typeof saveState === 'function') saveState();
+        };
+      }
       row.querySelector('.svc-del').onclick = () => {
         if (count){
           alert(`אי אפשר למחוק את הקטגוריה "${cat}" כי יש בה ${count} שירותים. קודם צריך למחוק (או להעביר לקטגוריה אחרת) את כל השירותים שבה, ואז אפשר יהיה למחוק את הקטגוריה עצמה.`);
@@ -3303,6 +3405,7 @@
         }
         if (!confirm(`למחוק את הקטגוריה "${cat}"?`)) return;
         categories.splice(i, 1);
+        editingCategoryIndices.clear();
         renderCategories();
         renderCategoryOptions();
         if (typeof renderServices === 'function') renderServices();
@@ -3522,7 +3625,9 @@
   let calViewMonth = todayMidnight.getMonth();
   const slotStepMinutes = 15;
   const fineStepMinutes = 5;
-  const minLeadMinutes = 15;
+  // Minimum notice a client must give before an appointment — e.g. at 30, if it's
+  // 11:00 now the earliest bookable slot is 11:30, not 11:15.
+  const minLeadMinutes = 30;
   const slotsEl = document.getElementById('slots');
   let selectedSlot = null;
   function formatDateKey(d){
@@ -3626,6 +3731,96 @@
     if (calViewMonth < 0){ calViewMonth = 11; calViewYear--; }
     if (calViewMonth > 11){ calViewMonth = 0; calViewYear++; }
     renderMiniCal();
+  }
+  /* ===== Manual booking (admin) mini-calendar =====
+     A separate copy of state (mbCalViewYear/mbCalViewMonth/mbSelectedDate) so opening
+     the "add manual appointment" modal never touches the customer-facing booking
+     calendar's own state (bookingSelectedDate/calViewYear/calViewMonth) — important
+     since a customer could be mid-booking on their own device while the admin opens
+     this modal on hers. The open/closed-day logic below intentionally mirrors
+     isDateClosedForStaff() + the real slot logic exactly, so the days and hours shown
+     here always match what the client's own calendar would show for that staff member. */
+  let mbCalViewYear = todayMidnight.getFullYear();
+  let mbCalViewMonth = todayMidnight.getMonth();
+  let mbSelectedDate = new Date(todayMidnight);
+  function mbCalShiftMonth(delta){
+    mbCalViewMonth += delta;
+    if (mbCalViewMonth < 0){ mbCalViewMonth = 11; mbCalViewYear--; }
+    if (mbCalViewMonth > 11){ mbCalViewMonth = 0; mbCalViewYear++; }
+    renderMbCal();
+  }
+  function mbHasAnySlotForStaff(cellDate, staffIdx, duration){
+    const emp = staff[staffIdx];
+    const dow = cellDate.getDay();
+    const dayInfo = emp && emp.hours ? emp.hours[dow] : null;
+    if (!emp || !dayInfo || !dayInfo.open) return false;
+    if (isDateClosedForStaff(staffIdx, cellDate)) return false;
+    let openMin = timeToMinutes(dayInfo.from);
+    const closeMin = timeToMinutes(dayInfo.to);
+    if (sameDate(cellDate, todayMidnight)){
+      const now = new Date();
+      const earliest = Math.ceil((now.getHours()*60 + now.getMinutes() + minLeadMinutes) / slotStepMinutes) * slotStepMinutes;
+      openMin = Math.max(openMin, earliest);
+    }
+    if (openMin + duration > closeMin) return false;
+    const busy = weekAppointments
+      .filter(a => a.date === formatDateKey(cellDate) && a.staff === staffIdx)
+      .map(a => { const s = timeToMinutes(a.time); return [s, s + (a.dur || 30)]; });
+    for (let t = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes; t + duration <= closeMin; t += slotStepMinutes){
+      const end = t + duration;
+      if (busy.every(([bStart, bEnd]) => end <= bStart || t >= bEnd)) return true;
+    }
+    return false;
+  }
+  function renderMbCal(){
+    const gridEl = document.getElementById('mbCalGrid');
+    const titleEl = document.getElementById('mbCalTitle');
+    const prevBtn = document.getElementById('mbCalPrevBtn');
+    if (!gridEl || !titleEl) return;
+    gridEl.innerHTML = '';
+    titleEl.textContent = hebrewMonths[mbCalViewMonth] + ' ' + mbCalViewYear;
+    const isCurrentMonth = (mbCalViewYear === todayMidnight.getFullYear() && mbCalViewMonth === todayMidnight.getMonth());
+    if (prevBtn) prevBtn.disabled = isCurrentMonth;
+    const staffIdx = parseInt(document.getElementById('mbStaff')?.value);
+    const svcIdx = parseInt(document.getElementById('mbService')?.value);
+    const svc = services[svcIdx];
+    const overrideDur = parseInt(document.getElementById('mbDuration')?.value);
+    const duration = !isNaN(overrideDur) && overrideDur > 0 ? overrideDur : (svc ? (svc.duration || 30) : 30);
+    const firstOfMonth = new Date(mbCalViewYear, mbCalViewMonth, 1);
+    const daysInMonth = new Date(mbCalViewYear, mbCalViewMonth + 1, 0).getDate();
+    const leadingBlanks = firstOfMonth.getDay();
+    for (let i = 0; i < leadingBlanks; i++){
+      const blank = document.createElement('div');
+      blank.className = 'cal-day-cell empty';
+      gridEl.appendChild(blank);
+    }
+    const emp = staff[staffIdx];
+    for (let d = 1; d <= daysInMonth; d++){
+      const cellDate = new Date(mbCalViewYear, mbCalViewMonth, d);
+      const dow = cellDate.getDay();
+      const isPast = cellDate < todayMidnight;
+      const isClosedDay = !emp || !(emp.hours && emp.hours[dow] && emp.hours[dow].open) || isDateClosedForStaff(staffIdx, cellDate);
+      const noSlots = !isPast && !isClosedDay && !mbHasAnySlotForStaff(cellDate, staffIdx, duration);
+      const cell = document.createElement('div');
+      cell.className = 'cal-day-cell';
+      if (sameDate(cellDate, todayMidnight)) cell.classList.add('today');
+      if (mbSelectedDate && sameDate(cellDate, mbSelectedDate)) cell.classList.add('selected');
+      if (isPast) cell.classList.add('past');
+      else if (isClosedDay) cell.classList.add('closed-day');
+      else if (noSlots) cell.classList.add('closed-day');
+      cell.textContent = d;
+      if (!isPast && !isClosedDay && !noSlots){
+        cell.onclick = () => {
+          mbSelectedDate = cellDate;
+          document.getElementById('mbDate').value = formatDateKey(cellDate);
+          renderMbCal();
+          renderManualBookingSlots();
+        };
+      } else if (noSlots){
+        cell.title = 'אין שעות פנויות ביום זה לעובדת/שירות שנבחרו';
+      }
+      gridEl.appendChild(cell);
+    }
   }
   // Which staff index a given available slot time was actually resolved to —
   // only meaningful when selectedStaffIndex === 'any'. confirmBooking() reads
@@ -3955,8 +4150,17 @@
   function getSiteUrl(){
     return window.location.href.split('#')[0];
   }
-  function getAppointmentEmailText(name, service, dateLabel, time, staffName, actionText){
-    return `היי ${name}, נקבע לך תור ל${service} בתאריך ${dateLabel} בשעה ${time}${staffName ? ' אצל ' + staffName : ''}. ${actionText || 'לביטול או שינוי מועד, ניתן לפנות אלינו.'}\n\nלניהול התור, לביטול או לקביעת תור נוסף:\n${getSiteUrl()}`;
+  // Builds a link straight into "find my appointment" with the phone number already
+  // filled in — see handleAppointmentLookupFromUrl() — so a link in an email takes the
+  // customer right to her appointment(s) instead of a bare homepage she'd then have to
+  // search from manually.
+  function buildMyAppointmentLink(phone){
+    const digits = (phone || '').replace(/[^0-9]/g, '');
+    if (!digits) return getSiteUrl();
+    return getSiteUrl() + '?lookupPhone=' + encodeURIComponent(digits);
+  }
+  function getAppointmentEmailText(name, service, dateLabel, time, staffName, actionText, phone){
+    return `היי ${name}, נקבע לך תור ל${service} בתאריך ${dateLabel} בשעה ${time}${staffName ? ' אצל ' + staffName : ''}. ${actionText || 'לביטול או שינוי מועד, ניתן לפנות אלינו.'}\n\nלניהול התור, לביטול או לקביעת תור נוסף:\n${buildMyAppointmentLink(phone)}`;
   }
   async function confirmBooking(){
     if (!selectedSlot){
@@ -4163,7 +4367,7 @@
         sendEmail(
           customerEmail,
           'התור שלך אושר',
-          getAppointmentEmailText(clientNameVal, svc ? svc.name : 'שירות', dateLabel, selectedSlot, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:')
+          getAppointmentEmailText(clientNameVal, svc ? svc.name : 'שירות', dateLabel, selectedSlot, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:', phoneVal)
         );
       }
     } catch (e) {
@@ -4196,7 +4400,14 @@
     });
   }
   function rescheduleAppointment(){
+    // A reschedule frees up the OLD slot exactly like a cancellation would — anyone
+    // waiting for that slot should be notified the same way (see cancelAppointment).
+    const apptBeingRescheduled = currentBookedAppointment;
+    const waitlistMatches = apptBeingRescheduled ? getWaitlistMatchesForAppointment(apptBeingRescheduled) : [];
     removeCurrentBookedAppointment();
+    if (waitlistMatches.length && typeof renderWaitlistMatchAlert === 'function'){
+      renderWaitlistMatchAlert(waitlistMatches, apptBeingRescheduled);
+    }
     document.getElementById('myAppointment').style.display = 'none';
     document.getElementById('bookingFormWrap').style.display = 'block';
     goToStep(1);
@@ -4222,6 +4433,9 @@
   }
   function cancelAppointment(){
     const apptBeingCancelled = currentBookedAppointment;
+    // Look up waitlist matches BEFORE removing the appointment (removal doesn't
+    // change the appointment object itself, but do this first for clarity/safety).
+    const waitlistMatches = apptBeingCancelled ? getWaitlistMatchesForAppointment(apptBeingCancelled) : [];
     removeCurrentBookedAppointment();
     if (apptBeingCancelled){
       const client = clients.find(c => c.name === apptBeingCancelled.client);
@@ -4231,6 +4445,12 @@
           'התור שלך בוטל',
           `היי ${apptBeingCancelled.client}, התור שלך ל${apptBeingCancelled.service} ב-${apptBeingCancelled.time} בוטל בהצלחה. נשמח לראותך שוב בקרוב!\n\nלקביעת תור חדש:\n${getSiteUrl()}`
         );
+      }
+      // A cancellation frees up a slot no matter who cancels it — a customer
+      // cancelling her own appointment should notify the waitlist exactly the same
+      // way an admin-cancelled appointment already does (see cancelAdminAppointment).
+      if (waitlistMatches.length && typeof renderWaitlistMatchAlert === 'function'){
+        renderWaitlistMatchAlert(waitlistMatches, apptBeingCancelled);
       }
     }
     const apptEl = document.getElementById('myAppointment');
@@ -4335,6 +4555,7 @@
   function cancelListedAppointment(idx){
     const appt = lookedUpAppointmentsList[idx];
     if (!appt) return;
+    const waitlistMatches = getWaitlistMatchesForAppointment(appt);
     const pos = weekAppointments.indexOf(appt);
     if (pos !== -1) weekAppointments.splice(pos, 1);
     if (typeof renderWeekCal === 'function') renderWeekCal();
@@ -4348,6 +4569,11 @@
           'התור שלך בוטל',
           `היי ${appt.client}, התור שלך ל${appt.service} ב-${appt.time} בוטל בהצלחה. נשמח לראותך שוב בקרוב!\n\nלקביעת תור חדש:\n${getSiteUrl()}`
         );
+      }
+      // Same as cancelAdminAppointment/cancelAppointment — cancelling here frees up
+      // a real slot, so anyone waiting for it should be notified automatically.
+      if (waitlistMatches.length && typeof renderWaitlistMatchAlert === 'function'){
+        renderWaitlistMatchAlert(waitlistMatches, appt);
       }
     } catch (e) {
       console.error('cancelListedAppointment: notification failed (cancellation itself succeeded):', e);
@@ -4773,6 +4999,27 @@
     const banner = document.getElementById('cloudErrorBanner');
     if (banner) banner.remove();
   }
+  // Lets a reminder/confirmation email link straight into "find my appointment"
+  // with the phone number already filled in and searched — a customer clicking
+  // the link in her email lands directly on her appointment(s), ready to cancel
+  // or reschedule, instead of having to type her phone number in again by hand.
+  // Only runs once, right after the very first successful cloud load (need real
+  // client/appointment data loaded before searching for anything).
+  let autoLookupFromUrlDone = false;
+  function handleAppointmentLookupFromUrl(){
+    if (autoLookupFromUrlDone) return;
+    autoLookupFromUrlDone = true;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const phone = params.get('lookupPhone');
+      if (!phone) return;
+      const lookupInput = document.getElementById('lookupPhone');
+      if (lookupInput) lookupInput.value = phone;
+      if (typeof searchMyAppointment === 'function') searchMyAppointment();
+    } catch (e) {
+      console.error('Auto appointment lookup from link failed:', e);
+    }
+  }
   function loadCloudData(){
     CLOUD_DOC.get().then(doc => {
       hideCloudErrorBanner();
@@ -4781,6 +5028,7 @@
         console.log('No saved data yet in the cloud — using demo starter data.');
         lastLoadedSnapshot = {};
         cloudLoadComplete = true;
+        handleAppointmentLookupFromUrl();
         return;
       }
       applyCloudData(doc.data());
@@ -4788,6 +5036,7 @@
       lastLoadedSnapshot = cloneJSON(doc.data());
       cloudLoadComplete = true;
       console.log('Loaded saved data from the cloud.');
+      handleAppointmentLookupFromUrl();
     }).catch(err => {
       // Deliberately NOT setting cloudLoadComplete = true here. Doing so on a
       // failed load is exactly what used to cause full data loss: the app would
