@@ -390,6 +390,7 @@
     color:var(--ink);
   }
   .field:focus{outline:none; border-color:var(--wine);}
+  .field.field-locked{background:#F1ECE3; color:#8A8178; cursor:not-allowed;}
   /* Native date pickers render their day/month/year segments left-to-right
      no matter what — but sitting inside this page's dir="rtl" html element
      confuses that rendering in some browsers (the segment you click/type
@@ -613,6 +614,7 @@
   }
   .my-appt-actions .danger{color:var(--wine); border-color:#E8C3CB;}
   .stat-row{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:24px;}
+  .stat-row.with-cancellations{grid-template-columns:repeat(4,1fr);}
   .stat{
     background:var(--ink-2);
     border:1px solid rgba(245,238,228,0.1);
@@ -757,9 +759,33 @@
     font-family:'JetBrains Mono';
     font-size:13px;
   }
-  .hours-row.closed .hours-range{opacity:0.3; pointer-events:none;}
-  .hours-row.closed .hours-range::before{content:'סגור'; color:var(--ivory-dim); font-family:'Heebo';}
-  .hours-row.closed .hours-range select{display:none;}
+  .hours-ranges-wrap{display:flex; flex-direction:column; gap:8px;}
+  .hours-add-shift{
+    align-self:flex-start;
+    background:transparent;
+    border:1px dashed rgba(245,238,228,0.3);
+    color:var(--ivory-dim);
+    border-radius:8px;
+    padding:4px 10px;
+    font-family:'Heebo';
+    font-size:12px;
+    cursor:pointer;
+  }
+  .hours-add-shift:hover{border-color:var(--sage); color:var(--ivory);}
+  .hours-range-del{
+    background:transparent;
+    border:none;
+    color:var(--ivory-dim);
+    cursor:pointer;
+    font-size:14px;
+    padding:0 4px;
+    line-height:1;
+  }
+  .hours-range-del:hover{color:#d98a8a;}
+  .hours-row.closed .hours-ranges-wrap{opacity:0.3; pointer-events:none;}
+  .hours-row.closed .hours-ranges-wrap::before{content:'סגור'; color:var(--ivory-dim); font-family:'Heebo';}
+  .hours-row.closed .hours-ranges-wrap select,
+  .hours-row.closed .hours-ranges-wrap button{display:none;}
   .inv-email-row{
     display:flex; align-items:center; gap:10px; flex-wrap:wrap;
     margin-bottom:16px;
@@ -950,6 +976,32 @@
   .popular-row .pop-bar-track{flex:1; height:8px; background:rgba(245,238,228,0.1); border-radius:99px; overflow:hidden;}
   .popular-row .pop-bar-fill{height:100%; background:var(--sage); border-radius:99px;}
   .popular-row .pop-count{flex:0 0 34px; text-align:left; font-family:'JetBrains Mono'; color:var(--ivory-dim); font-size:13px;}
+  .cancel-list{border:1px solid rgba(245,238,228,0.12); border-radius:16px; overflow:hidden;}
+  .cancel-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 20px;
+    border-bottom:1px solid rgba(245,238,228,0.08);
+    font-size:13.5px;
+    flex-wrap:wrap;
+  }
+  .cancel-row:last-child{border-bottom:none;}
+  .cancel-row .c-date{font-family:'JetBrains Mono'; color:var(--gold-soft); flex:0 0 auto;}
+  .cancel-row .c-client{font-weight:500; flex:1 1 120px;}
+  .cancel-row .c-detail{color:var(--ivory-dim); font-size:12.5px; flex:1 1 160px;}
+  .report-actions-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin:20px 0 24px;
+    padding-top:16px;
+    border-top:1px solid rgba(245,238,228,0.1);
+  }
+  .report-actions-row .cta{width:auto; margin-top:0; padding:10px 18px; font-size:13px;}
+  .report-actions-row .search-input{flex:1 1 200px; width:auto; margin:0;}
+  .report-actions-row .cta.ghost{background:transparent; border:1px solid rgba(245,238,228,0.25); color:var(--ivory);}
   .client-list{display:flex; flex-direction:column; gap:12px; margin-bottom:20px;}
   .client-card{
     display:flex;
@@ -985,13 +1037,17 @@
     font-family:'JetBrains Mono'; font-size:11.5px;
     background:none; border:1px solid transparent; border-radius:6px;
     color:var(--ivory-dim); padding:3px 6px;
-    flex:1 1 90px; min-width:90px;
+    flex:1 1 auto; min-width:0; width:100%;
   }
-  .client-mini-input[data-field="email"]{flex:1.8 1 150px;}
-  .client-mini-input[data-field="birthday"]{flex:0 0 128px;}
-  .bday-field-wrap{display:flex; align-items:center; gap:4px; flex:0 0 auto;}
-  .bday-label{font-size:11px; color:var(--ivory-dim); white-space:nowrap;}
   .client-mini-input:hover, .client-mini-input:focus{border-color:rgba(245,238,228,0.2); background:var(--ink); color:var(--ivory);}
+  /* A tiny label above each client-detail field (name/ת.ז./טלפון/אימייל) so the
+     fields never get confused with one another — they're plain text inputs with
+     no other visual cue once a value is typed in and the placeholder disappears. */
+  .mini-field{display:flex; flex-direction:column; gap:1px; flex:1 1 90px; min-width:90px;}
+  .mini-field[data-field-wrap="email"]{flex:1.8 1 150px;}
+  .mini-field[data-field-wrap="birthday"]{flex:0 0 128px;}
+  .mini-field-label{font-size:9.5px; color:var(--gold-soft); letter-spacing:0.02em; padding:0 6px;}
+  .name-field-wrap{display:flex; flex-direction:column; gap:1px; flex:1;}
   .client-info .visits{font-size:12px; color:var(--gold-soft); margin-top:2px;}
   .client-info .role-tag{font-size:12px; color:var(--ivory-dim); margin-top:2px;}
   .client-note{
@@ -1219,6 +1275,7 @@
   footer .brand{color:var(--gold-soft); font-family:'Suez One'; font-style:normal;}
   @media (max-width:640px){
     .stat-row{grid-template-columns:1fr;}
+    .stat-row.with-cancellations{grid-template-columns:repeat(2,1fr);}
     .row{grid-template-columns:60px 1fr 1fr; font-size:13px;}
     .row .badge-col{display:none;}
   }
@@ -1254,6 +1311,11 @@
   .myday-row:last-child{border-bottom:none;}
   .myday-row .t{font-family:'JetBrains Mono'; font-weight:500; color:var(--wine);}
   .myday-row .who{color:#8A8178; font-size:12px;}
+  .myday-filter{display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:13px; color:#8A8178;}
+  .myday-filter select{
+    background:#F3ECE0; border:none; border-radius:8px;
+    padding:7px 10px; font-family:'Heebo'; font-size:13px; color:var(--ink); cursor:pointer;
+  }
   .arrival-name{font-family:'Suez One'; font-weight:400; font-size:20px; margin-bottom:4px;}
   .arrival-meta{color:#8A8178; font-size:13px; margin-bottom:14px;}
   .arrival-section-label{font-size:12px; color:#8A8178; text-transform:uppercase; letter-spacing:0.03em; margin:14px 0 6px;}
@@ -1521,16 +1583,16 @@
       <button class="active" onclick="showSub('overview', this)"><i class="ti ti-layout-dashboard"></i> סקירה</button>
       <button onclick="showSub('clients', this)"><i class="ti ti-users"></i> לקוחות</button>
       <button onclick="showSub('notifications', this)"><i class="ti ti-bell"></i> התראות</button>
-      <button onclick="showSub('staff', this)"><i class="ti ti-users-group"></i> צוות</button>
-      <button onclick="showSub('servicesgroup', this)"><i class="ti ti-scissors"></i> שירותים</button>
+      <button onclick="guardedShowSub('staff', this)"><i class="ti ti-users-group"></i> צוות</button>
+      <button onclick="guardedShowSub('servicesgroup', this)"><i class="ti ti-scissors"></i> שירותים</button>
       <button onclick="showSub('inventory', this)"><i class="ti ti-package"></i> מלאי</button>
       <button onclick="showSub('whatsnewadmin', this)"><i class="ti ti-sparkles"></i> מה חדש</button>
-      <button onclick="showSub('settings', this)"><i class="ti ti-settings"></i> הגדרות</button>
+      <button id="settingsTabBtn" onclick="guardedShowSub('settings', this)"><i class="ti ti-settings"></i> הגדרות</button>
     </div>
     <div id="sub-overview" class="subpanel active">
       <div class="inner-switcher">
         <button class="active" onclick="showInnerTab('sub-overview', 'inner-overview-calendar', this)">יומן</button>
-        <button onclick="showInnerTab('sub-overview', 'inner-overview-reports', this)">דוחות</button>
+        <button onclick="guardedShowInnerTab('sub-overview', 'inner-overview-reports', this)">דוחות</button>
       </div>
       <div id="inner-overview-calendar" class="inner-subpanel active">
       <div class="stat-row">
@@ -1592,15 +1654,25 @@
             <button class="cta" style="width:auto; margin-top:0;" onclick="renderCustomRangeReport()">הצגת דוח</button>
           </div>
         </div>
-        <div class="stat-row">
+        <div class="stat-row with-cancellations">
           <div class="stat"><div class="num mono" id="repRevenue">3,240 ₪</div><div class="lbl">הכנסה</div></div>
           <div class="stat"><div class="num mono" id="repCount">27</div><div class="lbl">תורים</div></div>
           <div class="stat"><div class="num mono" id="repAvg">120 ₪</div><div class="lbl">ממוצע לתור</div></div>
+          <div class="stat"><div class="num mono" id="repCancellations">0</div><div class="lbl">ביטולים</div></div>
         </div>
         <div class="label" style="margin:8px 0 10px;">הכנסה לפי יום</div>
         <div class="bar-chart" id="revChart"></div>
         <div class="label" style="margin:24px 0 10px;">השירותים הכי מבוקשים</div>
         <div class="popular-list" id="popularList"></div>
+        <div class="label" style="margin:24px 0 10px;">ביטולים בטווח</div>
+        <div class="cancel-list" id="cancelList"></div>
+        <div class="report-actions-row">
+          <button class="cta ghost" onclick="exportReportToCsv()">⬇ הורדה לאקסל (CSV)</button>
+          <button class="cta ghost" onclick="printReport()">🖨 הדפסה</button>
+          <input type="email" id="reportEmailTo" class="search-input" placeholder="מייל לשליחת הדוח...">
+          <button class="cta ghost" onclick="emailReport()">✉ שלח למייל</button>
+        </div>
+        <div id="reportActionStatus" style="font-size:12px; color:var(--ivory-dim); margin-top:-6px;"></div>
       </div>
     </div>
     <div id="sub-clients" class="subpanel">
@@ -1720,6 +1792,16 @@
         <div id="cpSuccess" style="display:none; color:#3E5C36; font-size:13px;"></div>
         <button class="template-btn" style="width:fit-content;" onclick="doChangePassword()">🔑 עדכון סיסמה</button>
       </div>
+      <div class="label" style="margin-bottom:10px;">הגבלת גישה לטאבים רגישים</div>
+      <div style="font-size:12.5px; color:var(--ivory-dim); max-width:480px; margin-bottom:10px;">
+        קוד נפרד (לא הסיסמה שלך!) — אם מגדירים אותו, הוא יידרש כדי להיכנס לטאבים
+        "הגדרות", "דוחות", "צוות" ו"שירותים". כך עובדת שמחוברת למערכת (כדי לצפות
+        ביומן וללקוחות, למשל) לא תוכל להיכנס לאזורים האלה בלי לדעת את הקוד.
+        השארת השדה ריק מבטלת את ההגבלה הזו לחלוטין. לתשומת ליבך: זו הגנה בסיסית
+        מפני עובדת שמסתכלת סתם או נכנסת בטעות — לא הגנת אבטחה אמיתית, ולכן חשוב
+        שהקוד הזה יהיה שונה מהסיסמה שלך ולא חלק ממנה.
+      </div>
+      <input type="text" id="ownerAccessCodeInput" class="field-dark" placeholder="קוד גישה (השאירי ריק לביטול ההגבלה)" style="max-width:280px; margin-bottom:28px;" oninput="updateOwnerAccessCode()">
       <div class="label" style="margin-bottom:10px;">מיתוג</div>
       <div class="brand-editor">
         <div class="brand-logo-upload" id="logoUpload" onclick="document.getElementById('logoFile').click()">
@@ -1732,6 +1814,9 @@
           <input type="text" id="bizNameInput" class="field-dark" placeholder="שם העסק שלך" value="" oninput="updateBranding()">
           <div class="label" style="margin:12px 0 6px;">טלפון ליצירת קשר (להתייעצות)</div>
           <input type="tel" id="bizPhoneInput" class="field-dark" placeholder="050-0000000" oninput="updateBranding()">
+          <div class="label" style="margin:12px 0 6px;">מייל המנהלת (לקבלת התראות)</div>
+          <input type="email" id="invAlertEmail" class="field-dark" placeholder="you@example.com" oninput="updateInvAlertEmail()">
+          <div style="font-size:11.5px; color:var(--ivory-dim); margin-top:4px;">לכתובת הזו מגיעות התראות מלאי נמוך, והיא מוצעת כברירת מחדל בשליחת דוחות למייל (בטאב "דוחות") — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות את זה כאן.</div>
         </div>
       </div>
       <div class="label" style="margin:22px 0 10px;">כך זה ייראה ללקוחה</div>
@@ -1798,11 +1883,7 @@
       </div>
     </div>
     <div id="sub-inventory" class="subpanel">
-      <div class="inv-email-row">
-        <span class="label" style="margin:0;">מייל לקבלת התראות מלאי + דוח שבועי</span>
-        <input type="email" id="invAlertEmail" placeholder="you@example.com" oninput="updateInvAlertEmail()">
-      </div>
-      <div style="font-size:12px; color:var(--ivory-dim); margin-top:-4px; margin-bottom:14px;">אותו מייל משמש גם לדוח סיכום שבועי אוטומטי (הכנסה, מספר תורים, ביטולים) שנשלח בכל יום ראשון בבוקר.</div>
+      <div style="font-size:12px; color:var(--ivory-dim); margin-bottom:14px;">מייל ההתראות (למלאי נמוך, ולברירת המחדל בשליחת דוחות) מוגדר כעת בטאב <b>הגדרות</b> → מיתוג, לצד פרטי העסק.</div>
       <div class="inv-alert" id="invAlert"></div>
       <div class="inv-list">
         <div class="inv-row head"><span>מוצר</span><span>במלאי</span><span>סף התראה</span><span>סטטוס</span></div>
@@ -1825,7 +1906,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 20.08-יד-מחיקת-עובדת</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 20.08-יז-תצוגת-יום-לפי-עובדת-ונעילת-טאבים</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -1841,6 +1922,10 @@
         <button onclick="window.print()">🖨️ הדפסה</button>
         <button onclick="closeMyDayView()">✕ סגירה</button>
       </div>
+    </div>
+    <div class="myday-filter no-print">
+      <span>הצגה לפי עובדת:</span>
+      <select id="myDayStaffFilter" onchange="onMyDayStaffFilterChange()"></select>
     </div>
     <div id="myDayList" class="myday-list"></div>
   </div>
@@ -1933,7 +2018,7 @@
     <h3>ברוכה הבאה ל"הכל בקליק" 👋</h3>
     <p class="onboard-sub">הנה מה שכל טאב עושה:</p>
     <ul class="onboard-list">
-      <li><i class="ti ti-layout-dashboard"></i> <b>סקירה</b> — היומן שלך (שבועי/יומי/חודשי) ותת-טאב <b>דוחות</b> להכנסות ושירותים פופולריים</li>
+      <li><i class="ti ti-layout-dashboard"></i> <b>סקירה</b> — היומן שלך (שבועי/יומי/חודשי) ותת-טאב <b>דוחות</b> להכנסות, ביטולים ושירותים פופולריים לפי תאריך — כולל הורדה לאקסל, הדפסה ושליחה למייל</li>
       <li><i class="ti ti-users"></i> <b>לקוחות</b> — כרטיסיות לקוחות, ותת-טאב <b>הודעות ללקוחות</b> לשליחת עדכונים וברכות</li>
       <li><i class="ti ti-bell"></i> <b>התראות</b> — רשימת המתנה ומי חוגגת יום הולדת היום</li>
       <li><i class="ti ti-users-group"></i> <b>צוות</b> — ניהול העובדות ותת-טאב <b>שעות פעילות</b> (כולל ימים סגורים)</li>
@@ -1949,15 +2034,42 @@
   function closeOnboarding(){
     document.getElementById('onboardOverlay').classList.add('hide');
   }
-  function openMyDayView(){
+  // Remembered for the duration of the page (not persisted) — 'all' shows every
+  // staff member's appointments together like before; a staff index narrows the
+  // view down to just that one employee's day. Kept as a module-level variable
+  // (not reset each open) so flipping through days/reopening keeps whichever
+  // employee she was just looking at.
+  let myDaySelectedStaff = 'all';
+  function renderMyDayStaffFilterOptions(){
+    const sel = document.getElementById('myDayStaffFilter');
+    if (!sel) return;
+    const options = ['<option value="all">כולן</option>'];
+    staff.forEach((s, i) => {
+      if (s.deleted) return;
+      options.push(`<option value="${i}" ${myDaySelectedStaff === i ? 'selected' : ''}>${s.name}</option>`);
+    });
+    sel.innerHTML = options.join('');
+    sel.value = (myDaySelectedStaff === 'all' || !staff[myDaySelectedStaff] || staff[myDaySelectedStaff].deleted) ? 'all' : String(myDaySelectedStaff);
+    if (sel.value === 'all') myDaySelectedStaff = 'all';
+  }
+  function onMyDayStaffFilterChange(){
+    const sel = document.getElementById('myDayStaffFilter');
+    myDaySelectedStaff = sel.value === 'all' ? 'all' : parseInt(sel.value);
+    renderMyDayTitle();
+    renderMyDayList();
+  }
+  function renderMyDayTitle(){
     const now = new Date();
     const dow = now.getDay();
-    const dayKey = weekdayKeys[dow];
     const dayName = days[dow].name;
     const dateStr = now.getDate() + ' ב' + hebrewMonths[now.getMonth()];
-    document.getElementById('myDayTitle').textContent = `היום שלי — יום ${dayName}, ${dateStr}`;
+    const staffSuffix = (myDaySelectedStaff !== 'all' && staff[myDaySelectedStaff]) ? ' — ' + staff[myDaySelectedStaff].name : '';
+    document.getElementById('myDayTitle').textContent = `היום שלי — יום ${dayName}, ${dateStr}${staffSuffix}`;
+  }
+  function renderMyDayList(){
+    const now = new Date();
     const todays = weekAppointments
-      .filter(a => a.date === formatDateKey(now))
+      .filter(a => a.date === formatDateKey(now) && (myDaySelectedStaff === 'all' || a.staff === myDaySelectedStaff))
       .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
     const listEl = document.getElementById('myDayList');
     if (!todays.length){
@@ -1965,9 +2077,16 @@
     } else {
       listEl.innerHTML = todays.map(a => {
         const empName = (staff[a.staff] && staff[a.staff].name) || '';
-        return `<div class="myday-row"><span class="t">${a.time}</span><span>${a.client} · ${a.service}</span><span class="who">${empName}</span></div>`;
+        // The "who" column is redundant once the view is already narrowed to one
+        // specific employee, so it only shows when looking at everyone together.
+        return `<div class="myday-row"><span class="t">${a.time}</span><span>${a.client} · ${a.service}</span>${myDaySelectedStaff === 'all' ? `<span class="who">${empName}</span>` : ''}</div>`;
       }).join('');
     }
+  }
+  function openMyDayView(){
+    renderMyDayTitle();
+    renderMyDayStaffFilterOptions();
+    renderMyDayList();
     document.getElementById('myDayOverlay').classList.add('show');
   }
   function closeMyDayView(){
@@ -2045,7 +2164,11 @@
     document.getElementById('mbDate').value = formatDateKey(mbSelectedDate);
     document.getElementById('mbTime').value = opts.time || '';
     document.getElementById('mbClientId').value = opts.clientId || '';
-    document.getElementById('mbClientName').value = opts.clientName || '';
+    // opts.clientName is only ever passed in for a real, already-existing client
+    // (opened from her client card) — so the name is locked from the start here,
+    // same as when a תז/phone match happens below. A brand-new booking with no
+    // opts starts blank and editable, ready for either a match or a typed name.
+    if (opts.clientName) mbLockClientName(opts.clientName); else mbUnlockClientName(true);
     document.getElementById('mbClientPhone').value = opts.clientPhone || '';
     document.getElementById('mbError').style.display = 'none';
     document.getElementById('manualBookingOverlay').classList.add('show');
@@ -2053,6 +2176,29 @@
   }
   document.getElementById('mbService')?.addEventListener('change', mbServiceChanged);
   document.getElementById('mbDuration')?.addEventListener('input', mbRefreshCalendarAndSlots);
+  // The client-name field auto-fills from a תז/phone match (below) and is
+  // locked (read-only) whenever it's showing a real matched client's name —
+  // she asked for this specifically: filling in an ID or phone shouldn't leave
+  // the name open to an accidental typo that no longer matches the client
+  // record it was pulled from. It unlocks again the moment there's no valid
+  // match (see both listeners below), so a genuinely new client's name can
+  // still be typed by hand as usual.
+  function mbLockClientName(name){
+    const nameInput = document.getElementById('mbClientName');
+    if (!nameInput) return;
+    nameInput.value = name;
+    nameInput.readOnly = true;
+    nameInput.classList.add('field-locked');
+    nameInput.title = 'השם מולא אוטומטית מכרטיס לקוחה קיימת — לשינוי השם יש לעדכן אותו בכרטיסיית הלקוחות.';
+  }
+  function mbUnlockClientName(clearValue){
+    const nameInput = document.getElementById('mbClientName');
+    if (!nameInput) return;
+    nameInput.readOnly = false;
+    nameInput.classList.remove('field-locked');
+    nameInput.title = '';
+    if (clearValue) nameInput.value = '';
+  }
   // As soon as the ID number or phone matches an existing client, fill in her
   // name (and, for ID, phone too) automatically — mirrors the "ברוכה שובך"
   // auto-fill on the customer-facing booking form, so the admin doesn't have to
@@ -2061,30 +2207,35 @@
   // who don't have a תז on file yet.
   document.getElementById('mbClientId')?.addEventListener('input', function(){
     this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
-    const nameInput = document.getElementById('mbClientName');
     const phoneInput = document.getElementById('mbClientPhone');
     // Any edit to the ID field (including clearing it because she typed the
     // wrong תז) clears whatever name/phone were auto-filled for the PREVIOUS
     // value first — otherwise a mismatched name/phone from a different client
     // could keep sitting there, unnoticed, after she corrects the ID.
-    if (nameInput) nameInput.value = '';
+    mbUnlockClientName(true);
     if (phoneInput) phoneInput.value = '';
     if (this.value.length < 9) return;
     const match = clients.find(c => c.teudatZehut === this.value);
     if (match){
-      if (nameInput) nameInput.value = match.name;
+      mbLockClientName(match.name);
       if (phoneInput) phoneInput.value = match.phone || '';
     }
   });
   document.getElementById('mbClientPhone')?.addEventListener('input', function(){
     const digits = this.value.replace(/[^0-9]/g, '');
-    if (digits.length < 9) return;
-    const match = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits);
+    const nameInput = document.getElementById('mbClientName');
+    const idInput = document.getElementById('mbClientId');
+    const match = digits.length >= 9 ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits) : null;
     if (match){
-      const nameInput = document.getElementById('mbClientName');
-      if (nameInput) nameInput.value = match.name;
-      const idInput = document.getElementById('mbClientId');
+      mbLockClientName(match.name);
       if (idInput && match.teudatZehut) idInput.value = match.teudatZehut;
+    } else if (nameInput && nameInput.readOnly){
+      // The name currently shown was locked in by an earlier phone match that
+      // no longer applies to what's typed now (she kept editing the phone) —
+      // clear it rather than leave a stale, still-locked name from someone else.
+      // A manually-typed name for a genuinely new client (never locked) is never
+      // touched here.
+      mbUnlockClientName(true);
     }
   });
   function closeManualBookingModal(){
@@ -2159,46 +2310,46 @@
         if (hint) hint.textContent = 'אין עובדת המתאימה לשירות זה.';
         return;
       }
-      const perStaffWindow = {};
+      const perStaffWindows = {};
       const perStaffBusy = {};
-      let openMin = Infinity, closeMin = -Infinity;
+      let allWindows = [];
       capableIndices.forEach(idx => {
         const emp = staff[idx];
         const dayInfo = emp && emp.hours ? emp.hours[dateObj.getDay()] : null;
-        if (!emp || !dayInfo || !dayInfo.open || isDateClosedForStaff(idx, dateObj)) return;
-        let staffOpenMin = timeToMinutes(dayInfo.from);
-        const staffCloseMin = timeToMinutes(dayInfo.to);
-        if (sameDate(dateObj, todayMidnight)){
-          const now = new Date();
-          const earliest = Math.ceil((now.getHours()*60 + now.getMinutes() + minLeadMinutes) / slotStepMinutes) * slotStepMinutes;
-          staffOpenMin = Math.max(staffOpenMin, earliest);
-        }
-        perStaffWindow[idx] = [staffOpenMin, staffCloseMin];
+        if (!emp || isDateClosedForStaff(idx, dateObj)) return;
+        // A staff member can now have more than one shift on the same day (e.g.
+        // morning + evening) — getEffectiveDayWindows() returns every one of them.
+        const windows = getEffectiveDayWindows(dayInfo, dateObj);
+        if (!windows.length) return;
+        perStaffWindows[idx] = windows;
         perStaffBusy[idx] = weekAppointments.filter(a => a.date === dateVal && a.staff === idx).map(a => {
           const st = timeToMinutes(a.time); return [st, st + (a.dur || 30)];
         });
-        openMin = Math.min(openMin, staffOpenMin);
-        closeMin = Math.max(closeMin, staffCloseMin);
+        allWindows = allWindows.concat(windows);
       });
-      if (openMin === Infinity){
+      if (!allWindows.length){
         if (hint) hint.textContent = 'אין שעות פעילות/זמינות ביום שנבחר.';
         return;
       }
       const fitsStaff = (idx, start) => {
-        const win = perStaffWindow[idx];
-        if (!win) return false;
+        const wins = perStaffWindows[idx];
+        if (!wins) return false;
         const end = start + duration;
-        if (start < win[0] || end > win[1]) return false;
+        if (!wins.some(([s, e]) => start >= s && end <= e)) return false;
         return (perStaffBusy[idx] || []).every(([bs,be]) => end <= bs || start >= be);
       };
-      const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
-      for (let bucketStart = firstBucket; bucketStart + duration <= closeMin; bucketStart += slotStepMinutes){
-        const bucketEnd = bucketStart + slotStepMinutes;
-        for (let t = Math.max(bucketStart, openMin); t < bucketEnd && t + duration <= closeMin; t += fineStepMinutes){
-          const freeStaffIdx = capableIndices.find(idx => fitsStaff(idx, t));
-          if (freeStaffIdx !== undefined){ addSlot(t, freeStaffIdx); break; }
+      // Iterate per merged window (not one flat span) so a gap between two
+      // shifts — shared by every capable staff member — never gets offered.
+      mergeWindows(allWindows).forEach(([openMin, closeMin]) => {
+        const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
+        for (let bucketStart = firstBucket; bucketStart + duration <= closeMin; bucketStart += slotStepMinutes){
+          const bucketEnd = bucketStart + slotStepMinutes;
+          for (let t = Math.max(bucketStart, openMin); t < bucketEnd && t + duration <= closeMin; t += fineStepMinutes){
+            const freeStaffIdx = capableIndices.find(idx => fitsStaff(idx, t));
+            if (freeStaffIdx !== undefined){ addSlot(t, freeStaffIdx); break; }
+          }
         }
-      }
+      });
     } else {
       const emp = staff[staffIdx];
       const dayInfo = emp && emp.hours ? emp.hours[dateObj.getDay()] : null;
@@ -2206,28 +2357,28 @@
         if (hint) hint.textContent = 'אין שעות פעילות/זמינות לעובדת זו ביום שנבחר.';
         return;
       }
-      let openMin = timeToMinutes(dayInfo.from);
-      const closeMin = timeToMinutes(dayInfo.to);
-      if (sameDate(dateObj, todayMidnight)){
-        const now = new Date();
-        const earliest = Math.ceil((now.getHours()*60 + now.getMinutes() + minLeadMinutes) / slotStepMinutes) * slotStepMinutes;
-        openMin = Math.max(openMin, earliest);
+      const windows = mergeWindows(getEffectiveDayWindows(dayInfo, dateObj));
+      if (!windows.length){
+        if (hint) hint.textContent = 'אין שעות פעילות/זמינות לעובדת זו ביום שנבחר.';
+        return;
       }
       const busy = weekAppointments.filter(a => a.date === dateVal && a.staff === staffIdx).map(a => {
         const st = timeToMinutes(a.time); return [st, st + (a.dur || 30)];
       });
       const fits = (start) => {
         const end = start + duration;
-        if (end > closeMin) return false;
+        if (!windows.some(([s, e]) => start >= s && end <= e)) return false;
         return busy.every(([bs,be]) => end <= bs || start >= be);
       };
-      const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
-      for (let bucketStart = firstBucket; bucketStart + duration <= closeMin; bucketStart += slotStepMinutes){
-        const bucketEnd = bucketStart + slotStepMinutes;
-        for (let t = Math.max(bucketStart, openMin); t < bucketEnd && t + duration <= closeMin; t += fineStepMinutes){
-          if (fits(t)){ addSlot(t, staffIdx); break; }
+      windows.forEach(([openMin, closeMin]) => {
+        const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
+        for (let bucketStart = firstBucket; bucketStart + duration <= closeMin; bucketStart += slotStepMinutes){
+          const bucketEnd = bucketStart + slotStepMinutes;
+          for (let t = Math.max(bucketStart, openMin); t < bucketEnd && t + duration <= closeMin; t += fineStepMinutes){
+            if (fits(t)){ addSlot(t, staffIdx); break; }
+          }
         }
-      }
+      });
     }
     if (hint) hint.textContent = anyAvailable ? 'מוצגות כאן רק שעות פנויות, בדיוק כמו בקביעת תור ללקוחה.' : 'אין שעות פנויות ביום הזה. אפשר לבחור יום אחר בלוח השנה.';
   }
@@ -2385,6 +2536,24 @@
       errorEl.textContent = 'יש למלא שם, תאריך, שעה, שירות ועובדת.';
       return;
     }
+    // Until now, the admin's manual-booking form never actually checked that a
+    // typed phone/תז were valid — only the customer's own self-service booking
+    // form did (isValidIsraeliPhone / 9-digit check). A garbled phone number or
+    // a half-typed תז would silently get saved onto a client record. Both fields
+    // stay optional here (the admin may not always have them on hand for a
+    // walk-in), but if something IS typed in, it has to be a real phone/תז —
+    // otherwise it's almost certainly a typo worth catching before it's saved.
+    if (phone && !isValidIsraeliPhone(phone)){
+      errorEl.style.display = 'block';
+      errorEl.textContent = 'מספר הטלפון שהוזן לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567) או להשאיר את השדה ריק.';
+      return;
+    }
+    if (idDigits && idDigits.length !== 9){
+      errorEl.style.display = 'block';
+      errorEl.textContent = 'תעודת הזהות שהוזנה לא תקינה — צריכה להיות 9 ספרות, או להשאיר את השדה ריק.';
+      return;
+    }
+    errorEl.style.display = 'none';
     const svc = services[svcIdx];
     const dateParts = dateVal.split('-').map(Number);
     const apptDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
@@ -2516,6 +2685,7 @@
     document.getElementById('repRevenue').textContent = data.revenue;
     document.getElementById('repCount').textContent = data.count;
     document.getElementById('repAvg').textContent = data.avg;
+    document.getElementById('repCancellations').textContent = data.cancellations.length;
     const maxVal = Math.max(...data.bars.map(b => b.val), 1);
     const chartEl = document.getElementById('revChart');
     chartEl.innerHTML = '';
@@ -2539,11 +2709,35 @@
       row.innerHTML = `<span class="pop-name">${p.name}</span><div class="pop-bar-track"><div class="pop-bar-fill" style="width:${width}%;"></div></div><span class="pop-count">${p.count}</span>`;
       popEl.appendChild(row);
     });
+    const cancelEl = document.getElementById('cancelList');
+    cancelEl.innerHTML = '';
+    if (!data.cancellations.length){
+      cancelEl.innerHTML = '<div class="cancel-row" style="color:#8A8178;">אין ביטולים בטווח זה</div>';
+    }
+    data.cancellations.forEach(c => {
+      const row = document.createElement('div');
+      row.className = 'cancel-row';
+      const dateLbl = c.date ? c.date.split('-').reverse().join('/') : '';
+      row.innerHTML = `<span class="c-date">${dateLbl}${c.time ? ' · ' + c.time : ''}</span><span class="c-client">${c.client || 'לקוחה'}</span><span class="c-detail">${c.service || ''}${c.staffName ? ' · ' + c.staffName : ''}</span>`;
+      cancelEl.appendChild(row);
+    });
+    // Kept around so the export/print/email actions below can reuse exactly what's
+    // on screen, instead of recomputing (and risking drifting from what the admin
+    // actually sees if she flips the range again before clicking one of them).
+    lastReportData = data;
   }
+  // Cancellations are matched to the report's date range by the appointment's
+  // ORIGINAL date (c.date) — the date it was booked for — not by when the
+  // cancellation itself happened (cancelledAt). This mirrors how revenue/count
+  // above are scoped to appointments dated within the range, so "כמה תורים
+  // ביטלו בשבוע הזה" reads as "appointments THAT WEEK that ended up cancelled",
+  // consistent with the rest of the report.
+  let lastReportData = null;
   function computeRealRangeReport(fromD, toD){
     const totalDays = Math.round((toD - fromD) / 86400000) + 1;
     const useWeekly = totalDays > 14;
     const bars = [];
+    const dailyRows = [];
     const popularMap = {};
     let totalRevenue = 0, totalCount = 0;
     let weekBucketRevenue = 0, weekIndex = 1;
@@ -2562,6 +2756,7 @@
         totalCount += 1;
         popularMap[a.service] = (popularMap[a.service] || 0) + 1;
       });
+      dailyRows.push({ date: formatDateKey(d), revenue: dayRevenue, count: dayAppts.length });
       if (!useWeekly){
         bars.push({ lbl: d.getDate() + '/' + (d.getMonth()+1), val: dayRevenue });
       } else {
@@ -2577,12 +2772,21 @@
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
+    const fromKey = formatDateKey(fromD), toKey = formatDateKey(toD);
+    const cancellations = cancellationLog
+      .filter(c => c && c.date && c.date >= fromKey && c.date <= toKey)
+      .sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
     return {
       revenue: totalRevenue.toLocaleString('he-IL') + ' ₪',
+      revenueRaw: totalRevenue,
       count: totalCount,
       avg: totalCount ? Math.round(totalRevenue / totalCount).toLocaleString('he-IL') + ' ₪' : '0 ₪',
       bars: bars.length ? bars : [{ lbl: '', val: 0 }],
-      popular
+      dailyRows,
+      popular,
+      cancellations,
+      fromKey,
+      toKey
     };
   }
   function renderReports(range){
@@ -2608,7 +2812,136 @@
     if (toD < fromD) return;
     renderReportOutput(computeRealRangeReport(fromD, toD));
   }
+  function reportRangeLabel(){
+    if (!lastReportData) return '';
+    return lastReportData.fromKey.split('-').reverse().join('/') + ' - ' + lastReportData.toKey.split('-').reverse().join('/');
+  }
+  function showReportActionStatus(msg){
+    const el = document.getElementById('reportActionStatus');
+    if (!el) return;
+    el.textContent = msg;
+    setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4000);
+  }
+  // Plain CSV (with a UTF-8 BOM so Hebrew displays correctly the moment it's
+  // opened in Excel, not just after a manual encoding fix) — not a real .xlsx
+  // file, but Excel opens/edits/saves CSVs natively, which is what "הורדה
+  // לאקסל" means in practice for a single-file app with no server-side build step.
+  function exportReportToCsv(){
+    if (!lastReportData) return;
+    const rangeLbl = reportRangeLabel();
+    const rows = [];
+    rows.push(['דוח', branding.name || 'הכל בקליק']);
+    rows.push(['טווח תאריכים', rangeLbl]);
+    rows.push([]);
+    rows.push(['סיכום']);
+    rows.push(['הכנסה', lastReportData.revenue]);
+    rows.push(['מספר תורים', lastReportData.count]);
+    rows.push(['ממוצע לתור', lastReportData.avg]);
+    rows.push(['ביטולים', lastReportData.cancellations.length]);
+    rows.push([]);
+    rows.push(['הכנסה יומית']);
+    rows.push(['תאריך', 'הכנסה', 'מספר תורים']);
+    lastReportData.dailyRows.forEach(r => rows.push([r.date.split('-').reverse().join('/'), r.revenue, r.count]));
+    rows.push([]);
+    rows.push(['השירותים הכי מבוקשים']);
+    rows.push(['שירות', 'כמות']);
+    lastReportData.popular.forEach(p => rows.push([p.name, p.count]));
+    rows.push([]);
+    rows.push(['ביטולים']);
+    rows.push(['תאריך', 'שעה', 'לקוחה', 'שירות', 'עובדת', 'מחיר']);
+    lastReportData.cancellations.forEach(c => rows.push([
+      c.date ? c.date.split('-').reverse().join('/') : '', c.time || '', c.client || '', c.service || '', c.staffName || '', c.price || 0
+    ]));
+    const csvEscape = (v) => {
+      const s = String(v === undefined || v === null ? '' : v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const csvText = rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csvText], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `דוח ${rangeLbl.replace(/\//g, '-')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    showReportActionStatus('הקובץ ירד בהצלחה — אפשר לפתוח אותו באקסל.');
+  }
+  // Opens a separate, print-only view of the current report (not the whole
+  // app's layout, which has a sidebar/tabs that would print messily) and
+  // triggers the browser's print dialog on it directly.
+  function printReport(){
+    if (!lastReportData) return;
+    const rangeLbl = reportRangeLabel();
+    const win = window.open('', '_blank');
+    if (!win){ showReportActionStatus('הדפדפן חסם את פתיחת חלון ההדפסה — נסי לאשר חלונות קופצים לאתר.'); return; }
+    const popularRows = lastReportData.popular.map(p => `<tr><td>${p.name}</td><td>${p.count}</td></tr>`).join('') || '<tr><td colspan="2">אין נתונים</td></tr>';
+    const cancelRows = lastReportData.cancellations.map(c => `<tr><td>${c.date ? c.date.split('-').reverse().join('/') : ''}</td><td>${c.time || ''}</td><td>${c.client || ''}</td><td>${c.service || ''}</td><td>${c.staffName || ''}</td></tr>`).join('') || '<tr><td colspan="5">אין ביטולים בטווח זה</td></tr>';
+    win.document.write(`<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>דוח ${rangeLbl}</title>
+      <style>
+        body{font-family:Arial, sans-serif; padding:24px; color:#222;}
+        h1{font-size:20px; margin-bottom:2px;}
+        h2{font-size:15px; margin-top:28px; border-bottom:1px solid #ccc; padding-bottom:4px;}
+        .stats{display:flex; gap:24px; margin:16px 0;}
+        .stats div{font-size:14px;}
+        .stats b{display:block; font-size:20px;}
+        table{width:100%; border-collapse:collapse; margin-top:8px;}
+        td, th{border:1px solid #ddd; padding:6px 10px; text-align:right; font-size:13px;}
+      </style></head><body>
+      <h1>דוח — ${branding.name || 'הכל בקליק'}</h1>
+      <div>טווח תאריכים: ${rangeLbl}</div>
+      <div class="stats">
+        <div><b>${lastReportData.revenue}</b>הכנסה</div>
+        <div><b>${lastReportData.count}</b>תורים</div>
+        <div><b>${lastReportData.avg}</b>ממוצע לתור</div>
+        <div><b>${lastReportData.cancellations.length}</b>ביטולים</div>
+      </div>
+      <h2>השירותים הכי מבוקשים</h2>
+      <table><tr><th>שירות</th><th>כמות</th></tr>${popularRows}</table>
+      <h2>ביטולים בטווח</h2>
+      <table><tr><th>תאריך</th><th>שעה</th><th>לקוחה</th><th>שירות</th><th>עובדת</th></tr>${cancelRows}</table>
+    </body></html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 300);
+  }
+  // Sends the same summary as a plain email via the app's existing mail-queue
+  // mechanism (sendEmail → the "mail" collection → SendGrid extension) — this
+  // is a manual, one-off send the admin triggers herself, NOT a recurring
+  // automatic report.
+  function emailReport(){
+    if (!lastReportData) return;
+    const toInput = document.getElementById('reportEmailTo');
+    const to = (toInput.value || '').trim() || invAlertEmail;
+    if (!to){
+      showReportActionStatus('יש להזין כתובת מייל לשליחה.');
+      return;
+    }
+    const rangeLbl = reportRangeLabel();
+    const popularText = lastReportData.popular.length
+      ? lastReportData.popular.map(p => `- ${p.name}: ${p.count}`).join('\n')
+      : '(אין נתונים)';
+    const cancelText = lastReportData.cancellations.length
+      ? lastReportData.cancellations.map(c => `- ${c.date ? c.date.split('-').reverse().join('/') : ''} ${c.time || ''} — ${c.client || ''} (${c.service || ''}${c.staffName ? ', ' + c.staffName : ''})`).join('\n')
+      : '(אין ביטולים בטווח זה)';
+    const bodyText = `דוח ${rangeLbl}:\n\n` +
+      `הכנסה: ${lastReportData.revenue}\n` +
+      `מספר תורים: ${lastReportData.count}\n` +
+      `ממוצע לתור: ${lastReportData.avg}\n` +
+      `ביטולים: ${lastReportData.cancellations.length}\n\n` +
+      `השירותים הכי מבוקשים:\n${popularText}\n\n` +
+      `ביטולים בטווח:\n${cancelText}`;
+    sendEmail(to, `דוח — ${rangeLbl}`, bodyText);
+    showReportActionStatus(`הדוח בדרך למייל ${to}.`);
+  }
   let branding = { name: '', logo: null, phone: '' };
+  // Declared here (before renderBranding()'s own definition/first call just below,
+  // not down near updateInvAlertEmail/updateOwnerAccessCode where they're actually
+  // edited) because renderBranding() reads both to populate their fields, and a
+  // `let` can't be read before its own declaration line has run.
+  let invAlertEmail = '';
+  let ownerAccessCode = '';
   const pendingEmailQueue = {};
   function sendEmail(to, subject, text, imageDataUrl){
     if (!to) return;
@@ -2751,6 +3084,10 @@
     const phoneInputEl = document.getElementById('bizPhoneInput');
     if (nameInputEl && document.activeElement !== nameInputEl) nameInputEl.value = branding.name;
     if (phoneInputEl && document.activeElement !== phoneInputEl) phoneInputEl.value = branding.phone || '';
+    const invEmailInputEl = document.getElementById('invAlertEmail');
+    if (invEmailInputEl && document.activeElement !== invEmailInputEl) invEmailInputEl.value = invAlertEmail || '';
+    const ownerCodeInputEl = document.getElementById('ownerAccessCodeInput');
+    if (ownerCodeInputEl && document.activeElement !== ownerCodeInputEl) ownerCodeInputEl.value = ownerAccessCode || '';
     const heroBizNameEl = document.getElementById('heroBizName');
     const heroPlatformLineEl = document.getElementById('heroPlatformLine');
     if (heroBizNameEl && heroPlatformLineEl){
@@ -2980,12 +3317,27 @@
         <div class="client-info">
           <div class="name-row">
             <div style="flex:1;">
-              <input class="client-name-input" value="${c.name}" placeholder="שם הלקוחה">
+              <div class="name-field-wrap">
+                <span class="mini-field-label">שם</span>
+                <input class="client-name-input" value="${c.name}" placeholder="שם הלקוחה">
+              </div>
               <div class="client-mini-row">
-                <input class="client-mini-input" data-field="teudatZehut" inputmode="numeric" maxlength="9" value="${c.teudatZehut || ''}" placeholder="תעודת זהות">
-                <input class="client-mini-input" data-field="phone" value="${c.phone || ''}" placeholder="טלפון">
-                <input class="client-mini-input" data-field="email" type="email" value="${c.email || ''}" placeholder="אימייל">
-                <span class="bday-field-wrap"><span class="bday-label">🎂 יום הולדת:</span><input class="client-mini-input" data-field="birthday" type="date" dir="ltr" value="${c.birthday || ''}"></span>
+                <div class="mini-field" data-field-wrap="teudatZehut">
+                  <span class="mini-field-label">ת.ז.</span>
+                  <input class="client-mini-input" data-field="teudatZehut" inputmode="numeric" maxlength="9" value="${c.teudatZehut || ''}" placeholder="תעודת זהות">
+                </div>
+                <div class="mini-field" data-field-wrap="phone">
+                  <span class="mini-field-label">טלפון</span>
+                  <input class="client-mini-input" data-field="phone" value="${c.phone || ''}" placeholder="טלפון">
+                </div>
+                <div class="mini-field" data-field-wrap="email">
+                  <span class="mini-field-label">אימייל</span>
+                  <input class="client-mini-input" data-field="email" type="email" value="${c.email || ''}" placeholder="אימייל">
+                </div>
+                <div class="mini-field" data-field-wrap="birthday">
+                  <span class="mini-field-label">🎂 יום הולדת</span>
+                  <input class="client-mini-input" data-field="birthday" type="date" dir="ltr" value="${c.birthday || ''}">
+                </div>
               </div>
               <div class="visits">${c.visits || 0} ביקורים · אחרון ${formatLastVisit(c.daysSinceVisit)}${isInactive ? ' <span class="badge low" style="margin-inline-start:6px;">לא הגיעה זמן רב</span>' : ''}${isBday ? ' <span class="badge" style="background:rgba(201,162,39,0.2); color:var(--gold-soft); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : ''}</div>
             </div>
@@ -3306,6 +3658,13 @@
   // can't be read before their declaration line runs.
   let categories = [];
   let services = [];
+  // Also declared here (not down near cancellation/logCancellation further below)
+  // for the same reason — the initial renderReports('week') call runs before that
+  // point and its computeRealRangeReport() reads cancellationLog for the
+  // "ביטולים" section of the reports tab.
+  let cancellationLog = [];
+  // (invAlertEmail and ownerAccessCode are declared earlier still, right next to
+  // `branding` — renderBranding()'s first call happens even before this point.)
   // Also declared here (not down near the category/service management code)
   // for the same reason — renderStaffPicker (called from renderStaff's first
   // synchronous run) reads it, and a `let` can't be read before its own line runs.
@@ -3597,6 +3956,14 @@
   function renderStaffFilterRow(){
     const rowEl = document.getElementById('staffFilterRow');
     if (!rowEl) return;
+    // Safety net: if the currently-selected filter points at a staff member who
+    // is now hidden below (deleted with no appointment history), fall back to
+    // "כולן" instead of silently filtering the calendar down to a chip that no
+    // longer exists on screen.
+    if (typeof selectedStaffFilter === 'number'){
+      const sel = staff[selectedStaffFilter];
+      if (!sel || (sel.deleted && !weekAppointments.some(a => a.staff === selectedStaffFilter))) selectedStaffFilter = 'all';
+    }
     rowEl.innerHTML = '';
     const allChip = document.createElement('div');
     allChip.className = 'staff-filter-chip' + (selectedStaffFilter === 'all' ? ' active' : '');
@@ -3604,12 +3971,19 @@
     allChip.onclick = () => { selectedStaffFilter = 'all'; renderStaffFilterRow(); renderWeekCal(); if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal(); };
     rowEl.appendChild(allChip);
     staff.forEach((s, i) => {
+      // A deleted staff member with zero appointments on record (past or future)
+      // has nothing to filter TO — showing her here just clutters the row and
+      // confuses whoever's looking (she asked specifically about this: a removed
+      // staff member showing up in the calendar when she never even had an
+      // appointment). Only keep a deleted staff member visible here if she DOES
+      // have real history worth being able to filter down to.
+      if (s.deleted && !weekAppointments.some(a => a.staff === i)) return;
       const chip = document.createElement('div');
       chip.className = 'staff-filter-chip' + (selectedStaffFilter === i ? ' active' : '');
       const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
-      // Deleted staff stay in this specific filter (unlike every booking-facing
-      // staff picker) so the calendar can still be filtered to see her past
-      // appointments — just labeled so it's clear she's no longer active.
+      // Deleted staff WITH history stay in this specific filter (unlike every
+      // booking-facing staff picker) so the calendar can still be filtered to
+      // see her past appointments — just labeled so it's clear she's no longer active.
       chip.innerHTML = `<div class="avatar">${avatarHtml}</div><span>${s.name}${s.deleted ? ' (הוסרה)' : ''}</span>`;
       chip.onclick = () => { selectedStaffFilter = i; renderStaffFilterRow(); renderWeekCal(); if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal(); };
       rowEl.appendChild(chip);
@@ -3702,22 +4076,27 @@
       return sum + (svcMatch ? svcMatch.price : 0);
     }, 0);
     let openSlots = 0;
+    const todayDateObj = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     staff.forEach((s, idx) => {
+      if (s.deleted) return;
       const hoursToday = s.hours && s.hours[dow];
       if (!hoursToday || !hoursToday.open) return;
-      const openMin = timeToMinutes(hoursToday.from);
-      const closeMin = timeToMinutes(hoursToday.to);
+      // A staff member can have more than one shift today (e.g. morning + evening)
+      // — sum open slots across every one of that day's windows.
+      const windows = mergeWindows(getEffectiveDayWindows(hoursToday, todayDateObj));
       const busy = weekAppointments
         .filter(a => a.day === dayKey && a.staff === idx)
         .map(a => {
           const s2 = timeToMinutes(a.time);
           return [s2, s2 + a.dur];
         });
-      for (let t = openMin; t + 30 <= closeMin; t += 30){
-        const end = t + 30;
-        const free = busy.every(([bs, be]) => end <= bs || t >= be);
-        if (free) openSlots++;
-      }
+      windows.forEach(([openMin, closeMin]) => {
+        for (let t = openMin; t + 30 <= closeMin; t += 30){
+          const end = t + 30;
+          const free = busy.every(([bs, be]) => end <= bs || t >= be);
+          if (free) openSlots++;
+        }
+      });
     });
     apptsEl.textContent = todaysAppts.length;
     slotsEl2.textContent = openSlots;
@@ -4173,32 +4552,63 @@
     const dateStr = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
     return s.closedDates.includes(dateStr);
   }
+  // A staff member's hours for a given day-of-week can be either the legacy
+  // single block ({open, from, to}) or, now, separate shifts
+  // ({open, ranges: [{from,to}, {from,to}, ...]}) — e.g. a morning shift and a
+  // separate evening shift with a closed gap in between (renderHoursEditor lets
+  // her add/remove these). This normalizes either shape into a plain list of
+  // [startMin, endMin] windows, already clipped to "not before right now" when
+  // dateObj is today — a shift that's already fully over today (e.g. a
+  // finished morning shift once it's the afternoon) is dropped entirely rather
+  // than producing a window whose start is after its end.
+  function getEffectiveDayWindows(dayInfo, dateObj){
+    if (!dayInfo || !dayInfo.open) return [];
+    const rawRanges = (Array.isArray(dayInfo.ranges) && dayInfo.ranges.length)
+      ? dayInfo.ranges
+      : (dayInfo.from && dayInfo.to ? [{ from: dayInfo.from, to: dayInfo.to }] : []);
+    const isToday = sameDate(dateObj, todayMidnight);
+    const earliestToday = isToday ? Math.ceil((nowMinutesReal + minLeadMinutes) / fineStepMinutes) * fineStepMinutes : -Infinity;
+    return rawRanges
+      .map(r => [Math.max(timeToMinutes(r.from), earliestToday), timeToMinutes(r.to)])
+      .filter(([s, e]) => s < e)
+      .sort((a, b) => a[0] - b[0]);
+  }
+  // Merges a list of [start,end] minute windows that may overlap or touch into
+  // the minimal set of disjoint, sorted windows — needed so that when several
+  // staff (or several shifts) cover overlapping times in "any staff" mode, the
+  // slot grid doesn't loop over the same covered time more than once.
+  function mergeWindows(windows){
+    const sorted = windows.slice().sort((a, b) => a[0] - b[0]);
+    const merged = [];
+    sorted.forEach(([s, e]) => {
+      const last = merged[merged.length - 1];
+      if (last && s <= last[1]) last[1] = Math.max(last[1], e);
+      else merged.push([s, e]);
+    });
+    return merged;
+  }
   function hasAnySlotForStaff(cellDate, staffIdx){
     const svc = services[selectedSvcIndex];
     const dow = cellDate.getDay();
     const dayInfo = staff[staffIdx] && staff[staffIdx].hours[dow];
     if (!svc || !dayInfo || !dayInfo.open) return false;
     if (isDateClosedForStaff(staffIdx, cellDate)) return false;
-    const dayKey = weekdayKeys[dow];
-    let openMin = timeToMinutes(dayInfo.from);
-    const closeMin = timeToMinutes(dayInfo.to);
     const duration = svc.duration || 30;
-    if (sameDate(cellDate, todayMidnight)){
-      const earliestStart = Math.ceil((nowMinutesReal + minLeadMinutes) / fineStepMinutes) * fineStepMinutes;
-      openMin = Math.max(openMin, earliestStart);
-    }
-    if (openMin + duration > closeMin) return false;
+    const windows = getEffectiveDayWindows(dayInfo, cellDate);
+    if (!windows.length) return false;
     const busy = weekAppointments
       .filter(a => a.date === formatDateKey(cellDate) && a.staff === staffIdx)
       .map(a => {
         const s = timeToMinutes(a.time);
         return [s, s + a.dur];
       });
-    for (let t = openMin; t + duration <= closeMin; t += fineStepMinutes){
-      const end = t + duration;
-      if (busy.every(([bStart, bEnd]) => end <= bStart || t >= bEnd)) return true;
-    }
-    return false;
+    return windows.some(([openMin, closeMin]) => {
+      for (let t = openMin; t + duration <= closeMin; t += fineStepMinutes){
+        const end = t + duration;
+        if (busy.every(([bStart, bEnd]) => end <= bStart || t >= bEnd)) return true;
+      }
+      return false;
+    });
   }
   // When the customer chose "לא משנה לי מי" (any suitable staff), a day/slot
   // counts as available as long as AT LEAST ONE capable staff member is free —
@@ -4337,22 +4747,18 @@
     const dayInfo = emp && emp.hours ? emp.hours[dow] : null;
     if (!emp || !dayInfo || !dayInfo.open) return false;
     if (isDateClosedForStaff(staffIdx, cellDate)) return false;
-    let openMin = timeToMinutes(dayInfo.from);
-    const closeMin = timeToMinutes(dayInfo.to);
-    if (sameDate(cellDate, todayMidnight)){
-      const now = new Date();
-      const earliest = Math.ceil((now.getHours()*60 + now.getMinutes() + minLeadMinutes) / slotStepMinutes) * slotStepMinutes;
-      openMin = Math.max(openMin, earliest);
-    }
-    if (openMin + duration > closeMin) return false;
+    const windows = getEffectiveDayWindows(dayInfo, cellDate);
+    if (!windows.length) return false;
     const busy = weekAppointments
       .filter(a => a.date === formatDateKey(cellDate) && a.staff === staffIdx)
       .map(a => { const s = timeToMinutes(a.time); return [s, s + (a.dur || 30)]; });
-    for (let t = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes; t + duration <= closeMin; t += slotStepMinutes){
-      const end = t + duration;
-      if (busy.every(([bStart, bEnd]) => end <= bStart || t >= bEnd)) return true;
-    }
-    return false;
+    return windows.some(([openMin, closeMin]) => {
+      for (let t = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes; t + duration <= closeMin; t += slotStepMinutes){
+        const end = t + duration;
+        if (busy.every(([bStart, bEnd]) => end <= bStart || t >= bEnd)) return true;
+      }
+      return false;
+    });
   }
   // "לא משנה לי מי" for manual booking — a day/slot counts as available as long as
   // at least one capable staff member is free, mirroring hasAnySlot() in the
@@ -4436,14 +4842,13 @@
       slotsEl.innerHTML = '<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">העובדת לא זמינה ביום זה (חג/חופשה)</div>';
       return;
     }
-    let openMin = timeToMinutes(dayInfo.from);
-    const closeMin = timeToMinutes(dayInfo.to);
     const duration = svc.duration || 30;
-    if (isToday){
-      const earliestStart = Math.ceil((nowMinutesReal + minLeadMinutes) / fineStepMinutes) * fineStepMinutes;
-      openMin = Math.max(openMin, earliestStart);
-    }
-    if (openMin + duration > closeMin){
+    // A staff member can now have more than one shift on the same day (e.g.
+    // morning + evening) — getEffectiveDayWindows() returns every one of them,
+    // already clipped for today's lead time; mergeWindows() collapses any
+    // touching/overlapping ranges into a disjoint sorted list.
+    const windows = mergeWindows(getEffectiveDayWindows(dayInfo, bookingSelectedDate));
+    if (!windows.length){
       slotsEl.innerHTML = '<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">היום כבר נגמרו השעות הפנויות</div>';
       return;
     }
@@ -4455,7 +4860,7 @@
       });
     const fits = (start, dur) => {
       const end = start + dur;
-      if (end > closeMin) return false;
+      if (!windows.some(([s, e]) => start >= s && end <= e)) return false;
       return busy.every(([bStart, bEnd]) => end <= bStart || start >= bEnd);
     };
     const findConflict = (start, dur) => {
@@ -4464,52 +4869,54 @@
     };
     const minutesToTime = (m) => String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0');
     let firstFree = null;
-    const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
-    for (let bucketStart = firstBucket; bucketStart + duration <= closeMin; bucketStart += slotStepMinutes){
-      let chosenTime = null;
-      const bucketEnd = bucketStart + slotStepMinutes;
-      for (let t = Math.max(bucketStart, openMin); t < bucketEnd && t + duration <= closeMin; t += fineStepMinutes){
-        if (fits(t, duration)){ chosenTime = t; break; }
-      }
-      const t = chosenTime !== null ? chosenTime : bucketStart;
-      const available = chosenTime !== null;
-      const timeStr = minutesToTime(t);
-      const d = document.createElement('div');
-      d.className = 'slot' + (available ? '' : ' booked');
-      d.textContent = timeStr;
-      if (available){
-        slotStaffAssignment[timeStr] = selectedStaffIndex;
-        if (firstFree === null) firstFree = timeStr;
-        d.onclick = () => {
-          document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
-          d.classList.add('selected');
-          selectedSlot = timeStr;
-          document.getElementById('waitlistBox').innerHTML = '';
-        };
-      } else {
-        const conflict = findConflict(t, duration);
-        let reason;
-        if (conflict){
-          const [cStart] = conflict;
-          if (cStart <= t){
-            reason = `יש כבר תור שמתחיל ב-${minutesToTime(cStart)} ועדיין לא הסתיים.`;
-          } else {
-            reason = `טיפול באורך ${duration} דק׳ שמתחיל ב-${timeStr} ייחפוף לתור שמתחיל ב-${minutesToTime(cStart)}.`;
-          }
-        } else {
-          reason = 'השעה הזו לא מתאימה למשך הטיפול שנבחר.';
+    windows.forEach(([openMin, closeMin]) => {
+      const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
+      for (let bucketStart = firstBucket; bucketStart + duration <= closeMin; bucketStart += slotStepMinutes){
+        let chosenTime = null;
+        const bucketEnd = bucketStart + slotStepMinutes;
+        for (let t = Math.max(bucketStart, openMin); t < bucketEnd && t + duration <= closeMin; t += fineStepMinutes){
+          if (fits(t, duration)){ chosenTime = t; break; }
         }
-        d.onclick = () => showWaitlistPrompt(timeStr, reason);
+        const t = chosenTime !== null ? chosenTime : bucketStart;
+        const available = chosenTime !== null;
+        const timeStr = minutesToTime(t);
+        const d = document.createElement('div');
+        d.className = 'slot' + (available ? '' : ' booked');
+        d.textContent = timeStr;
+        if (available){
+          slotStaffAssignment[timeStr] = selectedStaffIndex;
+          if (firstFree === null) firstFree = timeStr;
+          d.onclick = () => {
+            document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+            d.classList.add('selected');
+            selectedSlot = timeStr;
+            document.getElementById('waitlistBox').innerHTML = '';
+          };
+        } else {
+          const conflict = findConflict(t, duration);
+          let reason;
+          if (conflict){
+            const [cStart] = conflict;
+            if (cStart <= t){
+              reason = `יש כבר תור שמתחיל ב-${minutesToTime(cStart)} ועדיין לא הסתיים.`;
+            } else {
+              reason = `טיפול באורך ${duration} דק׳ שמתחיל ב-${timeStr} ייחפוף לתור שמתחיל ב-${minutesToTime(cStart)}.`;
+            }
+          } else {
+            reason = 'השעה הזו לא מתאימה למשך הטיפול שנבחר.';
+          }
+          d.onclick = () => showWaitlistPrompt(timeStr, reason);
+        }
+        slotsEl.appendChild(d);
       }
-      slotsEl.appendChild(d);
-    }
+    });
     if (firstFree){
       selectedSlot = firstFree;
       const firstEl = Array.from(slotsEl.children).find(el => el.textContent === firstFree);
       if (firstEl) firstEl.classList.add('selected');
     } else {
       slotsEl.innerHTML += '<div style="grid-column:1/-1; font-size:13px; color:#8A8178; margin-top:6px;">אין שעות פנויות עם משך הטיפול הזה היום.</div>';
-      const wlTime = (openMin < closeMin) ? minutesToTime(openMin) : 'השעות הפנויות ביום זה';
+      const wlTime = minutesToTime(windows[0][0]);
       document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">אין כרגע שעות פנויות ביום הזה. אם תרצי, אפשר להצטרף לרשימת ההמתנה ולקבל עדכון אם יתפנה מקום.<div style="margin-top:8px;"><button onclick="showWaitlistPrompt('${wlTime}', 'אין כרגע שעות פנויות ביום הזה.')">הצטרפות לרשימת ההמתנה</button></div></div>`;
     }
   }
@@ -4531,77 +4938,79 @@
       return;
     }
     const candidateIndices = getCapableStaffIndices(selectedCategoryForBooking);
-    const staffWindows = candidateIndices.map(idx => {
+    // Each staff member can now have more than one shift on the same day (e.g.
+    // morning + evening) — perStaffWindows[idx] holds ALL of that staff member's
+    // windows for the day, while allWindows collects every window across every
+    // capable staff member so the outer loop can iterate the union of all of them.
+    const perStaffWindows = {};
+    const perStaffBusy = {};
+    let allWindows = [];
+    candidateIndices.forEach(idx => {
       const emp = staff[idx];
       const dayInfo = emp && emp.hours ? emp.hours[dow] : null;
-      if (!emp || !dayInfo || !dayInfo.open) return null;
-      if (isDateClosedForStaff(idx, bookingSelectedDate)) return null;
-      let openMin = timeToMinutes(dayInfo.from);
-      const closeMin = timeToMinutes(dayInfo.to);
-      if (isToday){
-        const earliestStart = Math.ceil((nowMinutesReal + minLeadMinutes) / fineStepMinutes) * fineStepMinutes;
-        openMin = Math.max(openMin, earliestStart);
-      }
-      const busy = weekAppointments
+      if (!emp || isDateClosedForStaff(idx, bookingSelectedDate)) return;
+      const windows = getEffectiveDayWindows(dayInfo, bookingSelectedDate);
+      if (!windows.length) return;
+      perStaffWindows[idx] = windows;
+      perStaffBusy[idx] = weekAppointments
         .filter(a => a.date === formatDateKey(bookingSelectedDate) && a.staff === idx)
         .map(a => { const s = timeToMinutes(a.time); return [s, s + a.dur]; });
-      return { idx, openMin, closeMin, busy };
-    }).filter(Boolean);
-    if (!staffWindows.length){
+      allWindows = allWindows.concat(windows);
+    });
+    if (!allWindows.length){
       slotsEl.innerHTML = '<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">אין עובדת מתאימה זמינה ביום זה לטיפול שנבחר.</div>';
-      return;
-    }
-    const openMin = Math.min(...staffWindows.map(w => w.openMin));
-    const closeMin = Math.max(...staffWindows.map(w => w.closeMin));
-    if (openMin + duration > closeMin){
-      slotsEl.innerHTML = '<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">היום כבר נגמרו השעות הפנויות</div>';
       return;
     }
     const findFreeStaff = (start, dur) => {
       const end = start + dur;
-      for (const w of staffWindows){
-        if (start < w.openMin || end > w.closeMin) continue;
-        if (w.busy.every(([bStart, bEnd]) => end <= bStart || start >= bEnd)) return w.idx;
+      for (const idx of candidateIndices){
+        const wins = perStaffWindows[idx];
+        if (!wins) continue;
+        if (!wins.some(([s, e]) => start >= s && end <= e)) continue;
+        if ((perStaffBusy[idx] || []).every(([bStart, bEnd]) => end <= bStart || start >= bEnd)) return idx;
       }
       return null;
     };
     const minutesToTime = (m) => String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0');
     let firstFree = null;
-    const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
-    for (let bucketStart = firstBucket; bucketStart + duration <= closeMin; bucketStart += slotStepMinutes){
-      let chosenTime = null, chosenStaff = null;
-      const bucketEnd = bucketStart + slotStepMinutes;
-      for (let t = Math.max(bucketStart, openMin); t < bucketEnd && t + duration <= closeMin; t += fineStepMinutes){
-        const freeStaff = findFreeStaff(t, duration);
-        if (freeStaff !== null){ chosenTime = t; chosenStaff = freeStaff; break; }
+    const mergedWindows = mergeWindows(allWindows);
+    mergedWindows.forEach(([openMin, closeMin]) => {
+      const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
+      for (let bucketStart = firstBucket; bucketStart + duration <= closeMin; bucketStart += slotStepMinutes){
+        let chosenTime = null, chosenStaff = null;
+        const bucketEnd = bucketStart + slotStepMinutes;
+        for (let t = Math.max(bucketStart, openMin); t < bucketEnd && t + duration <= closeMin; t += fineStepMinutes){
+          const freeStaff = findFreeStaff(t, duration);
+          if (freeStaff !== null){ chosenTime = t; chosenStaff = freeStaff; break; }
+        }
+        const t = chosenTime !== null ? chosenTime : bucketStart;
+        const available = chosenTime !== null;
+        const timeStr = minutesToTime(t);
+        const d = document.createElement('div');
+        d.className = 'slot' + (available ? '' : ' booked');
+        d.textContent = timeStr;
+        if (available){
+          slotStaffAssignment[timeStr] = chosenStaff;
+          if (firstFree === null) firstFree = timeStr;
+          d.onclick = () => {
+            document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+            d.classList.add('selected');
+            selectedSlot = timeStr;
+            document.getElementById('waitlistBox').innerHTML = '';
+          };
+        } else {
+          d.onclick = () => showWaitlistPrompt(timeStr, 'אף עובדת מתאימה לא פנויה בשעה זו למשך הטיפול שנבחר.');
+        }
+        slotsEl.appendChild(d);
       }
-      const t = chosenTime !== null ? chosenTime : bucketStart;
-      const available = chosenTime !== null;
-      const timeStr = minutesToTime(t);
-      const d = document.createElement('div');
-      d.className = 'slot' + (available ? '' : ' booked');
-      d.textContent = timeStr;
-      if (available){
-        slotStaffAssignment[timeStr] = chosenStaff;
-        if (firstFree === null) firstFree = timeStr;
-        d.onclick = () => {
-          document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
-          d.classList.add('selected');
-          selectedSlot = timeStr;
-          document.getElementById('waitlistBox').innerHTML = '';
-        };
-      } else {
-        d.onclick = () => showWaitlistPrompt(timeStr, 'אף עובדת מתאימה לא פנויה בשעה זו למשך הטיפול שנבחר.');
-      }
-      slotsEl.appendChild(d);
-    }
+    });
     if (firstFree){
       selectedSlot = firstFree;
       const firstEl = Array.from(slotsEl.children).find(el => el.textContent === firstFree);
       if (firstEl) firstEl.classList.add('selected');
     } else {
       slotsEl.innerHTML += '<div style="grid-column:1/-1; font-size:13px; color:#8A8178; margin-top:6px;">אין שעות פנויות עם משך הטיפול הזה היום, אצל אף עובדת מתאימה.</div>';
-      const wlTime = (openMin < closeMin) ? minutesToTime(openMin) : 'השעות הפנויות ביום זה';
+      const wlTime = minutesToTime(mergedWindows[0][0]);
       document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">אין כרגע שעות פנויות ביום הזה. אם תרצי, אפשר להצטרף לרשימת ההמתנה ולקבל עדכון אם יתפנה מקום.<div style="margin-top:8px;"><button onclick="showWaitlistPrompt('${wlTime}', 'אין כרגע שעות פנויות ביום הזה.')">הצטרפות לרשימת ההמתנה</button></div></div>`;
     }
   }
@@ -4609,17 +5018,33 @@
   // A cancelled appointment is simply removed from weekAppointments (see
   // removeCurrentBookedAppointment/cancelAdminAppointment) — there was never a
   // record of it having happened at all. That's fine for the app itself, but the
-  // weekly email report (see functions/index.js) needs SOME record of how many
-  // cancellations happened, so this tiny append-only log exists purely for that:
-  // logCancellation() is called from every real cancellation path (NOT from a
-  // reschedule, which isn't a lost booking, just a moved one) right before the
-  // appointment is removed.
-  let cancellationLog = [];
+  // "ביטולים" section of the manual reports tab (renderReports/computeRealRangeReport
+  // below) needs SOME record of what was cancelled, so this append-only log exists
+  // purely for that: logCancellation() is called from every real cancellation path
+  // (NOT from a reschedule, which isn't a lost booking, just a moved one) right
+  // before the appointment is removed — while staff[appt.staff] can still be
+  // resolved to a name, since the staff array hasn't changed yet at this point.
+  // (cancellationLog itself is declared much earlier in the file — see near
+  // `let categories = []` — because the initial renderReports('week') call
+  // near the top of the page runs before this point and already reads it.)
   function logCancellation(appt){
     if (!appt) return;
-    cancellationLog.push({ date: appt.date, service: appt.service, cancelledAt: formatDateKey(new Date()) });
+    const svcMatch = services.find(s => s.name === appt.service);
+    cancellationLog.push({
+      date: appt.date,
+      time: appt.time || '',
+      service: appt.service,
+      client: appt.client || '',
+      staffName: (staff[appt.staff] && staff[appt.staff].name) || '',
+      price: svcMatch ? (svcMatch.price || 0) : 0,
+      cancelledAt: formatDateKey(new Date())
+    });
+    // Kept for a full year+ (not just a rolling few weeks) now that this log
+    // also feeds the manual "ביטולים" report, which can be asked about any
+    // past custom date range — a short retention window would silently make
+    // older cancellations disappear from that report.
     const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 60);
+    cutoff.setDate(cutoff.getDate() - 400);
     const cutoffKey = formatDateKey(cutoff);
     cancellationLog = cancellationLog.filter(c => c && c.cancelledAt >= cutoffKey);
   }
@@ -4925,7 +5350,10 @@
         const dayInfo = empCandidate && empCandidate.hours ? empCandidate.hours[dow] : null;
         if (!empCandidate || !dayInfo || !dayInfo.open) return false;
         if (isDateClosedForStaff(idx, bookingSelectedDate)) return false;
-        if (slotStartMin < timeToMinutes(dayInfo.from) || slotEndMin > timeToMinutes(dayInfo.to)) return false;
+        // A staff member can have more than one shift on this day (e.g. morning +
+        // evening) — the slot must fit inside AT LEAST ONE of their windows.
+        const candidateWindows = getEffectiveDayWindows(dayInfo, bookingSelectedDate);
+        if (!candidateWindows.some(([s, e]) => slotStartMin >= s && slotEndMin <= e)) return false;
         const conflict = weekAppointments.some(a => {
           if (a.staff !== idx || a.date !== dateKeyForSlot) return false;
           const aStart = timeToMinutes(a.time);
@@ -5410,6 +5838,64 @@
     document.querySelectorAll('.subswitcher button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }
+  // Stays true for the rest of THIS browser session once the right code is
+  // entered once — she shouldn't have to retype it every single time she moves
+  // between these tabs. Reset on logout (see doLogout) and naturally reset by a
+  // full page reload, since it's just an in-memory flag, not persisted anywhere.
+  let sensitiveAccessUnlocked = false;
+  function isSensitiveAccessLocked(){
+    return !!ownerAccessCode && !sensitiveAccessUnlocked;
+  }
+  // A plain prompt()/alert() rather than a custom overlay — consistent with how
+  // the rest of this app already handles simple yes/no and confirmation moments
+  // (confirm() for deletions, etc.), and there's no real security benefit to a
+  // fancier-looking dialog for what's explicitly a soft, honesty-based gate.
+  function promptOwnerAccessCode(onSuccess){
+    const entered = prompt('הטאב הזה מוגן בקוד גישה למנהלת — נא להקליד את הקוד:');
+    if (entered === null) return; // she cancelled — stay right where she was
+    if (entered === ownerAccessCode){
+      sensitiveAccessUnlocked = true;
+      onSuccess();
+    } else {
+      alert('קוד שגוי.');
+    }
+  }
+  // Wrap the tab-switch itself so a wrong/missing code never actually reveals
+  // the tab's content — the real showSub()/showInnerTab() only run inside
+  // onSuccess, after the code is confirmed correct.
+  function guardedShowSub(name, btn){
+    const gatedTabs = ['settings', 'staff', 'servicesgroup'];
+    if (isSensitiveAccessLocked() && gatedTabs.includes(name)){
+      promptOwnerAccessCode(() => showSub(name, btn));
+      return;
+    }
+    showSub(name, btn);
+  }
+  function guardedShowInnerTab(containerId, innerId, btn){
+    if (isSensitiveAccessLocked() && innerId === 'inner-overview-reports'){
+      promptOwnerAccessCode(() => showInnerTab(containerId, innerId, btn));
+      return;
+    }
+    showInnerTab(containerId, innerId, btn);
+  }
+  // The inventory tab's "לא הוגדר מייל" link used to just call .focus() on the
+  // email field directly — but that field now lives on the Settings tab, and
+  // focusing an element that's hidden (a different, inactive subpanel) silently
+  // does nothing visible. This switches to Settings first, then focuses it.
+  function goToInvAlertEmailSetting(){
+    const settingsBtn = document.getElementById('settingsTabBtn');
+    const focusEmailField = () => {
+      const emailInput = document.getElementById('invAlertEmail');
+      if (emailInput){
+        emailInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        emailInput.focus();
+      }
+    };
+    // Settings may itself be code-gated now (see guardedShowSub) — if so, this
+    // link has to go through the same prompt like any other way of getting there.
+    if (settingsBtn) guardedShowSub('settings', settingsBtn);
+    focusEmailField();
+  }
   function showInnerTab(containerId, innerId, btn){
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -5508,43 +5994,94 @@
     if (!hoursList || !staff[hoursEditorStaffIndex]) return;
     hoursList.innerHTML = '';
     const hours = staff[hoursEditorStaffIndex].hours;
+    const refreshDownstream = () => {
+      if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+      if (typeof renderMiniCal === 'function') renderMiniCal();
+      if (typeof saveState === 'function') saveState();
+    };
     days.forEach((day, i) => {
       const dayHours = hours[i];
+      // A day can now have more than one shift (e.g. morning + evening) — the
+      // data is normalized here, once, into the `ranges` array shape.
+      // getEffectiveDayWindows() elsewhere already accepts either shape, so
+      // existing saved data with only from/to keeps working until it's opened
+      // in this editor, at which point it's read into ranges[0].
+      if (!Array.isArray(dayHours.ranges) || !dayHours.ranges.length){
+        dayHours.ranges = (dayHours.from && dayHours.to) ? [{ from: dayHours.from, to: dayHours.to }] : [{ from: '09:00', to: '18:00' }];
+      }
       const row = document.createElement('div');
       row.className = 'hours-row' + (dayHours.open ? '' : ' closed');
-      const fromOptions = hourOptions.map(h => `<option value="${h}" ${h===dayHours.from?'selected':''}>${h}</option>`).join('');
-      const toOptions = hourOptions.map(h => `<option value="${h}" ${h===dayHours.to?'selected':''}>${h}</option>`).join('');
+      const shiftsHtml = dayHours.ranges.map((r, ri) => {
+        const fromOptions = hourOptions.map(h => `<option value="${h}" ${h===r.from?'selected':''}>${h}</option>`).join('');
+        const toOptions = hourOptions.map(h => `<option value="${h}" ${h===r.to?'selected':''}>${h}</option>`).join('');
+        return `<div class="hours-range" data-range-idx="${ri}">
+          <select data-part="from">${fromOptions}</select>
+          <span>עד</span>
+          <select data-part="to">${toOptions}</select>
+          ${dayHours.ranges.length > 1 ? '<button type="button" class="hours-range-del" aria-label="הסרת משמרת">✕</button>' : ''}
+        </div>`;
+      }).join('');
       row.innerHTML = `
         <span class="day">${day.name}</span>
         <div class="toggle${dayHours.open ? ' on' : ''}"></div>
-        <div class="hours-range">
-          <select>${fromOptions}</select>
-          <span>עד</span>
-          <select>${toOptions}</select>
+        <div class="hours-ranges-wrap">
+          ${shiftsHtml}
+          <button type="button" class="hours-add-shift">+ משמרת (למשל ערב)</button>
         </div>`;
       row.querySelector('.toggle').onclick = () => {
         dayHours.open = !dayHours.open;
         row.classList.toggle('closed');
         row.querySelector('.toggle').classList.toggle('on');
-        if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
-        if (typeof renderMiniCal === 'function') renderMiniCal();
+        refreshDownstream();
       };
-      row.querySelectorAll('select').forEach((sel, si) => {
-        sel.onchange = () => {
-          if (si === 0) dayHours.from = sel.value; else dayHours.to = sel.value;
-          if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
-          if (typeof renderMiniCal === 'function') renderMiniCal();
-        };
+      row.querySelectorAll('.hours-range').forEach(rangeEl => {
+        const ri = parseInt(rangeEl.dataset.rangeIdx);
+        rangeEl.querySelectorAll('select').forEach(sel => {
+          sel.onchange = () => {
+            dayHours.ranges[ri][sel.dataset.part] = sel.value;
+            refreshDownstream();
+          };
+        });
+        const delBtn = rangeEl.querySelector('.hours-range-del');
+        if (delBtn){
+          delBtn.onclick = () => {
+            dayHours.ranges.splice(ri, 1);
+            renderHoursEditor();
+            refreshDownstream();
+          };
+        }
       });
+      row.querySelector('.hours-add-shift').onclick = () => {
+        // New shift defaults to starting right when the last one ends, so
+        // "בוקר ואז ערב" is one click + maybe one tweak, not retyping both times.
+        // The default end time is set 2 hours later (clamped to the last option)
+        // so the new shift is never born as an invalid from>=to range.
+        const last = dayHours.ranges[dayHours.ranges.length - 1];
+        const newFrom = last ? last.to : '09:00';
+        const fromIdx = hourOptions.indexOf(newFrom);
+        const newTo = fromIdx !== -1 ? hourOptions[Math.min(fromIdx + 2, hourOptions.length - 1)] : '18:00';
+        dayHours.ranges.push({ from: newFrom, to: newTo === newFrom ? hourOptions[hourOptions.length - 1] : newTo });
+        renderHoursEditor();
+        refreshDownstream();
+      };
       hoursList.appendChild(row);
     });
   }
   renderHoursStaffPicker();
   renderHoursEditor();
-  let invAlertEmail = '';
+  // invAlertEmail itself is declared much earlier in the file (see near
+  // `let cancellationLog = []`) — renderBranding()'s very first synchronous
+  // call, further up the page, already reads it to populate the field's value.
   function updateInvAlertEmail(){
     invAlertEmail = document.getElementById('invAlertEmail').value.trim();
     renderInventory();
+  }
+  // ownerAccessCode itself is declared much earlier (see near `let invAlertEmail`)
+  // for the same TDZ reason. See guardedShowSub/guardedShowInnerTab further below
+  // for where this is actually enforced.
+  function updateOwnerAccessCode(){
+    ownerAccessCode = document.getElementById('ownerAccessCodeInput').value.trim();
+    if (typeof saveState === 'function') saveState();
   }
   let inventory = [];
   function renderInventory(){
@@ -5585,7 +6122,7 @@
       alertEl.classList.add('show');
       const emailNote = invAlertEmail
         ? `תישלח התראה למייל ${invAlertEmail}.`
-        : `<u style="cursor:pointer;" onclick="document.getElementById('invAlertEmail').focus();">לא הוגדר מייל לשליחת התראות — לחצי כאן להגדיר</u>.`;
+        : `<u style="cursor:pointer;" onclick="goToInvAlertEmailSetting()">לא הוגדר מייל לשליחת התראות — לחצי כאן להגדיר</u>.`;
       alertEl.innerHTML = '⚠ &nbsp;<span>מלאי נמוך מהסף שהגדרת: ' + lowItems.join(', ') + '. ' + emailNote + '</span>';
     } else {
       alertEl.classList.remove('show');
@@ -5673,7 +6210,8 @@
     const nowIso = new Date().toISOString();
     const simpleFields = {
       branding, inactivityThresholdDays, customTemplates, staff,
-      categories, services, whatsNewItems, invAlertEmail, inventory, cancellationLog
+      categories, services, whatsNewItems, invAlertEmail, inventory, cancellationLog,
+      ownerAccessCode
     };
     db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
       const server = doc.exists ? doc.data() : {};
@@ -5723,7 +6261,8 @@
         const fullSnapshot = {
           branding, clients, inactivityThresholdDays, customTemplates,
           staff, weekAppointments, categories, services, whatsNewItems,
-          invAlertEmail, inventory, waitlist, cancellationLog, savedAt: committedPayload.savedAt
+          invAlertEmail, inventory, waitlist, cancellationLog, ownerAccessCode,
+          savedAt: committedPayload.savedAt
         };
         CLOUD_DOC.collection('backups').doc(backupDateKey).set(fullSnapshot).catch(err => console.error('Backup save failed:', err));
       }
@@ -5846,6 +6385,7 @@
     if (data.inventory) inventory = data.inventory;
     if (data.waitlist) waitlist = data.waitlist;
     if (data.cancellationLog) cancellationLog = data.cancellationLog;
+    if (typeof data.ownerAccessCode === 'string') ownerAccessCode = data.ownerAccessCode;
   }
   function rerenderEverything(){
     if (typeof renderCategories === 'function') renderCategories();
@@ -6119,6 +6659,10 @@
       // read/write access to the cloud data (booking flow, etc.) after the owner
       // logs out — otherwise every request would start failing permission checks.
       auth.signInAnonymously().catch(err => console.error('Re-sign-in after logout failed:', err));
+      // Whoever logs back in next (even on the very same shared login) has to
+      // enter the owner-access code again for the gated tabs — this isn't
+      // remembered across a logout.
+      sensitiveAccessUnlocked = false;
       document.querySelectorAll('.switcher button')[0].click();
     });
   }
