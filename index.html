@@ -1471,15 +1471,19 @@
           </div>
           <div class="booking-step" id="bstep-3">
             <div class="label">פרטי קשר</div>
-            <input class="field" id="bookingNameInput" placeholder="שם מלא">
-            <div id="bookingNameError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין שם מלא</div>
-            <input class="field" id="bookingPhoneInput" type="tel" placeholder="050-0000000">
+            <input class="field" id="bookingIdInput" type="tel" inputmode="numeric" maxlength="9" placeholder="תעודת זהות">
+            <div id="bookingIdError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין תעודת זהות תקנית (9 ספרות)</div>
             <div id="bookingWelcomeBack" style="display:none; color:var(--sage); font-size:12px; margin:-4px 0 8px;"></div>
-            <div id="bookingPhoneError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">מספר טלפון לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567)</div>
-            <div id="firstTimePerks" class="first-time-perks" style="display:none;">
-              <p class="ftp-title">🎁 בואי לעדכן אותנו קצת עלייך כדי לקבל פינוקים שווים ביום ההולדת שלך!</p>
-              <input class="field" id="ftpEmail" type="email" placeholder="אימייל (אופציונלי)">
-              <input class="field" id="ftpBirthday" type="date" placeholder="תאריך לידה (אופציונלי)">
+            <div id="newClientRegistration" style="display:none;">
+              <input class="field" id="bookingNameInput" placeholder="שם מלא">
+              <div id="bookingNameError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין שם מלא</div>
+              <input class="field" id="bookingPhoneInput" type="tel" placeholder="050-0000000">
+              <div id="bookingPhoneError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">מספר טלפון לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567)</div>
+              <div id="firstTimePerks" class="first-time-perks">
+                <p class="ftp-title">🎁 פעם ראשונה? נעים להכיר! אפשר גם לעדכן אותנו קצת עלייך כדי לקבל פינוקים שווים ביום ההולדת שלך:</p>
+                <input class="field" id="ftpEmail" type="email" placeholder="אימייל (אופציונלי)">
+                <input class="field" id="ftpBirthday" type="date" placeholder="תאריך לידה (אופציונלי)">
+              </div>
             </div>
             <div class="label" style="margin-top:10px;">איך תרצי לקבל תזכורת? (אפשר לבחור יותר מאחת)</div>
             <div class="reminder-choice" id="reminderChoice">
@@ -1602,7 +1606,7 @@
           <input type="number" id="inactivityThreshold" value="21" style="width:70px;" oninput="updateInactivityThreshold()">
         </div>
         <div class="inv-alert" id="missYouAlert"></div>
-        <input type="text" id="clientSearch" class="search-input" placeholder="חיפוש לקוחה לפי שם או טלפון..." oninput="renderClients()">
+        <input type="text" id="clientSearch" class="search-input" placeholder="חיפוש לקוחה לפי שם, טלפון או תעודת זהות..." oninput="renderClients()">
         <div class="client-list" id="clientList"></div>
         <div class="client-add-row">
           <div class="brand-logo-upload small" id="clientPhotoUpload" onclick="document.getElementById('clientPhotoFile').click()">
@@ -1634,9 +1638,17 @@
             <button class="cta" style="width:auto; margin-top:0;" onclick="addCustomTemplate()">שמירת תבנית</button>
           </div>
           <div class="label" style="margin:16px 0 6px;">תמונה מצורפת (אופציונלי)</div>
-          <div class="brand-logo-upload" id="broadcastPhotoUpload" onclick="document.getElementById('broadcastPhotoFile').click()" style="width:100%; height:120px; border-radius:12px;">
-            <span id="broadcastPhotoPlaceholder">+ הוספת תמונה</span>
-            <img id="broadcastPhotoPreview" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:12px;">
+          <div style="position:relative; width:100%;">
+            <div class="brand-logo-upload" id="broadcastPhotoUpload" onclick="document.getElementById('broadcastPhotoFile').click()" style="width:100%; height:120px; border-radius:12px;">
+              <span id="broadcastPhotoPlaceholder">+ הוספת תמונה</span>
+              <img id="broadcastPhotoPreview" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:12px;">
+            </div>
+            <!-- Only visible once a photo is actually attached — this is the "remove
+                 the photo" control the person asked for: the photo isn't tied to any
+                 one template (it's a separate "attach a photo to whatever message I
+                 send" toggle), so it stays attached across template switches until
+                 explicitly removed here or until a broadcast is actually sent. -->
+            <button type="button" id="broadcastPhotoRemoveBtn" onclick="removeBroadcastPhoto(event)" style="display:none; position:absolute; top:6px; left:6px; background:rgba(20,16,20,0.75); color:#fff; border:none; border-radius:999px; width:26px; height:26px; font-size:14px; cursor:pointer; line-height:1;">✕</button>
           </div>
           <input type="file" id="broadcastPhotoFile" accept="image/*" style="display:none;" onchange="handleBroadcastPhotoUpload(event)">
           <div class="label" style="margin:16px 0 6px;">תוכן ההודעה</div>
@@ -1716,6 +1728,15 @@
       </div>
       <div class="label" style="margin:22px 0 10px;">כך זה ייראה ללקוחה</div>
       <div class="brand-preview" id="brandPreview"></div>
+      <div class="label" style="margin:28px 0 10px;">גיבויים</div>
+      <div style="font-size:13px; color:var(--ivory-dim); margin-bottom:10px; max-width:480px;">
+        המערכת שומרת גיבוי מלא אוטומטי אחת ליום. אם משהו השתבש (למשל נתונים שנמחקו
+        בטעות), אפשר לשחזר לאחד הימים האחרונים — זה יחליף את כל הנתונים הנוכחיים
+        (לקוחות, תורים, שירותים וכו') בנתונים מהגיבוי שנבחר, אז אפשר להשתמש בזה
+        רק אם באמת צריך.
+      </div>
+      <button class="template-btn" style="margin-bottom:10px;" onclick="loadBackupsList()">🔄 טעינת רשימת גיבויים</button>
+      <div id="backupsList" class="client-list"></div>
       <div class="label" style="margin:28px 0 10px;">חשבון</div>
       <button class="template-btn" onclick="doLogout()">🚪 התנתקות</button>
     </div>
@@ -1731,6 +1752,11 @@
           <input type="text" id="newSvcName" placeholder="שם השירות (למשל: לייזר ידיים)">
           <input type="number" id="newSvcPrice" placeholder="מחיר בש&quot;ח">
           <input type="number" id="newSvcDuration" placeholder="משך בדקות">
+          <div class="brand-logo-upload" id="newSvcPhotoUpload" onclick="document.getElementById('newSvcPhotoFile').click()" style="width:52px; height:52px; border-radius:10px; font-size:10px; text-align:center;">
+            <span id="newSvcPhotoPlaceholder">+ תמונה</span>
+            <img id="newSvcPhotoPreview" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:10px;">
+          </div>
+          <input type="file" id="newSvcPhotoFile" accept="image/*" style="display:none;" onchange="handleSvcPhotoUpload(event)">
           <button class="cta" style="width:auto; margin-top:0;" onclick="addService()">הוספת שירות</button>
         </div>
       </div>
@@ -1762,9 +1788,10 @@
     </div>
     <div id="sub-inventory" class="subpanel">
       <div class="inv-email-row">
-        <span class="label" style="margin:0;">מייל לקבלת התראות מלאי</span>
+        <span class="label" style="margin:0;">מייל לקבלת התראות מלאי + דוח שבועי</span>
         <input type="email" id="invAlertEmail" placeholder="you@example.com" oninput="updateInvAlertEmail()">
       </div>
+      <div style="font-size:12px; color:var(--ivory-dim); margin-top:-4px; margin-bottom:14px;">אותו מייל משמש גם לדוח סיכום שבועי אוטומטי (הכנסה, מספר תורים, ביטולים) שנשלח בכל יום ראשון בבוקר.</div>
       <div class="inv-alert" id="invAlert"></div>
       <div class="inv-list">
         <div class="inv-row head"><span>מוצר</span><span>במלאי</span><span>סף התראה</span><span>סטטוס</span></div>
@@ -1787,8 +1814,14 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 20.08-ג-תמונות-ותורים</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 20.08-ט-תז-ומחיקת-לקוחות</div>
 </footer>
+<!-- Small, quiet status pill — shows "שומר..." while a change is being written to
+     the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
+     there's always a clear, glanceable answer to "did that actually save?" instead
+     of having to guess or refresh to check. A real failure still shows the bigger
+     red banner (showSaveErrorBanner) — this pill is only for the calm, ordinary case. -->
+<div id="saveStatusIndicator" style="position:fixed; bottom:16px; inset-inline-start:16px; background:rgba(20,16,20,0.9); color:#F5EEE4; font-size:12.5px; padding:7px 16px; border-radius:999px; z-index:999998; display:none; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.3);"></div>
 <div id="myDayOverlay" class="myday-overlay">
   <div class="myday-sheet">
     <div class="myday-header no-print">
@@ -1836,6 +1869,7 @@
       </div>
     </div>
     <div style="display:flex; flex-direction:column; gap:10px;">
+      <input type="tel" inputmode="numeric" maxlength="9" id="mbClientId" class="field" placeholder="תעודת זהות (אם יש בכרטיסייה — ימלא שם וטלפון אוטומטית)">
       <input type="text" id="mbClientName" class="field" placeholder="שם הלקוחה">
       <input type="tel" id="mbClientPhone" class="field" placeholder="050-0000000">
       <select id="mbService" class="field"></select>
@@ -1999,6 +2033,7 @@
     mbCalViewMonth = mbSelectedDate.getMonth();
     document.getElementById('mbDate').value = formatDateKey(mbSelectedDate);
     document.getElementById('mbTime').value = opts.time || '';
+    document.getElementById('mbClientId').value = opts.clientId || '';
     document.getElementById('mbClientName').value = opts.clientName || '';
     document.getElementById('mbClientPhone').value = opts.clientPhone || '';
     document.getElementById('mbError').style.display = 'none';
@@ -2007,10 +2042,23 @@
   }
   document.getElementById('mbService')?.addEventListener('change', mbServiceChanged);
   document.getElementById('mbDuration')?.addEventListener('input', mbRefreshCalendarAndSlots);
-  // As soon as the phone number matches an existing client, fill in her name
-  // automatically — mirrors the "ברוכה שובך" auto-fill on the customer-facing
-  // booking form (see the bookingPhoneInput listener further down), so the
-  // admin doesn't have to look the client up and retype her name by hand.
+  // As soon as the ID number or phone matches an existing client, fill in her
+  // name (and, for ID, phone too) automatically — mirrors the "ברוכה שובך"
+  // auto-fill on the customer-facing booking form, so the admin doesn't have to
+  // look the client up and retype her details by hand. ID takes priority since
+  // it's now the real identity key; phone stays as a fallback for older clients
+  // who don't have a תז on file yet.
+  document.getElementById('mbClientId')?.addEventListener('input', function(){
+    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
+    if (this.value.length < 9) return;
+    const match = clients.find(c => c.teudatZehut === this.value);
+    if (match){
+      const nameInput = document.getElementById('mbClientName');
+      const phoneInput = document.getElementById('mbClientPhone');
+      if (nameInput) nameInput.value = match.name;
+      if (phoneInput) phoneInput.value = match.phone || '';
+    }
+  });
   document.getElementById('mbClientPhone')?.addEventListener('input', function(){
     const digits = this.value.replace(/[^0-9]/g, '');
     if (digits.length < 9) return;
@@ -2018,6 +2066,8 @@
     if (match){
       const nameInput = document.getElementById('mbClientName');
       if (nameInput) nameInput.value = match.name;
+      const idInput = document.getElementById('mbClientId');
+      if (idInput && match.teudatZehut) idInput.value = match.teudatZehut;
     }
   });
   function closeManualBookingModal(){
@@ -2293,6 +2343,7 @@
     const confirmed = confirm(`לבטל את התור של ${appt.client} ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}?`);
     if (!confirmed) return;
     const matches = getWaitlistMatchesForAppointment(appt);
+    logCancellation(appt);
     const idx = weekAppointments.findIndex(a => a.id === appt.id);
     if (idx !== -1) weekAppointments.splice(idx,1);
     if (typeof renderWeekCal==='function') renderWeekCal();
@@ -2306,6 +2357,7 @@
   function submitManualBooking(){
     const name = document.getElementById('mbClientName').value.trim();
     const phone = document.getElementById('mbClientPhone').value.trim();
+    const idDigits = (document.getElementById('mbClientId')?.value || '').replace(/[^0-9]/g, '');
     const svcIdx = parseInt(document.getElementById('mbService').value);
     const staffValRaw = document.getElementById('mbStaff').value;
     const dateVal = document.getElementById('mbDate').value;
@@ -2378,8 +2430,18 @@
       note: ''
     };
     weekAppointments.push(manualAppointment);
-    if (phone && !clients.some(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, ''))){
-      clients.push({ name, phone, email: '', photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
+    // Prefer matching by תז (the real identity key) when the admin entered one;
+    // fall back to phone for older clients who don't have a תז on file yet. If a
+    // known-by-phone client is found and now has a תז typed in that she didn't
+    // have before, save it onto her existing record instead of creating a
+    // duplicate — the admin clearly knows this is the same person.
+    const existingByIdOrPhone = idDigits
+      ? clients.find(c => c.teudatZehut === idDigits) || (phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, '')) : null)
+      : (phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, '')) : null);
+    if (existingByIdOrPhone){
+      if (idDigits && !existingByIdOrPhone.teudatZehut) existingByIdOrPhone.teudatZehut = idDigits;
+    } else if (phone || idDigits){
+      clients.push({ name, phone, teudatZehut: idDigits || null, email: '', photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
     }
     if (typeof saveState === 'function') saveState();
     // The appointment is saved at this point — show the success feedback and close
@@ -2829,6 +2891,7 @@
               <span class="t">${a.time || ''}</span>
               <span class="visit-svc">${a.service || 'שירות'}</span>
               <span class="visit-date">${formatHistoryDate(a)}</span>
+              <button class="visit-cancel-btn" data-cancel-appt-id="${a.id || ''}" title="ביטול התור הזה" style="margin-inline-start:auto; background:none; border:1px solid rgba(155,44,66,0.4); color:var(--wine); border-radius:8px; font-size:12px; padding:3px 8px; cursor:pointer;">✕ ביטול</button>
             </div>
             <div class="upcoming-meta">${a.staff !== undefined && staff[a.staff] ? 'אצל ' + staff[a.staff].name + ' · ' : ''}${formatAppointmentStatus(a)}</div>
             ${a.note ? `<div style="font-size:12px; color:var(--ivory-dim); margin-top:5px;">${a.note}</div>` : ''}
@@ -2840,6 +2903,7 @@
             <span class="t">${a.time || ''}</span>
             <span class="visit-svc">${a.service || 'שירות'}</span>
             <span class="visit-date">${formatHistoryDate(a)}</span>
+            <button class="visit-delete-btn" data-delete-history-id="${a.id || ''}" title="מחיקת הרשומה הזו (למשל רישום כפול בטעות)" style="margin-inline-start:auto; background:none; border:1px solid rgba(245,238,228,0.15); color:var(--ivory-dim); border-radius:8px; font-size:12px; padding:3px 8px; cursor:pointer;">🗑</button>
           </div>
           <div class="visit-status-actions">
             <button class="visit-status-btn${a.status === 'completed' ? ' active-yes' : ''}" data-status="completed">✓ הגיעה</button>
@@ -2870,9 +2934,11 @@
       }
       if (searchTerm){
         const nameMatch = c.name.toLowerCase().includes(searchTerm);
-        const phoneMatch = (c.phone || '').replace(/[^0-9]/g, '').includes(searchTerm.replace(/[^0-9]/g, ''));
+        const digitsInTerm = searchTerm.replace(/[^0-9]/g, '');
+        const phoneMatch = (c.phone || '').replace(/[^0-9]/g, '').includes(digitsInTerm);
+        const idMatch = (c.teudatZehut || '').includes(digitsInTerm);
         const searchIsDigits = /\d/.test(searchTerm);
-        if (!nameMatch && !(searchIsDigits && phoneMatch)) return;
+        if (!nameMatch && !(searchIsDigits && (phoneMatch || idMatch))) return;
       }
       const row = document.createElement('div');
       row.className = 'client-card';
@@ -2888,6 +2954,7 @@
             <div style="flex:1;">
               <input class="client-name-input" value="${c.name}" placeholder="שם הלקוחה">
               <div class="client-mini-row">
+                <input class="client-mini-input" data-field="teudatZehut" inputmode="numeric" maxlength="9" value="${c.teudatZehut || ''}" placeholder="תעודת זהות">
                 <input class="client-mini-input" data-field="phone" value="${c.phone || ''}" placeholder="טלפון">
                 <input class="client-mini-input" data-field="email" type="email" value="${c.email || ''}" placeholder="אימייל">
                 <span class="bday-field-wrap"><span class="bday-label">🎂 יום הולדת:</span><input class="client-mini-input" data-field="birthday" type="date" value="${c.birthday || ''}"></span>
@@ -2938,27 +3005,52 @@
         panel.style.display = isOpen ? 'none' : 'block';
       };
       row.querySelector('[data-action="book"]').onclick = () => {
-        openManualBookingModal({ clientName: c.name, clientPhone: c.phone });
+        openManualBookingModal({ clientName: c.name, clientPhone: c.phone, clientId: c.teudatZehut });
       };
       row.querySelector('.client-name-input').oninput = (e) => { c.name = e.target.value; };
       row.querySelectorAll('.client-mini-input').forEach(inp => {
         if (inp.dataset.field === 'birthday'){
           inp.onchange = (e) => { c.birthday = e.target.value; renderClients(); };
+        } else if (inp.dataset.field === 'teudatZehut'){
+          inp.oninput = (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 9);
+            c.teudatZehut = e.target.value;
+          };
         } else {
           inp.oninput = (e) => { c[e.target.dataset.field] = e.target.value; };
         }
       });
+      // Deleting a client used to be blocked entirely whenever she had any
+      // appointment (history or upcoming) — meant real, established clients could
+      // basically never be removed, even obviously-fake/test entries. Now deletion
+      // is always allowed, but with a clear warning about exactly what else gets
+      // wiped along with her (future appointments get cancelled, history is erased
+      // for good), and a second confirmation for that destructive case specifically.
       row.querySelector('.svc-del').onclick = () => {
-        if (allAppointments.length){
-          alert(`לא ניתן למחוק את ${c.name} כי קיימים לה ${history.length ? 'תורים בהיסטוריה' : ''}${history.length && upcoming.length ? ' וגם ' : ''}${upcoming.length ? 'תורים עתידיים' : ''}. כדי לשמור על היסטוריית הלקוחה, יש להשאיר את הכרטיסייה במערכת.`);
-          return;
-        }
-        const confirmed = confirm(`האם את בטוחה שברצונך למחוק את הלקוחה ${c.name}?`);
+        let warnMsg = `האם את בטוחה שברצונך למחוק את הלקוחה ${c.name}?`;
+        if (upcoming.length) warnMsg += `\n\nיש לה ${upcoming.length} תור/ים עתידי/ים — הם יבוטלו אוטומטית.`;
+        if (history.length) warnMsg += `\n\nההיסטוריה שלה (${history.length} טיפולים) תימחק לצמיתות ולא ניתן לשחזר אותה.`;
+        const confirmed = confirm(warnMsg);
         if (!confirmed) return;
+        if (upcoming.length || history.length){
+          const confirmedAgain = confirm('לאישור סופי: פעולה זו תמחק את כל התורים של הלקוחה הזו (עתידיים והיסטוריים) ולא ניתן לבטל אותה. להמשיך?');
+          if (!confirmedAgain) return;
+        }
+        // A deletion cleanup isn't a real "she cancelled" event, so it's intentionally
+        // NOT logged via logCancellation() — that would wrongly inflate the weekly
+        // report's cancellation count for what's really just data cleanup.
+        weekAppointments = weekAppointments.filter(a => a.client !== c.name);
+        waitlist = waitlist.filter(w => w.name !== c.name);
         clients.splice(i, 1);
         renderClients();
+        if (typeof renderWeekCal === 'function') renderWeekCal();
+        if (typeof renderMiniCal === 'function') renderMiniCal();
+        if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
+        if (typeof renderOverviewDayView === 'function') renderOverviewDayView();
+        if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal();
         if (typeof saveState === 'function') saveState();
         if (typeof renderBroadcastCount === 'function') renderBroadcastCount();
+        showAdminToast(`✓ הלקוחה ${c.name} נמחקה בהצלחה`);
       };
       row.querySelector('.client-note').oninput = (e) => { c.note = e.target.value; };
       row.querySelectorAll('[data-panel="history"] .visit-row').forEach(visitEl => {
@@ -2975,6 +3067,28 @@
         });
         const noteEl = visitEl.querySelector('.visit-note');
         if (noteEl) noteEl.oninput = (e) => { appt.note = e.target.value; };
+        // A one-off "delete this record" for a mistaken/duplicate history entry —
+        // deliberately a plain removal (not cancelAdminAppointment/logCancellation),
+        // since this is data cleanup for something that (probably) never really
+        // happened, not a genuine cancellation that should count in any report.
+        const delBtn = visitEl.querySelector('[data-delete-history-id]');
+        if (delBtn){
+          delBtn.onclick = () => {
+            const confirmedDel = confirm(`למחוק לצמיתות את הרשומה של ${appt.service || 'הטיפול'} מתאריך ${appt.date}?`);
+            if (!confirmedDel) return;
+            const idx2 = weekAppointments.findIndex(a => a.id === appt.id);
+            if (idx2 !== -1) weekAppointments.splice(idx2, 1);
+            renderClients();
+            if (typeof saveState === 'function') saveState();
+          };
+        }
+      });
+      row.querySelectorAll('[data-panel="upcoming"] .visit-row').forEach(visitEl => {
+        const apptId = visitEl.dataset.apptId;
+        const appt = weekAppointments.find(a => a.id === apptId);
+        if (!appt) return;
+        const cancelBtn = visitEl.querySelector('[data-cancel-appt-id]');
+        if (cancelBtn) cancelBtn.onclick = () => cancelAdminAppointment(appt);
       });
       row.querySelectorAll('[data-today-appt-id]').forEach(visitEl => {
         const apptId = visitEl.dataset.todayApptId;
@@ -3050,7 +3164,25 @@
       document.getElementById('broadcastPhotoPreview').src = broadcastPhoto;
       document.getElementById('broadcastPhotoPreview').style.display = 'block';
       document.getElementById('broadcastPhotoPlaceholder').style.display = 'none';
+      const removeBtn = document.getElementById('broadcastPhotoRemoveBtn');
+      if (removeBtn) removeBtn.style.display = 'flex';
     });
+  }
+  // The attached photo isn't tied to a specific template — it stays attached across
+  // template switches (it's a separate "also attach this photo" toggle) until either
+  // removed here, or the broadcast is sent (sendBroadcast() clears it automatically
+  // once sent, so it doesn't accidentally get attached again to the next message too).
+  function removeBroadcastPhoto(event){
+    if (event) event.stopPropagation(); // don't let the click bubble to the upload box and reopen the file picker
+    broadcastPhoto = null;
+    const preview = document.getElementById('broadcastPhotoPreview');
+    const placeholder = document.getElementById('broadcastPhotoPlaceholder');
+    const removeBtn = document.getElementById('broadcastPhotoRemoveBtn');
+    const fileInput = document.getElementById('broadcastPhotoFile');
+    if (preview){ preview.style.display = 'none'; preview.src = ''; }
+    if (placeholder) placeholder.style.display = '';
+    if (removeBtn) removeBtn.style.display = 'none';
+    if (fileInput) fileInput.value = '';
   }
   const messageTemplates = {
     shana: 'שנה טובה ומתוקה! 🍯✨\nתודה שאת חלק מהלקוחות שלנו — מאחלות לך שנה מלאה בבריאות, אושר והרבה רגעים יפים.\nמחכות לראות אותך גם השנה!',
@@ -3060,7 +3192,13 @@
   };
   function fillTemplate(key){
     document.getElementById('broadcastMessage').value = messageTemplates[key] || '';
+    hideBroadcastResult();
   }
+  function hideBroadcastResult(){
+    const resultEl = document.getElementById('broadcastResult');
+    if (resultEl) resultEl.style.display = 'none';
+  }
+  document.getElementById('broadcastMessage')?.addEventListener('input', hideBroadcastResult);
   let customTemplates = [];
   function renderCustomTemplates(){
     const rowEl = document.getElementById('customTemplateRow');
@@ -3071,6 +3209,7 @@
       btn.innerHTML = `<span>✏️ ${tpl.label}</span><span class="tpl-del" aria-label="מחיקת תבנית">✕</span>`;
       btn.querySelector('span:first-child').onclick = () => {
         document.getElementById('broadcastMessage').value = tpl.content;
+        hideBroadcastResult();
       };
       btn.querySelector('.tpl-del').onclick = (e) => {
         e.stopPropagation();
@@ -3101,7 +3240,8 @@
     countEl.textContent = `יישלח ל-${withEmail} מתוך ${clients.length} לקוחות (עם כתובת מייל רשומה)`;
   }
   function sendBroadcast(){
-    const msg = document.getElementById('broadcastMessage').value.trim();
+    const msgEl = document.getElementById('broadcastMessage');
+    const msg = msgEl.value.trim();
     const clientsWithEmail = clients.filter(c => c.email && c.email.trim());
     const resultEl = document.getElementById('broadcastResult');
     if (!msg){
@@ -3112,6 +3252,13 @@
     clientsWithEmail.forEach(c => sendEmail(c.email, (branding.name || 'הכל בקליק') + ' — עדכון', msg, broadcastPhoto));
     resultEl.style.display = 'block';
     resultEl.innerHTML = `✓ &nbsp;ההודעה${broadcastPhoto ? ' (עם התמונה המצורפת)' : ''} נשלחה ל-${clientsWithEmail.length} לקוחות במייל.`;
+    // Clear the form right after a successful send — otherwise the "✓ נשלחה" line
+    // above just sits there forever, and the next time she opens this tab to send
+    // a DIFFERENT message, there's no way to tell whether that confirmation belongs
+    // to the new message or is a leftover from the last one. An empty, reset form
+    // makes it obvious this is a fresh, not-yet-sent message.
+    msgEl.value = '';
+    removeBroadcastPhoto();
   }
   function makeDefaultHours(){
     return [
@@ -3765,7 +3912,8 @@
       if (s.category !== cat) return;
       const el = document.createElement('div');
       el.className = 'svc-card' + (i === selectedSvcIndex ? ' selected' : '');
-      el.innerHTML = `<span>${s.name}</span><span>${s.price} ש"ח · ${s.duration} דק'</span>`;
+      const photoHtml = s.photo ? `<img src="${s.photo}" style="width:36px; height:36px; border-radius:8px; object-fit:cover; flex-shrink:0;">` : '';
+      el.innerHTML = `<span style="display:flex; align-items:center; gap:10px;">${photoHtml}${s.name}</span><span>${s.price} ש"ח · ${s.duration} דק'</span>`;
       el.onclick = () => {
         selectedSvcIndex = i;
         renderServiceListForCategory(cat);
@@ -3815,7 +3963,8 @@
         const i = services.indexOf(s);
         const row = document.createElement('div');
         row.className = 'svc-manage-row';
-        row.innerHTML = `<span>${s.name}</span><span><span class="price">${s.price} ש"ח · ${s.duration} דק'</span><button class="svc-del" onclick="removeService(${i})" aria-label="מחיקת שירות">✕</button></span>`;
+        const photoHtml = s.photo ? `<img src="${s.photo}" style="width:28px; height:28px; border-radius:6px; object-fit:cover; margin-inline-end:8px; vertical-align:middle;">` : '';
+        row.innerHTML = `<span>${photoHtml}${s.name}</span><span><span class="price">${s.price} ש"ח · ${s.duration} דק'</span><button class="svc-del" onclick="removeService(${i})" aria-label="מחיקת שירות">✕</button></span>`;
         manageList.appendChild(row);
       });
     });
@@ -3831,11 +3980,27 @@
     const price = parseInt(priceEl.value);
     const duration = parseInt(durationEl.value);
     if (!name || !price || !duration || !category) return;
-    services.push({ name, price, duration, category });
+    services.push({ name, price, duration, category, photo: newSvcPhoto });
     nameEl.value = '';
     priceEl.value = '';
     durationEl.value = '';
+    newSvcPhoto = null;
+    const photoPreview = document.getElementById('newSvcPhotoPreview');
+    const photoPlaceholder = document.getElementById('newSvcPhotoPlaceholder');
+    if (photoPreview){ photoPreview.style.display = 'none'; photoPreview.src = ''; }
+    if (photoPlaceholder) photoPlaceholder.style.display = '';
     renderServices();
+  }
+  let newSvcPhoto = null;
+  function handleSvcPhotoUpload(event){
+    const file = event.target.files[0];
+    if (!file) return;
+    readImageCompressed(file, (dataUrl) => {
+      newSvcPhoto = dataUrl;
+      document.getElementById('newSvcPhotoPreview').src = newSvcPhoto;
+      document.getElementById('newSvcPhotoPreview').style.display = 'block';
+      document.getElementById('newSvcPhotoPlaceholder').style.display = 'none';
+    }, { maxDim: 500 });
   }
   function removeService(i){
     const svc = services[i];
@@ -4385,6 +4550,23 @@
     }
   }
   let waitlist = [];
+  // A cancelled appointment is simply removed from weekAppointments (see
+  // removeCurrentBookedAppointment/cancelAdminAppointment) — there was never a
+  // record of it having happened at all. That's fine for the app itself, but the
+  // weekly email report (see functions/index.js) needs SOME record of how many
+  // cancellations happened, so this tiny append-only log exists purely for that:
+  // logCancellation() is called from every real cancellation path (NOT from a
+  // reschedule, which isn't a lost booking, just a moved one) right before the
+  // appointment is removed.
+  let cancellationLog = [];
+  function logCancellation(appt){
+    if (!appt) return;
+    cancellationLog.push({ date: appt.date, service: appt.service, cancelledAt: formatDateKey(new Date()) });
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 60);
+    const cutoffKey = formatDateKey(cutoff);
+    cancellationLog = cancellationLog.filter(c => c && c.cancelledAt >= cutoffKey);
+  }
   function renderWaitlistAdmin(){
     const listEl = document.getElementById('waitlistAdminList');
     const countEl = document.getElementById('waitlistCount');
@@ -4444,9 +4626,21 @@
       boxEl.querySelector('.wl-known-phone').textContent = knownPhone;
       boxEl.querySelector('.wl-join-known-btn').onclick = () => joinWaitlist(time, knownName, knownPhone);
       boxEl.querySelector('.wl-not-me-btn').onclick = () => showWaitlistPromptManual(time, reason);
+      scrollWaitlistBoxIntoView();
       return;
     }
     showWaitlistPromptManual(time, reason);
+  }
+  // Clicking a greyed-out/unavailable time slot pops the waitlist-signup box open
+  // further down the page — but if that box was below the visible screen area
+  // (very common on mobile, where the slot grid alone can fill the screen), nothing
+  // visibly happens where the person clicked, so it looked like the click did
+  // nothing. Scrolling it into view makes it obvious something happened.
+  function scrollWaitlistBoxIntoView(){
+    const boxEl = document.getElementById('waitlistBox');
+    if (boxEl && boxEl.innerHTML.trim()){
+      boxEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
   function showWaitlistPromptManual(time, reason){
     document.getElementById('waitlistBox').innerHTML = `
@@ -4457,6 +4651,7 @@
         <div id="wlError" style="display:none; color:var(--wine); font-size:12px; margin-bottom:6px;">יש למלא שם ומספר טלפון תקין</div>
         <div><button onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
       </div>`;
+    scrollWaitlistBoxIntoView();
   }
   function joinWaitlist(time, presetName, presetPhone){
     let name, phone;
@@ -4508,39 +4703,52 @@
     const emailInput = document.getElementById('reminderEmailInput');
     if (!emailInput) return;
     if (!emailChecked){ emailInput.style.display = 'none'; return; }
-    const digits = document.getElementById('bookingPhoneInput').value.replace(/[^0-9]/g, '');
-    const match = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits);
+    const digits = document.getElementById('bookingIdInput').value.replace(/[^0-9]/g, '');
+    const match = clients.find(c => c.teudatZehut === digits);
     if (match && match.email){ emailInput.style.display = 'none'; return; }
-    const perksEl = document.getElementById('firstTimePerks');
-    if (perksEl && perksEl.style.display !== 'none'){ emailInput.style.display = 'none'; return; }
+    const regEl = document.getElementById('newClientRegistration');
+    // While the registration block is showing, its own ftpEmail field already
+    // asks for an email — no need to ask a second time in a separate field.
+    if (regEl && regEl.style.display !== 'none'){ emailInput.style.display = 'none'; return; }
     emailInput.style.display = 'block';
   }
-  document.getElementById('bookingPhoneInput').addEventListener('input', function(){
-    if (isValidIsraeliPhone(this.value)){
-      document.getElementById('bookingPhoneError').style.display = 'none';
-      this.style.borderColor = '';
-    }
-    const digits = this.value.replace(/[^0-9]/g, '');
+  // The client now identifies herself by תעודת זהות (ID number) instead of by
+  // name+phone — it never changes, unlike a phone number, so it's a much more
+  // reliable way to recognize a returning client. A recognized ID skips straight
+  // to "ברוכה שובך" with nothing else to fill in; an unrecognized one opens the
+  // one-time registration fields (name, phone, optional email/birthday) — see the
+  // AskUserQuestion decisions this was built against: phone stays a separate
+  // field (not the identity key), only 9 digits are validated (no ID checksum),
+  // and an unrecognized ID is always treated as a new client, no fuzzy matching.
+  document.getElementById('bookingIdInput').addEventListener('input', function(){
+    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
+    const digits = this.value;
+    document.getElementById('bookingIdError').style.display = 'none';
+    this.style.borderColor = '';
     const welcomeEl = document.getElementById('bookingWelcomeBack');
+    const regEl = document.getElementById('newClientRegistration');
     const nameInput = document.getElementById('bookingNameInput');
-    if (digits.length >= 9){
-      const match = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits);
-      const perksEl = document.getElementById('firstTimePerks');
+    const phoneInput = document.getElementById('bookingPhoneInput');
+    if (digits.length === 9){
+      const match = clients.find(c => c.teudatZehut === digits);
       if (match){
         nameInput.value = match.name;
+        phoneInput.value = match.phone || '';
         welcomeEl.style.display = 'block';
-        welcomeEl.textContent = `✓ ברוכה שובך, ${match.name}! מילאנו את הפרטים שלך אוטומטית.`;
-        perksEl.style.display = 'none';
+        welcomeEl.textContent = `✓ ברוכה שובך, ${match.name}! אין צורך למלא פרטים נוספים.`;
+        regEl.style.display = 'none';
         updateReminderEmailVisibility();
         return;
       }
       welcomeEl.style.display = 'none';
-      perksEl.style.display = 'block';
+      nameInput.value = '';
+      phoneInput.value = '';
+      regEl.style.display = 'block';
       updateReminderEmailVisibility();
       return;
     }
-    document.getElementById('firstTimePerks').style.display = 'none';
     welcomeEl.style.display = 'none';
+    regEl.style.display = 'none';
     updateReminderEmailVisibility();
   });
   document.querySelectorAll('input[name="reminderChannel"]').forEach(function(radio){
@@ -4580,24 +4788,41 @@
       document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">לא נבחרה שעה פנויה ליום זה — יש לבחור יום אחר עם זמינות, או שירות/עובדת אחרת.</div>`;
       return;
     }
+    const idInput = document.getElementById('bookingIdInput');
+    const idErrorEl = document.getElementById('bookingIdError');
+    const idDigits = (idInput.value || '').replace(/[^0-9]/g, '');
+    if (!/^\d{9}$/.test(idDigits)){
+      idErrorEl.style.display = 'block';
+      idInput.style.borderColor = 'var(--wine)';
+      idInput.focus();
+      return;
+    }
+    idErrorEl.style.display = 'none';
+    idInput.style.borderColor = '';
+    const existingClientPre = clients.find(c => c.teudatZehut === idDigits);
     const nameInput = document.getElementById('bookingNameInput');
     const nameErrorEl = document.getElementById('bookingNameError');
-    if (!nameInput.value.trim()){
-      nameErrorEl.style.display = 'block';
-      nameInput.style.borderColor = 'var(--wine)';
-      nameInput.focus();
-      return;
-    }
-    nameErrorEl.style.display = 'none';
-    nameInput.style.borderColor = '';
     const phoneVal = document.getElementById('bookingPhoneInput').value;
     const errorEl = document.getElementById('bookingPhoneError');
-    if (!isValidIsraeliPhone(phoneVal)){
-      errorEl.style.display = 'block';
-      document.getElementById('bookingPhoneInput').style.borderColor = 'var(--wine)';
-      return;
+    // A recognized ID already carries her name+phone (auto-filled, fields hidden) —
+    // only a brand-new ID needs these validated, since only then is she actually
+    // typing them into the visible registration fields.
+    if (!existingClientPre){
+      if (!nameInput.value.trim()){
+        nameErrorEl.style.display = 'block';
+        nameInput.style.borderColor = 'var(--wine)';
+        nameInput.focus();
+        return;
+      }
+      nameErrorEl.style.display = 'none';
+      nameInput.style.borderColor = '';
+      if (!isValidIsraeliPhone(phoneVal)){
+        errorEl.style.display = 'block';
+        document.getElementById('bookingPhoneInput').style.borderColor = 'var(--wine)';
+        return;
+      }
+      errorEl.style.display = 'none';
     }
-    errorEl.style.display = 'none';
     const reminderChecked = Array.from(document.querySelectorAll('input[name="reminderChannel"]:checked'));
     const reminderErrorEl = document.getElementById('reminderChoiceError');
     if (!reminderChecked.length){
@@ -4670,8 +4895,7 @@
     const emp = staff[resolvedStaffIndex];
     const clientNameVal = document.getElementById('bookingNameInput').value.trim() || 'לקוחה';
     const dayKey = weekdayKeys[bookingSelectedDate.getDay()];
-    const phoneDigits = phoneVal.replace(/[^0-9]/g, '');
-    const existingClient = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phoneDigits);
+    const existingClient = clients.find(c => c.teudatZehut === idDigits);
     // If email was chosen as a reminder channel, make sure there's actually an email
     // to send to — either already on file, from the first-time perks field, or from
     // the dedicated reminder-email field that appears when it's needed.
@@ -4732,7 +4956,7 @@
       const reminderEmailVal = reminderEmailEl ? reminderEmailEl.value.trim() : '';
       const finalEmail = ftpEmail || reminderEmailVal;
       const ftpBirthday = document.getElementById('ftpBirthday').value || null;
-      clients.push({ name: clientNameVal, phone: phoneVal.trim(), email: finalEmail, photo: null, visits: isTodayOrPastBooking ? 1 : 0, daysSinceVisit: isTodayOrPastBooking ? 0 : null, note: '', birthday: ftpBirthday });
+      clients.push({ name: clientNameVal, phone: phoneVal.trim(), teudatZehut: idDigits, email: finalEmail, photo: null, visits: isTodayOrPastBooking ? 1 : 0, daysSinceVisit: isTodayOrPastBooking ? 0 : null, note: '', birthday: ftpBirthday });
       customerEmail = finalEmail;
     }
     currentBookedAppointment = {
@@ -4757,6 +4981,8 @@
     // booking form wondering whether anything happened.
     let gcalUrl = '#';
     try { gcalUrl = buildGoogleCalendarUrl(bookingSelectedDate, selectedSlot, svc ? (svc.duration || 30) : 30, svc ? svc.name : 'תור', emp ? emp.name : ''); } catch(e){ console.error('Calendar link build failed:', e); }
+    let icsUrl = '#';
+    try { icsUrl = buildIcsDataUrl(bookingSelectedDate, selectedSlot, svc ? (svc.duration || 30) : 30, svc ? svc.name : 'תור', emp ? emp.name : ''); } catch(e){ console.error('ICS link build failed:', e); }
     document.getElementById('bookingFormWrap').style.display = 'none';
     const apptEl = document.getElementById('myAppointment');
     apptEl.style.display = 'block';
@@ -4765,7 +4991,10 @@
       <h4>${svc ? svc.name : 'שירות'}</h4>
       <div class="appt-meta">${bookingSelectedDate.getDate()} ב${hebrewMonths[bookingSelectedDate.getMonth()]} (${hebrewDateStr(bookingSelectedDate)}), ${selectedSlot}${svc ? ' · ' + svc.price + ' ש"ח' : ''}${emp ? ' · אצל ' + emp.name : ''}</div>
       <div class="appt-meta" style="margin-top:2px;">תזכורת באמצעות: ${reminderText}</div>
-      <a href="${gcalUrl}" target="_blank" rel="noopener" class="gcal-link">📅 הוספה ליומן Google</a>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a href="${gcalUrl}" target="_blank" rel="noopener" class="gcal-link">📅 הוספה ל-Google Calendar</a>
+        <a href="${icsUrl}" download="תור-${svc ? svc.name : ''}.ics" class="gcal-link">📥 הוספה ליומן (iPhone/Outlook)</a>
+      </div>
       <div class="my-appt-actions">
         <button onclick="rescheduleAppointment()">שינוי מועד</button>
         <button class="danger" onclick="cancelAppointment()">ביטול תור</button>
@@ -4795,6 +5024,32 @@
       + 'T' + String(d.getHours()).padStart(2,'0') + String(d.getMinutes()).padStart(2,'0') + '00';
     const details = staffName ? encodeURIComponent('תור אצל ' + staffName) : '';
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmt(start)}/${fmt(end)}&details=${details}`;
+  }
+  // A Google Calendar link only helps someone who actually uses Google Calendar —
+  // this covers everyone else (Apple Calendar on iPhone, Outlook, etc.) with a
+  // standard downloadable .ics file, which every mainstream calendar app can open.
+  function buildIcsDataUrl(date, timeStr, durationMin, title, staffName){
+    const [h, m] = timeStr.split(':').map(Number);
+    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), h, m);
+    const end = new Date(start.getTime() + durationMin * 60000);
+    const fmtUtc = (d) => d.getUTCFullYear() + String(d.getUTCMonth()+1).padStart(2,'0') + String(d.getUTCDate()).padStart(2,'0')
+      + 'T' + String(d.getUTCHours()).padStart(2,'0') + String(d.getUTCMinutes()).padStart(2,'0') + '00Z';
+    const escapeIcsText = (t) => String(t || '').replace(/[\\;,]/g, (c) => '\\' + c).replace(/\n/g, '\\n');
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//הכל בקליק//appointment//HE',
+      'BEGIN:VEVENT',
+      'UID:appt-' + start.getTime() + '@rutizolberg.com',
+      'DTSTAMP:' + fmtUtc(new Date()),
+      'DTSTART:' + fmtUtc(start),
+      'DTEND:' + fmtUtc(end),
+      'SUMMARY:' + escapeIcsText(title),
+      'DESCRIPTION:' + escapeIcsText(staffName ? ('תור אצל ' + staffName) : ''),
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ];
+    return 'data:text/calendar;charset=utf-8,' + encodeURIComponent(lines.join('\r\n'));
   }
   let currentBookedAppointment = null;
   function removeCurrentBookedAppointment(){
@@ -4833,6 +5088,12 @@
       const phoneEl = document.getElementById('bookingPhoneInput');
       if (nameEl) nameEl.value = previousClient.name || '';
       if (phoneEl) phoneEl.value = previousClient.phone || '';
+      // If she already has a תז on file, feed it back through the real ID-input
+      // listener (dispatching 'input' like she typed it) so the "known client"
+      // UI state (welcome-back shown, registration fields hidden) is restored
+      // exactly like a fresh visit would — instead of duplicating that logic here.
+      const idEl = document.getElementById('bookingIdInput');
+      if (idEl){ idEl.value = previousClient.teudatZehut || ''; idEl.dispatchEvent(new Event('input')); }
     }
     goToStep(1);
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
@@ -4850,6 +5111,8 @@
       const phone = document.getElementById('bookingPhoneInput');
       if (name) name.value = previousClient.name || '';
       if (phone) phone.value = previousClient.phone || '';
+      const idEl = document.getElementById('bookingIdInput');
+      if (idEl){ idEl.value = previousClient.teudatZehut || ''; idEl.dispatchEvent(new Event('input')); }
     }
     goToStep(1);
     if (typeof showCategoryGrid === 'function') showCategoryGrid();
@@ -4860,6 +5123,7 @@
     // Look up waitlist matches BEFORE removing the appointment (removal doesn't
     // change the appointment object itself, but do this first for clarity/safety).
     const waitlistMatches = apptBeingCancelled ? getWaitlistMatchesForAppointment(apptBeingCancelled) : [];
+    logCancellation(apptBeingCancelled);
     removeCurrentBookedAppointment();
     if (apptBeingCancelled){
       const client = clients.find(c => c.name === apptBeingCancelled.client);
@@ -4958,12 +5222,17 @@
       const apptDate = new Date(parts[0], parts[1] - 1, parts[2]);
       const emp = staff[appt.staff];
       const gcalUrl = buildGoogleCalendarUrl(apptDate, appt.time, appt.dur || 30, appt.service, emp ? emp.name : '');
+      let icsUrl = '#';
+      try { icsUrl = buildIcsDataUrl(apptDate, appt.time, appt.dur || 30, appt.service, emp ? emp.name : ''); } catch(e){ console.error('ICS link build failed:', e); }
       return `
       <div class="my-appt-card" style="${idx > 0 ? 'margin-top:14px; padding-top:14px; border-top:1px solid rgba(245,238,228,0.12);' : ''}">
         <div class="status-dot">✓ ${list.length > 1 ? `תור ${idx + 1} מתוך ${list.length}` : 'נמצא תור קיים'}</div>
         <h4>${appt.service}</h4>
         <div class="appt-meta">${apptDate.getDate()} ב${hebrewMonths[apptDate.getMonth()]} (${hebrewDateStr(apptDate)}), ${appt.time}${emp ? ' · אצל ' + emp.name : ''}</div>
-        <a href="${gcalUrl}" target="_blank" rel="noopener" class="gcal-link">📅 הוספה ליומן Google</a>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a href="${gcalUrl}" target="_blank" rel="noopener" class="gcal-link">📅 הוספה ל-Google Calendar</a>
+          <a href="${icsUrl}" download="תור-${appt.service}.ics" class="gcal-link">📥 הוספה ליומן (iPhone/Outlook)</a>
+        </div>
         <div class="my-appt-actions">
           <button onclick="rescheduleListedAppointment(${idx})">שינוי מועד</button>
           <button class="danger" onclick="cancelListedAppointment(${idx})">ביטול תור</button>
@@ -4980,6 +5249,7 @@
     const appt = lookedUpAppointmentsList[idx];
     if (!appt) return;
     const waitlistMatches = getWaitlistMatchesForAppointment(appt);
+    logCancellation(appt);
     const pos = weekAppointments.indexOf(appt);
     if (pos !== -1) weekAppointments.splice(pos, 1);
     if (typeof renderWeekCal === 'function') renderWeekCal();
@@ -5325,7 +5595,7 @@
     const nowIso = new Date().toISOString();
     const simpleFields = {
       branding, inactivityThresholdDays, customTemplates, staff,
-      categories, services, whatsNewItems, invAlertEmail, inventory
+      categories, services, whatsNewItems, invAlertEmail, inventory, cancellationLog
     };
     db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
       const server = doc.exists ? doc.data() : {};
@@ -5342,17 +5612,22 @@
       const mergedWaitlist = mergeListField(server.waitlist, lastLoadedSnapshot.waitlist, waitlist, w => w && w.id);
       if (JSON.stringify(mergedWaitlist) !== JSON.stringify(server.waitlist || [])) hasChange = true;
       payload.waitlist = mergedWaitlist;
-      const mergedClients = mergeListField(server.clients, lastLoadedSnapshot.clients, clients, c => c && c.phone ? 'p:' + String(c.phone).replace(/[^0-9]/g, '') : null);
+      // תעודת זהות is now the real identity key (never changes, unlike a phone
+      // number) — prefer it for merge/dedup, but fall back to phone for older
+      // client records saved before this field existed.
+      const mergedClients = mergeListField(server.clients, lastLoadedSnapshot.clients, clients, c => c && c.teudatZehut ? 'tz:' + c.teudatZehut : (c && c.phone ? 'p:' + String(c.phone).replace(/[^0-9]/g, '') : null));
       if (JSON.stringify(mergedClients) !== JSON.stringify(server.clients || [])) hasChange = true;
       payload.clients = mergedClients;
       if (!hasChange) return null; // nothing this tab needs to write right now
       // merge:true so this write only ever touches the fields present in payload —
       // any field left out (because this tab didn't change it) is left exactly as-is
       // on the server, no matter which other tab/device most recently wrote it.
+      showSaveStatus('שומר...');
       tx.set(CLOUD_DOC, payload, { merge: true });
       return payload;
     })).then(committedPayload => {
-      if (!committedPayload) return;
+      if (!committedPayload) { hideSaveStatus(); return; }
+      showSaveStatus('נשמר ✓', 1800);
       // Adopt the merged lists locally too, so this tab now agrees with the server
       // (including any items another tab/device added that this tab hadn't seen yet).
       weekAppointments = committedPayload.weekAppointments;
@@ -5370,7 +5645,7 @@
         const fullSnapshot = {
           branding, clients, inactivityThresholdDays, customTemplates,
           staff, weekAppointments, categories, services, whatsNewItems,
-          invAlertEmail, inventory, waitlist, savedAt: committedPayload.savedAt
+          invAlertEmail, inventory, waitlist, cancellationLog, savedAt: committedPayload.savedAt
         };
         CLOUD_DOC.collection('backups').doc(backupDateKey).set(fullSnapshot).catch(err => console.error('Backup save failed:', err));
       }
@@ -5384,6 +5659,7 @@
       // screen said so, so refreshing seemed safe when it actually discarded the
       // unsaved change. Now any save failure shows a real, visible banner instead.
       console.error('Cloud save failed:', err);
+      hideSaveStatus();
       const msg = ((err && err.message) || '').toLowerCase();
       const sizeIssue = msg.indexOf('size') !== -1 || msg.indexOf('large') !== -1 || msg.indexOf('big') !== -1 || msg.indexOf('exceeds') !== -1 || msg.indexOf('longer than') !== -1;
       showSaveErrorBanner(sizeIssue
@@ -5405,6 +5681,79 @@
     banner.appendChild(closeBtn);
     document.body.prepend(banner);
   }
+  function showSaveStatus(text, autoHideMs){
+    const el = document.getElementById('saveStatusIndicator');
+    if (!el) return;
+    el.textContent = text;
+    el.style.display = 'block';
+    clearTimeout(window.__saveStatusTimer);
+    if (autoHideMs){
+      window.__saveStatusTimer = setTimeout(() => { el.style.display = 'none'; }, autoHideMs);
+    }
+  }
+  function hideSaveStatus(){
+    clearTimeout(window.__saveStatusTimer);
+    const el = document.getElementById('saveStatusIndicator');
+    if (el) el.style.display = 'none';
+  }
+  // One full snapshot per calendar day already gets saved automatically (see the
+  // "backups" subcollection write inside saveState() above) — this is the UI in
+  // Settings that lets a real person actually look at and restore from one of
+  // those, instead of the only option being opening the Firebase console by hand.
+  function loadBackupsList(){
+    const listEl = document.getElementById('backupsList');
+    if (!listEl) return;
+    listEl.innerHTML = '<div style="font-size:13px; color:var(--ivory-dim);">טוענת...</div>';
+    CLOUD_DOC.collection('backups').get().then(snap => {
+      const docs = [];
+      snap.forEach(doc => docs.push({ id: doc.id, data: doc.data() }));
+      docs.sort((a, b) => b.id.localeCompare(a.id)); // "YYYY-MM-DD" sorts correctly as plain text — newest first
+      if (!docs.length){
+        listEl.innerHTML = '<div style="font-size:13px; color:var(--ivory-dim);">אין עדיין גיבויים שמורים (הגיבוי הראשון נשמר אוטומטית בפעם הבאה שנשמר שינוי כלשהו).</div>';
+        return;
+      }
+      listEl.innerHTML = '';
+      docs.forEach(({ id, data }) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; border:1px solid rgba(245,238,228,0.15); border-radius:10px; margin-bottom:8px; flex-wrap:wrap;';
+        const apptCount = Array.isArray(data.weekAppointments) ? data.weekAppointments.length : 0;
+        const clientCount = Array.isArray(data.clients) ? data.clients.length : 0;
+        const span = document.createElement('span');
+        span.innerHTML = `📅 ${id} <span style="color:var(--ivory-dim); font-size:12px;">(${clientCount} לקוחות, ${apptCount} תורים)</span>`;
+        const btn = document.createElement('button');
+        btn.className = 'template-btn small';
+        btn.textContent = '↩ שחזור לגיבוי הזה';
+        btn.onclick = () => restoreFromBackup(id);
+        row.appendChild(span);
+        row.appendChild(btn);
+        listEl.appendChild(row);
+      });
+    }).catch(err => {
+      console.error('Loading backups list failed:', err);
+      listEl.innerHTML = '<div style="font-size:13px; color:var(--wine);">טעינת רשימת הגיבויים נכשלה. נסי שוב.</div>';
+    });
+  }
+  function restoreFromBackup(dateKey){
+    const sure = confirm(`לשחזר את כל הנתונים לגיבוי מתאריך ${dateKey}?\n\nזה יחליף את כל הלקוחות, התורים, השירותים והצוות הנוכחיים בנתונים מהגיבוי הזה. פעולה זו לא ניתנת לביטול.`);
+    if (!sure) return;
+    const sureAgain = confirm('בטוחה לגמרי? כל שינוי שנעשה מאז התאריך הזה יימחק.');
+    if (!sureAgain) return;
+    CLOUD_DOC.collection('backups').doc(dateKey).get().then(doc => {
+      if (!doc.exists){ alert('הגיבוי הזה לא נמצא.'); return; }
+      const backupData = doc.data();
+      return CLOUD_DOC.set(backupData, { merge: false }).then(() => {
+        applyCloudData(backupData);
+        pruneExpiredWaitlistEntries();
+        rerenderEverything();
+        lastLoadedSnapshot = cloneJSON(backupData);
+        showAdminToast('✓ השחזור הושלם בהצלחה');
+        loadBackupsList();
+      });
+    }).catch(err => {
+      console.error('Restore failed:', err);
+      alert('השחזור נכשל. נסי שוב, ואם זה ממשיך לקרות תגידי לי.');
+    });
+  }
   function applyCloudData(data){
     if (data.branding) branding = data.branding;
     if (data.clients) clients = data.clients;
@@ -5418,6 +5767,7 @@
     if (typeof data.invAlertEmail === 'string') invAlertEmail = data.invAlertEmail;
     if (data.inventory) inventory = data.inventory;
     if (data.waitlist) waitlist = data.waitlist;
+    if (data.cancellationLog) cancellationLog = data.cancellationLog;
   }
   function rerenderEverything(){
     if (typeof renderCategories === 'function') renderCategories();
@@ -5595,6 +5945,37 @@
       lastLoadedSnapshot = cloneJSON(rawCloudData);
     }).catch(err => console.error('Refresh on tab return failed:', err));
   });
+  // A tab that's simply left open overnight (very plausible for a business owner
+  // who doesn't close her browser) never naturally re-checks "today" — waitlist
+  // requests whose date has passed keep showing until SOMETHING reloads the page,
+  // today's birthday alert never becomes tomorrow's, etc. All of that already
+  // fixes itself on any ordinary page load — this just makes sure a load actually
+  // happens by itself right after midnight too, instead of depending on someone
+  // remembering to refresh by hand.
+  function scheduleMidnightRefresh(){
+    const now = new Date();
+    // A few seconds after midnight, not exactly at it — just comfortable padding
+    // around the date-boundary instant itself.
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
+    setTimeout(attemptMidnightRefresh, nextMidnight.getTime() - now.getTime());
+  }
+  function attemptMidnightRefresh(){
+    // Don't yank the page out from under someone actively typing something or with
+    // a modal open (booking modal, login, etc.) — try again shortly instead of
+    // risking an in-progress, not-yet-saved edit.
+    const activeTag = document.activeElement && document.activeElement.tagName;
+    const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
+    const overlayOpen = document.querySelector('[id$="Overlay"].show');
+    if (isTyping || overlayOpen){
+      setTimeout(attemptMidnightRefresh, 5 * 60 * 1000); // try again in 5 minutes
+      return;
+    }
+    if (typeof saveState === 'function') saveState();
+    // Give the save a moment to actually reach the cloud before the reload tears
+    // the page down — a reload can't wait for an in-flight async write to finish.
+    setTimeout(() => location.reload(), 1500);
+  }
+  scheduleMidnightRefresh();
   /* ===== AUTH (business owner login) ===== */
   let isLoggedIn = false;
   let pendingBusinessBtn = null;
