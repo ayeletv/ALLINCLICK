@@ -391,6 +391,26 @@
   }
   .field:focus{outline:none; border-color:var(--wine);}
   .field.field-locked{background:#F1ECE3; color:#8A8178; cursor:not-allowed;}
+  /* Small "?" help hint — click/tap to open (not hover-only), so it works the
+     same on a phone/tablet as on a mouse. Closed by clicking anywhere else
+     (see the document click listener near toggleHelpHint). */
+  .help-hint{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:16px; height:16px; border-radius:50%;
+    background:rgba(245,238,228,0.18); color:var(--ivory-dim);
+    font-size:11px; font-weight:700; line-height:1;
+    cursor:pointer; margin-right:6px; position:relative;
+    vertical-align:middle; user-select:none;
+  }
+  .help-hint.open{background:var(--gold-soft); color:#2b2620;}
+  .help-hint .help-tip{
+    display:none; position:absolute; top:22px; right:0;
+    background:#2b2620; color:#F5EEE4; font-size:12px; font-weight:400;
+    line-height:1.5; padding:10px 12px; border-radius:8px; width:220px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.35); z-index:50; text-align:right;
+    cursor:default;
+  }
+  .help-hint.open .help-tip{display:block;}
   /* Native date pickers render their day/month/year segments left-to-right
      no matter what — but sitting inside this page's dir="rtl" html element
      confuses that rendering in some browsers (the segment you click/type
@@ -1188,7 +1208,7 @@
     align-items:center;
     overflow:hidden;
     color:#1C1719;
-    cursor:default;
+    cursor:pointer;
     box-shadow:0 0 0 1px rgba(28,23,25,0.1);
   }
   .cal-appt b{font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -1793,7 +1813,7 @@
         <div id="cpSuccess" style="display:none; color:#3E5C36; font-size:13px;"></div>
         <button class="template-btn" style="width:fit-content;" onclick="doChangePassword()">🔑 עדכון סיסמה</button>
       </div>
-      <div class="label" style="margin-bottom:10px;">הגבלת גישה לטאבים רגישים</div>
+      <div class="label" style="margin-bottom:10px;">הגבלת גישה לטאבים רגישים<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">קוד נפרד מהסיסמה שלך. כשהוא מוגדר, צריך אותו כדי להיכנס להגדרות, דוחות, לקוחות, מלאי, צוות ושירותים. משאירים ריק = אין הגבלה בכלל.</span></span></div>
       <div style="font-size:12.5px; color:var(--ivory-dim); max-width:480px; margin-bottom:10px;">
         קוד נפרד (לא הסיסמה שלך!) — אם מגדירים אותו, הוא יידרש כדי להיכנס לטאבים
         "הגדרות", "דוחות", "צוות" ו"שירותים". כך עובדת שמחוברת למערכת (כדי לצפות
@@ -1802,7 +1822,10 @@
         מפני עובדת שמסתכלת סתם או נכנסת בטעות — לא הגנת אבטחה אמיתית, ולכן חשוב
         שהקוד הזה יהיה שונה מהסיסמה שלך ולא חלק ממנה.
       </div>
-      <input type="text" id="ownerAccessCodeInput" class="field-dark" placeholder="קוד גישה (השאירי ריק לביטול ההגבלה)" style="max-width:280px; margin-bottom:28px;" oninput="updateOwnerAccessCode()">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:28px;">
+        <input type="text" id="ownerAccessCodeInput" class="field-dark" placeholder="קוד גישה (השאירי ריק לביטול ההגבלה)" style="max-width:280px;" oninput="updateOwnerAccessCode()">
+        <button class="template-btn" style="width:fit-content;" onclick="saveOwnerAccessCodeNow()">💾 שמירת קוד</button>
+      </div>
       <div class="label" style="margin-bottom:10px;">מיתוג</div>
       <div class="brand-editor">
         <div class="brand-logo-upload" id="logoUpload" onclick="document.getElementById('logoFile').click()">
@@ -1815,7 +1838,7 @@
           <input type="text" id="bizNameInput" class="field-dark" placeholder="שם העסק שלך" value="" oninput="updateBranding()">
           <div class="label" style="margin:12px 0 6px;">טלפון ליצירת קשר (להתייעצות)</div>
           <input type="tel" id="bizPhoneInput" class="field-dark" placeholder="050-0000000" oninput="updateBranding()">
-          <div class="label" style="margin:12px 0 6px;">מייל המנהלת (לקבלת התראות)</div>
+          <div class="label" style="margin:12px 0 6px;">מייל המנהלת (לקבלת התראות)<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">לכתובת הזו נשלחות התראות על מלאי נמוך, והיא מוצעת כברירת מחדל כששולחים דוח למייל — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות כאן.</span></span></div>
           <input type="email" id="invAlertEmail" class="field-dark" placeholder="you@example.com" oninput="updateInvAlertEmail()">
           <div style="font-size:11.5px; color:var(--ivory-dim); margin-top:4px;">לכתובת הזו מגיעות התראות מלאי נמוך, והיא מוצעת כברירת מחדל בשליחת דוחות למייל (בטאב "דוחות") — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות את זה כאן.</div>
         </div>
@@ -1907,7 +1930,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 20.08-יט-נעילת-טאבים-מחמירה</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 20.08-כא-ביטול-מהיומן-ושמירות-מיידיות</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -2520,7 +2543,21 @@
     if (typeof renderOverviewDayView==='function') renderOverviewDayView();
     if (typeof renderOverviewMonthCal==='function') renderOverviewMonthCal();
     if (typeof saveState==='function') saveState();
-    showAdminToast('✓ התור בוטל בהצלחה');
+    // Until now, only a CUSTOMER cancelling her own appointment (via the
+    // self-service "my appointment" page, see cancelAppointment() above) sent a
+    // notification email — a cancellation initiated by an employee/manager from
+    // here (client card, day list, or the calendar itself) never told the client
+    // at all. She asked for the client to always be emailed when an appointment
+    // she's booked gets cancelled, no matter who cancels it.
+    const cancelledClient = clients.find(c => c.name === appt.client);
+    if (cancelledClient && cancelledClient.email){
+      sendEmail(
+        cancelledClient.email,
+        'התור שלך בוטל',
+        `היי ${appt.client}, התור שלך ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time} בוטל. נשמח לראותך שוב בקרוב!\n\nלקביעת תור חדש:\n${getSiteUrl()}`
+      );
+    }
+    showAdminToast('✓ התור בוטל בהצלחה' + (cancelledClient && cancelledClient.email ? ' — נשלח מייל לעדכון הלקוחה' : ''));
     if (matches.length) renderWaitlistMatchAlert(matches, appt);
   }
   function submitManualBooking(){
@@ -3202,6 +3239,14 @@
       document.getElementById('logoPreview').style.display = 'block';
       document.getElementById('logoPlaceholder').style.display = 'none';
       renderBranding();
+      // Save immediately (not silently) instead of waiting for the next ambient
+      // autosave tick — a logo upload is a one-time discrete action, not typing,
+      // so there's no per-keystroke race to worry about here. This also means she
+      // gets an explicit "נשמר ✓", or — if the image is large enough to push the
+      // shared document over Firestore's 1MB size limit — the red error banner
+      // right away, instead of possibly navigating off the page before the next
+      // silent autosave tick and having the upload quietly vanish.
+      if (typeof saveState === 'function') saveState();
     }, { maxDim: 500, mime: 'image/png' });
   }
   function renderBranding(){
@@ -4208,8 +4253,18 @@
         block.style.top = (hourIdx * hourBandHeight + stackPos * (rowH + rowGap) + 2) + 'px';
         block.style.height = rowH + 'px';
         block.style.background = staffColors[a.staff % staffColors.length];
-        block.title = `${a.client} · ${a.service} · ${a.time} (${a.dur} דק')`;
+        // Clicking an appointment right here in the calendar cancels it — she
+        // asked for this specifically because until now the only way to cancel
+        // was from the client card or a day list, not from the calendar grid
+        // itself. cancelAdminAppointment() already confirms before doing
+        // anything (see its own confirm() dialog), so a stray/accidental click
+        // can't cancel anything by itself.
+        block.title = `${a.client} · ${a.service} · ${a.time} (${a.dur} דק') — לחיצה מבטלת את התור`;
         block.innerHTML = `<b>${a.time.slice(0,5)} ${a.client} · ${a.service}</b>`;
+        block.onclick = (e) => {
+          e.stopPropagation();
+          cancelAdminAppointment(a);
+        };
         body.appendChild(block);
       });
       col.appendChild(body);
@@ -5992,6 +6047,18 @@
     document.querySelectorAll('.subswitcher button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }
+  // Small "?" help hints (see .help-hint CSS) — click/tap toggles the tip open,
+  // clicking anywhere else closes it. Deliberately click-based rather than
+  // hover-only, since hover doesn't exist on a phone/tablet screen.
+  function toggleHelpHint(el, event){
+    event.stopPropagation();
+    const wasOpen = el.classList.contains('open');
+    document.querySelectorAll('.help-hint.open').forEach(h => h.classList.remove('open'));
+    if (!wasOpen) el.classList.add('open');
+  }
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.help-hint.open').forEach(h => h.classList.remove('open'));
+  });
   // Stays true for the rest of THIS browser session once the right code is
   // entered once — she shouldn't have to retype it every single time she moves
   // between these tabs. Reset on logout (see doLogout) and naturally reset by a
@@ -6238,8 +6305,25 @@
   // ownerAccessCode itself is declared much earlier (see near `let invAlertEmail`)
   // for the same TDZ reason. See guardedShowSub/guardedShowInnerTab further below
   // for where this is actually enforced.
+  // IMPORTANT: this used to call saveState() directly on every keystroke, unlike
+  // every other field in Settings (bizName/bizPhone/invAlertEmail etc., which just
+  // update the in-memory variable and let the periodic autosave below pick it up).
+  // That was the actual bug behind "the code sometimes doesn't stick" — typing a
+  // code fires one save transaction per character, and since each is a separate
+  // async round-trip to the server, an earlier (partial) keystroke's save could
+  // sometimes finish AFTER a later, more complete one and silently overwrite it.
+  // Matching the same pattern as every other field here fixes that race.
   function updateOwnerAccessCode(){
     ownerAccessCode = document.getElementById('ownerAccessCodeInput').value.trim();
+  }
+  // Explicit "💾 שמירת קוד" button, mirroring "🔑 עדכון סיסמה" right above it —
+  // she asked for a visible, on-demand save specifically here (rather than only
+  // trusting the silent ambient autosave) so she always knows for certain the
+  // code was saved. This is a single click-triggered save, not per-keystroke, so
+  // it doesn't reintroduce the overlapping-saves race that updateOwnerAccessCode()
+  // used to have.
+  function saveOwnerAccessCodeNow(){
+    updateOwnerAccessCode();
     if (typeof saveState === 'function') saveState();
   }
   let inventory = [];
