@@ -390,6 +390,14 @@
     color:var(--ink);
   }
   .field:focus{outline:none; border-color:var(--wine);}
+  /* Native date pickers render their day/month/year segments left-to-right
+     no matter what — but sitting inside this page's dir="rtl" html element
+     confuses that rendering in some browsers (the segment you click/type
+     isn't the one that visually looks selected), which is exactly what made
+     typed-in birthdates end up "jumping" to a different date than typed.
+     Forcing ltr direction on every date input fixes the segment order
+     regardless of the surrounding RTL layout. */
+  input[type="date"]{ direction: ltr; }
   .cta{
     width:100%;
     background:var(--wine);
@@ -1482,7 +1490,7 @@
               <div id="firstTimePerks" class="first-time-perks">
                 <p class="ftp-title">🎁 פעם ראשונה? נעים להכיר! אפשר גם לעדכן אותנו קצת עלייך כדי לקבל פינוקים שווים ביום ההולדת שלך:</p>
                 <input class="field" id="ftpEmail" type="email" placeholder="אימייל (אופציונלי)">
-                <input class="field" id="ftpBirthday" type="date" placeholder="תאריך לידה (אופציונלי)">
+                <input class="field" id="ftpBirthday" type="date" dir="ltr" placeholder="תאריך לידה (אופציונלי)">
               </div>
             </div>
             <div class="label" style="margin-top:10px;">איך תרצי לקבל תזכורת? (אפשר לבחור יותר מאחת)</div>
@@ -1578,9 +1586,9 @@
         <div id="customRangeControls" style="display:none; margin-bottom:1.5rem;">
           <div class="inv-email-row">
             <span class="label" style="margin:0;">מתאריך</span>
-            <input type="date" id="reportFromDate" class="search-input" style="margin:0; width:auto;">
+            <input type="date" id="reportFromDate" dir="ltr" class="search-input" style="margin:0; width:auto;">
             <span class="label" style="margin:0;">עד תאריך</span>
-            <input type="date" id="reportToDate" class="search-input" style="margin:0; width:auto;">
+            <input type="date" id="reportToDate" dir="ltr" class="search-input" style="margin:0; width:auto;">
             <button class="cta" style="width:auto; margin-top:0;" onclick="renderCustomRangeReport()">הצגת דוח</button>
           </div>
         </div>
@@ -1617,7 +1625,7 @@
           <input type="text" id="newClientName" placeholder="שם הלקוחה">
           <input type="text" id="newClientPhone" placeholder="050-0000000">
           <input type="email" id="newClientEmail" placeholder="אימייל">
-          <input type="date" id="newClientBirthday" placeholder="תאריך לידה">
+          <input type="date" id="newClientBirthday" dir="ltr" placeholder="תאריך לידה">
           <button class="cta" style="width:auto; margin-top:0;" onclick="addClient()">הוספת לקוחה</button>
         </div>
       </div>
@@ -1696,7 +1704,7 @@
           <div class="label" style="margin-bottom:10px;">ימים סגורים (חג, חופשה)</div>
           <div class="client-list" id="closedDatesList"></div>
           <div class="client-add-row">
-            <input type="date" id="newClosedDate">
+            <input type="date" id="newClosedDate" dir="ltr">
             <button class="cta" style="width:auto; margin-top:0;" onclick="addClosedDate()">הוספת יום סגור</button>
           </div>
         </div>
@@ -1729,6 +1737,9 @@
       <div class="label" style="margin:22px 0 10px;">כך זה ייראה ללקוחה</div>
       <div class="brand-preview" id="brandPreview"></div>
       <div class="label" style="margin:28px 0 10px;">גיבויים</div>
+      <div style="font-size:13.5px; font-weight:700; color:var(--wine); background:rgba(155,44,66,0.1); border:1px solid rgba(155,44,66,0.35); border-radius:10px; padding:10px 14px; margin-bottom:10px; max-width:480px;">
+        ⚠️ אזור למקרי חירום בלבד — לא לגעת בלי סיבה! שחזור גיבוי מוחק ומחליף את כל הנתונים הנוכחיים (לקוחות, תורים, שירותים וכו').
+      </div>
       <div style="font-size:13px; color:var(--ivory-dim); margin-bottom:10px; max-width:480px;">
         המערכת שומרת גיבוי מלא אוטומטי אחת ליום. אם משהו השתבש (למשל נתונים שנמחקו
         בטעות), אפשר לשחזר לאחד הימים האחרונים — זה יחליף את כל הנתונים הנוכחיים
@@ -1814,7 +1825,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 20.08-ט-תז-ומחיקת-לקוחות</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 20.08-יד-מחיקת-עובדת</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -2050,11 +2061,17 @@
   // who don't have a תז on file yet.
   document.getElementById('mbClientId')?.addEventListener('input', function(){
     this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
+    const nameInput = document.getElementById('mbClientName');
+    const phoneInput = document.getElementById('mbClientPhone');
+    // Any edit to the ID field (including clearing it because she typed the
+    // wrong תז) clears whatever name/phone were auto-filled for the PREVIOUS
+    // value first — otherwise a mismatched name/phone from a different client
+    // could keep sitting there, unnoticed, after she corrects the ID.
+    if (nameInput) nameInput.value = '';
+    if (phoneInput) phoneInput.value = '';
     if (this.value.length < 9) return;
     const match = clients.find(c => c.teudatZehut === this.value);
     if (match){
-      const nameInput = document.getElementById('mbClientName');
-      const phoneInput = document.getElementById('mbClientPhone');
       if (nameInput) nameInput.value = match.name;
       if (phoneInput) phoneInput.value = match.phone || '';
     }
@@ -2761,7 +2778,6 @@
   }
   renderBranding();
   let clients = [];
-  const birthdayEmailsSentToday = new Set();
   let newClientPhoto = null;
   let inactivityThresholdDays = 21;
   function updateInactivityThreshold(){
@@ -2926,10 +2942,22 @@
       const isBday = isBirthdayToday(c.birthday);
       if (isBday){
         birthdayClients.push(c.name);
-        const todayKey = c.name + '-' + new Date().toISOString().slice(0, 10);
-        if (c.email && !birthdayEmailsSentToday.has(todayKey)){
-          birthdayEmailsSentToday.add(todayKey);
+        // Used to be guarded by a plain in-memory Set (birthdayEmailsSentToday) —
+        // that only prevented a duplicate send within the SAME browser tab until
+        // the next reload. It did nothing against: reloading the page later the
+        // same day, opening the site in another tab/device, or the separate
+        // sendBirthdayGreetings Cloud Function (functions/index.js) — which sends
+        // its own once-a-day birthday email using this exact field,
+        // lastBirthdayGreetingYear, already saved on the client. Together those
+        // gaps meant a client really could get more than one birthday email.
+        // Persisting the year directly on her record means whichever side sends
+        // first (this browser tab or the cloud function) is the one and only
+        // send for the year, no matter how many times the page is reloaded.
+        const todayYear = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }).slice(0, 4);
+        if (c.email && c.lastBirthdayGreetingYear !== todayYear){
+          c.lastBirthdayGreetingYear = todayYear;
           sendEmail(c.email, 'מזל טוב מ' + (branding.name || 'הכל בקליק') + '!', `היי ${c.name}, מזל טוב ליום ההולדת שלך! מאחלים לך יום נפלא, ומחכים לראותך אצלנו בקרוב.`);
+          if (typeof saveState === 'function') saveState();
         }
       }
       if (searchTerm){
@@ -2957,7 +2985,7 @@
                 <input class="client-mini-input" data-field="teudatZehut" inputmode="numeric" maxlength="9" value="${c.teudatZehut || ''}" placeholder="תעודת זהות">
                 <input class="client-mini-input" data-field="phone" value="${c.phone || ''}" placeholder="טלפון">
                 <input class="client-mini-input" data-field="email" type="email" value="${c.email || ''}" placeholder="אימייל">
-                <span class="bday-field-wrap"><span class="bday-label">🎂 יום הולדת:</span><input class="client-mini-input" data-field="birthday" type="date" value="${c.birthday || ''}"></span>
+                <span class="bday-field-wrap"><span class="bday-label">🎂 יום הולדת:</span><input class="client-mini-input" data-field="birthday" type="date" dir="ltr" value="${c.birthday || ''}"></span>
               </div>
               <div class="visits">${c.visits || 0} ביקורים · אחרון ${formatLastVisit(c.daysSinceVisit)}${isInactive ? ' <span class="badge low" style="margin-inline-start:6px;">לא הגיעה זמן רב</span>' : ''}${isBday ? ' <span class="badge" style="background:rgba(201,162,39,0.2); color:var(--gold-soft); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : ''}</div>
             </div>
@@ -3296,6 +3324,10 @@
     const searchEl = document.getElementById('staffSearch');
     const searchTerm = searchEl ? searchEl.value.trim().toLowerCase() : '';
     staff.forEach((s, i) => {
+      // Soft-deleted staff (see the delete handler below) are kept in the array
+      // so appointment history keeps attributing correctly, but hidden from
+      // this active-staff list — as far as the admin is concerned she's gone.
+      if (s.deleted) return;
       if (searchTerm && !s.name.toLowerCase().includes(searchTerm)) return;
       // Migrate staff saved before the category-linkage feature existed: treat
       // them as capable of every current category, so nothing that used to work
@@ -3381,19 +3413,31 @@
         };
       }
       row.querySelector('.svc-del').onclick = () => {
-        const apptCount = weekAppointments.filter(a => a.staff === i).length;
-        if (apptCount){
-          alert(`אי אפשר למחוק את ${s.name} כי יש לה ${apptCount} תורים במערכת (כולל היסטוריה). קודם צריך למחוק את כל התורים שלה, ואז אפשר יהיה למחוק אותה.`);
+        // Only future appointments block deletion — history is fine, and is
+        // never lost or misattributed by this (see the comment on the
+        // deleted-flag approach below): a client's card will keep showing
+        // "אצל ${s.name}" on her old appointments exactly as before.
+        const futureCount = weekAppointments.filter(a => a.staff === i && !isAppointmentHistory(a)).length;
+        if (futureCount){
+          alert(`אי אפשר למחוק את ${s.name} כי יש לה ${futureCount} תור/ים עתידי/ים. קודם צריך לבטל אותם או להעביר אותם לעובדת אחרת, ואז אפשר יהיה למחוק אותה.`);
           return;
         }
         if (!confirm(`למחוק את ${s.name}?`)) return;
-        staff.splice(i, 1);
-        // Indices shift after a delete, so any in-progress edit state (which row's
-        // pencil is open) can no longer be trusted — safest to just close them all.
-        editingStaffIndices.clear();
-        if (selectedStaffIndex >= staff.length) selectedStaffIndex = 0;
-        if (typeof selectedStaffFilter === 'number' && selectedStaffFilter >= staff.length) selectedStaffFilter = 'all';
-        if (typeof hoursEditorStaffIndex !== 'undefined' && hoursEditorStaffIndex >= staff.length) hoursEditorStaffIndex = 0;
+        if (!confirm(`לאישור סופי: למחוק את ${s.name} לצמיתות מרשימת הצוות הפעילה?`)) return;
+        // Deliberately NOT staff.splice(i, 1) — every appointment in the system
+        // stores its staff member as a plain array INDEX (a.staff), so removing
+        // an entry from the middle of this array would shift everyone after her
+        // down by one, silently reattributing their past (and any other)
+        // appointments to the wrong person. Instead she's kept in her exact spot,
+        // just flagged — isStaffCapableOf() is what makes her disappear from every
+        // staff-picker/availability screen from now on, while staff[a.staff]
+        // lookups (client-card history, calendar, reports) keep finding her real
+        // name exactly as before. Nothing about existing history changes at all.
+        s.deleted = true;
+        editingStaffIndices.delete(i);
+        if (selectedStaffIndex === i) selectedStaffIndex = 'any';
+        if (selectedStaffFilter === i) selectedStaffFilter = 'all';
+        if (hoursEditorStaffIndex === i) hoursEditorStaffIndex = 0;
         renderStaff();
         renderStaffPicker();
         if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
@@ -3401,6 +3445,7 @@
         if (typeof renderHoursStaffPicker === 'function') renderHoursStaffPicker();
         if (typeof renderHoursEditor === 'function') renderHoursEditor();
         if (typeof saveState === 'function') saveState();
+        showAdminToast(`✓ ${s.name} הוסרה מהצוות הפעיל`);
       };
       listEl.appendChild(row);
     });
@@ -3412,7 +3457,15 @@
   // but kept as a safe fallback) are treated as capable of everything.
   function isStaffCapableOf(staffIdx, cat){
     const s = staff[staffIdx];
-    if (!s) return false;
+    // A "deleted" staff member (see renderStaff()'s delete handler) is never
+    // spliced out of the staff array — that would shift every other staff
+    // member's index and corrupt their appointments' staff attribution
+    // (weekAppointments stores staff as a plain array index). Instead she's
+    // kept in place with a `deleted` flag, and this single check is what makes
+    // her disappear from every staff-picker/availability surface in the app
+    // (they all funnel through here or getCapableStaffIndices) while her real
+    // historical appointments (staff[a.staff]) keep resolving correctly.
+    if (!s || s.deleted) return false;
     if (!cat) return true;
     if (!Array.isArray(s.categories) || !s.categories.length) return true;
     return s.categories.includes(cat);
@@ -3554,7 +3607,10 @@
       const chip = document.createElement('div');
       chip.className = 'staff-filter-chip' + (selectedStaffFilter === i ? ' active' : '');
       const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
-      chip.innerHTML = `<div class="avatar">${avatarHtml}</div><span>${s.name}</span>`;
+      // Deleted staff stay in this specific filter (unlike every booking-facing
+      // staff picker) so the calendar can still be filtered to see her past
+      // appointments — just labeled so it's clear she's no longer active.
+      chip.innerHTML = `<div class="avatar">${avatarHtml}</div><span>${s.name}${s.deleted ? ' (הוסרה)' : ''}</span>`;
       chip.onclick = () => { selectedStaffFilter = i; renderStaffFilterRow(); renderWeekCal(); if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal(); };
       rowEl.appendChild(chip);
     });
@@ -4729,6 +4785,12 @@
     const regEl = document.getElementById('newClientRegistration');
     const nameInput = document.getElementById('bookingNameInput');
     const phoneInput = document.getElementById('bookingPhoneInput');
+    // Any edit to the ID (including clearing/correcting it) wipes whatever
+    // name/phone were auto-filled for the PREVIOUS value first, so a
+    // mismatched name/phone from a different client never lingers behind a
+    // corrected תז.
+    nameInput.value = '';
+    phoneInput.value = '';
     if (digits.length === 9){
       const match = clients.find(c => c.teudatZehut === digits);
       if (match){
@@ -4741,8 +4803,6 @@
         return;
       }
       welcomeEl.style.display = 'none';
-      nameInput.value = '';
-      phoneInput.value = '';
       regEl.style.display = 'block';
       updateReminderEmailVisibility();
       return;
@@ -5378,7 +5438,15 @@
     if (hoursList) hoursList.style.display = 'block';
     if (closedDatesSection) closedDatesSection.style.display = 'block';
     pickerEl.innerHTML = '';
+    // Deleted staff don't need their hours edited going forward — hide them
+    // here, and steer the current selection away from one if it's pointing at
+    // her (e.g. she was the default/only staff member and just got deleted).
+    if (staff[hoursEditorStaffIndex] && staff[hoursEditorStaffIndex].deleted){
+      const firstActive = staff.findIndex(s => !s.deleted);
+      hoursEditorStaffIndex = firstActive !== -1 ? firstActive : 0;
+    }
     staff.forEach((s, i) => {
+      if (s.deleted) return;
       const chip = document.createElement('div');
       chip.className = 'staff-filter-chip' + (hoursEditorStaffIndex === i ? ' active' : '');
       const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
@@ -5590,7 +5658,17 @@
     });
     return merged;
   }
-  function saveState(){
+  // opts.silent is used only by the ambient every-4-seconds autosave below —
+  // that one runs constantly in the background regardless of what the admin is
+  // doing (including just clicking between tabs with no real edit in mind), and
+  // showing "שומר.../נשמר ✓" for it made the indicator feel like it was popping
+  // up "for no reason" while just navigating. Saves triggered by an actual
+  // action (booking, cancelling, editing a field, etc.) still show it — this
+  // only quiets the ambient catch-up save specifically. A real failure still
+  // always shows the red error banner, silent or not — that's the part that
+  // actually matters for not losing data.
+  function saveState(opts){
+    const silent = !!(opts && opts.silent);
     if (!cloudLoadComplete || !lastLoadedSnapshot) return;
     const nowIso = new Date().toISOString();
     const simpleFields = {
@@ -5622,12 +5700,12 @@
       // merge:true so this write only ever touches the fields present in payload —
       // any field left out (because this tab didn't change it) is left exactly as-is
       // on the server, no matter which other tab/device most recently wrote it.
-      showSaveStatus('שומר...');
+      if (!silent) showSaveStatus('שומר...');
       tx.set(CLOUD_DOC, payload, { merge: true });
       return payload;
     })).then(committedPayload => {
       if (!committedPayload) { hideSaveStatus(); return; }
-      showSaveStatus('נשמר ✓', 1800);
+      if (!silent) showSaveStatus('נשמר ✓', 1800);
       // Adopt the merged lists locally too, so this tab now agrees with the server
       // (including any items another tab/device added that this tab hadn't seen yet).
       weekAppointments = committedPayload.weekAppointments;
@@ -5928,7 +6006,7 @@
   // or a customer who opened the booking page and stepped away) should not keep
   // re-saving its old in-memory snapshot every 4 seconds and overwrite newer data that
   // was added elsewhere in the meantime.
-  setInterval(() => { if (!document.hidden) saveState(); }, 4000);
+  setInterval(() => { if (!document.hidden) saveState({ silent: true }); }, 4000);
   window.addEventListener('beforeunload', saveState);
   // When a background tab becomes visible again, refresh from the cloud first —
   // this is the other half of the protection above: before that tab resumes
