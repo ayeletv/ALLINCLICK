@@ -1345,13 +1345,35 @@
   </div>
 </section>
 <script>
-  // Reveals the hero text (see the .fonts-ready CSS rules above) only once the custom
-  // fonts have actually finished loading, instead of the moment the page paints.
-  // Without this, the huge heading briefly renders in the browser's fallback serif
-  // font (wrong size/shape) and then visibly reflows into "Suez One" a beat later —
-  // that jarring resize is the "ugly flash that then settles" effect. Runs as an
-  // isolated inline script right after the hero markup so it fires as early as
-  // possible, independent of the much larger app script further down the page.
+  // Promise that the main app script (much further down the page) resolves once
+  // it knows the REAL final state of the hero heading — i.e. once it knows whether
+  // this business has a saved name (branding.name), which decides whether the big
+  // heading is that name or the generic "הכל בקליק" tagline. See loadCloudData()
+  // for where this gets resolved. Declared here (before that script even exists
+  // yet) so the reveal logic below can safely reference it right away.
+  window.__brandingReady = new Promise(function(resolve){ window.__resolveBrandingReady = resolve; });
+  // Reveals the hero text (see the .fonts-ready CSS rules above) only once BOTH:
+  // (1) the custom fonts have actually finished loading, and
+  // (2) the real branding data has loaded from the cloud (or timed out) —
+  // instead of the moment the page paints.
+  //
+  // (1) alone used to be the only gate here, but that missed a second, unrelated
+  // cause of the exact same symptom ("heading flashes big/generic, then visibly
+  // resizes a beat later"): on first paint, before the cloud data has arrived,
+  // there's no business name yet, so the generic tagline ("הכל בקליק — הכל במקום
+  // אחד...") is shown as the big primary heading. Once the real business name
+  // loads from Firestore a moment later, the app swaps to showing THAT as the
+  // primary heading instead, and the tagline shrinks down to a small line
+  // underneath it — an abrupt, unanimated size change, because that swap happens
+  // completely independently of (and usually after) this reveal. That size swap
+  // is the "jumps huge until it shrinks" effect — and no amount of font-loading
+  // fix could ever touch it, since it has nothing to do with fonts. Waiting for
+  // the branding data too means the hero now stays invisible until we already
+  // know its FINAL correct heading, so it only ever paints once, already correct.
+  //
+  // Both waits are individually time-capped (so a slow/offline visitor still sees
+  // the hero soon), and there's still an absolute 2000ms safety net below on top
+  // of that, so the hero is never left invisible for long no matter what.
   //
   // Important: we explicitly request the "Suez One" font by name via
   // document.fonts.load(), instead of just awaiting document.fonts.ready. The
@@ -1372,16 +1394,22 @@
       revealed = true;
       heroEl.classList.add('fonts-ready');
     }
+    var fontPromise;
     try {
       if (document.fonts && document.fonts.load){
-        Promise.race([
+        fontPromise = Promise.race([
           document.fonts.load("400 64px 'Suez One'").catch(function(){}),
           new Promise(function(resolve){ setTimeout(resolve, 1200); })
-        ]).then(reveal);
+        ]);
       } else {
-        setTimeout(reveal, 300);
+        fontPromise = new Promise(function(resolve){ setTimeout(resolve, 300); });
       }
-    } catch (e) { reveal(); }
+    } catch (e) { fontPromise = Promise.resolve(); }
+    var brandingPromise = Promise.race([
+      window.__brandingReady,
+      new Promise(function(resolve){ setTimeout(resolve, 1400); })
+    ]);
+    Promise.all([fontPromise, brandingPromise]).then(reveal);
     setTimeout(reveal, 2000); // absolute safety net — never leave the hero invisible
   })();
 </script>
@@ -1759,7 +1787,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 20.08-פונט-מוטמע</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 20.08-ג-תמונות-ותורים</div>
 </footer>
 <div id="myDayOverlay" class="myday-overlay">
   <div class="myday-sheet">
@@ -2044,6 +2072,18 @@
       if (timeStr === previouslySelected) timeInput.value = timeStr;
     }
 
+    // Slots are found in two tiers — a coarse "bucket" grid (slotStepMinutes,
+    // e.g. every 15 min) with a finer search (fineStepMinutes, e.g. every 5 min)
+    // *within* each bucket to find the first actually-free start time in it. This
+    // exactly mirrors the customer-facing renderAvailableSlots()/renderAvailableSlotsAny()
+    // logic below — it's what lets a slot like "8:20" (after a 20-minute booking
+    // that started at 8:00) show up at all. Without this, a booking that doesn't
+    // start and end exactly on a slotStepMinutes boundary — like any appointment
+    // with a duration override, or really any duration that isn't a clean multiple
+    // of 15 — could silently make the next real opening (e.g. 8:20) never get
+    // offered here at all, while the customer-facing calendar found it just fine
+    // and offered it correctly. That mismatch (client sees the slot, admin doesn't)
+    // was a real reported bug — this two-tier search is the fix for it.
     if (isAny){
       // Union available slots across every staff member capable of this service —
       // mirrors the customer-facing "לא משנה לי מי" flow (hasAnySlot/renderAvailableSlotsAny).
@@ -2077,15 +2117,20 @@
         if (hint) hint.textContent = 'אין שעות פעילות/זמינות ביום שנבחר.';
         return;
       }
-      for (let t = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes; t + duration <= closeMin; t += slotStepMinutes){
-        const end = t + duration;
-        const freeStaffIdx = capableIndices.find(idx => {
-          const win = perStaffWindow[idx];
-          if (!win || t < win[0] || end > win[1]) return false;
-          return (perStaffBusy[idx] || []).every(([bs,be]) => end <= bs || t >= be);
-        });
-        if (freeStaffIdx === undefined) continue;
-        addSlot(t, freeStaffIdx);
+      const fitsStaff = (idx, start) => {
+        const win = perStaffWindow[idx];
+        if (!win) return false;
+        const end = start + duration;
+        if (start < win[0] || end > win[1]) return false;
+        return (perStaffBusy[idx] || []).every(([bs,be]) => end <= bs || start >= be);
+      };
+      const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
+      for (let bucketStart = firstBucket; bucketStart + duration <= closeMin; bucketStart += slotStepMinutes){
+        const bucketEnd = bucketStart + slotStepMinutes;
+        for (let t = Math.max(bucketStart, openMin); t < bucketEnd && t + duration <= closeMin; t += fineStepMinutes){
+          const freeStaffIdx = capableIndices.find(idx => fitsStaff(idx, t));
+          if (freeStaffIdx !== undefined){ addSlot(t, freeStaffIdx); break; }
+        }
       }
     } else {
       const emp = staff[staffIdx];
@@ -2104,11 +2149,17 @@
       const busy = weekAppointments.filter(a => a.date === dateVal && a.staff === staffIdx).map(a => {
         const st = timeToMinutes(a.time); return [st, st + (a.dur || 30)];
       });
-      for (let t = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes; t + duration <= closeMin; t += slotStepMinutes){
-        const end = t + duration;
-        const free = busy.every(([bs,be]) => end <= bs || t >= be);
-        if (!free) continue;
-        addSlot(t, staffIdx);
+      const fits = (start) => {
+        const end = start + duration;
+        if (end > closeMin) return false;
+        return busy.every(([bs,be]) => end <= bs || start >= be);
+      };
+      const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
+      for (let bucketStart = firstBucket; bucketStart + duration <= closeMin; bucketStart += slotStepMinutes){
+        const bucketEnd = bucketStart + slotStepMinutes;
+        for (let t = Math.max(bucketStart, openMin); t < bucketEnd && t + duration <= closeMin; t += fineStepMinutes){
+          if (fits(t)){ addSlot(t, staffIdx); break; }
+        }
       }
     }
     if (hint) hint.textContent = anyAvailable ? 'מוצגות כאן רק שעות פנויות, בדיוק כמו בקביעת תור ללקוחה.' : 'אין שעות פנויות ביום הזה. אפשר לבחור יום אחר בלוח השנה.';
@@ -2488,9 +2539,23 @@
     clearTimeout(queue.timer);
     queue.timer = setTimeout(() => flushEmailQueue(to), 5000);
   }
-  function textToHtmlBlock(text, imageDataUrl){
+  // Turns a "data:image/xyz;base64,...." string (how every photo in this app is
+  // stored — client photos, staff photos, the logo, broadcast photos, etc.) into
+  // a nodemailer-style attachment object, so it can be attached to the outgoing
+  // mail document and referenced from the HTML via "cid:" instead of a raw data:
+  // URI. See the long comment on flushEmailQueue below for why this is necessary.
+  function dataUrlToAttachment(dataUrl, cid){
+    const match = /^data:([^;]+);base64,(.*)$/.exec(dataUrl || '');
+    if (!match) return null;
+    const mime = match[1];
+    const ext = (mime.split('/')[1] || 'png').split('+')[0];
+    return { filename: cid + '.' + ext, content: match[2], encoding: 'base64', cid: cid, contentType: mime };
+  }
+  function textToHtmlBlock(text, imageDataUrl, cid){
     const escaped = (text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-    const imgHtml = imageDataUrl ? `<img src="${imageDataUrl}" style="max-width:100%; border-radius:8px; margin-bottom:12px; display:block;">` : '';
+    // Referencing "cid:xxx" (an attached inline image) here, NOT the raw data:
+    // URI — see flushEmailQueue for why.
+    const imgHtml = imageDataUrl ? `<img src="cid:${cid}" style="max-width:100%; border-radius:8px; margin-bottom:12px; display:block;">` : '';
     return `${imgHtml}<p style="font-family:sans-serif; font-size:15px; line-height:1.6; direction:rtl; text-align:right;">${escaped}</p>`;
   }
   function flushEmailQueue(to){
@@ -2499,21 +2564,39 @@
     const bizNameForEmail = (branding.name || '').trim();
     const fromName = bizNameForEmail ? `${bizNameForEmail} — הכל בקליק` : 'הכל בקליק';
     const fromAddress = 'appointments@rutizolberg.com';
+    // A photo attached to a broadcast (or any future email with a photo) is stored
+    // in the app as a "data:image/...;base64,..." string — that works perfectly
+    // for showing it INSIDE the app itself, but putting that same raw data: URI
+    // directly into an <img src="..."> of an email's HTML does not reliably work:
+    // most mailbox providers (Gmail, Outlook, etc.) strip or block data: URIs in
+    // email HTML as a spam/security precaution, so the text arrives but the photo
+    // silently doesn't. The correct, standard way to put an image inside an email
+    // is as a real attachment referenced by "cid:" from the HTML — every queued
+    // item with a photo gets turned into one attachment below, keyed by its own
+    // unique cid, before the email is queued.
+    const attachments = [];
+    queue.items.forEach((item, i) => {
+      if (!item.imageDataUrl) return;
+      item.cid = 'photo' + i;
+      const attachment = dataUrlToAttachment(item.imageDataUrl, item.cid);
+      if (attachment) attachments.push(attachment);
+    });
     let subject, text, html;
     if (queue.items.length === 1){
       subject = queue.items[0].subject;
       text = queue.items[0].text;
-      html = textToHtmlBlock(queue.items[0].text, queue.items[0].imageDataUrl);
+      html = textToHtmlBlock(queue.items[0].text, queue.items[0].imageDataUrl, queue.items[0].cid);
     } else {
       subject = 'כמה עדכונים מ' + fromName;
       text = queue.items.map(item => `${item.subject}:\n${item.text}`).join('\n\n———\n\n');
-      html = queue.items.map(item => `<h3 style="font-family:sans-serif; direction:rtl; text-align:right;">${item.subject}</h3>` + textToHtmlBlock(item.text, item.imageDataUrl)).join('<hr style="margin:16px 0; border:none; border-top:1px solid #eee;">');
+      html = queue.items.map(item => `<h3 style="font-family:sans-serif; direction:rtl; text-align:right;">${item.subject}</h3>` + textToHtmlBlock(item.text, item.imageDataUrl, item.cid)).join('<hr style="margin:16px 0; border:none; border-top:1px solid #eee;">');
     }
     const payload = {
       to: to,
       from: `${fromName} <${fromAddress}>`,
       message: { subject: subject, text: text, html: html }
     };
+    if (attachments.length) payload.message.attachments = attachments;
     db.collection('mail').add(payload).catch(err => console.error('Email send failed:', err));
     delete pendingEmailQueue[to];
   }
@@ -2523,18 +2606,57 @@
     renderBranding();
     if (typeof renderServices === 'function') renderServices();
   }
+  // Every photo in the app (logo, staff, clients, broadcast, "what's new") ends up
+  // stored as a base64 data: string inside the ONE shared business/default Firestore
+  // document — and that document has a hard 1MB size ceiling. A photo straight off a
+  // phone camera, un-resized, can be several MB on its own — enough on its own (or
+  // combined with everything else already in the document) to push a save over that
+  // ceiling. When that happens the cloud write is silently rejected (only logged to
+  // the browser console, nothing visible on screen) — so whatever was just added
+  // looks fine locally, but a refresh loses it, because the refresh reloads the last
+  // save that DID succeed, from before this one. This is exactly the "I added a
+  // photo, saw it, refreshed, and it was gone" bug. The fix: always resize/recompress
+  // through a canvas before ever storing a photo, so a single photo is at most a
+  // few hundred KB, never multiple MB.
+  function readImageCompressed(file, callback, opts){
+    opts = opts || {};
+    const maxDim = opts.maxDim || 900;
+    const quality = opts.quality || 0.75;
+    const mime = opts.mime || 'image/jpeg';
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        try {
+          callback(canvas.toDataURL(mime, quality));
+        } catch (err) {
+          console.error('Image compression failed, using original file as-is:', err);
+          callback(e.target.result);
+        }
+      };
+      img.onerror = () => callback(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
   function handleLogoUpload(event){
     const file = event.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      branding.logo = e.target.result;
+    readImageCompressed(file, (dataUrl) => {
+      branding.logo = dataUrl;
       document.getElementById('logoPreview').src = branding.logo;
       document.getElementById('logoPreview').style.display = 'block';
       document.getElementById('logoPlaceholder').style.display = 'none';
       renderBranding();
-    };
-    reader.readAsDataURL(file);
+    }, { maxDim: 500, mime: 'image/png' });
   }
   function renderBranding(){
     const logoHtml = branding.logo
@@ -2891,14 +3013,12 @@
   function handleClientPhotoUpload(event){
     const file = event.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      newClientPhoto = e.target.result;
+    readImageCompressed(file, (dataUrl) => {
+      newClientPhoto = dataUrl;
       document.getElementById('clientPhotoPreview').src = newClientPhoto;
       document.getElementById('clientPhotoPreview').style.display = 'block';
       document.getElementById('clientPhotoPlaceholder').style.display = 'none';
-    };
-    reader.readAsDataURL(file);
+    });
   }
   function addClient(){
     const nameEl = document.getElementById('newClientName');
@@ -2925,14 +3045,12 @@
   function handleBroadcastPhotoUpload(event){
     const file = event.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      broadcastPhoto = e.target.result;
+    readImageCompressed(file, (dataUrl) => {
+      broadcastPhoto = dataUrl;
       document.getElementById('broadcastPhotoPreview').src = broadcastPhoto;
       document.getElementById('broadcastPhotoPreview').style.display = 'block';
       document.getElementById('broadcastPhotoPlaceholder').style.display = 'none';
-    };
-    reader.readAsDataURL(file);
+    });
   }
   const messageTemplates = {
     shana: 'שנה טובה ומתוקה! 🍯✨\nתודה שאת חלק מהלקוחות שלנו — מאחלות לך שנה מלאה בבריאות, אושר והרבה רגעים יפים.\nמחכות לראות אותך גם השנה!',
@@ -3187,14 +3305,12 @@
   function handleStaffPhotoUpload(event){
     const file = event.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      newStaffPhoto = e.target.result;
+    readImageCompressed(file, (dataUrl) => {
+      newStaffPhoto = dataUrl;
       document.getElementById('staffPhotoPreview').src = newStaffPhoto;
       document.getElementById('staffPhotoPreview').style.display = 'block';
       document.getElementById('staffPhotoPlaceholder').style.display = 'none';
-    };
-    reader.readAsDataURL(file);
+    });
   }
   function addStaff(){
     const nameEl = document.getElementById('newStaffName');
@@ -3776,14 +3892,12 @@
   function handleWnPhotoUpload(event){
     const file = event.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      newWnPhoto = e.target.result;
+    readImageCompressed(file, (dataUrl) => {
+      newWnPhoto = dataUrl;
       document.getElementById('wnPhotoPreview').src = newWnPhoto;
       document.getElementById('wnPhotoPreview').style.display = 'block';
       document.getElementById('wnPhotoPlaceholder').style.display = 'none';
-    };
-    reader.readAsDataURL(file);
+    });
   }
   function addWhatsNew(){
     const titleEl = document.getElementById('newWnTitle');
@@ -5260,7 +5374,36 @@
         };
         CLOUD_DOC.collection('backups').doc(backupDateKey).set(fullSnapshot).catch(err => console.error('Backup save failed:', err));
       }
-    }).catch(err => console.error('Cloud save failed:', err));
+    }).catch(err => {
+      // Until now a failed SAVE (as opposed to a failed initial LOAD, which already
+      // shows showCloudErrorBanner) was only ever logged to the browser console —
+      // completely invisible on screen. That silence is exactly what made a bug like
+      // "I added a photo, saw it, refreshed the page, and it was gone" so confusing:
+      // the save failed (most likely because the change — often a photo — pushed the
+      // shared data document over Firestore's 1MB size ceiling), but nothing on
+      // screen said so, so refreshing seemed safe when it actually discarded the
+      // unsaved change. Now any save failure shows a real, visible banner instead.
+      console.error('Cloud save failed:', err);
+      const msg = ((err && err.message) || '').toLowerCase();
+      const sizeIssue = msg.indexOf('size') !== -1 || msg.indexOf('large') !== -1 || msg.indexOf('big') !== -1 || msg.indexOf('exceeds') !== -1 || msg.indexOf('longer than') !== -1;
+      showSaveErrorBanner(sizeIssue
+        ? '⚠ השינוי האחרון לא נשמר בעננן — כנראה שהתמונה שהועלתה גדולה מדי. נא לנסות תמונה אחרת ולא לרענן את הדף בינתיים.'
+        : '⚠ השינוי האחרון לא נשמר בעננן. נא לבדוק את החיבור לאינטרנט ולנסות שוב — לא לרענן את הדף בינתיים, אחרת השינוי יאבד.');
+    });
+  }
+  function showSaveErrorBanner(message){
+    const existing = document.getElementById('saveErrorBanner');
+    if (existing) existing.remove();
+    const banner = document.createElement('div');
+    banner.id = 'saveErrorBanner';
+    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#9B2C42; color:#fff; text-align:center; padding:10px 40px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
+    banner.textContent = message;
+    const closeBtn = document.createElement('span');
+    closeBtn.textContent = ' ✕';
+    closeBtn.style.cssText = 'position:absolute; left:14px; top:8px; cursor:pointer; font-weight:bold;';
+    closeBtn.onclick = () => banner.remove();
+    banner.appendChild(closeBtn);
+    document.body.prepend(banner);
   }
   function applyCloudData(data){
     if (data.branding) branding = data.branding;
@@ -5383,6 +5526,10 @@
         cloudLoadComplete = true;
         handleAppointmentLookupFromUrl();
         handleWaitlistCancelFromUrl();
+        // Tell the hero it can reveal now — see window.__brandingReady above.
+        // Nothing changed here (no saved branding to apply), so whatever the
+        // hero already shows by default is already the final state.
+        if (typeof window.__resolveBrandingReady === 'function') window.__resolveBrandingReady();
         return;
       }
       const rawCloudData = doc.data();
@@ -5398,6 +5545,9 @@
       console.log('Loaded saved data from the cloud.');
       handleAppointmentLookupFromUrl();
       handleWaitlistCancelFromUrl();
+      // rerenderEverything() above already called renderBranding() with the real
+      // saved business name, so the hero now knows its final heading — safe to reveal.
+      if (typeof window.__resolveBrandingReady === 'function') window.__resolveBrandingReady();
     }).catch(err => {
       // Deliberately NOT setting cloudLoadComplete = true here. Doing so on a
       // failed load is exactly what used to cause full data loss: the app would
