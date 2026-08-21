@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  קובץ זה הוא הגרסה הבטוחה והמעודכנת ביותר של האתר — עודכן לאחרונה: 20.08.2026.
+  קובץ זה הוא הגרסה הבטוחה והמעודכנת ביותר של האתר — עודכן לאחרונה: 21.08.2026.
   הוא כולל הגנות קריטיות מפני איפוס/מחיקת נתונים:
   - טעינה בטוחה מהענן (לא שומר נתונים ריקים אם הטעינה נכשלת)
   - התחברות אנונימית שקטה (נדרשת בגלל כללי האבטחה ב-Firestore)
@@ -1114,7 +1114,7 @@
   }
   .visit-row-head .t{font-family:'JetBrains Mono'; color:var(--gold-soft);}
   .visit-row-head .visit-svc{flex:1;}
-  .visit-row-head .visit-date{color:var(--ivory-dim); font-size:11.5px;}
+  .visit-row-head .visit-date{color:var(--gold-soft); font-size:12px; font-weight:500; flex-shrink:0;}
   .visit-status-actions{display:flex; gap:6px; margin-bottom:6px;}
   .visit-status-btn{
     background:var(--ink); border:1px solid rgba(245,238,228,0.15);
@@ -1308,6 +1308,15 @@
     flex-shrink:0;
     color:#9B7E2E;
     font-size:13px;
+    /* She asked for the logo to catch the eye of a client who just opened the
+       booking page — a gentle glowing pulse (not a harsh on/off flicker, which
+       reads as broken rather than inviting) that runs for a little while and
+       then settles, so it doesn't stay distracting the whole time she's booking. */
+    animation: logoBlinkPulse 1.8s ease-in-out 5;
+  }
+  @keyframes logoBlinkPulse{
+    0%, 100% { box-shadow:0 0 0 0 rgba(155,44,66,0); transform:scale(1); }
+    50% { box-shadow:0 0 0 6px rgba(155,44,66,0.22); transform:scale(1.06); }
   }
   .phone-brand .logo-dot img{width:100%; height:100%; object-fit:cover;}
   .phone-brand .biz-name{font-family:'Suez One'; font-weight:400; font-size:16px; color:var(--ink);}
@@ -1857,19 +1866,21 @@
         <div id="cpSuccess" style="display:none; color:#3E5C36; font-size:13px;"></div>
         <button class="template-btn" style="width:fit-content;" onclick="doChangePassword()">🔑 עדכון סיסמה</button>
       </div>
-      <div class="label" style="margin-bottom:10px;">הגבלת גישה לטאבים רגישים<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">קוד נפרד מהסיסמה שלך. כשהוא מוגדר, צריך אותו כדי להיכנס להגדרות, דוחות, לקוחות, מלאי, צוות ושירותים. משאירים ריק = אין הגבלה בכלל.</span></span></div>
+      <div class="label" style="margin-bottom:10px;">הגבלת גישה לטאבים רגישים<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">קוד נפרד מהסיסמה שלך. בוחרים למטה על אילו טאבים הוא חל — רק על אלה יידרש הקוד, כל שאר הטאבים נשארים פתוחים. משאירים את שדה הקוד ריק מבטל את ההגבלה לחלוטין, לא משנה אילו תיבות מסומנות.</span></span></div>
       <div style="font-size:12.5px; color:var(--ivory-dim); max-width:480px; margin-bottom:10px;">
-        קוד נפרד (לא הסיסמה שלך!) — אם מגדירים אותו, הוא יידרש כדי להיכנס לטאבים
-        "הגדרות", "דוחות", "צוות" ו"שירותים". כך עובדת שמחוברת למערכת (כדי לצפות
-        ביומן וללקוחות, למשל) לא תוכל להיכנס לאזורים האלה בלי לדעת את הקוד.
-        השארת השדה ריק מבטלת את ההגבלה הזו לחלוטין. לתשומת ליבך: זו הגנה בסיסית
-        מפני עובדת שמסתכלת סתם או נכנסת בטעות — לא הגנת אבטחה אמיתית, ולכן חשוב
-        שהקוד הזה יהיה שונה מהסיסמה שלך ולא חלק ממנה.
+        קוד נפרד (לא הסיסמה שלך!) — אם מגדירים אותו, הוא יידרש כדי להיכנס לכל טאב
+        שתסמני למטה. כך עובדת שמחוברת למערכת (כדי לצפות ביומן, למשל) לא תוכל להיכנס
+        לאזורים המסומנים בלי לדעת את הקוד. השארת שדה הקוד ריק מבטלת את ההגבלה
+        לחלוטין, בלי קשר לאילו תיבות מסומנות. לתשומת ליבך: זו הגנה בסיסית מפני
+        עובדת שמסתכלת סתם או נכנסת בטעות — לא הגנת אבטחה אמיתית, ולכן חשוב שהקוד
+        הזה יהיה שונה מהסיסמה שלך ולא חלק ממנה.
       </div>
-      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:28px;">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
         <input type="text" id="ownerAccessCodeInput" class="field-dark" placeholder="קוד גישה (השאירי ריק לביטול ההגבלה)" style="max-width:280px;" oninput="updateOwnerAccessCode()">
         <button class="template-btn" style="width:fit-content;" onclick="saveOwnerAccessCodeNow()">💾 שמירת קוד</button>
       </div>
+      <div style="font-size:12px; color:var(--ivory-dim); margin-bottom:8px;">הקוד יידרש רק בטאבים המסומנים כאן:</div>
+      <div id="gatedTabsCheckboxes" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:28px;"></div>
       <div class="label" style="margin-bottom:10px;">מיתוג</div>
       <div class="brand-editor">
         <div class="brand-logo-upload" id="logoUpload" onclick="document.getElementById('logoFile').click()">
@@ -1976,7 +1987,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 20.08-כג-עיצוב-תג-הכל-בקליק</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 21.08-א-יום-סגור-ותיקונים</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -2243,6 +2254,20 @@
     document.getElementById('mbError').style.display = 'none';
     document.getElementById('manualBookingOverlay').classList.add('show');
     mbRefreshCalendarAndSlots();
+    // Also re-sync staff (hours/closedDates) from the cloud right when this modal
+    // opens — guards against a second device/tab having just added a closed day or
+    // changed hours since this tab last loaded. Fire-and-forget: re-render the slots
+    // grid once it lands, but don't hold up the modal opening on it.
+    if (typeof CLOUD_DOC !== 'undefined' && CLOUD_DOC){
+      CLOUD_DOC.get().then(doc => {
+        if (doc.exists && doc.data().staff){
+          staff = doc.data().staff;
+          if (document.getElementById('manualBookingOverlay').classList.contains('show')){
+            mbRefreshCalendarAndSlots();
+          }
+        }
+      }).catch(() => {});
+    }
   }
   document.getElementById('mbService')?.addEventListener('change', mbServiceChanged);
   document.getElementById('mbDuration')?.addEventListener('input', mbRefreshCalendarAndSlots);
@@ -2648,8 +2673,22 @@
     const dur = !isNaN(overrideDurVal) && overrideDurVal > 0 ? overrideDurVal : (svc.duration || 30);
     const startMin = timeToMinutes(timeVal);
     const endMin = startMin + dur;
+    // Final defense-in-depth check, mirroring the same fix on the customer-facing
+    // confirmBooking(): the slot grid already filters out closed days/hours, but it
+    // relies on #mbTime only ever being set by clicking a real rendered slot. This
+    // makes that the actual last word too, not just a UI convenience — so a closed
+    // day can never end up booked here even if slot generation and this check were
+    // ever to disagree with each other for some staff member.
+    const isOpenAndNotClosed = idx => {
+      const emp2 = staff[idx];
+      const dayInfo2 = emp2 && emp2.hours ? emp2.hours[apptDate.getDay()] : null;
+      if (!emp2 || !dayInfo2 || !dayInfo2.open) return false;
+      if (isDateClosedForStaff(idx, apptDate)) return false;
+      return getEffectiveDayWindows(dayInfo2, apptDate).some(([s, e]) => startMin >= s && endMin <= e);
+    };
     const isStillFree = idx => {
       if (idx === undefined || idx === null || isNaN(idx)) return false;
+      if (!isOpenAndNotClosed(idx)) return false;
       const conflict = weekAppointments.some(a => {
         if (a.day !== dayKey || a.date !== dateVal || a.staff !== idx) return false;
         const aStart = timeToMinutes(a.time);
@@ -2683,7 +2722,9 @@
       }
       if (!isStillFree(staffIdx)){
         errorEl.style.display = 'block';
-        errorEl.textContent = `יש כבר תור חופף לעובדת זו באותו זמן.`;
+        errorEl.textContent = isOpenAndNotClosed(staffIdx)
+          ? 'יש כבר תור חופף לעובדת זו באותו זמן.'
+          : 'היום הזה סגור לעובדת זו (יום חופש שבועי או סגירה חד-פעמית).';
         return;
       }
     }
@@ -3159,6 +3200,17 @@
   // `let` can't be read before its own declaration line has run.
   let invAlertEmail = '';
   let ownerAccessCode = '';
+  // Which tabs the access code actually applies to — she asked for this to be
+  // her own choice rather than a fixed list I decide: every tab defaults to
+  // gated (matching the original fixed behavior) so nothing becomes suddenly
+  // exposed for an existing user updating to this version, but she can untick
+  // any of them in Settings. renderGatedTabsCheckboxes() (declared further
+  // below, called from renderBranding()) is what actually draws those checkboxes.
+  let gatedTabsConfig = { clients: true, staff: true, servicesgroup: true, inventory: true, settings: true, reports: true };
+  // Also declared this early for the same reason — renderGatedTabsCheckboxes()
+  // (called from renderBranding(), whose first call happens very early in the
+  // page's startup) reads this to label each checkbox.
+  const GATED_TAB_LABELS = { clients: 'לקוחות', staff: 'צוות', servicesgroup: 'שירותים', inventory: 'מלאי', settings: 'הגדרות', reports: 'דוחות' };
   const pendingEmailQueue = {};
   function sendEmail(to, subject, text, imageDataUrl){
     if (!to) return;
@@ -3326,12 +3378,18 @@
     const phoneInputEl = document.getElementById('bizPhoneInput');
     if (nameInputEl && document.activeElement !== nameInputEl) nameInputEl.value = branding.name;
     if (phoneInputEl && document.activeElement !== phoneInputEl) phoneInputEl.value = branding.phone || '';
+    // She asked for the WhatsApp field to auto-fill from the regular contact phone
+    // (since most businesses use the same number for both), while still letting her
+    // type a different number in when the two actually differ — so the field shown
+    // here mirrors branding.phone as long as she hasn't set her own explicit
+    // branding.whatsapp value; buildWhatsAppLink() already has the same fallback.
     const waInputEl2 = document.getElementById('bizWhatsappInput');
-    if (waInputEl2 && document.activeElement !== waInputEl2) waInputEl2.value = branding.whatsapp || '';
+    if (waInputEl2 && document.activeElement !== waInputEl2) waInputEl2.value = branding.whatsapp || branding.phone || '';
     const invEmailInputEl = document.getElementById('invAlertEmail');
     if (invEmailInputEl && document.activeElement !== invEmailInputEl) invEmailInputEl.value = invAlertEmail || '';
     const ownerCodeInputEl = document.getElementById('ownerAccessCodeInput');
     if (ownerCodeInputEl && document.activeElement !== ownerCodeInputEl) ownerCodeInputEl.value = ownerAccessCode || '';
+    if (typeof renderGatedTabsCheckboxes === 'function') renderGatedTabsCheckboxes();
     const heroBizNameEl = document.getElementById('heroBizName');
     const heroPlatformLineEl = document.getElementById('heroPlatformLine');
     if (heroBizNameEl && heroPlatformLineEl){
@@ -3495,14 +3553,27 @@
     if (!appointments.length){
       return '<p style="color:var(--ivory-dim); font-size:13px;">' + (options.emptyText || 'אין תורים.') + '</p>';
     }
-    return appointments.map(a => {
+    // History lists can get long for a client who's been coming for years — she
+    // asked to only show the 3 most recent by default (appointments are already
+    // sorted newest-first by getClientAppointments), with a "הצג עוד" button to
+    // reveal the rest instead of one long scroll. The toggle click handler itself
+    // is wired up in renderClients() right after this HTML is inserted, since it
+    // just needs to flip a CSS class — no re-render required.
+    if (options.paginateAt && appointments.length > options.paginateAt){
+      const visibleHtml = appointments.slice(0, options.paginateAt).map(a => renderOneAppointmentRow(a, options)).join('');
+      const restHtml = appointments.slice(options.paginateAt).map(a => renderOneAppointmentRow(a, options)).join('');
+      return `${visibleHtml}<div class="visit-rows-rest" style="display:none;">${restHtml}</div><button type="button" class="visit-show-more-btn" style="width:100%; background:none; border:1px dashed rgba(245,238,228,0.2); color:var(--ivory-dim); border-radius:8px; font-size:12px; padding:6px; margin-top:4px; cursor:pointer;">הצג עוד (${appointments.length - options.paginateAt})</button>`;
+    }
+    return appointments.map(a => renderOneAppointmentRow(a, options)).join('');
+  }
+  function renderOneAppointmentRow(a, options){
       if (options.upcoming){
         return `
           <div class="visit-row upcoming-visit-row" data-appt-id="${a.id || ''}">
             <div class="visit-row-head">
+              <span class="visit-date">${formatHistoryDate(a)}</span>
               <span class="t">${a.time || ''}</span>
               <span class="visit-svc">${a.service || 'שירות'}</span>
-              <span class="visit-date">${formatHistoryDate(a)}</span>
               <button class="visit-cancel-btn" data-cancel-appt-id="${a.id || ''}" title="ביטול התור הזה" style="margin-inline-start:auto; background:none; border:1px solid rgba(155,44,66,0.4); color:var(--wine); border-radius:8px; font-size:12px; padding:3px 8px; cursor:pointer;">✕ ביטול</button>
             </div>
             <div class="upcoming-meta">${a.staff !== undefined && staff[a.staff] ? 'אצל ' + staff[a.staff].name + ' · ' : ''}${formatAppointmentStatus(a)}</div>
@@ -3512,9 +3583,9 @@
       return `
         <div class="visit-row" data-appt-id="${a.id || ''}">
           <div class="visit-row-head">
+            <span class="visit-date">${formatHistoryDate(a)}</span>
             <span class="t">${a.time || ''}</span>
             <span class="visit-svc">${a.service || 'שירות'}</span>
-            <span class="visit-date">${formatHistoryDate(a)}</span>
             <button class="visit-delete-btn" data-delete-history-id="${a.id || ''}" title="מחיקת הרשומה הזו (למשל רישום כפול בטעות)" style="margin-inline-start:auto; background:none; border:1px solid rgba(245,238,228,0.15); color:var(--ivory-dim); border-radius:8px; font-size:12px; padding:3px 8px; cursor:pointer;">🗑</button>
           </div>
           <div class="visit-status-actions">
@@ -3523,7 +3594,6 @@
           </div>
           <textarea class="visit-note" placeholder="הערה על הטיפול הזה...">${a.note || ''}</textarea>
         </div>`;
-    }).join('');
   }
   function renderClients(){
     const listEl = document.getElementById('clientList');
@@ -3532,7 +3602,13 @@
     const birthdayClients = [];
     const searchEl = document.getElementById('clientSearch');
     const searchTerm = searchEl ? searchEl.value.trim().toLowerCase() : '';
-    clients.forEach((c, i) => {
+    // Displayed alphabetically (א-ב) instead of insertion order — sort a list of
+    // original indices rather than the `clients` array itself, since sendMissYouMessage(i)
+    // and the delete button below (clients.splice(i, 1)) both need the real index
+    // into the underlying array, not its position in this sorted display order.
+    const sortedClientIndices = clients.map((c, i) => i).sort((a, b) => clients[a].name.localeCompare(clients[b].name, 'he'));
+    sortedClientIndices.forEach(i => {
+      const c = clients[i];
       const isInactive = c.daysSinceVisit !== null && c.daysSinceVisit !== undefined && c.daysSinceVisit >= inactivityThresholdDays;
       if (isInactive) inactiveClients.push(c.name);
       const isBday = isBirthdayToday(c.birthday);
@@ -3626,7 +3702,7 @@
             <button class="template-btn small" data-action="book">➕ קביעת תור נוסף</button>
           </div>
           <div class="client-history" data-panel="history" style="display:none;">
-            ${renderClientAppointmentRows(history, { emptyText: 'אין עדיין היסטוריית טיפולים.' })}
+            ${renderClientAppointmentRows(history, { emptyText: 'אין עדיין היסטוריית טיפולים.', paginateAt: 3 })}
           </div>
           <div class="client-history client-upcoming" data-panel="upcoming" style="display:none;">
             ${renderClientAppointmentRows(upcoming, { upcoming: true, emptyText: 'אין תורים עתידיים.' })}
@@ -3638,6 +3714,18 @@
         const isOpen = panel.style.display !== 'none';
         panel.style.display = isOpen ? 'none' : 'block';
       };
+      const historyShowMoreBtn = row.querySelector('[data-panel="history"] .visit-show-more-btn');
+      if (historyShowMoreBtn){
+        historyShowMoreBtn.onclick = () => {
+          const restEl = row.querySelector('[data-panel="history"] .visit-rows-rest');
+          if (!restEl) return;
+          const nowShowing = restEl.style.display !== 'none';
+          restEl.style.display = nowShowing ? 'none' : 'block';
+          historyShowMoreBtn.textContent = nowShowing
+            ? historyShowMoreBtn.textContent.replace('הצג פחות', 'הצג עוד')
+            : historyShowMoreBtn.textContent.replace('הצג עוד', 'הצג פחות');
+        };
+      }
       row.querySelector('[data-action="upcoming"]').onclick = () => {
         const panel = row.querySelector('[data-panel="upcoming"]');
         const isOpen = panel.style.display !== 'none';
@@ -4694,6 +4782,22 @@
     if (typeof renderStaffPicker === 'function') renderStaffPicker();
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
     if (typeof renderMiniCal === 'function') renderMiniCal();
+    // This is the point a customer first sees the actual date calendar, so it's
+    // the best moment to re-sync staff hours/closedDates from the cloud — this
+    // page loads data once at open, with no live sync, so a tab that was already
+    // open before the owner just closed a day would otherwise keep showing it as
+    // bookable. confirmBooking() re-checks this again right before the final
+    // click regardless, but catching it here means the calendar itself already
+    // shows the true, current state instead of only failing at the very last step.
+    if (typeof CLOUD_DOC !== 'undefined' && CLOUD_DOC){
+      CLOUD_DOC.get().then(doc => {
+        if (doc.exists && doc.data().staff){
+          staff = doc.data().staff;
+          if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+          if (typeof renderMiniCal === 'function') renderMiniCal();
+        }
+      }).catch(() => {});
+    }
   }
   function renderServiceListForCategory(cat){
     const custList = document.getElementById('custSvcList');
@@ -5697,6 +5801,12 @@
     // open for a while, and in the meantime the business owner (or another customer)
     // may have taken this exact slot. Without this, this browser would still think
     // the slot is free and create a double-booked appointment.
+    // Also re-sync `staff` here (not just weekAppointments) — a booking tab that was
+    // already open before the owner just marked this exact day closed (or changed
+    // hours) would otherwise never find out, since this app has no live/real-time
+    // sync and only ever reads once at page load. This was a real reported bug:
+    // "closed day doesn't work anymore" turned out to mean an already-open client
+    // tab kept honoring stale (pre-closure) staff data all the way to the final click.
     const confirmBtnEl = document.querySelector('[onclick="confirmBooking()"]');
     const confirmBtnOrigText = confirmBtnEl ? confirmBtnEl.textContent : '';
     if (confirmBtnEl){ confirmBtnEl.disabled = true; confirmBtnEl.textContent = 'בודקת זמינות...'; }
@@ -5704,6 +5814,9 @@
       const freshDoc = await CLOUD_DOC.get();
       if (freshDoc.exists && freshDoc.data().weekAppointments){
         weekAppointments = freshDoc.data().weekAppointments;
+      }
+      if (freshDoc.exists && freshDoc.data().staff){
+        staff = freshDoc.data().staff;
       }
     } catch (e) {
       console.error('Availability re-check failed, proceeding with last-known data:', e);
@@ -5740,6 +5853,22 @@
       if (resolvedStaffIndex === undefined){
         if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
         document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">מצטערים, אף עובדת מתאימה כבר לא פנויה בשעה זו — היא נתפסה ממש עכשיו. נא לבחור שעה פנויה אחרת מהרשימה המעודכנת.</div>`;
+        return;
+      }
+    } else {
+      // A specific staff member was chosen (not "לא משנה לי מי") — the "any"
+      // branch above already re-checks closure/hours against the just-refreshed
+      // staff data, but this branch never did, so re-check it here too. Otherwise
+      // an already-open tab that picked a specific staff member before the owner
+      // closed this exact day would sail straight through to booking anyway.
+      const dow = bookingSelectedDate.getDay();
+      const emp = staff[resolvedStaffIndex];
+      const dayInfo = emp && emp.hours ? emp.hours[dow] : null;
+      const stillOpen = !!(emp && dayInfo && dayInfo.open) && !isDateClosedForStaff(resolvedStaffIndex, bookingSelectedDate)
+        && getEffectiveDayWindows(dayInfo, bookingSelectedDate).some(([s, e]) => slotStartMin >= s && slotEndMin <= e);
+      if (!stillOpen){
+        if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+        document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">מצטערים, היום הזה נסגר ממש עכשיו ואי אפשר יותר לקבוע בו תור. נא לבחור יום אחר.</div>`;
         return;
       }
     }
@@ -6267,6 +6396,12 @@
       if (doc.exists){
         const d = doc.data();
         if (typeof d.ownerAccessCode === 'string') ownerAccessCode = d.ownerAccessCode;
+        // Which tabs are gated is just as subject to the same staleness as the
+        // code itself — a stale tab that doesn't know she just unticked a tab
+        // (or ticked a new one) needs the current, real config too.
+        if (d.gatedTabsConfig && typeof d.gatedTabsConfig === 'object'){
+          gatedTabsConfig = Object.assign({}, gatedTabsConfig, d.gatedTabsConfig);
+        }
       }
     }).catch(() => {
       // Offline/failed refresh — fall back to whatever's already in memory
@@ -6277,19 +6412,18 @@
   // the tab's content — the real showSub()/showInnerTab() only run inside
   // onSuccess, after the code is confirmed correct.
   function guardedShowSub(name, btn){
-    // Switched from a block-list to an allow-list, per her explicit request:
-    // once a code is set, an ordinary staff login should ONLY be able to open
-    // סקירה / התראות / מה חדש freely — everything else (including any tab
-    // added later) needs the code. Safer default: new tabs are gated unless
-    // deliberately added here.
+    // Which tabs are actually gated is now HER choice (gatedTabsConfig, set via
+    // the checkboxes in Settings) rather than a fixed list — 'overview',
+    // 'notifications' and 'whatsnewadmin' aren't offered as options at all
+    // (there's nothing sensitive there), everything else respects whatever
+    // she's ticked.
     // Returns a promise that ALWAYS resolves — with true if the tab is actually
     // shown, false if she cancelled or typed the wrong code — so a caller that
     // needs to do something right after (like goToInvAlertEmailSetting()
     // focusing a field) can chain off it with .then() safely either way,
     // instead of assuming this is synchronous or risking a promise that never
     // settles at all.
-    const openTabs = ['overview', 'notifications', 'whatsnewadmin'];
-    if (openTabs.includes(name)){ showSub(name, btn); return Promise.resolve(true); }
+    if (!gatedTabsConfig[name]){ showSub(name, btn); return Promise.resolve(true); }
     return refreshOwnerAccessCodeFromCloud().then(() => new Promise(resolve => {
       if (isSensitiveAccessLocked()){
         promptOwnerAccessCode(() => { showSub(name, btn); resolve(true); }, () => resolve(false));
@@ -6300,7 +6434,7 @@
     }));
   }
   function guardedShowInnerTab(containerId, innerId, btn){
-    if (innerId !== 'inner-overview-reports'){ showInnerTab(containerId, innerId, btn); return Promise.resolve(true); }
+    if (innerId !== 'inner-overview-reports' || !gatedTabsConfig.reports){ showInnerTab(containerId, innerId, btn); return Promise.resolve(true); }
     return refreshOwnerAccessCodeFromCloud().then(() => new Promise(resolve => {
       if (isSensitiveAccessLocked()){
         promptOwnerAccessCode(() => { showInnerTab(containerId, innerId, btn); resolve(true); }, () => resolve(false));
@@ -6309,6 +6443,24 @@
         resolve(true);
       }
     }));
+  }
+  // Draws the "which tabs need the code" checkboxes in Settings from
+  // gatedTabsConfig — called once from renderBranding() (see its call site)
+  // so it's always in sync with whatever was last loaded from the cloud.
+  function renderGatedTabsCheckboxes(){
+    const wrapEl = document.getElementById('gatedTabsCheckboxes');
+    if (!wrapEl) return;
+    wrapEl.innerHTML = '';
+    Object.keys(GATED_TAB_LABELS).forEach(key => {
+      const label = document.createElement('label');
+      label.style.cssText = 'display:flex; align-items:center; gap:5px; font-size:12.5px; background:rgba(245,238,228,0.08); padding:5px 10px; border-radius:8px; cursor:pointer;';
+      label.innerHTML = `<input type="checkbox" style="margin:0;" ${gatedTabsConfig[key] ? 'checked' : ''}> ${GATED_TAB_LABELS[key]}`;
+      label.querySelector('input').onchange = (e) => {
+        gatedTabsConfig[key] = e.target.checked;
+        if (typeof saveState === 'function') saveState();
+      };
+      wrapEl.appendChild(label);
+    });
   }
   // The inventory tab's "לא הוגדר מייל" link used to just call .focus() on the
   // email field directly — but that field now lives on the Settings tab, and
@@ -6672,7 +6824,7 @@
     const simpleFields = {
       branding, inactivityThresholdDays, customTemplates, staff,
       categories, services, whatsNewItems, invAlertEmail, inventory, cancellationLog,
-      ownerAccessCode
+      ownerAccessCode, gatedTabsConfig
     };
     db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
       const server = doc.exists ? doc.data() : {};
@@ -6723,6 +6875,7 @@
           branding, clients, inactivityThresholdDays, customTemplates,
           staff, weekAppointments, categories, services, whatsNewItems,
           invAlertEmail, inventory, waitlist, cancellationLog, ownerAccessCode,
+          gatedTabsConfig,
           savedAt: committedPayload.savedAt
         };
         CLOUD_DOC.collection('backups').doc(backupDateKey).set(fullSnapshot).catch(err => console.error('Backup save failed:', err));
@@ -6847,6 +7000,12 @@
     if (data.waitlist) waitlist = data.waitlist;
     if (data.cancellationLog) cancellationLog = data.cancellationLog;
     if (typeof data.ownerAccessCode === 'string') ownerAccessCode = data.ownerAccessCode;
+    // Merge rather than replace outright, so a gatedTabsConfig saved before a
+    // brand-new gate-able tab existed still defaults that new tab to gated
+    // (the safe default) instead of silently missing/undefined.
+    if (data.gatedTabsConfig && typeof data.gatedTabsConfig === 'object'){
+      gatedTabsConfig = Object.assign({}, gatedTabsConfig, data.gatedTabsConfig);
+    }
   }
   function rerenderEverything(){
     if (typeof renderCategories === 'function') renderCategories();
