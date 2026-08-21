@@ -1073,7 +1073,20 @@
      no other visual cue once a value is typed in and the placeholder disappears. */
   .mini-field{display:flex; flex-direction:column; gap:1px; flex:1 1 90px; min-width:90px;}
   .mini-field[data-field-wrap="email"]{flex:1.8 1 150px;}
-  .mini-field[data-field-wrap="birthday"]{flex:0 0 128px;}
+  .mini-field[data-field-wrap="birthday"]{flex:0 0 auto; min-width:228px;}
+  /* Compact variant so the day/month/year birthday selects match the tiny,
+     borderless look of the other client-card mini fields (ת.ז./טלפון/אימייל)
+     instead of the bulkier default .dmy-date-picker styling used elsewhere. */
+  .mini-field .dmy-date-picker{gap:4px;}
+  .mini-field .dmy-date-picker select{
+    font-family:'JetBrains Mono'; font-size:11px;
+    background:none; border:1px solid transparent; border-radius:6px;
+    color:var(--ivory-dim); padding:3px 2px;
+  }
+  .mini-field .dmy-date-picker select:hover, .mini-field .dmy-date-picker select:focus{border-color:rgba(245,238,228,0.2); background:var(--ink); color:var(--ivory);}
+  .mini-field .dmy-date-picker select:nth-child(1),
+  .mini-field .dmy-date-picker select:nth-child(3){width:40px;}
+  .mini-field .dmy-date-picker select:nth-child(2){width:64px;}
   .mini-field-label{font-size:9.5px; color:var(--gold-soft); letter-spacing:0.02em; padding:0 6px;}
   .name-field-wrap{display:flex; flex-direction:column; gap:1px; flex:1;}
   .client-info .visits{font-size:12px; color:var(--gold-soft); margin-top:2px;}
@@ -1170,9 +1183,11 @@
     font-family:'Heebo';
     font-size:14px;
   }
-  .dmy-date-picker select#newClosedDateDay,
-  .dmy-date-picker select#newClosedDateYear{width:66px;}
-  .dmy-date-picker select#newClosedDateMonth{width:96px;}
+  .dmy-date-picker select:nth-child(1),
+  .dmy-date-picker select:nth-child(3){width:66px;}
+  .dmy-date-picker select:nth-child(2){width:96px;}
+  .dmy-date-picker.full-width{width:100%;}
+  .dmy-date-picker.full-width select{flex:1; width:auto;}
   .brand-logo-upload.small{width:44px; height:44px; flex-shrink:0;}
   .brand-logo-upload.small span{font-size:10px;}
   .staff-filter-row{display:flex; gap:14px; overflow-x:auto; margin-bottom:20px; padding-bottom:4px;}
@@ -1646,7 +1661,11 @@
               <div id="firstTimePerks" class="first-time-perks">
                 <p class="ftp-title">🎁 פעם ראשונה? נעים להכיר! אפשר גם לעדכן אותנו קצת עלייך כדי לקבל פינוקים שווים ביום ההולדת שלך:</p>
                 <input class="field" id="ftpEmail" type="email" placeholder="אימייל (אופציונלי)">
-                <input class="field" id="ftpBirthday" type="date" dir="ltr" placeholder="תאריך לידה (אופציונלי)">
+                <div class="dmy-date-picker full-width" id="ftpBirthdayWrap" style="margin-top:8px;">
+                  <select id="ftpBirthdayDay" aria-label="יום לידה"></select>
+                  <select id="ftpBirthdayMonth" aria-label="חודש לידה"></select>
+                  <select id="ftpBirthdayYear" aria-label="שנת לידה"></select>
+                </div>
               </div>
             </div>
             <div class="label" style="margin-top:10px;">איך תרצי לקבל תזכורת? (אפשר לבחור יותר מאחת)</div>
@@ -1790,7 +1809,11 @@
           <input type="text" id="newClientName" placeholder="שם הלקוחה">
           <input type="text" id="newClientPhone" placeholder="050-0000000">
           <input type="email" id="newClientEmail" placeholder="אימייל">
-          <input type="date" id="newClientBirthday" dir="ltr" placeholder="תאריך לידה">
+          <div class="dmy-date-picker" id="newClientBirthdayWrap">
+            <select id="newClientBirthdayDay" aria-label="יום לידה"></select>
+            <select id="newClientBirthdayMonth" aria-label="חודש לידה"></select>
+            <select id="newClientBirthdayYear" aria-label="שנת לידה"></select>
+          </div>
           <button class="cta" style="width:auto; margin-top:0;" onclick="addClient()">הוספת לקוחה</button>
         </div>
       </div>
@@ -2015,7 +2038,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 21.08-ג-סגירה-לכל-הצוות-ותאריך-יומי</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 21.08-ד-תאריך-לידה-ואקסל-בעברית</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -3065,9 +3088,12 @@
         if (val === undefined || val === null || val === '') return;
         const ref = xlsxColLetter(ci) + (ri + 1);
         if (typeof val === 'number' && isFinite(val)){
-          cellsXml += `<c r="${ref}"><v>${val}</v></c>`;
+          cellsXml += `<c r="${ref}" s="0"><v>${val}</v></c>`;
         } else {
-          cellsXml += `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xlsxXmlEscape(val)}</t></is></c>`;
+          // s="0" explicitly applies the RTL-reading-order cell style (see styles.xml)
+          // instead of relying on every reader defaulting an unspecified style the
+          // same way — that default is exactly where the Hebrew-reversal bug lived.
+          cellsXml += `<c r="${ref}" s="0" t="inlineStr"><is><t xml:space="preserve">${xlsxXmlEscape(val)}</t></is></c>`;
         }
       });
       rowsXml += `<row r="${ri + 1}">${cellsXml}</row>`;
@@ -3106,7 +3132,16 @@
   <fills count="1"><fill><patternFill patternType="none"/></fill></fills>
   <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
   <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-  <cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellXfs>
+  <!-- readingOrder="2" forces right-to-left character order on every cell explicitly,
+       at the CELL level rather than only the sheet level. The sheetView rightToLeft="1"
+       flag above controls the sheet's overall layout (which side column A is on), but
+       several real readers (Google Sheets, Apple Numbers, and some Excel builds) don't
+       reliably infer per-cell bidi direction from that alone for a plain inlineStr cell
+       with no run-level direction hint — without this, they can fall back to rendering
+       the text as a flat left-to-right glyph run, which visually reverses Hebrew (e.g.
+       "דוח" shows as "חוד"), exactly what she reported. This is the standard, documented
+       OOXML property for this exact situation. -->
+  <cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyAlignment="1"><alignment readingOrder="2"/></xf></cellXfs>
 </styleSheet>`;
     return buildZipBlob([
       { name: '[Content_Types].xml', data: enc.encode(contentTypes) },
@@ -3480,6 +3515,82 @@
     alertEl.innerHTML = `✓ &nbsp;<span>נשלחה הודעת "מתגעגעים אלייך" ל-${inactiveIdx.length} לקוחות (למי שיש כתובת מייל שמורה).</span>`;
   }
   const hebrewMonths = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  // Generic day/month/year picker helpers — used everywhere a date needs to be
+  // typed in (birthdays, closed dates) instead of the browser's native
+  // <input type="date">, whose day/month order follows the browser/OS locale
+  // and can't be forced to day-first from the page itself. These always render
+  // day, then month, then year, regardless of device settings.
+  function populateDMYPickerEls(dayEl, monthEl, yearEl, opts){
+    opts = opts || {};
+    if (!dayEl || !monthEl || !yearEl) return;
+    dayEl.innerHTML = '';
+    if (opts.allowBlank){
+      const blank = document.createElement('option');
+      blank.value = ''; blank.textContent = 'יום';
+      dayEl.appendChild(blank);
+    }
+    for (let d = 1; d <= 31; d++){
+      const opt = document.createElement('option');
+      opt.value = String(d); opt.textContent = String(d);
+      dayEl.appendChild(opt);
+    }
+    monthEl.innerHTML = '';
+    if (opts.allowBlank){
+      const blank = document.createElement('option');
+      blank.value = ''; blank.textContent = 'חודש';
+      monthEl.appendChild(blank);
+    }
+    hebrewMonths.forEach((name, idx) => {
+      const opt = document.createElement('option');
+      opt.value = String(idx); opt.textContent = name;
+      monthEl.appendChild(opt);
+    });
+    yearEl.innerHTML = '';
+    if (opts.allowBlank){
+      const blank = document.createElement('option');
+      blank.value = ''; blank.textContent = 'שנה';
+      yearEl.appendChild(blank);
+    }
+    const thisYear = new Date().getFullYear();
+    const startYear = thisYear - (opts.yearsBack || 0);
+    const endYear = thisYear + (opts.yearsForward || 0);
+    // Newest year first — for a birthday, most clients are within the last
+    // several decades, so descending saves scrolling versus starting 100 years back.
+    for (let y = endYear; y >= startYear; y--){
+      const opt = document.createElement('option');
+      opt.value = String(y); opt.textContent = String(y);
+      yearEl.appendChild(opt);
+    }
+    if (opts.value){
+      const parts = opts.value.split('-').map(Number);
+      if (parts.length === 3 && !parts.some(isNaN)){
+        yearEl.value = String(parts[0]);
+        monthEl.value = String(parts[1] - 1);
+        dayEl.value = String(parts[2]);
+      }
+    } else if (opts.defaultToday){
+      const now = new Date();
+      dayEl.value = String(now.getDate());
+      monthEl.value = String(now.getMonth());
+      yearEl.value = String(now.getFullYear());
+    }
+  }
+  function readDMYPickerEls(dayEl, monthEl, yearEl){
+    if (!dayEl || !monthEl || !yearEl) return null;
+    if (!dayEl.value || !monthEl.value || !yearEl.value) return null;
+    return yearEl.value + '-' + String(Number(monthEl.value) + 1).padStart(2, '0') + '-' + String(Number(dayEl.value)).padStart(2, '0');
+  }
+  function populateDMYPicker(dayId, monthId, yearId, opts){
+    populateDMYPickerEls(document.getElementById(dayId), document.getElementById(monthId), document.getElementById(yearId), opts);
+  }
+  function readDMYPicker(dayId, monthId, yearId){
+    return readDMYPickerEls(document.getElementById(dayId), document.getElementById(monthId), document.getElementById(yearId));
+  }
+  // Both birthday pickers are optional and start blank (unlike the closed-dates
+  // picker, which defaults to today) — a birthday should never silently get
+  // saved as "today" just because nothing was chosen.
+  populateDMYPicker('ftpBirthdayDay', 'ftpBirthdayMonth', 'ftpBirthdayYear', { allowBlank: true, yearsBack: 100 });
+  populateDMYPicker('newClientBirthdayDay', 'newClientBirthdayMonth', 'newClientBirthdayYear', { allowBlank: true, yearsBack: 100 });
   function hebrewDayNumeral(n){
     if (n === 15) return 'ט״ו';
     if (n === 16) return 'ט״ז';
@@ -3712,7 +3823,11 @@
                 </div>
                 <div class="mini-field" data-field-wrap="birthday">
                   <span class="mini-field-label">🎂 יום הולדת</span>
-                  <input class="client-mini-input" data-field="birthday" type="date" dir="ltr" value="${c.birthday || ''}">
+                  <div class="dmy-date-picker" data-birthday-picker>
+                    <select class="mini-bday-day" aria-label="יום לידה"></select>
+                    <select class="mini-bday-month" aria-label="חודש לידה"></select>
+                    <select class="mini-bday-year" aria-label="שנת לידה"></select>
+                  </div>
                 </div>
               </div>
               <div class="visits">${c.visits || 0} ביקורים · אחרון ${formatLastVisit(c.daysSinceVisit)}${isInactive ? ' <span class="badge low" style="margin-inline-start:6px;">לא הגיעה זמן רב</span>' : ''}${isBday ? ' <span class="badge" style="background:rgba(201,162,39,0.2); color:var(--gold-soft); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : ''}</div>
@@ -3799,9 +3914,7 @@
         renderClients();
       });
       row.querySelectorAll('.client-mini-input').forEach(inp => {
-        if (inp.dataset.field === 'birthday'){
-          inp.onchange = (e) => { c.birthday = e.target.value; renderClients(); };
-        } else if (inp.dataset.field === 'teudatZehut'){
+        if (inp.dataset.field === 'teudatZehut'){
           inp.oninput = (e) => {
             e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 9);
             c.teudatZehut = e.target.value;
@@ -3810,6 +3923,20 @@
           inp.oninput = (e) => { c[e.target.dataset.field] = e.target.value; };
         }
       });
+      const bdayWrap = row.querySelector('[data-birthday-picker]');
+      if (bdayWrap){
+        const bdayDayEl = bdayWrap.querySelector('.mini-bday-day');
+        const bdayMonthEl = bdayWrap.querySelector('.mini-bday-month');
+        const bdayYearEl = bdayWrap.querySelector('.mini-bday-year');
+        populateDMYPickerEls(bdayDayEl, bdayMonthEl, bdayYearEl, { allowBlank: true, yearsBack: 100, value: c.birthday });
+        const onBdayChange = () => {
+          c.birthday = readDMYPickerEls(bdayDayEl, bdayMonthEl, bdayYearEl);
+          renderClients();
+        };
+        bdayDayEl.onchange = onBdayChange;
+        bdayMonthEl.onchange = onBdayChange;
+        bdayYearEl.onchange = onBdayChange;
+      }
       // Deleting a client used to be blocked entirely whenever she had any
       // appointment (history or upcoming) — meant real, established clients could
       // basically never be removed, even obviously-fake/test entries. Now deletion
@@ -3928,7 +4055,6 @@
     const nameEl = document.getElementById('newClientName');
     const phoneEl = document.getElementById('newClientPhone');
     const emailEl = document.getElementById('newClientEmail');
-    const birthdayEl = document.getElementById('newClientBirthday');
     const name = nameEl.value.trim();
     if (!name) return;
     if (phoneEl.value.trim() && !isValidIsraeliPhone(phoneEl.value)){
@@ -3938,8 +4064,10 @@
       return;
     }
     phoneEl.style.borderColor = '';
-    clients.push({ name, phone: phoneEl.value.trim(), email: emailEl.value.trim(), photo: newClientPhoto, visits: 0, daysSinceVisit: null, note: "", birthday: birthdayEl.value || null });
-    nameEl.value = ''; phoneEl.value = ''; emailEl.value = ''; birthdayEl.value = '';
+    const birthdayVal = readDMYPicker('newClientBirthdayDay', 'newClientBirthdayMonth', 'newClientBirthdayYear');
+    clients.push({ name, phone: phoneEl.value.trim(), email: emailEl.value.trim(), photo: newClientPhoto, visits: 0, daysSinceVisit: null, note: "", birthday: birthdayVal });
+    nameEl.value = ''; phoneEl.value = ''; emailEl.value = '';
+    populateDMYPicker('newClientBirthdayDay', 'newClientBirthdayMonth', 'newClientBirthdayYear', { allowBlank: true, yearsBack: 100, force: true });
     newClientPhoto = null;
     document.getElementById('clientPhotoPreview').style.display = 'none';
     document.getElementById('clientPhotoPlaceholder').style.display = 'block';
@@ -5988,7 +6116,7 @@
       const reminderEmailEl = document.getElementById('reminderEmailInput');
       const reminderEmailVal = reminderEmailEl ? reminderEmailEl.value.trim() : '';
       const finalEmail = ftpEmail || reminderEmailVal;
-      const ftpBirthday = document.getElementById('ftpBirthday').value || null;
+      const ftpBirthday = readDMYPicker('ftpBirthdayDay', 'ftpBirthdayMonth', 'ftpBirthdayYear');
       clients.push({ name: clientNameVal, phone: phoneVal.trim(), teudatZehut: idDigits, email: finalEmail, photo: null, visits: isTodayOrPastBooking ? 1 : 0, daysSinceVisit: isTodayOrPastBooking ? 0 : null, note: '', birthday: ftpBirthday });
       customerEmail = finalEmail;
     }
