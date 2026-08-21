@@ -1114,6 +1114,7 @@
   }
   .visit-row-head .t{font-family:'JetBrains Mono'; color:var(--gold-soft);}
   .visit-row-head .visit-svc{flex:1;}
+  .visit-row-head .visit-dur{color:var(--ivory-dim); font-size:11.5px; font-weight:400;}
   .visit-row-head .visit-date{color:var(--gold-soft); font-size:12px; font-weight:500; flex-shrink:0;}
   .visit-status-actions{display:flex; gap:6px; margin-bottom:6px;}
   .visit-status-btn{
@@ -1987,7 +1988,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 21.08-א-יום-סגור-ותיקונים</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 21.08-ב-שמירה-מיידית-ותאריכים</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -2569,13 +2570,13 @@
     const box = document.createElement('div');
     box.id = 'waitlistMatchAlert';
     box.className = 'waitlist-match-alert';
-    box.innerHTML = `<strong>🔔 התפנה מקום!</strong><div style="font-size:13px;margin-top:5px;">התפנה תור ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}.</div>`;
+    box.innerHTML = `<strong>🔔 התפנה מקום!</strong><div style="font-size:13px;margin-top:5px;">התפנה תור ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time}.</div>`;
     matches.forEach(w => {
       const digits = (w.phone || '').replace(/[^0-9]/g,'');
-      const smsMsg = encodeURIComponent(`היי ${w.name}, התפנה תור ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}. אם תרצי, אפשר לקבוע אותו כאן: ${getSiteUrl()}`);
+      const smsMsg = encodeURIComponent(`היי ${w.name}, התפנה תור ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time}. אם תרצי, אפשר לקבוע אותו כאן: ${getSiteUrl()}`);
       const clientEmail = findClientEmailByPhone(w.phone);
       if (clientEmail){
-        sendEmail(clientEmail, 'התפנה תור אצלנו!', `היי ${w.name}, התפנה תור ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}. אם תרצי, אפשר לקבוע אותו כאן:\n${getSiteUrl()}\n\nאם זה כבר לא רלוונטי לך, אפשר להסיר את עצמך מרשימת ההמתנה כאן:\n${buildWaitlistCancelLink(w.id)}`);
+        sendEmail(clientEmail, 'התפנה תור אצלנו!', `היי ${w.name}, התפנה תור ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time}. אם תרצי, אפשר לקבוע אותו כאן:\n${getSiteUrl()}\n\nאם זה כבר לא רלוונטי לך, אפשר להסיר את עצמך מרשימת ההמתנה כאן:\n${buildWaitlistCancelLink(w.id)}`);
       }
       const row = document.createElement('div');
       row.className='wl-match';
@@ -2603,7 +2604,7 @@
   }
   function cancelAdminAppointment(appt){
     if (!appt) return;
-    const confirmed = confirm(`לבטל את התור של ${appt.client} ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time}?`);
+    const confirmed = confirm(`לבטל את התור של ${appt.client} ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time}?`);
     if (!confirmed) return;
     const matches = getWaitlistMatchesForAppointment(appt);
     logCancellation(appt);
@@ -2625,7 +2626,7 @@
       sendEmail(
         cancelledClient.email,
         'התור שלך בוטל',
-        `היי ${appt.client}, התור שלך ל${appt.service} בתאריך ${appt.date} בשעה ${appt.time} בוטל. נשמח לראותך שוב בקרוב!\n\nלקביעת תור חדש:\n${getSiteUrl()}`
+        `היי ${appt.client}, התור שלך ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time} בוטל. נשמח לראותך שוב בקרוב!\n\nלקביעת תור חדש:\n${getSiteUrl()}`
       );
     }
     showAdminToast('✓ התור בוטל בהצלחה' + (cancelledClient && cancelledClient.email ? ' — נשלח מייל לעדכון הלקוחה' : ''));
@@ -3495,6 +3496,19 @@
     const dow = weekdayKeys.indexOf(a.day);
     return dow !== -1 ? 'יום ' + days[dow].name : '';
   }
+  // She asked that every date shown anywhere in the app always read day, then
+  // month, then year — never the raw "YYYY-MM-DD" ISO string a few confirm()
+  // dialogs, alerts and email bodies were interpolating directly. Converts a
+  // "YYYY-MM-DD" string into "D בMonth YYYY" (falls back to the original string
+  // if it isn't in that shape, so nothing breaks if it's ever called with
+  // something unexpected).
+  function formatDateDMY(dateStr){
+    if (!dateStr || typeof dateStr !== 'string') return dateStr;
+    const parts = dateStr.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(isNaN)) return dateStr;
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    return d.getDate() + ' ב' + hebrewMonths[d.getMonth()] + ' ' + parts[0];
+  }
   function getAppointmentDateOnly(appt){
     if (!appt || !appt.date) return null;
     const parts = appt.date.split('-').map(Number);
@@ -3573,7 +3587,7 @@
             <div class="visit-row-head">
               <span class="visit-date">${formatHistoryDate(a)}</span>
               <span class="t">${a.time || ''}</span>
-              <span class="visit-svc">${a.service || 'שירות'}</span>
+              <span class="visit-svc">${a.service || 'שירות'}${a.dur ? ` <span class="visit-dur">(${a.dur} דק')</span>` : ''}</span>
               <button class="visit-cancel-btn" data-cancel-appt-id="${a.id || ''}" title="ביטול התור הזה" style="margin-inline-start:auto; background:none; border:1px solid rgba(155,44,66,0.4); color:var(--wine); border-radius:8px; font-size:12px; padding:3px 8px; cursor:pointer;">✕ ביטול</button>
             </div>
             <div class="upcoming-meta">${a.staff !== undefined && staff[a.staff] ? 'אצל ' + staff[a.staff].name + ' · ' : ''}${formatAppointmentStatus(a)}</div>
@@ -3585,7 +3599,7 @@
           <div class="visit-row-head">
             <span class="visit-date">${formatHistoryDate(a)}</span>
             <span class="t">${a.time || ''}</span>
-            <span class="visit-svc">${a.service || 'שירות'}</span>
+            <span class="visit-svc">${a.service || 'שירות'}${a.dur ? ` <span class="visit-dur">(${a.dur} דק')</span>` : ''}</span>
             <button class="visit-delete-btn" data-delete-history-id="${a.id || ''}" title="מחיקת הרשומה הזו (למשל רישום כפול בטעות)" style="margin-inline-start:auto; background:none; border:1px solid rgba(245,238,228,0.15); color:var(--ivory-dim); border-radius:8px; font-size:12px; padding:3px 8px; cursor:pointer;">🗑</button>
           </div>
           <div class="visit-status-actions">
@@ -3823,7 +3837,7 @@
         const delBtn = visitEl.querySelector('[data-delete-history-id]');
         if (delBtn){
           delBtn.onclick = () => {
-            const confirmedDel = confirm(`למחוק לצמיתות את הרשומה של ${appt.service || 'הטיפול'} מתאריך ${appt.date}?`);
+            const confirmedDel = confirm(`למחוק לצמיתות את הרשומה של ${appt.service || 'הטיפול'} מתאריך ${formatDateDMY(appt.date)}?`);
             if (!confirmedDel) return;
             const idx2 = weekAppointments.findIndex(a => a.id === appt.id);
             if (idx2 !== -1) weekAppointments.splice(idx2, 1);
@@ -5925,7 +5939,7 @@
       nextDate.setDate(nextDate.getDate() + 1);
       const adjacentConflict = weekAppointments.find(a => a.client === existingClient.name && (a.date === fmt(prevDate) || a.date === fmt(nextDate)));
       if (adjacentConflict){
-        const proceed = confirm(`שימי לב: יש לך כבר תור נוסף ל${adjacentConflict.service} בתאריך ${adjacentConflict.date} (${adjacentConflict.time}). להמשיך ולקבוע גם את התור הזה?`);
+        const proceed = confirm(`שימי לב: יש לך כבר תור נוסף ל${adjacentConflict.service} בתאריך ${formatDateDMY(adjacentConflict.date)} (${adjacentConflict.time}). להמשיך ולקבוע גם את התור הזה?`);
         if (!proceed) return;
       }
     }
@@ -6564,6 +6578,12 @@
         if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
         if (typeof renderMiniCal === 'function') renderMiniCal();
         if (typeof renderWeekCal === 'function') renderWeekCal();
+        // This has to be saved to the cloud immediately, not left to the ambient
+        // autosave — a closed/open day is exactly the kind of change someone might
+        // check right away from another device/tab (the client's own page, or the
+        // manager's phone), and a several-second gap where the old value is still
+        // what's saved is exactly what caused "closed day doesn't work" reports.
+        if (typeof saveState === 'function') saveState();
       };
       listEl.appendChild(row);
     });
@@ -6584,6 +6604,12 @@
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
     if (typeof renderMiniCal === 'function') renderMiniCal();
     if (typeof renderWeekCal === 'function') renderWeekCal();
+    // Save immediately rather than waiting for the ambient autosave — she reported
+    // that marking a day closed and then immediately checking the client-facing
+    // booking page (a fresh page load, which reads straight from the cloud) still
+    // showed it as bookable. That gap is exactly the few seconds before the normal
+    // autosave interval fires; a closure has to take effect the moment it's set.
+    if (typeof saveState === 'function') saveState();
   }
   function renderHoursEditor(){
     const hoursList = document.getElementById('hoursList');
@@ -6950,7 +6976,7 @@
         const apptCount = Array.isArray(data.weekAppointments) ? data.weekAppointments.length : 0;
         const clientCount = Array.isArray(data.clients) ? data.clients.length : 0;
         const span = document.createElement('span');
-        span.innerHTML = `📅 ${id} <span style="color:var(--ivory-dim); font-size:12px;">(${clientCount} לקוחות, ${apptCount} תורים)</span>`;
+        span.innerHTML = `📅 ${formatDateDMY(id)} <span style="color:var(--ivory-dim); font-size:12px;">(${clientCount} לקוחות, ${apptCount} תורים)</span>`;
         const btn = document.createElement('button');
         btn.className = 'template-btn small';
         btn.textContent = '↩ שחזור לגיבוי הזה';
@@ -6965,7 +6991,7 @@
     });
   }
   function restoreFromBackup(dateKey){
-    const sure = confirm(`לשחזר את כל הנתונים לגיבוי מתאריך ${dateKey}?\n\nזה יחליף את כל הלקוחות, התורים, השירותים והצוות הנוכחיים בנתונים מהגיבוי הזה. פעולה זו לא ניתנת לביטול.`);
+    const sure = confirm(`לשחזר את כל הנתונים לגיבוי מתאריך ${formatDateDMY(dateKey)}?\n\nזה יחליף את כל הלקוחות, התורים, השירותים והצוות הנוכחיים בנתונים מהגיבוי הזה. פעולה זו לא ניתנת לביטול.`);
     if (!sure) return;
     const sureAgain = confirm('בטוחה לגמרי? כל שינוי שנעשה מאז התאריך הזה יימחק.');
     if (!sureAgain) return;
