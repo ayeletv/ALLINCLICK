@@ -1043,6 +1043,13 @@
     overflow:hidden;
   }
   .client-avatar img{width:100%; height:100%; object-fit:cover;}
+  .staff-avatar-edit-badge{
+    position:absolute; bottom:-2px; left:-2px;
+    width:18px; height:18px; border-radius:50%;
+    background:var(--gold-soft); color:#2b2620;
+    font-size:10px; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 0 2px var(--card, #1C1719);
+  }
   .client-info{flex:1; min-width:0;}
   .client-info .name-row{display:flex; justify-content:space-between; align-items:center; gap:10px;}
   .client-info h4{font-family:'Suez One'; font-weight:400; font-size:16px;}
@@ -1195,6 +1202,22 @@
   .cal-day-head b{font-family:'Suez One'; font-weight:400; font-size:14px; color:var(--ivory);}
   .cal-day-head .heb-date{font-size:9px; color:var(--gold-soft); opacity:0.8;}
   .cal-day-body{position:relative;}
+  /* A day that's fully closed (weekly day off, or a one-off closed date like a
+     wedding/holiday) for whichever staff the calendar is currently filtered
+     to — she asked for this to be visually obvious here too, not just on the
+     client-facing booking calendar which already grays these out. */
+  .cal-day-head.day-closed{background:rgba(155,44,66,0.14);}
+  .cal-day-head.day-closed b{color:#D89AA8;}
+  .cal-day-body.day-closed{
+    background:repeating-linear-gradient(135deg, rgba(155,44,66,0.05) 0px, rgba(155,44,66,0.05) 10px, transparent 10px, transparent 20px);
+    cursor:not-allowed;
+  }
+  .cal-day-closed-label{
+    position:absolute; top:8px; left:4px; right:4px; z-index:2;
+    text-align:center; font-size:10.5px; font-weight:700; color:var(--wine);
+    background:rgba(28,23,25,0.55); border-radius:6px; padding:3px 4px;
+    pointer-events:none; line-height:1.3;
+  }
   .cal-hour-line{border-top:1px solid rgba(245,238,228,0.08); box-sizing:border-box;}
   .cal-half-line{position:absolute; inset-inline:0; border-top:1px dashed rgba(245,238,228,0.05);}
   .cal-appt{
@@ -1256,13 +1279,20 @@
   }
   .brand-preview .logo-dot img{width:100%; height:100%; object-fit:cover;}
   .brand-preview .biz-name{font-family:'Suez One'; font-weight:400; font-size:16px; color:var(--ivory);}
+  /* Was plain small monospace text with no real branding treatment — she asked
+     for this to look intentional, like the "הכל בקליק" mark everywhere else in
+     the app (the hero heading's accent span): the same small click-logo icon,
+     the same serif brand font, the same gold color, instead of a generic tag. */
   .phone-product-tag{
-    font-family:'JetBrains Mono';
-    font-size:11px;
-    letter-spacing:0.05em;
+    font-family:'Suez One', serif;
+    font-weight:400;
+    font-size:13px;
+    letter-spacing:0.02em;
     color:#9B7E2E;
     margin-bottom:8px;
+    display:flex; align-items:center; gap:5px;
   }
+  .phone-product-tag .click-logo{flex-shrink:0;}
   .phone-brand{
     display:flex; align-items:center; gap:10px;
     margin-bottom:16px;
@@ -1497,12 +1527,25 @@
         fontPromise = new Promise(function(resolve){ setTimeout(resolve, 300); });
       }
     } catch (e) { fontPromise = Promise.resolve(); }
+    // This 1400ms give-up used to be exactly why the "jumps huge then shrinks"
+    // bug could still happen even after the fix above: on any connection where
+    // the real Firestore read takes LONGER than 1400ms (completely realistic on
+    // mobile data, not just "offline"), this timeout won —  the hero revealed
+    // showing the generic tagline as the big heading, and then a moment later,
+    // once the real branding data actually arrived, swapped to the business
+    // name. That swap-after-reveal IS the jump, just delayed past this timeout
+    // instead of past the font-load race. Raised to 5000ms (with the absolute
+    // safety net raised to match) so a normal slow-but-working connection has
+    // real room to finish before we give up and show a possibly-wrong state —
+    // a genuinely offline visitor still gets a hero eventually, just a little
+    // later, which is a far better trade than a visible jump for every
+    // moderately slow visitor.
     var brandingPromise = Promise.race([
       window.__brandingReady,
-      new Promise(function(resolve){ setTimeout(resolve, 1400); })
+      new Promise(function(resolve){ setTimeout(resolve, 5000); })
     ]);
     Promise.all([fontPromise, brandingPromise]).then(reveal);
-    setTimeout(reveal, 2000); // absolute safety net — never leave the hero invisible
+    setTimeout(reveal, 6000); // absolute safety net — never leave the hero invisible
   })();
 </script>
 <section class="stage">
@@ -1514,7 +1557,7 @@
   <div id="panel-customer" class="panel active">
     <div class="phone">
       <div class="phone-screen">
-        <div class="phone-product-tag">הכל בקליק</div>
+        <div class="phone-product-tag"><svg class="click-logo" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#9B7E2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg> הכל בקליק</div>
         <div class="phone-brand" id="phoneBrand"></div>
         <div style="text-align:center; margin-bottom:10px;">
           <a href="#" onclick="openApptLookup(); return false;" style="font-size:12px; color:#8A8178; text-decoration:underline;">יש לך תור קיים? לחיצה לבדיקה</a>
@@ -1579,7 +1622,7 @@
             </div>
             <div class="label" style="margin-top:10px;">איך תרצי לקבל תזכורת? (אפשר לבחור יותר מאחת)</div>
             <div class="reminder-choice" id="reminderChoice">
-              <label><input type="checkbox" name="reminderChannel" value="sms"> SMS</label>
+              <label><input type="checkbox" name="reminderChannel" value="whatsapp"> וואטסאפ</label>
               <label><input type="checkbox" name="reminderChannel" value="call"> שיחת טלפון</label>
               <label><input type="checkbox" name="reminderChannel" value="email" checked> מייל</label>
             </div>
@@ -1794,10 +1837,11 @@
         <div class="staff-filter-row" id="hoursStaffPicker"></div>
         <div class="hours-list" id="hoursList"></div>
         <div id="closedDatesSection" style="margin-top:24px; display:none;">
-          <div class="label" style="margin-bottom:10px;">ימים סגורים (חג, חופשה)</div>
+          <div class="label" style="margin-bottom:10px;">ימים סגורים (חג, חתונה, חופשה...)</div>
           <div class="client-list" id="closedDatesList"></div>
-          <div class="client-add-row">
+          <div class="client-add-row" style="flex-wrap:wrap;">
             <input type="date" id="newClosedDate" dir="ltr">
+            <input type="text" id="newClosedDateReason" placeholder="סיבה (לא חובה) — למשל חתונה, חג" style="flex:1; min-width:150px;">
             <button class="cta" style="width:auto; margin-top:0;" onclick="addClosedDate()">הוספת יום סגור</button>
           </div>
         </div>
@@ -1838,6 +1882,8 @@
           <input type="text" id="bizNameInput" class="field-dark" placeholder="שם העסק שלך" value="" oninput="updateBranding()">
           <div class="label" style="margin:12px 0 6px;">טלפון ליצירת קשר (להתייעצות)</div>
           <input type="tel" id="bizPhoneInput" class="field-dark" placeholder="050-0000000" oninput="updateBranding()">
+          <div class="label" style="margin:12px 0 6px;">מספר וואטסאפ<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">אם מספר הוואטסאפ שלך שונה ממספר הטלפון להתייעצות שמעליו — אפשר להזין אותו כאן. לקוחה שתלחץ על קישור הוואטסאפ תופנה למספר הזה; אם נשאר ריק, הקישור יפנה למספר הטלפון הרגיל.</span></span></div>
+          <input type="tel" id="bizWhatsappInput" class="field-dark" placeholder="050-0000000 (אם שונה מהטלפון למעלה)" oninput="updateBranding()">
           <div class="label" style="margin:12px 0 6px;">מייל המנהלת (לקבלת התראות)<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">לכתובת הזו נשלחות התראות על מלאי נמוך, והיא מוצעת כברירת מחדל כששולחים דוח למייל — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות כאן.</span></span></div>
           <input type="email" id="invAlertEmail" class="field-dark" placeholder="you@example.com" oninput="updateInvAlertEmail()">
           <div style="font-size:11.5px; color:var(--ivory-dim); margin-top:4px;">לכתובת הזו מגיעות התראות מלאי נמוך, והיא מוצעת כברירת מחדל בשליחת דוחות למייל (בטאב "דוחות") — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות את זה כאן.</div>
@@ -1930,7 +1976,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 20.08-כא-ביטול-מהיומן-ושמירות-מיידיות</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 20.08-כג-עיצוב-תג-הכל-בקליק</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -3186,8 +3232,25 @@
   function updateBranding(){
     branding.name = document.getElementById('bizNameInput').value.trim() || 'הסלון שלי';
     branding.phone = document.getElementById('bizPhoneInput').value.trim();
+    // Separate from branding.phone since the business's WhatsApp number isn't
+    // always the same number as its regular contact phone — see the "?" hint
+    // next to this field in Settings, and buildWhatsAppLink() below for where
+    // this falls back to branding.phone when left blank.
+    const waInputEl = document.getElementById('bizWhatsappInput');
+    branding.whatsapp = waInputEl ? waInputEl.value.trim() : '';
     renderBranding();
     if (typeof renderServices === 'function') renderServices();
+  }
+  // Builds a wa.me link from an Israeli-format local number (e.g. 050-1234567)
+  // by swapping the leading 0 for the 972 country code — used for both the
+  // business's own WhatsApp contact link and could be reused elsewhere later.
+  // Falls back to branding.phone if no separate WhatsApp number was set.
+  function buildWhatsAppLink(){
+    const raw = (branding.whatsapp && branding.whatsapp.trim()) || branding.phone || '';
+    const digits = raw.replace(/[^0-9]/g, '');
+    if (!digits) return null;
+    const intl = digits.replace(/^0/, '972');
+    return 'https://wa.me/' + intl;
   }
   // Every photo in the app (logo, staff, clients, broadcast, "what's new") ends up
   // stored as a base64 data: string inside the ONE shared business/default Firestore
@@ -3263,6 +3326,8 @@
     const phoneInputEl = document.getElementById('bizPhoneInput');
     if (nameInputEl && document.activeElement !== nameInputEl) nameInputEl.value = branding.name;
     if (phoneInputEl && document.activeElement !== phoneInputEl) phoneInputEl.value = branding.phone || '';
+    const waInputEl2 = document.getElementById('bizWhatsappInput');
+    if (waInputEl2 && document.activeElement !== waInputEl2) waInputEl2.value = branding.whatsapp || '';
     const invEmailInputEl = document.getElementById('invAlertEmail');
     if (invEmailInputEl && document.activeElement !== invEmailInputEl) invEmailInputEl.value = invAlertEmail || '';
     const ownerCodeInputEl = document.getElementById('ownerAccessCodeInput');
@@ -3382,17 +3447,32 @@
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
+  // How long a TODAY appointment stays in the separate "טיפול של היום" spot
+  // before it counts as done and moves into regular history — she asked for
+  // this specifically, since leaving it there for the rest of the day/night
+  // even hours after the actual treatment finished was confusing.
+  const TODAY_APPT_HISTORY_CUTOFF_MINUTES = 120;
   function isAppointmentHistory(appt){
     const d = getAppointmentDateOnly(appt);
     if (!d) return false;
-    // Strictly BEFORE today — today's own appointment is shown separately in
-    // its own "טיפול של היום" spot on the client card, not lumped into history.
-    return d < getTodayDateOnly();
+    const today = getTodayDateOnly();
+    if (d < today) return true;
+    if (d.getTime() === today.getTime()){
+      const apptMinutes = timeToMinutes(appt.time || '00:00');
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      return (nowMinutes - apptMinutes) > TODAY_APPT_HISTORY_CUTOFF_MINUTES;
+    }
+    return false;
   }
   function isAppointmentToday(appt){
     const d = getAppointmentDateOnly(appt);
     if (!d) return false;
-    return d.getTime() === getTodayDateOnly().getTime();
+    if (d.getTime() !== getTodayDateOnly().getTime()) return false;
+    // Once it's rolled into history (see the 2-hour cutoff above), it's no
+    // longer "today's" appointment for display purposes even though the date
+    // is still today.
+    return !isAppointmentHistory(appt);
   }
   function getClientAppointments(clientName){
     return weekAppointments
@@ -3931,7 +4011,11 @@
           </div>
           <div style="font-size:11px; color:var(--ivory-dim); margin-top:4px;">אילו תחומי טיפול העובדת הזו מבצעת — קובע אילו טיפולים לקוחות יוכלו לקבוע אצלה.</div>` : '';
         row.innerHTML = `
-          <div class="client-avatar">${avatarHtml}</div>
+          <div class="client-avatar staff-avatar-edit" title="לחיצה מוסיפה/משנה תמונה" style="cursor:pointer; position:relative;">
+            ${avatarHtml}
+            <span class="staff-avatar-edit-badge">✎</span>
+          </div>
+          <input type="file" class="staff-edit-photo-file" accept="image/*" style="display:none;">
           <div class="client-info">
             <div class="name-row">
               <div style="flex:1;">
@@ -3943,6 +4027,27 @@
             ${catChecksHtml}
             <div style="margin-top:10px;"><button class="cta staff-save-btn" style="width:auto; padding:8px 22px; font-size:13px;">💾 שמירה</button></div>
           </div>`;
+        // Until now, a photo could only be set when a staff member was first
+        // created (see newStaffPhoto/handleStaffPhotoUpload below) — there was
+        // no way at all to add or change one afterward. Reuses the same
+        // readImageCompressed() helper the logo upload and new-staff-photo use.
+        const avatarEditEl = row.querySelector('.staff-avatar-edit');
+        const photoFileEl = row.querySelector('.staff-edit-photo-file');
+        avatarEditEl.onclick = () => photoFileEl.click();
+        photoFileEl.onchange = (ev) => {
+          const file = ev.target.files[0];
+          if (!file) return;
+          readImageCompressed(file, (dataUrl) => {
+            s.photo = dataUrl;
+            // Update just this avatar in place rather than a full renderStaff()
+            // re-render, which would also reset the name/role inputs back to
+            // their pre-edit values if she's mid-typing a change to them.
+            avatarEditEl.innerHTML = `<img src="${dataUrl}"><span class="staff-avatar-edit-badge">✎</span>`;
+            if (typeof saveState === 'function') saveState();
+            if (typeof renderStaffPicker === 'function') renderStaffPicker();
+            if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
+          }, { maxDim: 300, mime: 'image/png' });
+        };
         row.querySelectorAll('.staff-cat-check').forEach(cb => {
           cb.onchange = () => {
             const cat = cb.dataset.cat;
@@ -4190,6 +4295,31 @@
       rowEl.appendChild(chip);
     });
   }
+  // Is this date fully closed (weekly day off, or a one-off closedDates entry)
+  // for every staff member the calendar is currently showing? 'all' means every
+  // non-deleted staff member has to be closed for the whole day to count as
+  // closed — mirrors the same "every capable staff" aggregation already used
+  // for isClosedDay in the client-facing mini-calendar (renderMiniCal/renderMbCal).
+  // Returns null if the day is open for at least one relevant staff member,
+  // otherwise { reason } with the first non-empty one-off reason found (if any).
+  function getWeekColClosedInfo(dateObj){
+    const dow = dateObj.getDay();
+    const indices = selectedStaffFilter === 'all'
+      ? staff.map((s, i) => i).filter(i => !staff[i].deleted)
+      : [selectedStaffFilter];
+    if (!indices.length) return null;
+    let allClosed = true;
+    let reason = '';
+    indices.forEach(idx => {
+      const s = staff[idx];
+      const dayInfo = s && s.hours && s.hours[dow];
+      const weeklyClosed = !dayInfo || !dayInfo.open;
+      const oneOff = getClosedDateEntry(idx, formatDateKey(dateObj));
+      if (!weeklyClosed && !oneOff) allClosed = false;
+      if (oneOff && oneOff.reason && !reason) reason = oneOff.reason;
+    });
+    return allClosed ? { reason } : null;
+  }
   function renderWeekCal(){
     const calEl = document.getElementById('weekCal');
     if (!calEl) return;
@@ -4216,9 +4346,26 @@
       const body = document.createElement('div');
       body.className = 'cal-day-body';
       body.style.height = (calEndHour - calStartHour) * hourBandHeight + 'px';
-      body.style.cursor = 'pointer';
-      body.title = 'לחיצה על שעה פנויה מוסיפה תור';
+      // Fully closed (weekly day off, or a one-off date like a wedding/holiday)
+      // for every staff member currently in view — tint the column, label why,
+      // and disable click-to-add here instead of only discovering it's closed
+      // after already opening the manual-booking modal.
+      const closedInfo = getWeekColClosedInfo(day.fullDate);
+      if (closedInfo){
+        head.classList.add('day-closed');
+        body.classList.add('day-closed');
+        body.style.cursor = 'not-allowed';
+        body.title = closedInfo.reason ? `סגור — ${closedInfo.reason}` : 'סגור';
+        const label = document.createElement('div');
+        label.className = 'cal-day-closed-label';
+        label.textContent = closedInfo.reason ? `סגור — ${closedInfo.reason}` : 'סגור';
+        body.appendChild(label);
+      } else {
+        body.style.cursor = 'pointer';
+        body.title = 'לחיצה על שעה פנויה מוסיפה תור';
+      }
       body.onclick = (e) => {
+        if (closedInfo) return;
         if (e.target.closest('.cal-appt')) return;
         const rect = body.getBoundingClientRect();
         const offsetY = e.clientY - rect.top;
@@ -4577,7 +4724,14 @@
       let contactLinks = '';
       if (branding.phone){
         contactLinks += ` <a href="tel:${branding.phone.replace(/[^0-9+]/g,'')}" class="notice-phone-link">📞 ${branding.phone}</a>`;
-        contactLinks += ` <a href="sms:${branding.phone.replace(/[^0-9+]/g,'')}" class="notice-phone-link">💬 SMS</a>`;
+      }
+      // Replaced the old sms: link with WhatsApp — she asked for this specifically,
+      // since a plain SMS link isn't something most clients actually use to reach
+      // a business anymore, and WhatsApp may be a different number than the main
+      // contact phone above (see buildWhatsAppLink()/bizWhatsappInput in Settings).
+      const waLink = typeof buildWhatsAppLink === 'function' ? buildWhatsAppLink() : null;
+      if (waLink){
+        contactLinks += ` <a href="${waLink}" target="_blank" rel="noopener" class="notice-phone-link">💬 וואטסאפ</a>`;
       }
       noticeEl.innerHTML = `<b>לתשומת ליבך:</b>הטיפול יחויב לפי הבחירה שלך — ${selSvc.name}, ${selSvc.duration} דק׳, ${selSvc.price} ש"ח. אם יש לך ספק לגבי משך הטיפול המתאים לך, מוזמנת להתקשר להתייעצות לפני קביעת התור.${contactLinks}`;
     } else {
@@ -4755,11 +4909,23 @@
   function sameDate(a, b){
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
-  function isDateClosedForStaff(staffIdx, date){
+  // closedDates entries used to be plain "YYYY-MM-DD" strings; she asked to be able
+  // to attach a reason (חתונה, חג, etc.) to each one, so a new entry is now
+  // { date, reason } — getClosedDateEntry() below reads either shape so existing
+  // saved data keeps working exactly as before.
+  function getClosedDateEntry(staffIdx, dateStr){
     const s = staff[staffIdx];
-    if (!s || !s.closedDates) return false;
+    if (!s || !s.closedDates) return null;
+    for (let i = 0; i < s.closedDates.length; i++){
+      const entry = s.closedDates[i];
+      if (typeof entry === 'string'){ if (entry === dateStr) return { date: entry, reason: '' }; }
+      else if (entry && entry.date === dateStr) return entry;
+    }
+    return null;
+  }
+  function isDateClosedForStaff(staffIdx, date){
     const dateStr = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
-    return s.closedDates.includes(dateStr);
+    return !!getClosedDateEntry(staffIdx, dateStr);
   }
   // A staff member's hours for a given day-of-week can be either the legacy
   // single block ({open, from, to}) or, now, separate shifts
@@ -5524,7 +5690,7 @@
       return;
     }
     reminderErrorEl.style.display = 'none';
-    const reminderLabels = { sms: 'SMS', call: 'שיחת טלפון', email: 'מייל' };
+    const reminderLabels = { whatsapp: 'וואטסאפ', call: 'שיחת טלפון', email: 'מייל' };
     const reminderChannels = reminderChecked.map(cb => cb.value);
     const reminderText = reminderChannels.map(v => reminderLabels[v]).join(' + ');
     // Re-check against the cloud right before committing — this page may have been
@@ -6071,15 +6237,41 @@
   // the rest of this app already handles simple yes/no and confirmation moments
   // (confirm() for deletions, etc.), and there's no real security benefit to a
   // fancier-looking dialog for what's explicitly a soft, honesty-based gate.
-  function promptOwnerAccessCode(onSuccess){
+  // onFail (optional) fires both when she cancels AND when the code is wrong —
+  // it exists so callers awaiting a promise (see guardedShowSub/guardedShowInnerTab)
+  // can always settle that promise instead of hanging forever on a cancel.
+  function promptOwnerAccessCode(onSuccess, onFail){
     const entered = prompt('הטאב הזה מוגן בקוד גישה למנהלת — נא להקליד את הקוד:');
-    if (entered === null) return; // she cancelled — stay right where she was
+    if (entered === null){ if (onFail) onFail(); return; } // she cancelled — stay right where she was
     if (entered === ownerAccessCode){
       sensitiveAccessUnlocked = true;
       onSuccess();
     } else {
       alert('קוד שגוי.');
+      if (onFail) onFail();
     }
+  }
+  // This is the actual fix for "the code works sometimes and not others" — the
+  // real cause was that this browser tab only ever knew whatever ownerAccessCode
+  // it happened to load on page-open (or last visibilitychange refresh). A tab
+  // left open from before she set/changed the code, or a second device/tab,
+  // could easily be looking at a STALE in-memory code — sometimes stale-empty
+  // (looks unlocked when it shouldn't be), sometimes stale-old (prompts but the
+  // code she just set moments ago in another tab isn't accepted yet). Rather
+  // than trust whatever's already in memory, every gated click now pulls the
+  // real, current code from the cloud FIRST and only then decides — closing
+  // that whole class of staleness down to a single quick network round-trip.
+  function refreshOwnerAccessCodeFromCloud(){
+    if (typeof CLOUD_DOC === 'undefined' || !CLOUD_DOC) return Promise.resolve();
+    return CLOUD_DOC.get().then(doc => {
+      if (doc.exists){
+        const d = doc.data();
+        if (typeof d.ownerAccessCode === 'string') ownerAccessCode = d.ownerAccessCode;
+      }
+    }).catch(() => {
+      // Offline/failed refresh — fall back to whatever's already in memory
+      // rather than block her from working at all.
+    });
   }
   // Wrap the tab-switch itself so a wrong/missing code never actually reveals
   // the tab's content — the real showSub()/showInnerTab() only run inside
@@ -6090,19 +6282,33 @@
     // סקירה / התראות / מה חדש freely — everything else (including any tab
     // added later) needs the code. Safer default: new tabs are gated unless
     // deliberately added here.
+    // Returns a promise that ALWAYS resolves — with true if the tab is actually
+    // shown, false if she cancelled or typed the wrong code — so a caller that
+    // needs to do something right after (like goToInvAlertEmailSetting()
+    // focusing a field) can chain off it with .then() safely either way,
+    // instead of assuming this is synchronous or risking a promise that never
+    // settles at all.
     const openTabs = ['overview', 'notifications', 'whatsnewadmin'];
-    if (isSensitiveAccessLocked() && !openTabs.includes(name)){
-      promptOwnerAccessCode(() => showSub(name, btn));
-      return;
-    }
-    showSub(name, btn);
+    if (openTabs.includes(name)){ showSub(name, btn); return Promise.resolve(true); }
+    return refreshOwnerAccessCodeFromCloud().then(() => new Promise(resolve => {
+      if (isSensitiveAccessLocked()){
+        promptOwnerAccessCode(() => { showSub(name, btn); resolve(true); }, () => resolve(false));
+      } else {
+        showSub(name, btn);
+        resolve(true);
+      }
+    }));
   }
   function guardedShowInnerTab(containerId, innerId, btn){
-    if (isSensitiveAccessLocked() && innerId === 'inner-overview-reports'){
-      promptOwnerAccessCode(() => showInnerTab(containerId, innerId, btn));
-      return;
-    }
-    showInnerTab(containerId, innerId, btn);
+    if (innerId !== 'inner-overview-reports'){ showInnerTab(containerId, innerId, btn); return Promise.resolve(true); }
+    return refreshOwnerAccessCodeFromCloud().then(() => new Promise(resolve => {
+      if (isSensitiveAccessLocked()){
+        promptOwnerAccessCode(() => { showInnerTab(containerId, innerId, btn); resolve(true); }, () => resolve(false));
+      } else {
+        showInnerTab(containerId, innerId, btn);
+        resolve(true);
+      }
+    }));
   }
   // The inventory tab's "לא הוגדר מייל" link used to just call .focus() on the
   // email field directly — but that field now lives on the Settings tab, and
@@ -6118,9 +6324,12 @@
       }
     };
     // Settings may itself be code-gated now (see guardedShowSub) — if so, this
-    // link has to go through the same prompt like any other way of getting there.
-    if (settingsBtn) guardedShowSub('settings', settingsBtn);
-    focusEmailField();
+    // link has to go through the same prompt like any other way of getting
+    // there. guardedShowSub() is async (it re-checks the code against the
+    // cloud first), so focus the field only after the tab is actually shown —
+    // otherwise this would try to focus a field that isn't visible yet.
+    if (settingsBtn) guardedShowSub('settings', settingsBtn).then(shown => { if (shown) focusEmailField(); });
+    else focusEmailField();
   }
   function showInnerTab(containerId, innerId, btn){
     const container = document.getElementById(containerId);
@@ -6178,7 +6387,11 @@
       listEl.innerHTML = '<p style="color:var(--ivory-dim); font-size:13px;">אין ימים סגורים מוגדרים.</p>';
       return;
     }
-    dates.slice().sort().forEach(dateStr => {
+    // Normalize every entry to a { date, reason } object for sorting/display —
+    // covers both the legacy plain-string entries and the newer object shape.
+    const normalized = dates.map(entry => typeof entry === 'string' ? { date: entry, reason: '' } : entry);
+    normalized.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0).forEach(entry => {
+      const dateStr = entry.date;
       const row = document.createElement('div');
       row.className = 'client-card';
       const parts = dateStr.split('-').map(Number);
@@ -6187,33 +6400,38 @@
       row.innerHTML = `
         <div class="client-info">
           <div class="name-row">
-            <h4>${label}</h4>
+            <h4>${label}${entry.reason ? ' — ' + entry.reason : ''}</h4>
             <button class="svc-del" aria-label="הסרת יום סגור">✕</button>
           </div>
         </div>`;
       row.querySelector('.svc-del').onclick = () => {
         if (!confirm(`להסיר את הסגירה בתאריך ${label}? היום הזה יחזור להיות זמין לקביעת תורים.`)) return;
-        const idx = staff[hoursEditorStaffIndex].closedDates.indexOf(dateStr);
+        const idx = staff[hoursEditorStaffIndex].closedDates.findIndex(e => (typeof e === 'string' ? e : e.date) === dateStr);
         if (idx !== -1) staff[hoursEditorStaffIndex].closedDates.splice(idx, 1);
         renderClosedDates();
         if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
         if (typeof renderMiniCal === 'function') renderMiniCal();
+        if (typeof renderWeekCal === 'function') renderWeekCal();
       };
       listEl.appendChild(row);
     });
   }
   function addClosedDate(){
     const input = document.getElementById('newClosedDate');
+    const reasonInput = document.getElementById('newClosedDateReason');
     const dateVal = input.value;
+    const reasonVal = (reasonInput && reasonInput.value || '').trim();
     if (!dateVal || !staff[hoursEditorStaffIndex]) return;
     if (!staff[hoursEditorStaffIndex].closedDates) staff[hoursEditorStaffIndex].closedDates = [];
-    if (!staff[hoursEditorStaffIndex].closedDates.includes(dateVal)){
-      staff[hoursEditorStaffIndex].closedDates.push(dateVal);
-    }
+    const already = staff[hoursEditorStaffIndex].closedDates.findIndex(e => (typeof e === 'string' ? e : e.date) === dateVal);
+    if (already !== -1) staff[hoursEditorStaffIndex].closedDates.splice(already, 1);
+    staff[hoursEditorStaffIndex].closedDates.push({ date: dateVal, reason: reasonVal });
     input.value = '';
+    if (reasonInput) reasonInput.value = '';
     renderClosedDates();
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
     if (typeof renderMiniCal === 'function') renderMiniCal();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
   }
   function renderHoursEditor(){
     const hoursList = document.getElementById('hoursList');
