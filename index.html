@@ -2038,7 +2038,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 21.08-ד-תאריך-לידה-ואקסל-בעברית</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 21.08-ה-אקסל-תואם-מלא</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -3081,6 +3081,22 @@
   function buildXlsxBlob(rows, sheetName){
     sheetName = (sheetName || 'דוח').slice(0, 31); // Excel's own sheet-name length limit
     const enc = new TextEncoder();
+    // Text cells go through a shared-strings table (t="s" + a numeric index into
+    // sharedStrings.xml) instead of inline strings (t="inlineStr"). Inline strings
+    // are valid per the OOXML spec, but they're the much less-traveled code path —
+    // real files saved by actual Excel almost always use shared strings, so that's
+    // what every reader's rendering pipeline is best-tested against. Google Sheets
+    // in particular was still showing Hebrew reversed with inline strings even after
+    // the per-cell readingOrder fix below; shared strings is the standard-shape fix.
+    const sharedStrings = [];
+    const sharedStringIndex = new Map();
+    function sharedStringId(s){
+      if (sharedStringIndex.has(s)) return sharedStringIndex.get(s);
+      const idx = sharedStrings.length;
+      sharedStrings.push(s);
+      sharedStringIndex.set(s, idx);
+      return idx;
+    }
     let rowsXml = '';
     rows.forEach((row, ri) => {
       let cellsXml = '';
@@ -3093,11 +3109,14 @@
           // s="0" explicitly applies the RTL-reading-order cell style (see styles.xml)
           // instead of relying on every reader defaulting an unspecified style the
           // same way — that default is exactly where the Hebrew-reversal bug lived.
-          cellsXml += `<c r="${ref}" s="0" t="inlineStr"><is><t xml:space="preserve">${xlsxXmlEscape(val)}</t></is></c>`;
+          const idx = sharedStringId(String(val));
+          cellsXml += `<c r="${ref}" s="0" t="s"><v>${idx}</v></c>`;
         }
       });
       rowsXml += `<row r="${ri + 1}">${cellsXml}</row>`;
     });
+    const sharedStringsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${sharedStrings.length}" uniqueCount="${sharedStrings.length}">${sharedStrings.map(s => `<si><t xml:space="preserve">${xlsxXmlEscape(s)}</t></si>`).join('')}</sst>`;
     const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
   <sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews>
@@ -3112,6 +3131,7 @@
   <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
   <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
   <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+  <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
 </Types>`;
     const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -3125,11 +3145,12 @@
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
 </Relationships>`;
     const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
   <fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>
-  <fills count="1"><fill><patternFill patternType="none"/></fill></fills>
+  <fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
   <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
   <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
   <!-- readingOrder="2" forces right-to-left character order on every cell explicitly,
@@ -3142,6 +3163,13 @@
        "דוח" shows as "חוד"), exactly what she reported. This is the standard, documented
        OOXML property for this exact situation. -->
   <cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyAlignment="1"><alignment readingOrder="2"/></xf></cellXfs>
+  <!-- A real Excel-saved file always includes this cellStyles block referencing xfId 0
+       as "Normal". Without it, openpyxl explicitly warned "workbook contains no default
+       style" — some readers may treat an incomplete styles.xml as invalid and silently
+       fall back to ignoring custom formatting altogether (including the readingOrder
+       fix above), instead of erroring loudly where we'd notice. Filling this in makes
+       the stylesheet match the shape every real spreadsheet app expects. -->
+  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
     return buildZipBlob([
       { name: '[Content_Types].xml', data: enc.encode(contentTypes) },
@@ -3149,6 +3177,7 @@
       { name: 'xl/workbook.xml', data: enc.encode(workbookXml) },
       { name: 'xl/_rels/workbook.xml.rels', data: enc.encode(workbookRels) },
       { name: 'xl/styles.xml', data: enc.encode(stylesXml) },
+      { name: 'xl/sharedStrings.xml', data: enc.encode(sharedStringsXml) },
       { name: 'xl/worksheets/sheet1.xml', data: enc.encode(sheetXml) }
     ]);
   }
