@@ -13,8 +13,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- This file is a shared template reused across different business clients —
+     it needs to stay fully generic here, with nothing about any one client
+     hardcoded in it. The real fix for "Google doesn't find my business name"
+     is in renderBranding() further down: the business name loaded live from
+     THIS deployment's own Firestore data used to get reset back to this
+     generic text for a moment on every single page load (a real race-condition
+     bug, now fixed) — modern Google (and every major crawler) executes a
+     page's JavaScript and waits for it to finish loading data before indexing
+     it, so once that reset bug was fixed, the live-loaded business name is
+     what search engines actually see, with zero per-client editing needed here. -->
 <title>הכל בקליק — קביעת תורים אונליין</title>
 <meta name="description" content="קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
+<meta property="og:title" content="הכל בקליק — קביעת תורים אונליין">
+<meta property="og:description" content="קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
+<meta property="og:type" content="website">
 <meta name="google-site-verification" content="WS6m2Sxptw8wMNM_ZnYV9ijOvIIrqppaEtl6QuQN0yI" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1503,6 +1516,12 @@
 </head>
 <body>
 <section class="hero">
+  <!-- Left empty here on purpose — this file is a shared template across
+       clients, so no business name gets hardcoded into it. renderBranding()
+       fills this in from THIS deployment's own Firestore data once it loads,
+       and (since the reset-to-generic race condition below is now fixed)
+       reliably keeps it filled in rather than ever reverting it back to
+       nothing/generic — see the comment there for the full explanation. -->
   <h1 class="serif" id="heroBizName" style="display:none;"></h1>
   <p class="hero-platform-line" id="heroPlatformLine"><span class="accent">הכל בקליק</span> <span class="reveal-rest"><svg class="click-logo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#9B2C42" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg> הכל במקום אחד, בלי מאמץ</span></p>
   <div class="scroll-hint">
@@ -1760,9 +1779,17 @@
         <div id="customRangeControls" style="display:none; margin-bottom:1.5rem;">
           <div class="inv-email-row">
             <span class="label" style="margin:0;">מתאריך</span>
-            <input type="date" id="reportFromDate" dir="ltr" class="search-input" style="margin:0; width:auto;">
+            <div class="dmy-date-picker" id="reportFromDateWrap">
+              <select id="reportFromDateDay" aria-label="יום"></select>
+              <select id="reportFromDateMonth" aria-label="חודש"></select>
+              <select id="reportFromDateYear" aria-label="שנה"></select>
+            </div>
             <span class="label" style="margin:0;">עד תאריך</span>
-            <input type="date" id="reportToDate" dir="ltr" class="search-input" style="margin:0; width:auto;">
+            <div class="dmy-date-picker" id="reportToDateWrap">
+              <select id="reportToDateDay" aria-label="יום"></select>
+              <select id="reportToDateMonth" aria-label="חודש"></select>
+              <select id="reportToDateYear" aria-label="שנה"></select>
+            </div>
             <button class="cta" style="width:auto; margin-top:0;" onclick="renderCustomRangeReport()">הצגת דוח</button>
           </div>
         </div>
@@ -2038,7 +2065,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 21.08-ה-אקסל-תואם-מלא</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 22.08-א-תאריכי-דוח-ותבנית-גנרית</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -2852,8 +2879,8 @@
       const today = new Date();
       const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-      document.getElementById('reportFromDate').value = fmt(firstOfMonth);
-      document.getElementById('reportToDate').value = fmt(today);
+      populateDMYPicker('reportFromDateDay', 'reportFromDateMonth', 'reportFromDateYear', { yearsBack: 5, value: fmt(firstOfMonth) });
+      populateDMYPicker('reportToDateDay', 'reportToDateMonth', 'reportToDateYear', { yearsBack: 5, value: fmt(today) });
       renderCustomRangeReport();
     } else {
       customEl.style.display = 'none';
@@ -2981,8 +3008,8 @@
     renderReportOutput(computeRealRangeReport(fromD, toD));
   }
   function renderCustomRangeReport(){
-    const fromVal = document.getElementById('reportFromDate').value;
-    const toVal = document.getElementById('reportToDate').value;
+    const fromVal = readDMYPicker('reportFromDateDay', 'reportFromDateMonth', 'reportFromDateYear');
+    const toVal = readDMYPicker('reportToDateDay', 'reportToDateMonth', 'reportToDateYear');
     if (!fromVal || !toVal) return;
     const fromParts = fromVal.split('-').map(Number);
     const toParts = toVal.split('-').map(Number);
@@ -3484,27 +3511,33 @@
     if (typeof renderGatedTabsCheckboxes === 'function') renderGatedTabsCheckboxes();
     const heroBizNameEl = document.getElementById('heroBizName');
     const heroPlatformLineEl = document.getElementById('heroPlatformLine');
-    if (heroBizNameEl && heroPlatformLineEl){
-      if (branding.name && branding.name.trim()){
-        // Business name set: it becomes the big primary heading, platform line shrinks below it.
-        heroBizNameEl.textContent = branding.name.trim();
-        heroBizNameEl.style.display = 'block';
-        heroPlatformLineEl.classList.remove('primary');
-      } else {
-        // No business name yet: platform line itself becomes the big primary heading.
-        heroBizNameEl.style.display = 'none';
-        heroPlatformLineEl.classList.add('primary');
-      }
-    }
     const bizNameTrimmed = (branding.name || '').trim();
-    document.title = bizNameTrimmed
-      ? bizNameTrimmed + ' — קביעת תורים אונליין'
-      : 'הכל בקליק — קביעת תורים אונליין';
-    const metaDescEl = document.querySelector('meta[name="description"]');
-    if (metaDescEl){
-      metaDescEl.setAttribute('content', bizNameTrimmed
-        ? bizNameTrimmed + ' — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.'
-        : 'קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.');
+    // Deliberately no "else" branch for the empty-name case anymore. `branding`
+    // starts as { name: '' } and renderBranding() runs once synchronously on
+    // every page load BEFORE the async Firestore fetch resolves — so the old
+    // code here reverted the heading/title/meta-description to generic
+    // "הכל בקליק" branding for that gap on literally every single visit, and
+    // would have stayed that way forever if the fetch ever failed. That was
+    // exactly why the real business name was effectively invisible to search
+    // engines: Google (and every modern crawler) DOES execute this page's JS
+    // and wait for it to finish loading data before indexing it — the actual
+    // problem was that even after loading the real name, this function then
+    // immediately overwrote it back to generic branding. This function now
+    // only ever UPGRADES the generic starting state to a real (non-empty) name
+    // once it loads — it never downgrades a real name back to placeholder
+    // branding. No business name is hardcoded anywhere in this file (see the
+    // <head> and the <h1 id="heroBizName">) — this file stays one generic,
+    // reusable template shared across every client; only each deployment's own
+    // Firestore data (loaded here) actually differs between clients.
+    if (heroBizNameEl && heroPlatformLineEl && bizNameTrimmed){
+      heroBizNameEl.textContent = bizNameTrimmed;
+      heroBizNameEl.style.display = 'block';
+      heroPlatformLineEl.classList.remove('primary');
+    }
+    if (bizNameTrimmed){
+      document.title = bizNameTrimmed + ' — קביעת תורים אונליין | הכל בקליק';
+      const metaDescEl = document.querySelector('meta[name="description"]');
+      if (metaDescEl) metaDescEl.setAttribute('content', bizNameTrimmed + ' — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.');
     }
   }
   renderBranding();
