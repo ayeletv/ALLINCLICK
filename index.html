@@ -1679,7 +1679,8 @@
               <div id="bookingPhoneError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">מספר טלפון לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567)</div>
               <div id="firstTimePerks" class="first-time-perks">
                 <p class="ftp-title">🎁 פעם ראשונה? נעים להכיר! אפשר גם לעדכן אותנו קצת עלייך כדי לקבל פינוקים שווים ביום ההולדת שלך:</p>
-                <input class="field" id="ftpEmail" type="email" placeholder="אימייל (אופציונלי)">
+                <input class="field" id="ftpEmail" type="email" placeholder="אימייל">
+                <div id="ftpEmailError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין כתובת אימייל</div>
                 <div class="dmy-date-picker full-width" id="ftpBirthdayWrap" style="margin-top:8px;">
                   <select id="ftpBirthdayDay" aria-label="יום לידה"></select>
                   <select id="ftpBirthdayMonth" aria-label="חודש לידה"></select>
@@ -1689,13 +1690,13 @@
             </div>
             <div class="label" style="margin-top:10px;">איך תרצי לקבל תזכורת? (אפשר לבחור יותר מאחת)</div>
             <div class="reminder-choice" id="reminderChoice">
-              <label><input type="checkbox" name="reminderChannel" value="whatsapp"> וואטסאפ</label>
+              <label><input type="checkbox" name="reminderChannel" value="whatsapp" checked> וואטסאפ</label>
               <label><input type="checkbox" name="reminderChannel" value="call"> שיחת טלפון</label>
-              <label><input type="checkbox" name="reminderChannel" value="email" checked> מייל</label>
             </div>
             <div id="reminderChoiceError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש לבחור לפחות ערוץ תזכורת אחד לפני קביעת התור</div>
-            <input class="field" id="reminderEmailInput" type="email" placeholder="כתובת מייל לתזכורות" style="display:none; margin-top:8px;">
-            <div id="reminderEmailError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין כתובת מייל כדי לקבל תזכורות במייל</div>
+            <p style="font-size:11.5px; color:#8A8178; margin:2px 0 4px;">אישור התור וניהולו תמיד יישלחו גם במייל.</p>
+            <input class="field" id="reminderEmailInput" type="email" placeholder="כתובת אימייל" style="display:none; margin-top:8px;">
+            <div id="reminderEmailError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין כתובת אימייל כדי שנוכל לשלוח לך עדכונים על התור</div>
             <p style="font-size:11.5px; color:#8A8178; margin:6px 0 4px; line-height:1.5;">שימי לב: ביטול או שינוי מועד בפחות מ-24 שעות לפני התור עלול לחייב בתשלום.</p>
             <div class="step-nav">
               <button class="step-back" onclick="goToStep(2)">חזרה</button>
@@ -2065,7 +2066,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 22.08-א-תאריכי-דוח-ותבנית-גנרית</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 22.08-ג-אימייל-חובה-בהרשמה</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -2109,7 +2110,7 @@
       </div>
     </div>
     <div style="display:flex; flex-direction:column; gap:10px;">
-      <input type="tel" id="lookupPhone" class="field" placeholder="050-0000000">
+      <input type="tel" inputmode="numeric" maxlength="10" id="lookupId" class="field" placeholder="תעודת זהות">
       <button class="cta" onclick="searchMyAppointment()">חיפוש</button>
       <div id="lookupResult"></div>
     </div>
@@ -2583,6 +2584,13 @@
     const match = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits);
     return match && match.email ? match.email : '';
   }
+  // תעודת זהות is the reliable identity key (a phone number can be shared by
+  // two people, or retyped wrong); prefer it whenever a waitlist entry has one.
+  function findClientEmailByTeudatZehut(teudatZehut){
+    if (!teudatZehut) return '';
+    const match = clients.find(c => c.teudatZehut === teudatZehut);
+    return match && match.email ? match.email : '';
+  }
   function bookWaitlistMatch(w, appt){
     const newStart = timeToMinutes(appt.time);
     const newEnd = newStart + (appt.dur || 30);
@@ -2608,8 +2616,18 @@
       note: ''
     };
     weekAppointments.push(newAppt);
-    if (w.phone && !clients.some(c => (c.phone || '').replace(/[^0-9]/g, '') === (w.phone || '').replace(/[^0-9]/g, ''))){
-      clients.push({ name: w.name, phone: w.phone, email: '', photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
+    // Same תז-first identity resolution as everywhere else — a waitlist entry
+    // now carries her תז/email from the moment she joined, so this backfills
+    // an existing record (never creating a duplicate for someone already on
+    // file) or registers her as a new client, exactly like a regular booking.
+    const existingByIdOrPhone = w.teudatZehut
+      ? clients.find(c => c.teudatZehut === w.teudatZehut) || (w.phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === (w.phone || '').replace(/[^0-9]/g, '')) : null)
+      : (w.phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === (w.phone || '').replace(/[^0-9]/g, '')) : null);
+    if (existingByIdOrPhone){
+      if (w.teudatZehut && !existingByIdOrPhone.teudatZehut) existingByIdOrPhone.teudatZehut = w.teudatZehut;
+      if (w.email && !existingByIdOrPhone.email) existingByIdOrPhone.email = w.email;
+    } else if (w.phone || w.teudatZehut){
+      clients.push({ name: w.name, phone: w.phone, teudatZehut: w.teudatZehut || null, email: w.email || '', photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
     }
     if (typeof saveState === 'function') saveState();
     showAdminToast(`✓ התור נקבע ל${w.name} בהצלחה`);
@@ -2619,7 +2637,7 @@
       if (typeof renderClients === 'function') renderClients();
       if (typeof renderOverviewDayView === 'function') renderOverviewDayView();
       if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal();
-      const clientEmail = findClientEmailByPhone(w.phone);
+      const clientEmail = w.email || findClientEmailByTeudatZehut(w.teudatZehut) || findClientEmailByPhone(w.phone);
       if (clientEmail){
         const dParts = appt.date.split('-').map(Number);
         const apptDateObj = new Date(dParts[0], dParts[1] - 1, dParts[2]);
@@ -2627,7 +2645,7 @@
         sendEmail(
           clientEmail,
           'התור שלך אושר',
-          getAppointmentEmailText(w.name, appt.service, dateLabel, appt.time, staff[appt.staff] ? staff[appt.staff].name : '', 'התור נקבע עבורך על ידי העסק מרשימת ההמתנה.', w.phone)
+          getAppointmentEmailText(w.name, appt.service, dateLabel, appt.time, staff[appt.staff] ? staff[appt.staff].name : '', 'התור נקבע עבורך על ידי העסק מרשימת ההמתנה.', w.teudatZehut, w.phone)
         );
       }
     } catch (e) {
@@ -2854,13 +2872,15 @@
         ovCalViewMonth = apptDate.getMonth();
         renderOverviewMonthCal();
       }
-      const bookedClient = clients.find(c => (c.phone || '').replace(/[^0-9]/g,'') === phone.replace(/[^0-9]/g,''));
+      const bookedClient = idDigits
+        ? clients.find(c => c.teudatZehut === idDigits) || clients.find(c => (c.phone || '').replace(/[^0-9]/g,'') === phone.replace(/[^0-9]/g,''))
+        : clients.find(c => (c.phone || '').replace(/[^0-9]/g,'') === phone.replace(/[^0-9]/g,''));
       if (bookedClient && bookedClient.email){
         const dateLabel = apptDate.getDate() + ' ב' + hebrewMonths[apptDate.getMonth()];
         sendEmail(
           bookedClient.email,
           'התור שלך אושר',
-          getAppointmentEmailText(name, svc.name, dateLabel, timeVal, staff[staffIdx] ? staff[staffIdx].name : '', 'התור נקבע עבורך על ידי העסק.', phone)
+          getAppointmentEmailText(name, svc.name, dateLabel, timeVal, staff[staffIdx] ? staff[staffIdx].name : '', 'התור נקבע עבורך על ידי העסק.', bookedClient.teudatZehut || idDigits, phone)
         );
       }
     } catch (e) {
@@ -3969,7 +3989,10 @@
         if (!oldName || !newName || oldName === newName) return;
         let changedCount = 0;
         weekAppointments.forEach(a => { if (a.client === oldName){ a.client = newName; changedCount++; } });
-        waitlist.forEach(w => { if (w.name === oldName) w.name = newName; });
+        // תעודת זהות is the reliable identity key here too, when both sides have
+        // one — matching by name alone is exactly the "not okay" waitlist bug
+        // she flagged, since two different clients can share a name/phone.
+        waitlist.forEach(w => { if (c.teudatZehut && w.teudatZehut ? w.teudatZehut === c.teudatZehut : w.name === oldName) w.name = newName; });
         cancellationLog.forEach(cl => { if (cl.client === oldName) cl.client = newName; });
         if (typeof saveState === 'function') saveState();
         if (changedCount && typeof showAdminToast === 'function') showAdminToast(`השם עודכן — ${changedCount} תורים קושרו אוטומטית לשם החדש.`);
@@ -4019,7 +4042,7 @@
         // NOT logged via logCancellation() — that would wrongly inflate the weekly
         // report's cancellation count for what's really just data cleanup.
         weekAppointments = weekAppointments.filter(a => a.client !== c.name);
-        waitlist = waitlist.filter(w => w.name !== c.name);
+        waitlist = waitlist.filter(w => c.teudatZehut && w.teudatZehut ? w.teudatZehut !== c.teudatZehut : w.name !== c.name);
         clients.splice(i, 1);
         renderClients();
         if (typeof renderWeekCal === 'function') renderWeekCal();
@@ -5779,7 +5802,7 @@
           <div class="name-row">
             <div>
               <h4>${w.name}</h4>
-              <div class="phone">${w.phone} · ${w.service}${w.staffName ? ' · אצל ' + w.staffName : ''}</div>
+              <div class="phone">${w.phone}${w.email ? ' · ' + w.email : ''} · ${w.service}${w.staffName ? ' · אצל ' + w.staffName : ''}</div>
               <div class="visits">מעוניינת ב-${dateLabel}, סביב ${w.requestedTime}</div>
             </div>
             <button class="svc-del" aria-label="הסרה מרשימת המתנה">✕</button>
@@ -5803,7 +5826,19 @@
     const boxEl = document.getElementById('waitlistBox');
     const knownName = (document.getElementById('bookingNameInput')?.value || '').trim();
     const knownPhone = (document.getElementById('bookingPhoneInput')?.value || '').trim();
-    if (knownName && isValidIsraeliPhone(knownPhone)){
+    // תעודת זהות is the real identity key everywhere else in the booking flow
+    // (see the bookingIdInput comment below) — the waitlist now requires it too,
+    // instead of matching people by name+phone alone, which two different
+    // clients can share or mistype. Same reasoning for email: it has to be
+    // captured (from her existing client record, or freshly here) so there's
+    // always a real way to notify her later when a slot opens, even if this is
+    // the very first time she's ever interacted with the business.
+    const knownId = (document.getElementById('bookingIdInput')?.value || '').replace(/[^0-9]/g, '');
+    const knownClient = knownId.length === 9 ? clients.find(c => c.teudatZehut === knownId) : null;
+    const ftpEmailEl = document.getElementById('ftpEmail');
+    const reminderEmailEl = document.getElementById('reminderEmailInput');
+    const knownEmail = (knownClient && knownClient.email) || (ftpEmailEl && ftpEmailEl.value.trim()) || (reminderEmailEl && reminderEmailEl.value.trim()) || '';
+    if (knownName && isValidIsraeliPhone(knownPhone) && knownId.length === 9 && knownEmail){
       boxEl.innerHTML = `
         <div class="waitlist-prompt">
           השעה ${time} לא זמינה — ${reason || 'תפוסה כרגע.'}
@@ -5815,7 +5850,7 @@
         </div>`;
       boxEl.querySelector('.wl-known-name').textContent = knownName;
       boxEl.querySelector('.wl-known-phone').textContent = knownPhone;
-      boxEl.querySelector('.wl-join-known-btn').onclick = () => joinWaitlist(time, knownName, knownPhone);
+      boxEl.querySelector('.wl-join-known-btn').onclick = () => joinWaitlist(time, knownName, knownPhone, knownId, knownEmail);
       boxEl.querySelector('.wl-not-me-btn').onclick = () => showWaitlistPromptManual(time, reason);
       scrollWaitlistBoxIntoView();
       return;
@@ -5837,40 +5872,78 @@
     document.getElementById('waitlistBox').innerHTML = `
       <div class="waitlist-prompt">
         השעה ${time} לא זמינה — ${reason || 'תפוסה כרגע.'}
-        <input type="text" id="wlName" class="field" style="margin-top:8px;" placeholder="שם מלא">
+        <input type="tel" inputmode="numeric" maxlength="9" id="wlId" class="field" style="margin-top:8px;" placeholder="תעודת זהות">
+        <input type="text" id="wlName" class="field" placeholder="שם מלא">
         <input type="tel" id="wlPhone" class="field" placeholder="050-0000000">
-        <div id="wlError" style="display:none; color:var(--wine); font-size:12px; margin-bottom:6px;">יש למלא שם ומספר טלפון תקין</div>
+        <input type="email" id="wlEmail" class="field" placeholder="אימייל (כדי שנוכל להודיע לך אם יתפנה מקום)">
+        <div id="wlError" style="display:none; color:var(--wine); font-size:12px; margin-bottom:6px;">יש למלא תעודת זהות (9 ספרות), שם, טלפון ואימייל תקינים</div>
         <div><button onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
       </div>`;
+    // Same identity lookup as the main booking flow's bookingIdInput: a
+    // recognized תז auto-fills what's already on file (including her email, if
+    // she has one), so a returning client never has to retype it just to join
+    // the waitlist a second time.
+    document.getElementById('wlId').addEventListener('input', function(){
+      this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
+      if (this.value.length === 9){
+        const match = clients.find(c => c.teudatZehut === this.value);
+        if (match){
+          document.getElementById('wlName').value = match.name || '';
+          document.getElementById('wlPhone').value = match.phone || '';
+          if (match.email) document.getElementById('wlEmail').value = match.email;
+        }
+      }
+    });
     scrollWaitlistBoxIntoView();
   }
-  function joinWaitlist(time, presetName, presetPhone){
-    let name, phone;
-    if (presetName !== undefined && presetPhone !== undefined){
+  function joinWaitlist(time, presetName, presetPhone, presetId, presetEmail){
+    let name, phone, idDigits, email;
+    if (presetName !== undefined && presetPhone !== undefined && presetId !== undefined && presetEmail !== undefined){
       name = presetName;
       phone = presetPhone;
+      idDigits = presetId;
+      email = presetEmail;
     } else {
       const nameEl = document.getElementById('wlName');
       const phoneEl = document.getElementById('wlPhone');
+      const idEl = document.getElementById('wlId');
+      const emailEl = document.getElementById('wlEmail');
       const errorEl = document.getElementById('wlError');
       name = nameEl.value.trim();
       phone = phoneEl.value.trim();
-      if (!name || !isValidIsraeliPhone(phone)){
+      idDigits = idEl.value.replace(/[^0-9]/g, '');
+      email = emailEl.value.trim();
+      if (!name || !isValidIsraeliPhone(phone) || idDigits.length !== 9 || !email){
         errorEl.style.display = 'block';
         return;
       }
+    }
+    // Same identity resolution as regular booking (see the manualAppointment
+    // and existingClient blocks elsewhere): תעודת זהות is the real key. A
+    // recognized one backfills any missing email/phone onto her existing
+    // record instead of creating a duplicate; an unrecognized one registers
+    // her as a new client right here — this IS the "sign her up" step the
+    // owner asked for, so notifying her later never again depends on a
+    // fragile name/phone match.
+    const existingClient = clients.find(c => c.teudatZehut === idDigits);
+    if (existingClient){
+      if (!existingClient.email) existingClient.email = email;
+      if (!existingClient.phone) existingClient.phone = phone;
+    } else {
+      clients.push({ name, phone, teudatZehut: idDigits, email, photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
     }
     const svc = services[selectedSvcIndex];
     const emp = selectedStaffIndex === 'any' ? null : staff[selectedStaffIndex];
     const dateStr = bookingSelectedDate.getFullYear() + '-' + String(bookingSelectedDate.getMonth()+1).padStart(2,'0') + '-' + String(bookingSelectedDate.getDate()).padStart(2,'0');
     waitlist.push({
       id: 'wl_' + Date.now() + '_' + Math.floor(Math.random()*10000),
-      name, phone,
+      name, phone, teudatZehut: idDigits, email: (existingClient && existingClient.email) || email,
       service: svc ? svc.name : '',
       staffName: selectedStaffIndex === 'any' ? '' : (emp ? emp.name : ''),
       date: dateStr,
       requestedTime: time
     });
+    if (typeof renderClients === 'function') renderClients();
     if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
     if (typeof saveState === 'function') saveState();
     document.getElementById('waitlistBox').innerHTML = `
@@ -5889,19 +5962,28 @@
       this.style.borderColor = '';
     }
   });
+  document.getElementById('ftpEmail').addEventListener('input', function(){
+    if (this.value.trim()){
+      document.getElementById('ftpEmailError').style.display = 'none';
+      this.style.borderColor = '';
+    }
+  });
+  // Email is no longer tied to a "reminder channel" choice — it's always
+  // required, since a booking confirmation and a way to manage the appointment
+  // are always sent by email regardless of which reminder channels (WhatsApp/
+  // phone call) she picks. This field only ever needs to show for a RETURNING
+  // client (recognized תז) who doesn't have an email on file yet, from before
+  // email became mandatory — a brand-new registration already asks for it via
+  // the (now-required) ftpEmail field instead.
   function updateReminderEmailVisibility(){
-    const emailChecked = !!document.querySelector('input[name="reminderChannel"][value="email"]:checked');
     const emailInput = document.getElementById('reminderEmailInput');
     if (!emailInput) return;
-    if (!emailChecked){ emailInput.style.display = 'none'; return; }
     const digits = document.getElementById('bookingIdInput').value.replace(/[^0-9]/g, '');
     const match = clients.find(c => c.teudatZehut === digits);
     if (match && match.email){ emailInput.style.display = 'none'; return; }
     const regEl = document.getElementById('newClientRegistration');
-    // While the registration block is showing, its own ftpEmail field already
-    // asks for an email — no need to ask a second time in a separate field.
     if (regEl && regEl.style.display !== 'none'){ emailInput.style.display = 'none'; return; }
-    emailInput.style.display = 'block';
+    emailInput.style.display = match ? 'block' : 'none';
   }
   // The client now identifies herself by תעודת זהות (ID number) instead of by
   // name+phone — it never changes, unlike a phone number, so it's a much more
@@ -5956,17 +6038,20 @@
   function getSiteUrl(){
     return window.location.href.split('#')[0];
   }
-  // Builds a link straight into "find my appointment" with the phone number already
-  // filled in — see handleAppointmentLookupFromUrl() — so a link in an email takes the
-  // customer right to her appointment(s) instead of a bare homepage she'd then have to
-  // search from manually.
-  function buildMyAppointmentLink(phone){
+  // Builds a link straight into "find my appointment" with her identity already
+  // filled in — see handleAppointmentLookupFromUrl() — so a link in an email takes
+  // the customer right to her appointment(s) instead of a bare homepage she'd then
+  // have to search from manually. תעודת זהות is the real identity key (see
+  // searchMyAppointment); phone is only a fallback link format for a client who
+  // somehow doesn't have a תז on file (e.g. an old admin-entered walk-in record).
+  function buildMyAppointmentLink(teudatZehut, phone){
+    if (teudatZehut) return getSiteUrl() + '?lookupId=' + encodeURIComponent(teudatZehut);
     const digits = (phone || '').replace(/[^0-9]/g, '');
     if (!digits) return getSiteUrl();
     return getSiteUrl() + '?lookupPhone=' + encodeURIComponent(digits);
   }
-  function getAppointmentEmailText(name, service, dateLabel, time, staffName, actionText, phone){
-    return `היי ${name}, נקבע לך תור ל${service} בתאריך ${dateLabel} בשעה ${time}${staffName ? ' אצל ' + staffName : ''}. ${actionText || 'לביטול או שינוי מועד, ניתן לפנות אלינו.'}\n\nלניהול התור, לביטול או לקביעת תור נוסף:\n${buildMyAppointmentLink(phone)}`;
+  function getAppointmentEmailText(name, service, dateLabel, time, staffName, actionText, teudatZehut, phone){
+    return `היי ${name}, נקבע לך תור ל${service} בתאריך ${dateLabel} בשעה ${time}${staffName ? ' אצל ' + staffName : ''}. ${actionText || 'לביטול או שינוי מועד, ניתן לפנות אלינו.'}\n\nלניהול התור, לביטול או לקביעת תור נוסף:\n${buildMyAppointmentLink(teudatZehut, phone)}`;
   }
   // Lets a "waitlist slot opened" email give the client a real way to remove
   // herself from the waitlist with one click — without this, a client who no
@@ -6025,7 +6110,7 @@
       return;
     }
     reminderErrorEl.style.display = 'none';
-    const reminderLabels = { whatsapp: 'וואטסאפ', call: 'שיחת טלפון', email: 'מייל' };
+    const reminderLabels = { whatsapp: 'וואטסאפ', call: 'שיחת טלפון' };
     const reminderChannels = reminderChecked.map(cb => cb.value);
     const reminderText = reminderChannels.map(v => reminderLabels[v]).join(' + ');
     // Re-check against the cloud right before committing — this page may have been
@@ -6119,16 +6204,32 @@
     const clientNameVal = document.getElementById('bookingNameInput').value.trim() || 'לקוחה';
     const dayKey = weekdayKeys[bookingSelectedDate.getDay()];
     const existingClient = clients.find(c => c.teudatZehut === idDigits);
-    // If email was chosen as a reminder channel, make sure there's actually an email
-    // to send to — either already on file, from the first-time perks field, or from
-    // the dedicated reminder-email field that appears when it's needed.
-    if (reminderChannels.includes('email') && !(existingClient && existingClient.email)){
+    // Email is always required now — not conditional on picking it as a reminder
+    // channel (that option no longer exists) — so there's always a real address
+    // for the booking confirmation, and for notifying her later if she ever ends
+    // up on the waitlist. A brand-new registration asks for it via ftpEmail; a
+    // returning client (recognized תז) without one on file yet gets asked via
+    // the reminderEmailInput field that updateReminderEmailVisibility() reveals.
+    if (!(existingClient && existingClient.email)){
       const ftpEmailEl = document.getElementById('ftpEmail');
       const reminderEmailEl = document.getElementById('reminderEmailInput');
-      const providedEmail = (reminderEmailEl && reminderEmailEl.value.trim()) || (ftpEmailEl && ftpEmailEl.value.trim()) || '';
+      const regEl = document.getElementById('newClientRegistration');
+      const isNewRegistration = regEl && regEl.style.display !== 'none';
+      // Read only from whichever field is actually the relevant/visible one for
+      // this case — a returning client's flow must never pick up a leftover
+      // value still sitting in the (hidden) new-registration ftpEmail field from
+      // an earlier booking on this same page, and vice versa.
+      const providedEmail = isNewRegistration
+        ? ((ftpEmailEl && ftpEmailEl.value.trim()) || '')
+        : ((reminderEmailEl && reminderEmailEl.value.trim()) || '');
       if (!providedEmail){
-        document.getElementById('reminderEmailError').style.display = 'block';
-        if (reminderEmailEl) reminderEmailEl.style.display = 'block';
+        if (isNewRegistration){
+          document.getElementById('ftpEmailError').style.display = 'block';
+          if (ftpEmailEl){ ftpEmailEl.style.borderColor = 'var(--wine)'; ftpEmailEl.focus(); }
+        } else {
+          document.getElementById('reminderEmailError').style.display = 'block';
+          if (reminderEmailEl) reminderEmailEl.style.display = 'block';
+        }
         return;
       }
     }
@@ -6232,7 +6333,7 @@
         sendEmail(
           customerEmail,
           'התור שלך אושר',
-          getAppointmentEmailText(clientNameVal, svc ? svc.name : 'שירות', dateLabel, selectedSlot, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:', phoneVal)
+          getAppointmentEmailText(clientNameVal, svc ? svc.name : 'שירות', dateLabel, selectedSlot, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:', idDigits, phoneVal)
         );
       }
     } catch (e) {
@@ -6372,7 +6473,7 @@
       </div>`;
   }
   function openApptLookup(){
-    document.getElementById('lookupPhone').value = '';
+    document.getElementById('lookupId').value = '';
     document.getElementById('lookupResult').innerHTML = '';
     document.getElementById('apptLookupOverlay').classList.add('show');
   }
@@ -6380,10 +6481,15 @@
     document.getElementById('apptLookupOverlay').classList.remove('show');
   }
   async function searchMyAppointment(){
-    const phone = document.getElementById('lookupPhone').value.trim();
+    // תעודת זהות is the real identity key everywhere else in this app (booking,
+    // waitlist) — a phone number can be shared by two people in the same
+    // household or mistyped, so it's only kept here as a fallback for older
+    // clients who joined before a תז was on file for them.
+    const raw = document.getElementById('lookupId').value.trim();
+    const digits = raw.replace(/[^0-9]/g, '');
     const resultEl = document.getElementById('lookupResult');
-    if (!isValidIsraeliPhone(phone)){
-      resultEl.innerHTML = '<p style="color:var(--wine); font-size:13px;">יש להזין מספר טלפון תקין.</p>';
+    if (digits.length !== 9 && !isValidIsraeliPhone(raw)){
+      resultEl.innerHTML = '<p style="color:var(--wine); font-size:13px;">יש להזין תעודת זהות תקנית (9 ספרות).</p>';
       return;
     }
     // Refresh from the cloud first — this page may have been open for a while, and
@@ -6399,10 +6505,9 @@
     } catch (e) {
       console.error('Appointment lookup refresh failed, searching with last-known data:', e);
     }
-    const digits = phone.replace(/[^0-9]/g, '');
-    const client = clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits);
+    const client = clients.find(c => c.teudatZehut === digits) || clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits);
     if (!client){
-      resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצאה לקוחה עם מספר טלפון זה.</p>';
+      resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצאה לקוחה עם תעודת הזהות הזו.</p>';
       return;
     }
     const today = new Date();
@@ -7339,21 +7444,23 @@
     if (banner) banner.remove();
   }
   // Lets a reminder/confirmation email link straight into "find my appointment"
-  // with the phone number already filled in and searched — a customer clicking
-  // the link in her email lands directly on her appointment(s), ready to cancel
-  // or reschedule, instead of having to type her phone number in again by hand.
-  // Only runs once, right after the very first successful cloud load (need real
-  // client/appointment data loaded before searching for anything).
+  // with her identity already filled in and searched — a customer clicking the
+  // link in her email lands directly on her appointment(s), ready to cancel or
+  // reschedule, instead of having to type it in again by hand. ?lookupId= (תז)
+  // is the current link format; ?lookupPhone= is only kept so older emails
+  // already sent with the previous link format still work. Only runs once,
+  // right after the very first successful cloud load (need real client/
+  // appointment data loaded before searching for anything).
   let autoLookupFromUrlDone = false;
   function handleAppointmentLookupFromUrl(){
     if (autoLookupFromUrlDone) return;
     autoLookupFromUrlDone = true;
     try {
       const params = new URLSearchParams(window.location.search);
-      const phone = params.get('lookupPhone');
-      if (!phone) return;
-      const lookupInput = document.getElementById('lookupPhone');
-      if (lookupInput) lookupInput.value = phone;
+      const idOrPhone = params.get('lookupId') || params.get('lookupPhone');
+      if (!idOrPhone) return;
+      const lookupInput = document.getElementById('lookupId');
+      if (lookupInput) lookupInput.value = idOrPhone;
       if (typeof searchMyAppointment === 'function') searchMyAppointment();
     } catch (e) {
       console.error('Auto appointment lookup from link failed:', e);
