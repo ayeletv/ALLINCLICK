@@ -837,85 +837,173 @@
     border-color:var(--gold);
     color:var(--ink);
   }
-  /* ===== #panel-business's own top-level 8-destination subswitcher — back to
-     a directly-visible top row. Two rounds ago this got converted into a
-     hamburger-triggered slide-in side drawer (#bizSubNavDrawer and friends);
-     she tried it and didn't like it ("it shrinks/hides everything") and asked
-     for the tabs back at the top, PROVIDED they look good. Her original
-     complaint about the OLD plain top row was that it wrapped awkwardly /
-     looked "cut off" on narrower screens — this isn't a verbatim revert of
-     that markup, it fixes that: a single horizontally-scrollable row (never
-     wraps, so a button is never clipped mid-row) inside a wine/gold-tinted
-     strip matching the site's established saturated banner language
-     (.cp-banner, .cc-banner, .cal-day-tone-a/b), with a soft fade on each
-     scroll edge as a subtle "there's more — scroll" affordance. The 8 buttons
-     themselves — IDs, onclick="showSub(...)"/"guardedShowSub(...)" — are
-     completely unchanged; only how they're presented changed. Every ID/class
+  /* ===== #panel-business's own top-level 8-destination navigation =====
+     Two rounds ago this was a hamburger-triggered slide-in drawer; she tried
+     it, disliked how much it "shrank/hid everything" and asked for a plain
+     top row instead — which is what stood here since (a single horizontally-
+     scrollable wine/gold strip). She has now asked for the DRAWER pattern
+     again, explicitly, this time pointing at a specific competitor
+     screenshot ("LISTA Smart Manager"): closed by default, opened by a
+     small always-visible menu icon, so that whichever sub-section is active
+     (the calendar, the client list, ...) gets virtually the whole page
+     width/height instead of permanently sharing it with 8 tab buttons. Her
+     own words: "כל הטאבים... לא יראו אותו כל הזמן... רק אם לוחצים על חיצון
+     קטן... וכל העמוד יתפרס... הרעיון שהכל יהיה גדול ומובן וכמה שפחות
+     אלמנטים שיהיו על העמוד." The difference from the earlier, disliked
+     attempt isn't the pattern itself — it's execution: a real dimmed
+     backdrop, a smooth slide-in (not an instant snap), a toggle that's
+     unmistakably visible and tappable at every width, and the same bold
+     wine/gold banner language already used elsewhere (.cp-banner,
+     .cal-day-head) instead of a plain gray drawer. The 8 buttons themselves
+     — IDs, onclick="showSub(...)"/"guardedShowSub(...)" — are completely
+     unchanged; only the container around them changed, plus one new bit of
+     behavior: tapping one now also closes the drawer automatically (see
+     closeBizSubNavDrawer()/toggleBizSubNavDrawer() near showSub() further
+     down) so she doesn't have to close it herself every time. See
+     .biz-topbar just below for the small persistent toggle button, which
+     also now carries the exit/add-appointment/my-day icons that used to live
+     inside the removed colored .cal-topbar card (see that section) — one
+     small unified control strip instead of two separate bars. Every ID/class
      selector below targets #bizSubNavRow specifically (winning over the
      shared .subswitcher/.subswitcher button rules above by specificity), so
      every OTHER .subswitcher on the page (report-range switcher, week/day/
      month view-switch, etc.) keeps its normal inline-row look untouched. ===== */
-  .biz-subnav-wrap{
-    position:relative;
-    margin-bottom:0.7rem;
-    padding:5px;
-    border-radius:16px;
-    background:linear-gradient(90deg, rgba(155,44,66,0.12), rgba(201,162,39,0.12));
-    border:1px solid rgba(201,162,39,0.28);
+  /* Fixed (not sticky) and lifted out to a direct child of <body> in the
+     markup, same reasoning as .biz-subnav-drawer's own big comment near
+     <body>: nested inside #panel-business, .panel's permanently-lingering
+     post-animation transform would silently turn "fixed" into something
+     that scrolls away with the page instead of truly always-visible — which
+     is exactly the one guarantee this toggle can't afford to lose. Hidden
+     by default and shown only in body.admin-mode (showPanel() stamps that
+     class iff panel-business is the active panel — a reliable 1:1 stand-in
+     for ".panel.active" here, since this element isn't nested inside that
+     panel to get the same effect for free). z-index:910 — above
+     .biz-subnav-backdrop (900) AND .biz-subnav-drawer (901) on purpose, not
+     just above ordinary page content: it keeps the toggle itself reachable
+     and tappable even while the drawer is open, so "clicking the toggle
+     icon again also closes it" (her spec) keeps working without her having
+     to find the drawer's own ✕ instead. See body.admin-mode .stage's own
+     top-padding bump above for why nothing ends up hidden underneath it. */
+  .biz-topbar{
+    display:none;
+    position:fixed; top:0; left:0; right:0; z-index:910;
+    align-items:center; justify-content:space-between; gap:10px;
+    max-width:1040px; margin:0 auto;
+    padding:10px 3vw;
+    /* The box itself spans the full bar width (including the empty middle
+       gap between the two button clusters), but only the buttons inside it
+       should actually catch clicks — otherwise that invisible middle strip
+       would sit on top of the backdrop/whatever's underneath, at this
+       z-index, and silently swallow taps meant for them. */
+    pointer-events:none;
   }
-  /* #panel-business prefixed (raising specificity above the shared
-     "#panel-business .subswitcher{margin-bottom:0.9rem;}" compaction rule
-     further down, which would otherwise win on source order at equal
-     specificity) — this row's spacing is fully handled by .biz-subnav-wrap's
-     own padding/margin above, so it needs none of its own; keeping the
-     calendar below reachable without page-level scroll on short viewports
-     (see fitWeekCalToViewport()) depends on this row staying as compact as
-     the visible-tabs requirement allows. */
+  body.admin-mode .biz-topbar{display:flex;}
+  .biz-topbar > *{pointer-events:auto;}
+  /* The 3 action icons (🖨️ my-day / ➕ add-appointment / 🚪 exit) that used to
+     live inside the now-removed colored .cal-topbar card — .cal-icon-btn/
+     .cal-topbar-icons keep their original names since other test/selector
+     code already keys off them, they just live here now. */
+  .cal-topbar-icons{display:flex; gap:6px;}
+  .cal-icon-btn{
+    width:38px; height:38px; border-radius:10px; border:1.5px solid rgba(var(--panel-line-rgb),0.2);
+    background:var(--panel-card-bg); color:var(--panel-text); font-size:16px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;
+    transition:border-color 0.2s ease;
+  }
+  .cal-icon-btn:hover{border-color:var(--gold);}
+  .biz-subnav-toggle{
+    width:42px; height:42px; flex-shrink:0;
+    border-radius:12px;
+    background:linear-gradient(135deg, var(--wine), var(--wine-deep));
+    border:1.5px solid rgba(201,162,39,0.45);
+    color:#FCF3E2;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    box-shadow:0 3px 10px rgba(26,20,22,0.22);
+    transition:border-color 0.2s ease, transform 0.15s ease;
+  }
+  .biz-subnav-toggle:hover{border-color:var(--gold-soft);}
+  .biz-subnav-toggle:active{transform:scale(0.94);}
+  /* Plain 3-bar icon drawn in CSS (one span + its ::before/::after) instead of
+     an icon-font glyph/emoji, so it renders identically regardless of the
+     icon font's own load timing — it's the one control she must always be
+     able to find at a glance, so it can't risk a brief blank/fallback state. */
+  .biz-subnav-toggle-bars{position:relative; display:block; width:19px; height:2px; border-radius:2px; background:#FCF3E2;}
+  .biz-subnav-toggle-bars::before, .biz-subnav-toggle-bars::after{
+    content:''; position:absolute; right:0; left:0; height:2px; border-radius:2px; background:#FCF3E2;
+  }
+  .biz-subnav-toggle-bars::before{top:-6px;}
+  .biz-subnav-toggle-bars::after{top:6px;}
+  /* Dimming backdrop + the drawer itself. Fixed/overlay (unlike the old
+     always-in-flow top row) since it needs to sit on top of whichever
+     sub-section is currently filling the page, at any scroll position. */
+  .biz-subnav-backdrop{
+    position:fixed; inset:0; z-index:900;
+    background:rgba(10,8,9,0.55);
+    opacity:0; pointer-events:none;
+    transition:opacity 0.28s ease;
+  }
+  body.biz-subnav-open .biz-subnav-backdrop{opacity:1; pointer-events:auto;}
+  .biz-subnav-drawer{
+    position:fixed; top:0; bottom:0; right:0; z-index:901;
+    width:280px; max-width:82vw;
+    display:flex; flex-direction:column;
+    padding:18px 14px 18px;
+    padding-bottom:calc(18px + env(safe-area-inset-bottom, 0px));
+    background:linear-gradient(165deg, var(--wine-deep), #2A1218 60%, #1A1416);
+    border-inline-start:2px solid rgba(201,162,39,0.4);
+    box-shadow:-10px 0 34px rgba(0,0,0,0.4);
+    transform:translateX(100%);
+    transition:transform 0.32s cubic-bezier(0.32,0.72,0.35,1);
+    overflow-y:auto;
+  }
+  body.biz-subnav-open .biz-subnav-drawer{transform:translateX(0);}
+  .biz-subnav-drawer::-webkit-scrollbar{width:6px;}
+  .biz-subnav-drawer::-webkit-scrollbar-thumb{background:rgba(201,162,39,0.4); border-radius:99px;}
+  .biz-subnav-drawer-head{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:14px; padding-bottom:12px;
+    border-bottom:1px solid rgba(255,255,255,0.14);
+  }
+  .biz-subnav-drawer-title{font-family:'Suez One'; font-weight:400; font-size:16px; color:#FCF3E2;}
+  .biz-subnav-drawer-close{
+    width:30px; height:30px; border-radius:9px; flex-shrink:0;
+    background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);
+    color:#FCF3E2; font-size:14px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .biz-subnav-drawer-close:hover{background:rgba(255,255,255,0.2);}
+  /* The 8 nav buttons — unchanged IDs/onclick — now stacked as full-width
+     icon+label rows instead of a horizontally-scrolling pill row, matching
+     the reference screenshot's side-rail look. */
   #panel-business #bizSubNavRow.biz-subnav-row{
-    display:flex; flex-wrap:nowrap; align-items:center; gap:7px;
-    overflow-x:auto; overflow-y:hidden;
-    scroll-snap-type:x proximity;
-    -webkit-overflow-scrolling:touch;
+    display:flex; flex-direction:column; gap:7px;
     margin-bottom:0;
-    padding:0 2px;
+    padding:0;
+    overflow:visible;
   }
-  #bizSubNavRow.biz-subnav-row::-webkit-scrollbar{height:5px;}
-  #bizSubNavRow.biz-subnav-row::-webkit-scrollbar-track{background:transparent;}
-  #bizSubNavRow.biz-subnav-row::-webkit-scrollbar-thumb{background:rgba(201,162,39,0.4); border-radius:99px;}
   #bizSubNavRow.biz-subnav-row button{
-    flex:0 0 auto; scroll-snap-align:start;
-    display:flex; align-items:center; gap:6px; white-space:nowrap;
-    background:var(--panel-card-bg);
-    border:1.5px solid rgba(var(--panel-line-rgb),0.18);
-    color:var(--panel-text-dim);
-    font-family:'Heebo'; font-weight:500; font-size:12.5px;
-    padding:6px 14px; border-radius:999px; cursor:pointer; transition:all 0.2s ease;
+    flex:0 0 auto;
+    display:flex; align-items:center; gap:12px; width:100%;
+    background:rgba(255,255,255,0.05);
+    border:1.5px solid rgba(255,255,255,0.14);
+    color:rgba(252,243,226,0.82);
+    font-family:'Heebo'; font-weight:500; font-size:14.5px;
+    padding:12px 14px; border-radius:12px; cursor:pointer; transition:all 0.2s ease;
+    text-align:start;
   }
-  #bizSubNavRow.biz-subnav-row button i{font-size:14.5px;}
-  #bizSubNavRow.biz-subnav-row button:hover{border-color:rgba(201,162,39,0.55); color:var(--panel-text);}
+  #bizSubNavRow.biz-subnav-row button i{font-size:18px; width:20px; text-align:center; flex-shrink:0;}
+  #bizSubNavRow.biz-subnav-row button:hover{background:rgba(255,255,255,0.1); border-color:rgba(201,162,39,0.55); color:#FCF3E2;}
   #bizSubNavRow.biz-subnav-row button.active{
     background:linear-gradient(135deg, var(--gold), #A9800F);
     border-color:transparent; color:var(--ink); font-weight:700;
     box-shadow:0 3px 10px rgba(201,162,39,0.4);
   }
-  /* Soft fade on both scroll edges, matching the wrap's own two-tone gradient
-     tint at that edge so it reads as a real fade rather than a mismatched
-     patch, hinting there's more to scroll to without a hard clipped-off edge. */
-  .biz-subnav-wrap::before, .biz-subnav-wrap::after{
-    content:''; position:absolute; top:5px; bottom:5px; width:20px;
-    pointer-events:none; z-index:1; border-radius:12px;
-  }
-  .biz-subnav-wrap::before{
-    right:5px;
-    background:linear-gradient(to left, rgba(155,44,66,0.14), transparent);
-  }
-  .biz-subnav-wrap::after{
-    left:5px;
-    background:linear-gradient(to right, rgba(201,162,39,0.16), transparent);
-  }
   @media (max-width:480px){
-    #bizSubNavRow.biz-subnav-row button{padding:6px 12px; font-size:12px;}
-    #bizSubNavRow.biz-subnav-row button i{font-size:13px;}
+    .biz-subnav-toggle{width:38px; height:38px; border-radius:10px;}
+    .biz-subnav-drawer{width:252px;}
+    .cal-icon-btn{width:32px; height:32px; font-size:14px; border-radius:8px;}
+    .cal-topbar-icons{gap:5px;}
   }
   .subpanel{display:none;}
   .subpanel.active{display:block; animation:fadeUp 0.4s ease forwards;}
@@ -2021,7 +2109,13 @@
      the business panel is the active one, which in turn trims the surrounding
      .stage/.switcher padding that otherwise exists to give the hero's dark
      section room to breathe (irrelevant once that section is gone). */
-  body.admin-mode .stage{padding:1.5vh 3vw 2vh;}
+  /* Top padding leaves clearance for .biz-topbar (see its own CSS below),
+     which is position:fixed — same reasoning/trap as .biz-subnav-drawer's
+     own big comment near <body>: .panel's permanent post-animation transform
+     would otherwise make a nested "fixed" bar scroll away with the page, so
+     it lives at the very top of <body> instead and needs this space
+     reserved here so it never overlaps whichever sub-section is on top. */
+  body.admin-mode .stage{padding:calc(1.5vh + 62px) 3vw 2vh;}
   /* She asked for these top-level tabs gone entirely once she's inside the
      admin/business panel — they serve no purpose there (the calendar top
      bar's own 🚪 icon, wired to doLogout(), is the real way back out to the
@@ -2043,50 +2137,28 @@
      stats as inline text, the week/day/month subswitcher, and the 3 actions as
      small icon buttons — all in a single row so the actual calendar grid starts
      much higher up the page. */
-  /* Same bold banner treatment as the redesigned day-column headers above
-     (and .cp-banner/.cc-banner elsewhere) — a solid saturated wine gradient
-     fill with bold cream text and light chip-style controls, replacing the
-     previous flat pale card look, so the whole calendar's chrome reads as one
-     consistent, modern surface instead of just the grid itself. */
+  /* Used to be a solid wine-gradient card ("the pink box") also carrying the
+     "X תורים היום · Y מקומות פנויים" stats text — she asked for that colored
+     card and its stats text gone entirely ("תוריד את הריבוע הורוד... זה
+     תופס יותר מדי מקום"), so the calendar itself starts higher up the page
+     and reads bigger. What's left here is just the bare, uncolored week/day/
+     month view-switch (it falls back to the plain .subswitcher/.subswitcher
+     button look shared by every other switcher on the page, now that there's
+     no saturated fill behind it to stay legible against). The 3 icon buttons
+     that used to sit here (🖨️/➕/🚪) moved up into the new persistent
+     .biz-topbar (see the big comment above .biz-topbar) next to the drawer
+     toggle, so there's exactly one small control strip instead of two
+     competing bars. #statApptsToday/#statOpenSlots/#calSectionLabel stay in
+     the DOM — renderOverviewStats()/setOverviewView() still write into them
+     unconditionally — just hidden via .cal-topbar-stats/.cal-topbar-label
+     below, so nothing else has to change to keep working. */
   .cal-topbar{
-    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
-    margin-bottom:10px; padding:7px 16px;
-    background:linear-gradient(135deg, var(--wine), var(--wine-deep));
-    border:2px solid #1A1416;
-    border-radius:12px;
-    box-shadow:0 4px 14px rgba(26,20,22,0.13);
+    display:flex; align-items:center; margin-bottom:8px;
   }
-  .cal-topbar-stats{display:flex; align-items:center; gap:6px; font-size:12.5px; color:#FCF3E2; white-space:nowrap;}
-  .cal-topbar-stats b{font-family:'Suez One'; font-weight:400; font-size:17px; color:var(--gold-soft);}
-  .cal-topbar-stats .sep{opacity:0.55; color:#FCF3E2;}
-  .cal-topbar-label{font-size:11.5px; color:rgba(255,255,255,0.8); white-space:nowrap;}
+  .cal-topbar-stats, .cal-topbar-label{display:none;}
   .cal-topbar-viewswitch{margin:0 !important;}
-  .cal-topbar-viewswitch button{padding:6px 13px !important; font-size:12px !important;}
-  /* Light translucent chips on top of the wine banner instead of the plain
-     dim-text/transparent look .subswitcher button uses everywhere else, so
-     the view-switch buttons stay legible against the saturated fill. */
-  .cal-topbar .subswitcher button{
-    background:rgba(255,255,255,0.14);
-    border-color:rgba(255,255,255,0.4);
-    color:#FCF3E2;
-  }
-  .cal-topbar .subswitcher button.active{
-    background:var(--gold-soft);
-    border-color:var(--gold-soft);
-    color:#2b2620;
-  }
-  .cal-topbar-icons{display:flex; gap:6px; margin-inline-start:auto;}
-  .cal-icon-btn{
-    width:34px; height:34px; border-radius:9px; border:1px solid rgba(255,255,255,0.4);
-    background:rgba(255,255,255,0.14); color:#FCF3E2; font-size:15px;
-    display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;
-  }
-  .cal-icon-btn:hover{background:rgba(255,255,255,0.26);}
+  .cal-topbar-viewswitch button{padding:7px 15px !important; font-size:12.5px !important;}
   #staffFilterRow{margin-bottom:10px;}
-  @media (max-width:720px){
-    .cal-topbar{flex-direction:column; align-items:stretch;}
-    .cal-topbar-icons{margin-inline-start:0; justify-content:flex-end;}
-  }
   /* =====================================================================
      MOBILE WEEK CALENDAR COMPACTION (phone widths, <=480px — covers the
      375/390/412px devices she actually uses).
@@ -2107,20 +2179,15 @@
      day doesn't fit above the fold is reached via #weekCalWrap's own
      vertical scroll (fitWeekCalToViewport() — already existed, just never
      got to engage before since the old logic shrank rows until nothing
-     overflowed). Two things now happen together in this block:
-       1) The pink "תורים היום / מקומות פנויים" top bar (.cal-topbar and its
-          .cal-topbar-stats text) shrinks noticeably — smaller font/padding,
-          the redundant "היומן השבועי" label hidden (it only restates which
-          view-switch button is already active), smaller view-switch/icon
-          buttons — instead of the 4-row stacked box the max-width:720px
-          rule above produces at full size.
-       2) The other fixed-height chrome directly above the calendar
-          (biz-subnav-wrap's tab row, the יומן/דוחות inner-switcher, the
-          prev/next week nav, the staff-avatar filter row) all get tighter
-          margins/padding/fonts too — every pixel saved here is one more
-          pixel of legible, full-size calendar (more of the day) visible
-          before she needs to scroll for the rest, since the hour-row height
-          itself is now fixed rather than shrinking to absorb this chrome.
+     overflowed). The other fixed-height chrome directly above the calendar
+     (the יומן/דוחות inner-switcher, the view-switch, the prev/next week nav,
+     the staff-avatar filter row — the old pink stats card and the 8-tab row
+     are both gone from this flow entirely now, see .biz-topbar/
+     .biz-subnav-drawer above) gets tighter margins/padding/fonts here too —
+     every pixel saved is one more pixel of legible, full-size calendar (more
+     of the day) visible before she needs to scroll for the rest, since the
+     hour-row height itself is fixed rather than shrinking to absorb this
+     chrome.
      .week-cal's 820px min-width and .cal-day-col's 104px min-width (tuned
      for desktop, where 7 columns at >=104px each safely exceeds most
      screens and RELIES on .week-cal-wrap's horizontal scroll) are both
@@ -2134,20 +2201,10 @@
      resulting ~45-55px column width.
      ===================================================================== */
   @media (max-width:480px){
-    #panel-business .biz-subnav-wrap{margin-bottom:0.4rem;}
     #panel-business .inner-switcher{margin-bottom:0.5rem; gap:6px;}
     #panel-business .inner-switcher button{padding:6px 12px; font-size:12px;}
-    .cal-topbar{padding:6px 8px; gap:5px; margin-bottom:6px;}
-    .cal-topbar-stats{font-size:10.5px; gap:4px;}
-    .cal-topbar-stats b{font-size:13px;}
-    /* Redundant once the view-switch buttons right next to it already show
-       which view (שבועי/יומי/חודשי) is active — dropped only here, at the
-       width where every row of the stacked top bar costs real, scarce
-       height; still shown normally at wider widths. */
-    .cal-topbar-label{display:none;}
+    .cal-topbar{margin-bottom:6px;}
     .cal-topbar-viewswitch button{padding:4px 10px !important; font-size:10.5px !important;}
-    .cal-topbar-icons{gap:4px;}
-    .cal-icon-btn{width:27px; height:27px; font-size:11.5px; border-radius:7px;}
     #weekNavRow{margin-bottom:6px;}
     #weekNavRow button{padding:5px 9px; font-size:11px;}
     #weekNavRow span{font-size:12px;}
@@ -2337,6 +2394,54 @@
 </style>
 </head>
 <body>
+<!-- Persistent control strip (drawer toggle + the 3 icon actions that used
+     to live inside the now-removed colored .cal-topbar card) plus the
+     backdrop + slide-in drawer it opens, for #panel-business's 8-destination
+     nav (see the big CSS comment above .biz-topbar in the admin styles for
+     the full history/reasoning). Deliberately placed here, as a direct
+     child of <body>, rather than nested inside #panel-business/.stage: both
+     .panel and .subpanel play a translateY() entrance animation with
+     animation-fill-mode:forwards, which leaves a non-"none" `transform` on
+     the element permanently (even once fully settled at translateY(0)) — and
+     per the CSS spec, ANY non-none transform on an ancestor turns that
+     ancestor into the containing block for its position:fixed descendants,
+     silently demoting "fixed" to something that scrolls away with the page
+     instead of staying pinned to the real viewport. Sitting directly under
+     <body> (which is never transformed) sidesteps that trap entirely, so the
+     backdrop truly dims the whole screen and the drawer truly stays put
+     regardless of which panel is active or how far she's scrolled. Closed by
+     default (no "open" class/state on body — see toggleBizSubNavDrawer()
+     near showSub() further down). The 8 buttons themselves — IDs,
+     onclick="showSub(...)"/"guardedShowSub(...)" calls — are completely
+     unchanged from the previous top-row version; only the container around
+     them changed. -->
+<div class="biz-topbar" id="bizTopbar">
+  <button type="button" class="biz-subnav-toggle" id="bizSubNavToggle" onclick="toggleBizSubNavDrawer()" aria-haspopup="true" aria-expanded="false" aria-controls="bizSubNavDrawer" aria-label="תפריט ניווט">
+    <span class="biz-subnav-toggle-bars" aria-hidden="true"></span>
+  </button>
+  <div class="cal-topbar-icons">
+    <button type="button" class="cal-icon-btn" onclick="openMyDayView()" title="תצוגת היום שלי" aria-label="תצוגת היום שלי">🖨️</button>
+    <button type="button" class="cal-icon-btn" onclick="openManualBookingModal()" title="הוספת תור ידנית" aria-label="הוספת תור ידנית">➕</button>
+    <button type="button" class="cal-icon-btn" onclick="doLogout()" title="התנתקות" aria-label="התנתקות">🚪</button>
+  </div>
+</div>
+<div class="biz-subnav-backdrop" id="bizSubNavBackdrop" onclick="closeBizSubNavDrawer()"></div>
+<div class="biz-subnav-drawer" id="bizSubNavDrawer">
+  <div class="biz-subnav-drawer-head">
+    <span class="biz-subnav-drawer-title">ניווט</span>
+    <button type="button" class="biz-subnav-drawer-close" onclick="closeBizSubNavDrawer()" aria-label="סגירת תפריט הניווט">✕</button>
+  </div>
+  <div class="subswitcher biz-subnav-row" id="bizSubNavRow" role="navigation" aria-label="ניווט בין הטאבים">
+    <button class="active" onclick="showSub('overview', this)"><i class="ti ti-layout-dashboard"></i> סקירה</button>
+    <button id="clientsTabBtn" onclick="guardedShowSub('clients', this)"><i class="ti ti-users"></i> לקוחות</button>
+    <button onclick="showSub('notifications', this)"><i class="ti ti-bell"></i> התראות</button>
+    <button onclick="guardedShowSub('staff', this)"><i class="ti ti-users-group"></i> צוות</button>
+    <button onclick="guardedShowSub('servicesgroup', this)"><i class="ti ti-scissors"></i> שירותים</button>
+    <button onclick="guardedShowSub('inventory', this)"><i class="ti ti-package"></i> מלאי</button>
+    <button onclick="showSub('whatsnewadmin', this)"><i class="ti ti-sparkles"></i> מה חדש</button>
+    <button id="settingsTabBtn" onclick="guardedShowSub('settings', this)"><i class="ti ti-settings"></i> הגדרות</button>
+  </div>
+</div>
 <section class="hero">
   <!-- Left empty here on purpose — this file is a shared template across
        clients, so no business name gets hardcoded into it. renderBranding()
@@ -2540,34 +2645,25 @@
     <div class="new-grid" id="whatsNewList"></div>
   </div>
   <div id="panel-business" class="panel">
-    <!-- Back to a directly-visible top row (reverted from the hamburger/
-         slide-in-drawer experiment two rounds ago — see the CSS block above
-         starting ".biz-subnav-wrap" for why). The buttons themselves (IDs,
-         onclick="showSub(...)"/"guardedShowSub(...)" calls) are completely
-         unchanged — this is purely how they're presented, not a change to
-         the navigation logic. -->
-    <div class="biz-subnav-wrap">
-      <div class="subswitcher biz-subnav-row" id="bizSubNavRow" role="navigation" aria-label="ניווט בין הטאבים">
-        <button class="active" onclick="showSub('overview', this)"><i class="ti ti-layout-dashboard"></i> סקירה</button>
-        <button id="clientsTabBtn" onclick="guardedShowSub('clients', this)"><i class="ti ti-users"></i> לקוחות</button>
-        <button onclick="showSub('notifications', this)"><i class="ti ti-bell"></i> התראות</button>
-        <button onclick="guardedShowSub('staff', this)"><i class="ti ti-users-group"></i> צוות</button>
-        <button onclick="guardedShowSub('servicesgroup', this)"><i class="ti ti-scissors"></i> שירותים</button>
-        <button onclick="guardedShowSub('inventory', this)"><i class="ti ti-package"></i> מלאי</button>
-        <button onclick="showSub('whatsnewadmin', this)"><i class="ti ti-sparkles"></i> מה חדש</button>
-        <button id="settingsTabBtn" onclick="guardedShowSub('settings', this)"><i class="ti ti-settings"></i> הגדרות</button>
-      </div>
-    </div>
+    <!-- The persistent drawer-toggle + exit/add-appointment/my-day control
+         strip (.biz-topbar) is NOT here — it lives as a direct child of
+         <body>, right next to #bizSubNavDrawer/#bizSubNavBackdrop near the
+         very top of the page, for the exact same position:fixed/transformed-
+         ancestor reason explained in that big HTML comment. It's shown only
+         while body.admin-mode is set (i.e. exactly while this panel is the
+         active one), so functionally it behaves as if it were this panel's
+         own header even though it isn't nested inside it. -->
     <div id="sub-overview" class="subpanel active">
       <div class="inner-switcher">
         <button class="active" onclick="showInnerTab('sub-overview', 'inner-overview-calendar', this)">יומן</button>
         <button onclick="guardedShowInnerTab('sub-overview', 'inner-overview-reports', this)">דוחות</button>
       </div>
       <div id="inner-overview-calendar" class="inner-subpanel active">
-      <!-- Compacted into one slim bar per her request — she wants to land on the
-           calendar with as little chrome above it as possible: the two stats as
-           inline text, week/day/month as a small switcher, and the 3 actions as
-           icon-only buttons, all in a single row instead of 3 stacked ones. -->
+      <!-- The pink stats card is gone (see the CSS comment on .cal-topbar) —
+           #statApptsToday/#statOpenSlots/#calSectionLabel stay in the markup,
+           hidden, purely so renderOverviewStats()/setOverviewView() keep
+           finding the elements they already write into unconditionally.
+           All that's actually shown here now is the bare view-switch. -->
       <div class="cal-topbar">
         <div class="cal-topbar-stats">
           <span><b id="statApptsToday">0</b> תורים היום</span>
@@ -2579,11 +2675,6 @@
           <button class="active" id="ovWeekViewBtn" onclick="setOverviewView('week', this)">שבועי</button>
           <button onclick="setOverviewView('day', this)">יומי</button>
           <button onclick="setOverviewView('month', this)">חודשי</button>
-        </div>
-        <div class="cal-topbar-icons">
-          <button type="button" class="cal-icon-btn" onclick="openMyDayView()" title="תצוגת היום שלי" aria-label="תצוגת היום שלי">🖨️</button>
-          <button type="button" class="cal-icon-btn" onclick="openManualBookingModal()" title="הוספת תור ידנית" aria-label="הוספת תור ידנית">➕</button>
-          <button type="button" class="cal-icon-btn" onclick="doLogout()" title="התנתקות" aria-label="התנתקות">🚪</button>
         </div>
       </div>
       <!-- Prev/next week navigation — she asked for a way to move the visible week
@@ -2832,6 +2923,8 @@
           <input type="tel" id="bizWhatsappInput" class="field-dark" placeholder="050-0000000 (אם שונה מהטלפון למעלה)" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ פרטי העסק נשמרו בהצלחה')">
           <div class="label" style="margin:12px 0 6px;">כתובת העסק<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">הכתובת שתופיע ללקוחה במייל אישור התור ובמייל התזכורת, כדי שתדע לאן להגיע — אם נשאר ריק, השורה הזו פשוט לא תופיע במיילים.</span></span></div>
           <input type="text" id="bizAddressInput" class="field-dark" placeholder="לדוגמה: הרצל 12, תל אביב" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ פרטי העסק נשמרו בהצלחה')">
+          <div class="label" style="margin:12px 0 6px;">שם השולח בהודעות SMS<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">זה מה שיופיע כ"שולח" בתזכורות ה-SMS שהלקוחות מקבלות. חייב להיות עד 11 תווים באנגלית ו/או מספרים בלבד, בלי רווחים ובלי עברית (מגבלה של ספק ה-SMS) — לדוגמה SalonRuti. אם נשאר ריק, תזכורות ה-SMS לא יישלחו.</span></span></div>
+          <input type="text" id="bizSmsSenderInput" class="field-dark" placeholder="לדוגמה: SalonRuti" maxlength="11" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ פרטי העסק נשמרו בהצלחה')">
           <div class="label" style="margin:12px 0 6px;">מייל המנהלת (לקבלת התראות)<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">לכתובת הזו נשלחות התראות על מלאי נמוך, והיא מוצעת כברירת מחדל כששולחים דוח למייל — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות כאן.</span></span></div>
           <input type="email" id="invAlertEmail" class="field-dark" placeholder="you@example.com" oninput="updateInvAlertEmail()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ כתובת המייל להתראות נשמרה בהצלחה')">
           <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:4px;">לכתובת הזו מגיעות התראות מלאי נמוך, והיא מוצעת כברירת מחדל בשליחת דוחות למייל (בטאב "דוחות") — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות את זה כאן.</div>
@@ -2948,7 +3041,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 31.08-יז-יומן-מובייל-וביטול-אנימציה</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 31.08-יח-תפריט-צדדי-ואינפורו-SMS</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -5766,6 +5859,22 @@
     branding.whatsapp = waInputEl ? waInputEl.value.trim() : '';
     const addressInputEl = document.getElementById('bizAddressInput');
     branding.address = addressInputEl ? addressInputEl.value.trim() : '';
+    // SMS "Sender" id for the Inforu integration (see functions/index.js's
+    // sendSmsReminderViaInforu()) — Inforu requires this to be at most 11
+    // characters, English letters/digits only, no spaces (an alphanumeric
+    // sender id; a pre-approved phone number would also be valid per their
+    // docs, but we only support the alphanumeric case here since that's what
+    // she's using). Sanitized on every keystroke rather than only on save, so
+    // what she sees in the field always matches what will actually be sent —
+    // never silently rejecting something invalid only once she saves.
+    const smsSenderInputEl = document.getElementById('bizSmsSenderInput');
+    if (smsSenderInputEl){
+      const sanitizedSender = smsSenderInputEl.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 11);
+      if (sanitizedSender !== smsSenderInputEl.value) smsSenderInputEl.value = sanitizedSender;
+      branding.smsSenderId = sanitizedSender;
+    } else {
+      branding.smsSenderId = '';
+    }
     renderBranding();
     if (typeof renderServices === 'function') renderServices();
   }
@@ -5898,6 +6007,8 @@
     if (waInputEl2 && document.activeElement !== waInputEl2) waInputEl2.value = branding.whatsapp || branding.phone || '';
     const addressInputEl2 = document.getElementById('bizAddressInput');
     if (addressInputEl2 && document.activeElement !== addressInputEl2) addressInputEl2.value = branding.address || '';
+    const smsSenderInputEl2 = document.getElementById('bizSmsSenderInput');
+    if (smsSenderInputEl2 && document.activeElement !== smsSenderInputEl2) smsSenderInputEl2.value = branding.smsSenderId || '';
     const invEmailInputEl = document.getElementById('invAlertEmail');
     if (invEmailInputEl && document.activeElement !== invEmailInputEl) invEmailInputEl.value = invAlertEmail || '';
     const ownerCodeInputEl = document.getElementById('ownerAccessCodeInput');
@@ -8088,7 +8199,7 @@
   // The custom webfonts (Suez One/Heebo, embedded as data: URIs — see the
   // @font-face rules up top) still swap in a little after first paint
   // (font-display:block's brief invisible-text window), which nudges the
-  // exact height of every text row above the calendar (biz-subnav-wrap tabs,
+  // exact height of every text row above the calendar (biz-topbar,
   // the inner-switcher, day-nav-header, staff-filter-row) by a few pixels
   // once they do. Both on desktop AND on a phone width the calendar box
   // already scrolls internally whenever its content runs taller than the
@@ -10187,6 +10298,42 @@
     const wrapEl = document.getElementById('weekCalWrap');
     if (wrapEl) wrapEl.scrollTop = 0;
   }
+  // ===== #bizSubNavDrawer open/close =====
+  // A single source of truth (body.biz-subnav-open — see the CSS on
+  // .biz-subnav-backdrop/.biz-subnav-drawer) rather than toggling classes on
+  // both the drawer and the backdrop separately, so the two can never end up
+  // out of sync with each other. aria-expanded on the toggle button is kept
+  // in step here too, purely for screen readers — nothing in this app reads
+  // it back.
+  function openBizSubNavDrawer(){
+    document.body.classList.add('biz-subnav-open');
+    const toggle = document.getElementById('bizSubNavToggle');
+    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+  }
+  function closeBizSubNavDrawer(){
+    document.body.classList.remove('biz-subnav-open');
+    const toggle = document.getElementById('bizSubNavToggle');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  }
+  function toggleBizSubNavDrawer(){
+    if (document.body.classList.contains('biz-subnav-open')) closeBizSubNavDrawer();
+    else openBizSubNavDrawer();
+  }
+  // Tapping one of the 8 nav buttons must both navigate (its own unchanged
+  // onclick="showSub(...)"/"guardedShowSub(...)" already does that) AND close
+  // the drawer, so she never has to close it herself before seeing the
+  // section she just picked. A delegated listener on the row itself — rather
+  // than editing each button's onclick — keeps every onclick/id on the 8
+  // buttons byte-for-byte identical, per spec; this just runs alongside them.
+  (function(){
+    const row = document.getElementById('bizSubNavRow');
+    if (row) row.addEventListener('click', (e) => { if (e.target.closest('button')) closeBizSubNavDrawer(); });
+  })();
+  // Escape closes the drawer too, same as tapping the backdrop/toggle — a
+  // small polish touch expected of any real slide-in panel, costs nothing.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.body.classList.contains('biz-subnav-open')) closeBizSubNavDrawer();
+  });
   function showSub(name, btn){
     document.querySelectorAll('.subpanel').forEach(p => p.classList.remove('active'));
     document.getElementById('sub-' + name).classList.add('active');
