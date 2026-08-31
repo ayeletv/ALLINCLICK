@@ -230,180 +230,18 @@
      used elsewhere (see .phone-product-tag ~L1741), just sized for this
      heading line. */
   .hero-platform-line .inline-logo{ vertical-align:-3px; margin-inline-end:2px; flex-shrink:0; }
-  /* ===== Two-phase choreographed hero intro (rebuilt per her precise
-     storyboard — a genuine splash-then-reveal sequence, not "icon shrinks
-     into a permanent accent while the heading fades in behind it" like the
-     previous round did).
-     PHASE 1 — #heroSplash, a temporary, fully self-contained block (icon +
-     both lines of text) that is the very FIRST child of .hero, ahead of
-     #heroBizName/.hero-platform-line:
-       1. the click-logo icon appears big and centered, alone, and plays its
-          single press+dive click animation (heroIntroIconPlay below — this
-          exact keyframe/timing is untouched from the last round's fix: one
-          clean press then one continuous dive to rest, never a second
-          bounce) — 0.15s to 1.15s.
-       2. "הכל בקליק" (.hero-splash-heading) fades in right as the icon
-          settles, at 1.15s.
-       3. "לחצי לקביעת תור" (.hero-splash-subtitle) fades in ~175ms after
-          that, at 1.325s.
-       4. both lines then just sit still and readable for a ~700ms hold.
-       5. at 2.475s the ENTIRE #heroSplash block (icon + both lines, as one
-          unit) sinks down and fades out together (heroSplashSink below),
-          finishing at 3.025s.
-       6. the instant that sink animation ends, the small inline script
-          right after this .hero section sets #heroSplash's own
-          display:none, marks it aria-hidden (it already is, being purely
-          decorative — the real, permanent heading text lives in PHASE 2
-          below and carries the meaning for screen readers) and adds a
-          "splash-done" class to .hero — fully removing it from layout and
-          the accessibility tree, not just hiding it visually.
-     PHASE 2 — the real hero, unchanged in its final resting design from
-     before this rework: #heroBizName (business name, once loaded) OR
-     .hero-platform-line.primary (generic tagline, same existing swap logic
-     via revealBizNameAsHero() — never touched by this rework) as the big
-     heading, with the .accent/.tagline-rest pair (including the small
-     PERMANENT inline click-logo icon inside .tagline-rest — a completely
-     separate element from the big splash icon, and it stays exactly where
-     it always sits in the final design) fading in below it. Retimed below
-     to start at 3.03s/3.18s — i.e. only once PHASE 1 has fully sunk away —
-     instead of the old page-load-relative 1.15s/1.3s delays.
-     #heroBizName is additionally gated by ".hero:not(.splash-done)
-     #heroBizName{opacity:0 !important;}" further down: revealBizNameAsHero()
-     itself is untouched and can still fire at any moment (the real business
-     name may arrive before, during or after the splash plays), but this
-     override keeps it visually hidden — using its own existing opacity
-     transition, not a snap — until PHASE 1 has actually finished, so the
-     two phases never visually overlap no matter when the network resolves.
-     prefers-reduced-motion: reduce skips PHASE 1 entirely — #heroSplash is
-     display:none from the very first frame (a dedicated rule below, since
-     the generic ".hero *{opacity:1!important}" catch-all further down would
-     otherwise just show it fully-formed and stuck) — and the fast-reveal
-     script immediately adds "splash-done" to .hero too, so PHASE 2 lands
-     straight on its finished state with nothing ever stuck mid-animation. */
-  .hero-splash{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-  }
-  .hero.fonts-ready .hero-splash{
-    animation:heroSplashSink 0.55s ease forwards 2.475s;
-  }
-  @keyframes heroSplashSink{
-    0%{ opacity:1; transform:translateY(0); }
-    100%{ opacity:0; transform:translateY(26px); }
-  }
-  .hero-splash-heading{
-    font-family:'Suez One', serif;
-    font-size:clamp(34px, 6vw, 60px);
-    font-weight:400;
-    color:var(--gold-soft);
-    margin:0.9rem 0 0.35rem;
-    opacity:0;
-  }
-  .hero.fonts-ready .hero-splash-heading{ animation:fadeUp 0.45s ease forwards 1.15s; }
-  .hero-splash-subtitle{
-    font-size:clamp(14px, 2vw, 18px);
-    color:var(--ivory-dim);
-    opacity:0;
-    cursor:pointer;
-  }
-  .hero.fonts-ready .hero-splash-subtitle{ animation:fadeUp 0.45s ease forwards 1.325s; }
-  @media (prefers-reduced-motion: reduce){
-    #heroSplash{ display:none !important; }
-  }
-  /* The wrap's own box stays at its final settled-icon size the whole time
-     (30x30) — only the icon/ripple INSIDE it get scaled up via transform
-     during the intro, overflowing the small box visually while nothing
-     behind them is visible yet anyway. That's what lets the icon read as
-     big without ever having to animate layout-affecting width/height
-     (janky, and pointless when the whole splash — icon included — is about
-     to sink away and be removed entirely a moment later anyway). */
-  .hero-intro-icon-wrap{
-    display:flex; align-items:center; justify-content:center;
-    position:relative;
-    width:30px; height:30px;
-    margin:0 auto 0.9rem;
-    overflow:visible;
-  }
-  .hero-intro-icon-wrap .hero-intro-icon{
-    width:30px; height:30px;
-    stroke:#9B2C42;
-    opacity:0;
-    transform-box:fill-box; transform-origin:50% 50%;
-  }
-  .hero-intro-icon-wrap .hero-intro-ripple{
-    position:absolute; inset:0; margin:auto;
-    width:30px; height:30px; border-radius:50%;
-    border:2px solid var(--gold-soft);
-    opacity:0; pointer-events:none;
-  }
-  /* Scale/position trajectory (base size 30px): appear small+invisible ->
-     grow to a dramatic ~96px (scale 3.2) alone and centered -> ONE clean
-     press down (the "click"/impact: a quick squash with a brief
-     wine->gold->wine flash, and a downward translateY nudge, right as the
-     ripple fires) -> then ONE continuous, monotonic glide the rest of the
-     way down to scale(1) at its normal small resting size, with translateY
-     continuing to ease further down the whole time so the settle actually
-     reads as "diving down" into place rather than shrinking symmetrically
-     in a fixed spot. Scale only ever grows once then shrinks once (no
-     regrowth), and translateY only ever increases (never reverses back
-     up), so there is exactly one press/click, never a second bounce.
-     Reaching scale(1) is also the moment the heading text below starts
-     fading in. Per-keyframe animation-timing-function (rather than one
-     bouncy easing curve for the whole animation) keeps each phase reading
-     as one deliberate motion: a fast snap into the press, then a smooth
-     ease-out glide down to rest. translateY is listed BEFORE scale in each
-     transform (translateY(...) scale(...), not the other way round) so the
-     downward offset is applied in final, unscaled pixels — if scale came
-     first the same translateY value would get magnified by whatever the
-     current scale is, and the two could combine into a non-monotonic
-     on-screen path even though each function's own value only ever
-     increases. */
-  @keyframes heroIntroIconPlay{
-    0%{ opacity:0; transform:translateY(0) scale(0.5); }
-    28%{
-      opacity:1; transform:translateY(0) scale(3.2);
-      animation-timing-function:cubic-bezier(.6,0,.85,.25);
-    }
-    44%{
-      transform:translateY(2px) scale(2.5); stroke:#E8CE7A;
-      animation-timing-function:cubic-bezier(.16,1,.3,1);
-    }
-    100%{ opacity:1; transform:translateY(4px) scale(1); stroke:#9B2C42; }
-  }
-  @keyframes heroIntroRipple{
-    0%{ opacity:0.6; transform:scale(2); }
-    100%{ opacity:0; transform:scale(7.5); }
-  }
-  .hero.fonts-ready .hero-intro-icon-wrap .hero-intro-icon{
-    animation:heroIntroIconPlay 1s linear both 0.15s;
-  }
-  /* Ripple fires exactly at the icon's single impact moment: icon's own
-     0.15s start delay + 44% of its 1s duration = 0.59s. (A previous version
-     of this rule set the ripple's delay to the icon's impact keyframe
-     PERCENTAGE as if it were seconds, without adding the icon's 0.15s start
-     delay — e.g. 0.58s instead of 0.15+0.58=0.73s — so the ripple actually
-     fired noticeably before the icon's own flash. Fixed here.) */
-  .hero.fonts-ready .hero-intro-icon-wrap .hero-intro-ripple{
-    animation:heroIntroRipple 0.6s ease-out both 0.59s;
-  }
-  /* PHASE 2 heading text starts fading in only once PHASE 1 (#heroSplash)
-     has fully sunk away and disappeared — the splash's own sink animation
-     runs 2.475s -> 3.025s (see .hero-splash/heroSplashSink above), so these
-     delays start right at that handoff point, never before. */
-  .hero.fonts-ready .hero-platform-line .accent{ animation:fadeUp 0.5s ease forwards 3.03s; }
-  .hero.fonts-ready .hero-platform-line .tagline-rest{ animation:fadeUp 0.55s ease forwards 3.18s; }
-  /* Keeps #heroBizName visually hidden until PHASE 1 is fully gone, even if
-     the real business name (revealBizNameAsHero(), untouched — see the big
-     comment above) arrives before or during the splash: the !important here
-     beats the non-important opacity:1 that .biz-name-visible sets below, but
-     leaves #heroBizName's own opacity transition (also below) intact, so the
-     moment "splash-done" gets added (script right after this .hero section)
-     the name fades in smoothly via that same transition instead of snapping. */
-  .hero:not(.splash-done) #heroBizName{ opacity:0 !important; }
-  @media (prefers-reduced-motion: reduce){
-    .hero .hero-intro-icon-wrap .hero-intro-ripple{ display:none !important; }
-  }
+  /* Simple, fast hero reveal — she asked to remove the big centered
+     click-icon intro/splash sequence entirely (rounds יג-טז explored a
+     one-time animated icon that played before the heading appeared) and go
+     back to how it was before that work started: the heading and tagline
+     simply fade in, staggered slightly, the moment the fonts are ready — no
+     separate icon-animation phase, nothing else to wait for. The small
+     click-logo mark stays exactly where it always sat, inline inside
+     .tagline-rest (see .inline-logo above and the markup below), but it is
+     now just a plain static icon like the rest of the tagline text — it is
+     no longer animated on its own. */
+  .hero.fonts-ready .hero-platform-line .accent{ animation:fadeUp 0.5s ease forwards 0.15s; }
+  .hero.fonts-ready .hero-platform-line .tagline-rest{ animation:fadeUp 0.55s ease forwards 0.3s; }
   .hero-platform-line.primary{
     font-family:'Suez One', serif;
     font-size:clamp(52px, 10vw, 116px);
@@ -440,7 +278,7 @@
     gap:8px;
     opacity:0;
   }
-  .hero.fonts-ready .scroll-hint{ animation:fadeUp 0.9s ease forwards 3.43s; }
+  .hero.fonts-ready .scroll-hint{ animation:fadeUp 0.9s ease forwards 0.55s; }
   .scroll-hint .line{width:1px; height:38px; background:linear-gradient(var(--gold), transparent); animation:pulse 2s ease-in-out infinite;}
   @keyframes fadeUp{from{opacity:0; transform:translateY(18px);} to{opacity:1; transform:translateY(0);}}
   @keyframes pulse{0%,100%{opacity:0.3;} 50%{opacity:1;}}
@@ -1676,7 +1514,22 @@
      phone I only see three days and have to drag" complaint. */
   .week-cal-wrap{border:1px solid rgba(var(--panel-line-rgb),0.12); border-radius:16px; overflow-x:auto; scroll-behavior:smooth; overflow-anchor:none;}
   .week-cal{display:flex; min-width:820px; scroll-snap-type:x proximity;}
-  .cal-hours-col{width:52px; flex-shrink:0; padding-top:56px;}
+  .cal-hours-col{width:52px; flex-shrink:0;}
+  /* Sticky spacer standing in for the blank space that used to be a plain
+     padding-top on .cal-hours-col itself: plain padding can't stay pinned
+     while its column scrolls, and once .cal-day-head (below) started
+     sticking to the top of #weekCalWrap while scrolling, an un-stuck blank
+     padding here would have gone out of sync with it — the hour label that
+     ends up sitting at screen-top in this column would be the one actually
+     HIDDEN behind the day-heads' sticky header in every other column, one
+     full header-height off from whatever's visible there. Made sticky too,
+     with the same top:0 and an opaque background (so nothing bleeds through
+     while it's pinned), it keeps the (label-less) hour-gutter's own "header"
+     lined up with the real day headers at every scroll position. Height is
+     set inline by renderWeekCal() from the same DAY_HEAD_HEIGHT_MOBILE/
+     DESKTOP constant .cal-day-head's own height below must match — see that
+     JS comment. */
+  .cal-hours-spacer{position:sticky; top:0; z-index:5; background:var(--panel-bg);}
   .cal-hour-lbl{
     font-family:'JetBrains Mono';
     font-size:11px;
@@ -1694,11 +1547,26 @@
      renderWeekCal() by day index) instead of the previous flat pale-pink
      header. She asked for this specifically on "מראה חדשני ולא של תוכנה של
      פעם" grounds — modern, not dated software. */
+  /* position:sticky + top:0 pins every day-column header to the top of
+     #weekCalWrap (the actual scrolling box — see fitWeekCalToViewport())
+     while she scrolls down through the hour grid, at BOTH desktop widths
+     (the grid already scrolled internally there whenever it exceeded the
+     viewport) and phone widths (now the normal case since hour rows got a
+     fixed, comfortable height instead of shrinking to always fit — see the
+     MOBILE_HOUR_BAND_HEIGHT comment in the JS). Without this she'd lose
+     track of which column is which day the moment she scrolls past the
+     header row to find a slot later in the day — exactly the "can't tell
+     what's going on" feeling she described. The subtle box-shadow reads as
+     "floating above" the scrolled content beneath it rather than a
+     rendering glitch; z-index keeps it above the day-body's own absolutely-
+     positioned appointment blocks as they scroll underneath. */
   .cal-day-head{
     height:56px;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     font-size:12px; color:#FCF3E2;
     border-bottom:2px solid #1A1416;
+    position:sticky; top:0; z-index:5;
+    box-shadow:0 2px 6px rgba(0,0,0,0.22);
   }
   .cal-day-head.cal-day-tone-a{background:linear-gradient(135deg, var(--wine), var(--wine-deep));}
   .cal-day-head.cal-day-tone-b{background:linear-gradient(135deg, var(--gold), #A9800F);}
@@ -1706,8 +1574,12 @@
   .cal-day-head b{font-family:'Suez One'; font-weight:400; font-size:15px; color:#FCF3E2;}
   .cal-day-head .heb-date{font-size:9px; color:rgba(255,255,255,0.8); opacity:1;}
   /* Today's own column gets an extra bright gold ring on top of whichever
-     tone it already is, so it's obvious at a glance which column is "now". */
-  .cal-day-head.cal-day-today{box-shadow:inset 0 0 0 3px var(--gold-soft);}
+     tone it already is, so it's obvious at a glance which column is "now".
+     Listed as a second, comma-separated shadow alongside the sticky-header
+     shadow above (rather than a plain override) so BOTH survive together —
+     today's column keeps its floating-above-content shadow once pinned too,
+     it doesn't lose it to this more specific selector. */
+  .cal-day-head.cal-day-today{box-shadow:inset 0 0 0 3px var(--gold-soft), 0 2px 6px rgba(0,0,0,0.22);}
   .cal-day-body{position:relative;}
   /* A day that's fully closed (weekly day off, or a one-off closed date like a
      wedding/holiday) for whichever staff the calendar is currently filtered
@@ -2217,10 +2089,25 @@
   }
   /* =====================================================================
      MOBILE WEEK CALENDAR COMPACTION (phone widths, <=480px — covers the
-     375/390/412px devices she actually uses). Three things happen together
-     here, all in service of her literal ask: "shrink according to the
-     device size so I see all the days of the week AND all the calendar's
-     hours without scrolling down":
+     375/390/412px devices she actually uses).
+     An EARLIER version of this block (and renderWeekCal()'s
+     computeHourBandHeight(), see further down) chased her original ask
+     literally — "shrink according to the device size so I see all the days
+     AND all the hours without scrolling down" — by shrinking the hour rows
+     themselves until the entire 08:00-18:00 grid fit with zero vertical
+     scroll. Hands-on with the real deployed site on her own phone, that
+     read as "squished, can't book an appointment or see what's happening":
+     ~28-40px hour rows and 8px appointment text technically satisfied "no
+     scroll" but were neither legible nor comfortably tappable. She pointed
+     at a competitor app that shows a comfortably-sized PARTIAL hour range
+     and scrolls for the rest as what "normal" should look like, and asked
+     for exactly that instead. So the philosophy flipped: hour rows now get
+     a FIXED, comfortable, legible, tappable height on phone widths (see
+     MOBILE_HOUR_BAND_HEIGHT), never shrunk to fit, and whatever part of the
+     day doesn't fit above the fold is reached via #weekCalWrap's own
+     vertical scroll (fitWeekCalToViewport() — already existed, just never
+     got to engage before since the old logic shrank rows until nothing
+     overflowed). Two things now happen together in this block:
        1) The pink "תורים היום / מקומות פנויים" top bar (.cal-topbar and its
           .cal-topbar-stats text) shrinks noticeably — smaller font/padding,
           the redundant "היומן השבועי" label hidden (it only restates which
@@ -2230,19 +2117,21 @@
        2) The other fixed-height chrome directly above the calendar
           (biz-subnav-wrap's tab row, the יומן/דוחות inner-switcher, the
           prev/next week nav, the staff-avatar filter row) all get tighter
-          margins/padding/fonts too — every one of these eats into the
-          vertical budget renderWeekCal()'s computeHourBandHeight() (see
-          further down) has left to fit the full 08:00-18:00 grid without
-          the calendar needing its own internal scroll on a real phone.
-       3) .week-cal's 820px min-width and .cal-day-col's 104px min-width
-          (tuned for desktop, where 7 columns at >=104px each safely exceeds
-          most screens and RELIES on .week-cal-wrap's horizontal scroll) are
-          both dropped to 0 here so the 7 columns (6 weekdays + the
-          "בקשות מיוחדות" special column) divide whatever width is actually
-          available evenly via their own flex:1 instead of overflowing and
-          forcing the drag-to-see-the-rest scroll she specifically
-          complained about. Header/appointment text shrinks to match so
-          nothing clips or wraps at the resulting ~45-55px column width.
+          margins/padding/fonts too — every pixel saved here is one more
+          pixel of legible, full-size calendar (more of the day) visible
+          before she needs to scroll for the rest, since the hour-row height
+          itself is now fixed rather than shrinking to absorb this chrome.
+     .week-cal's 820px min-width and .cal-day-col's 104px min-width (tuned
+     for desktop, where 7 columns at >=104px each safely exceeds most
+     screens and RELIES on .week-cal-wrap's horizontal scroll) are both
+     dropped to 0 here so the 7 columns (6 weekdays + the "בקשות מיוחדות"
+     special column) divide whatever width is actually available evenly via
+     their own flex:1 instead of overflowing and forcing the
+     drag-to-see-the-rest horizontal scroll she specifically complained
+     about — this part is unrelated to the row-height philosophy above and
+     is UNCHANGED by it: still correct, still needed, still here. Header/
+     appointment text is sized to stay legible (not to shrink to fit) at the
+     resulting ~45-55px column width.
      ===================================================================== */
   @media (max-width:480px){
     #panel-business .biz-subnav-wrap{margin-bottom:0.4rem;}
@@ -2270,24 +2159,40 @@
        above. computeHourBandHeight() (renderWeekCal()/fitWeekCalToViewport())
        is this block's JS counterpart for the vertical axis. */
     .week-cal{min-width:0;}
-    .cal-hours-col{width:30px; padding-top:44px;}
-    .cal-hour-lbl{font-size:8.5px; padding-top:1px;}
+    /* No padding-top override here any more — the blank space above the hour
+       labels that used to be a hardcoded padding-top (kept manually in sync
+       with .cal-day-head's height) is now an actual sticky spacer element
+       (.cal-hours-spacer, inserted by renderWeekCal()) sized directly from
+       the same DAY_HEAD_HEIGHT_MOBILE/DESKTOP constant the JS uses elsewhere
+       — one source of truth instead of two numbers that could drift apart. */
+    .cal-hours-col{width:34px;}
+    .cal-hour-lbl{font-size:10px; padding-top:2px;}
     .cal-day-col{min-width:0;}
-    .cal-day-head{height:44px; font-size:10px;}
-    .cal-day-head b{font-size:12px;}
-    .cal-day-head .heb-date{font-size:7px;}
-    .cal-appt{padding:1px 3px; font-size:8px;}
-    .cal-appt b{font-size:8px;}
+    /* Legibility fix (her actual complaint): the PREVIOUS numbers here
+       (height:44px/font-size:10px, .cal-appt at font-size:8px) were tuned to
+       shrink the header down to whatever computeHourBandHeight()'s old
+       shrink-to-fit math left room for — now that hour-row height is a fixed,
+       comfortable constant (MOBILE_HOUR_BAND_HEIGHT) instead, the header and
+       appointment chips get sized for actual legibility instead, matched by
+       DAY_HEAD_HEIGHT_MOBILE in the JS below (keep the two in sync). */
+    .cal-day-head{height:50px; font-size:11px;}
+    .cal-day-head b{font-size:13.5px;}
+    .cal-day-head .heb-date{font-size:8px;}
+    .cal-appt{padding:2px 4px; font-size:10.5px;}
+    .cal-appt b{font-size:10.5px;}
     /* The "בקשות מיוחדות" special-requests column reuses .cal-day-col for its
        width, but its OWN header (.cal-special-head — the label + a round "+"
        add-button, side by side) doesn't fit that text next to a flex-shrink:0
        button at this column's new ~45px mobile width: the button was
        overflowing clean off the edge of the calendar (confirmed via
        #weekCalWrap.scrollWidth > clientWidth) rather than shrinking with it.
-       Stacked instead of side-by-side here, both shrunk to fit. */
-    .cal-special-head{height:44px; flex-direction:column; justify-content:center; gap:2px; padding:3px 2px;}
-    .cal-special-head b{font-size:8px; line-height:1.05; text-align:center;}
-    .cal-special-add-btn{width:16px; height:16px; min-width:16px; font-size:11px;}
+       Stacked instead of side-by-side here, both sized to stay legible (same
+       height as .cal-day-head above, so its sticky header lines up with the
+       real day columns' sticky headers as she scrolls — see .cal-special-head
+       position:sticky in the base ruleset). */
+    .cal-special-head{height:50px; flex-direction:column; justify-content:center; gap:2px; padding:3px 2px;}
+    .cal-special-head b{font-size:9.5px; line-height:1.1; text-align:center;}
+    .cal-special-add-btn{width:18px; height:18px; min-width:18px; font-size:12px;}
   }
   /* ===== "בקשות מיוחדות" column — replaces Saturday's time-grid column (the salon
      is closed Saturday, so a real column there is useless) with a running list
@@ -2299,9 +2204,20 @@
      and actions that used to live directly on an inline card — see
      renderSpecialRequestsColumn()/openSpecialRequestDetailOverlay(). ===== */
   .cal-special-col{background:rgba(var(--panel-line-rgb),0.02);}
+  /* Sticky too, same reasoning and z-index as .cal-day-head above — this is
+     the 7th column (the special-requests list replacing Saturday's grid) and
+     its header needs to stay pinned in lockstep with the 6 real day headers
+     while scrolling, or it would visually "lag behind" them, breaking the
+     illusion of one continuous pinned header row across the whole calendar.
+     Needs its own explicit opaque-ish background here (.cal-special-col's
+     own background is a near-transparent rgba(...,0.02) tint) so scrolled
+     request/waitlist blocks don't show through the header once it's pinned. */
   .cal-special-head{
     height:56px; display:flex; align-items:center; justify-content:space-between;
     padding:0 10px; border-bottom:1px solid rgba(var(--panel-line-rgb),0.1);
+    position:sticky; top:0; z-index:5;
+    background:var(--panel-bg);
+    box-shadow:0 2px 6px rgba(0,0,0,0.14);
   }
   .cal-special-head b{font-family:'Suez One'; font-weight:400; font-size:12.5px; color:var(--panel-text); line-height:1.25;}
   .cal-special-add-btn{
@@ -2428,33 +2344,6 @@
        and (since the reset-to-generic race condition below is now fixed)
        reliably keeps it filled in rather than ever reverting it back to
        nothing/generic — see the comment there for the full explanation. -->
-  <!-- PHASE 1 — temporary splash, first element in the hero on purpose (see
-       the big CSS comment above .hero-splash): big centered icon plays its
-       click animation, "הכל בקליק" and "לחצי לקביעת תור" fade in below it
-       one after the other, then the whole block sinks down, fades out and
-       (via the script right after this .hero section) gets display:none'd
-       and dropped from layout entirely once that finishes — it never
-       becomes a permanent part of the page. aria-hidden throughout since
-       it's purely decorative/transient — the PHASE 2 heading/tagline below
-       carry the real, permanent meaning for screen readers. The subtitle's
-       onclick is a lightweight, non-essential pointer affordance (scrolls
-       straight to the booking widget); it isn't part of the accessibility
-       tree while its aria-hidden ancestor is present. -->
-  <div class="hero-splash" id="heroSplash" aria-hidden="true">
-    <div class="hero-intro-icon-wrap" id="heroIntroIconWrap">
-      <span class="hero-intro-ripple"></span>
-      <svg class="hero-intro-icon" viewBox="0 0 24 24" fill="none" stroke="#9B2C42" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
-        <path d="M13 13l6 6"/>
-      </svg>
-    </div>
-    <p class="hero-splash-heading">הכל בקליק</p>
-    <p class="hero-splash-subtitle" onclick="var t=document.querySelector('.phone'); if(t) t.scrollIntoView({behavior:'smooth', block:'center'});">לחצי לקביעת תור</p>
-  </div>
-  <!-- PHASE 2 — the real, permanent hero heading. Unchanged in final design
-       from before this rework; only its reveal timing (see the .fonts-ready
-       CSS rules above) now starts after PHASE 1 above has fully sunk away
-       and been removed, instead of at the old page-load-relative delays. -->
   <h1 class="serif" id="heroBizName" style="display:none;"></h1>
   <!-- "primary" here by default (big heading treatment, see .hero-platform-line.primary)
        is what actually makes this line act as the hero's giant heading before any
@@ -2514,54 +2403,11 @@
   (function(){
     var heroEl = document.querySelector('.hero');
     if (!heroEl) return;
-    var splashEl = document.getElementById('heroSplash');
-    // Marks PHASE 1 (#heroSplash) as fully finished — removes it from layout
-    // and the a11y tree (not just visually hiding it), and adds "splash-done"
-    // to .hero, which is what lets #heroBizName's own opacity transition (see
-    // the ".hero:not(.splash-done) #heroBizName" override in the CSS above)
-    // finally take effect if the real business name already arrived while
-    // the splash was still playing.
-    var splashDone = false;
-    function finishSplash(){
-      if (splashDone || !splashEl) return;
-      splashDone = true;
-      splashEl.style.display = 'none';
-      splashEl.setAttribute('aria-hidden', 'true');
-      heroEl.classList.add('splash-done');
-    }
-    var reducedMotion = false;
-    try {
-      reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    } catch (e) {}
-    if (reducedMotion){
-      // The dedicated "#heroSplash{display:none!important}" reduced-motion
-      // CSS rule already keeps it from ever being shown — no sink animation
-      // will ever fire on it — so finish immediately, independent of the
-      // font-reveal timing below entirely.
-      finishSplash();
-    } else if (splashEl) {
-      // animationend bubbles up from every child animation (icon, ripple,
-      // the two text lines) too, not just the sink itself — only react to
-      // the event actually targeting #heroSplash (its own heroSplashSink
-      // keyframe).
-      splashEl.addEventListener('animationend', function(e){
-        if (e.target !== splashEl) return;
-        finishSplash();
-      });
-    }
     var revealed = false;
     function reveal(){
       if (revealed) return;
       revealed = true;
       heroEl.classList.add('fonts-ready');
-      // The splash's sink animation (.hero-splash/heroSplashSink above) is
-      // timed relative to THIS moment (.fonts-ready being added), not page
-      // load — so its safety-net fallback is armed from here too, instead
-      // of from a fixed point, to avoid ever firing early (and cutting the
-      // splash off mid-animation) on a slow font load that eats into the
-      // 1500ms reveal safety net below. Matches the sink's own worst-case
-      // end time (2.475s delay + 0.55s duration = 3.025s) plus margin.
-      if (!reducedMotion) setTimeout(finishSplash, 3400);
     }
     var fontPromise;
     try {
@@ -3102,7 +2948,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 22.08-טז-מסך-פתיחה-דו-שלבי</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 31.08-יז-יומן-מובייל-וביטול-אנימציה</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -7149,69 +6995,82 @@
   renderStaff();
   const staffColors = ['#E8CE7A', '#9FBF93', '#E29AA8', '#9DBFE8', '#D9B27C'];
   const calStartHour = 8, calEndHour = 18;
-  // ===== Responsive hourBandHeight (replaces the old fixed 96px-per-hour) =====
-  // She asked for the calendar to "shrink according to the device size" so the
-  // full 08:00-18:00 grid is visible on a phone with no vertical scrolling —
-  // a fixed 96px/hour band (960px of grid body for a 10-hour day) never fits a
-  // real phone viewport. MOBILE_CAL_BREAKPOINT matches the width the CSS
-  // "MOBILE WEEK CALENDAR COMPACTION" @media block (day-column widths, topbar/
-  // chrome sizing) switches on, so the two stay in lockstep — above it nothing
-  // changes from before (still a flat 96, matching every desktop-viewport test
-  // already written against that exact number, e.g. test_quarter_hour.js's
-  // y=24/72px click-offset math and test_appt_overlap_layout.js's
+  // ===== hourBandHeight: 96 on desktop, a fixed comfortable constant on phone
+  // widths (NOT "shrink until the whole day fits with zero scroll") =====
+  // An EARLIER version of this chased her original, literal ask — "shrink
+  // according to the device size so the full 08:00-18:00 grid is visible on a
+  // phone with no vertical scrolling" — by measuring #weekCalWrap's actual
+  // available space and dividing it down to whatever hour-band height made
+  // the entire day fit. On a real phone that produced ~28-40px hour rows,
+  // which she reported (after actually using the deployed site, screenshot
+  // in hand) as "squished, can't book an appointment or see what's
+  // happening" — technically zero scroll, but the appointment chips inside
+  // became too small to read or comfortably tap. She specifically pointed to
+  // a competitor calendar app that shows a comfortably-sized PARTIAL hour
+  // range and scrolls for the rest, and asked for that instead: "gadol
+  // ve-normali... efshar she-hasha'ah shel ha-yoman yihiye ad 2 ve-az
+  // lig'lol mata" (big and normal-sized; the calendar's hours can go up to
+  // around 2pm and then scroll down from there).
+  //
+  // So the mechanism flips: on phone widths the hour-band height is now a
+  // FIXED constant (MOBILE_HOUR_BAND_HEIGHT) — comfortable, legible, tappable
+  // — never shrunk to fit, and whatever part of the 08:00-18:00 day doesn't
+  // fit above the fold is reached via #weekCalWrap's OWN vertical scroll.
+  // That scroll capability already existed (fitWeekCalToViewport() below sets
+  // #weekCalWrap's max-height + overflow-y:auto unconditionally); the old
+  // shrink-to-fit logic just never let it actually engage, since it kept
+  // shrinking rows until nothing overflowed. A fixed row height naturally
+  // lands on "comfortable hours visible up to somewhere in the
+  // early-to-mid afternoon, then scroll for the rest" on a typical phone
+  // screen — her literal request — without hardcoding any specific cutoff
+  // hour, which would vary anyway by phone screen height and how much chrome
+  // (topbar/subnav/staff-filter row) happens to sit above the calendar.
+  //
+  // MOBILE_CAL_BREAKPOINT matches the width the CSS "MOBILE WEEK CALENDAR
+  // COMPACTION" @media block (day-column widths, topbar/chrome sizing)
+  // switches on, so the two stay in lockstep — above it nothing changes from
+  // before (still a flat 96, matching every desktop-viewport test already
+  // written against that exact number, e.g. test_quarter_hour.js's y=24/72px
+  // click-offset math and test_appt_overlap_layout.js's
   // hourBandHeight/2===48 half-hour check both run at desktop widths and must
   // keep seeing 96 unchanged); desktop keeps its existing internal-scroll
   // behavior (fitWeekCalToViewport() sizing #weekCalWrap's box, the grid
-  // scrolling inside it) exactly as before. Only at phone widths does this
-  // shrink the band height to whatever actually fits.
+  // scrolling inside it) exactly as before — the grid there was already
+  // sometimes taller than the viewport, and already relied on this same
+  // scroll box, so nothing about the desktop path changes at all.
   const MOBILE_CAL_BREAKPOINT = 480;
-  // Keep in sync with .cal-day-head's height / .cal-hours-col's padding-top in
-  // both the desktop CSS and the <=480px mobile override (56px / 44px there).
+  // Keep in sync with .cal-day-head's height in both the desktop CSS and the
+  // <=480px mobile override (56px / 50px there). .cal-hours-col no longer
+  // needs a separate matching padding-top number — the blank space above its
+  // hour labels is now an actual sticky spacer element (.cal-hours-spacer)
+  // whose height is set inline, straight from these same two constants, by
+  // renderWeekCal() below. One source of truth instead of two CSS numbers
+  // that used to have to be hand-kept in sync with each other.
   const DAY_HEAD_HEIGHT_DESKTOP = 56;
-  const DAY_HEAD_HEIGHT_MOBILE = 44;
-  // Floor below which an hour band would make appointment/block text genuinely
-  // illegible or the block untappable — per her instructions, only a viewport
-  // shorter than can fit this is allowed to fall back to the calendar's own
-  // internal vertical scroll (fitWeekCalToViewport()'s #weekCalWrap max-height
-  // + overflow-y:auto already does exactly that, unchanged) instead of shrinking
-  // further.
-  const MIN_HOUR_BAND_HEIGHT = 28;
+  const DAY_HEAD_HEIGHT_MOBILE = 50;
+  function currentDayHeadHeight(){
+    return window.innerWidth <= MOBILE_CAL_BREAKPOINT ? DAY_HEAD_HEIGHT_MOBILE : DAY_HEAD_HEIGHT_DESKTOP;
+  }
+  // The fixed, comfortable, legible, tappable hour-row height used at phone
+  // widths (see the big comment above) — meaningfully bigger than the old
+  // ~28px shrink-to-fit floor, picked so a name + service + time still reads
+  // clearly in a .cal-appt chip (bumped back up to a legible font-size in the
+  // <=480px CSS block alongside this) and so a half-hour or quarter-hour slot
+  // (hourBandHeight/2, /4 — see quarterHeight below) stays comfortably
+  // tappable with a fingertip, not just a mouse pointer.
+  const MOBILE_HOUR_BAND_HEIGHT = 60;
   // What hourBandHeight renderWeekCal() actually built the currently-rendered
   // grid with — read back by fitWeekCalToViewport() (and re-checked on every
   // window resize) to notice when the ideal value has changed enough that the
-  // whole grid needs rebuilding at a new scale, without renderWeekCal() and
-  // fitWeekCalToViewport() calling each other forever (each only re-renders
-  // when the computed value actually moved from what's already on screen).
+  // whole grid needs rebuilding at a new scale (in practice: only when
+  // crossing MOBILE_CAL_BREAKPOINT, since 96 and MOBILE_HOUR_BAND_HEIGHT are
+  // both fixed constants now rather than something that could drift on every
+  // resize), without renderWeekCal() and fitWeekCalToViewport() calling each
+  // other forever (each only re-renders when the computed value actually
+  // moved from what's already on screen).
   let lastRenderedHourBandHeight = null;
   function computeHourBandHeight(){
-    if (window.innerWidth > MOBILE_CAL_BREAKPOINT) return 96;
-    const wrap = document.getElementById('weekCalWrap');
-    // Not visible yet (she's on a different tab, or this is the very first
-    // synchronous render before the admin panel is ever opened) — nothing
-    // sensible to measure yet, so keep whatever's already been used (or the
-    // desktop default on the very first call) rather than guessing off a
-    // collapsed/zero-height box. showPanel()/fitWeekCalToViewport() re-run
-    // this for real the moment the calendar actually becomes visible.
-    if (!wrap || wrap.offsetParent === null) return lastRenderedHourBandHeight || 96;
-    const rect = wrap.getBoundingClientRect();
-    // Same "-14" bottom safety margin fitWeekCalToViewport() already uses below
-    // for the wrap's own max-height, so the two stay consistent with each other.
-    const availableForWrap = window.innerHeight - rect.top - 14;
-    const dayHeadHeight = window.innerWidth <= MOBILE_CAL_BREAKPOINT ? DAY_HEAD_HEIGHT_MOBILE : DAY_HEAD_HEIGHT_DESKTOP;
-    const availableForBody = availableForWrap - dayHeadHeight;
-    // .week-cal is a row flex container with the (default) align-items:stretch,
-    // so EVERY column — including the day columns, whose own .cal-day-body is
-    // only ever (calEndHour-calStartHour)*hourBandHeight tall — ends up
-    // stretched to match whichever column's natural content is tallest. That's
-    // .cal-hours-col: its hour-LABEL loop deliberately runs from calStartHour
-    // through calEndHour INCLUSIVE (11 labels for an 08:00-18:00 day, not 10)
-    // so the closing boundary time ("18:00") gets its own label under the last
-    // real hour band — one whole extra hourBandHeight of height beyond the
-    // actual grid body. Dividing by the label count (calEndHour-calStartHour+1)
-    // rather than the band count is what actually keeps the whole rendered
-    // column — not just its grid body — inside the available space.
-    const naturalHeight = availableForBody / (calEndHour - calStartHour + 1);
-    return Math.max(MIN_HOUR_BAND_HEIGHT, Math.min(96, naturalHeight));
+    return window.innerWidth > MOBILE_CAL_BREAKPOINT ? 96 : MOBILE_HOUR_BAND_HEIGHT;
   }
   const weekdayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
   const weekdayLabels = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
@@ -7487,10 +7346,22 @@
     const hoursCol = document.createElement('div');
     hoursCol.className = 'cal-hours-col';
     // See computeHourBandHeight() above — a flat 96 on desktop widths (every
-    // existing fixed-96 assumption elsewhere keeps working unchanged), shrunk
-    // to whatever actually fits on a phone width instead.
+    // existing fixed-96 assumption elsewhere keeps working unchanged), a
+    // fixed MOBILE_HOUR_BAND_HEIGHT on a phone width instead (never shrunk).
     const hourBandHeight = computeHourBandHeight();
     lastRenderedHourBandHeight = hourBandHeight;
+    // Sticky spacer standing in for the blank space above the hour labels —
+    // see the .cal-hours-spacer CSS comment for why this has to be an actual
+    // sticky element rather than a plain padding-top now that .cal-day-head
+    // (in every other column) sticks to the top of #weekCalWrap while
+    // scrolling: without a matching sticky spacer here, the hour label
+    // sitting at screen-top in THIS column while scrolled would be the one
+    // actually hidden behind the day-heads' sticky header everywhere else,
+    // one whole header-height out of alignment with what's actually visible.
+    const hoursSpacer = document.createElement('div');
+    hoursSpacer.className = 'cal-hours-spacer';
+    hoursSpacer.style.height = currentDayHeadHeight() + 'px';
+    hoursCol.appendChild(hoursSpacer);
     for (let h = calStartHour; h <= calEndHour; h++){
       const lbl = document.createElement('div');
       lbl.className = 'cal-hour-lbl';
@@ -8172,9 +8043,20 @@
     delBtn.onclick = () => { closeSpecialRequestDetailOverlay(); deleteSpecialRequest(r.id); };
     actionsEl.appendChild(delBtn);
   }
-  // Keeps the week calendar's own scroll box (not the whole page) ending right
-  // at the bottom of the viewport, so no page-level scrolling is ever needed to
-  // reach or fully see the calendar area — see the call at the end of
+  // Sizes #weekCalWrap's own max-height to whatever vertical space is left
+  // below it in the viewport and turns on its internal vertical scroll
+  // (overflow-y:auto) — so it's the CALENDAR's own scroll box that reaches
+  // the bottom of the viewport, not the whole page (no page-level scrolling
+  // is ever needed to reach or fully see the calendar area). This logic
+  // itself doesn't change between desktop and phone widths, and needed no
+  // change for the "fixed comfortable hour rows, scroll for the rest on
+  // phone" redesign (see MOBILE_HOUR_BAND_HEIGHT above) — it already
+  // generically fits whatever's inside it, however tall that turns out to
+  // be. What changed is simply that this box's internal scroll now actually
+  // ENGAGES on a phone width whenever the full 08:00-18:00 grid, at its
+  // fixed comfortable row height, runs taller than the available space —
+  // which on a real phone screen is the normal, expected case now, not a
+  // fallback for an unusually short viewport. See the call at the end of
   // renderWeekCal(). No-ops harmlessly if the calendar isn't actually visible
   // right now (e.g. she's on a different tab/sub-view).
   function fitWeekCalToViewport(){
@@ -8208,14 +8090,15 @@
   // (font-display:block's brief invisible-text window), which nudges the
   // exact height of every text row above the calendar (biz-subnav-wrap tabs,
   // the inner-switcher, day-nav-header, staff-filter-row) by a few pixels
-  // once they do. On a wide desktop viewport that drift is invisible (the
-  // calendar box already scrolls internally regardless), but on a phone
-  // width — where computeHourBandHeight() sizes the grid to land EXACTLY at
-  // the edge of the available space with no internal scroll — a stale
-  // pre-font-swap measurement could leave the grid a few pixels too tall (or
-  // leave a sliver of unused space). Re-fitting once the fonts are actually
-  // settled catches that, on top of showPanel()'s own immediate/rAF/300ms
-  // re-fit chain.
+  // once they do. Both on desktop AND on a phone width the calendar box
+  // already scrolls internally whenever its content runs taller than the
+  // available space (see fitWeekCalToViewport() above) — so this drift never
+  // breaks anything structurally either way — but #weekCalWrap's max-height
+  // itself is still measured off #weekCalWrap's own on-screen top position,
+  // and that position shifts by those few pixels once the real fonts swap
+  // in. Re-fitting once the fonts are actually settled keeps that max-height
+  // number accurate, on top of showPanel()'s own immediate/rAF/300ms re-fit
+  // chain.
   if (window.document && document.fonts && document.fonts.ready){
     document.fonts.ready.then(() => { if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport(); }).catch(() => {});
   }
