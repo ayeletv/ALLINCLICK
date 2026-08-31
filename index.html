@@ -199,70 +199,10 @@
      By default (no business name set) this acts as the big primary heading via .primary.
      Once a business name is set, #heroBizName becomes the primary <h1> and this line
      shrinks down into a secondary line underneath it.
-     Its contents are split into two inline spans (accent = "הכל בקליק", reveal-rest =
+     Its contents are split into two inline spans (accent = "הכל בקליק", tagline-rest =
      everything after it) so the two can be revealed one after the other instead of
-     all at once — see the .fonts-ready staging below and revealHero() in the script. */
-  /* ===== Visual-only entry animation =====
-     This layer is presentation only: it does not touch booking/state logic.
-     The large click mark appears in the center, performs a press, then the
-     title/tagline reveals underneath. After the short intro it gets out of
-     the way so the existing hero/business-name logic continues unchanged. ===== */
-  .hero-click-intro{
-    position:absolute; inset:0; z-index:4;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    pointer-events:none;
-    background:radial-gradient(circle at 50% 46%, rgba(155,44,66,0.16), transparent 42%), var(--ink);
-    animation:heroIntroDiveOut 0.8s cubic-bezier(.65,0,.35,1) forwards 2.15s;
-  }
-  .hero-click-mark{
-    width:clamp(118px, 19vw, 190px);
-    height:clamp(118px, 19vw, 190px);
-    display:flex; align-items:center; justify-content:center;
-    position:relative;
-    border:2px solid rgba(201,162,39,0.65);
-    border-radius:50%;
-    background:radial-gradient(circle, rgba(201,162,39,0.14), rgba(155,44,66,0.08) 58%, transparent 72%);
-    box-shadow:0 0 0 10px rgba(201,162,39,0.06), 0 18px 55px rgba(0,0,0,0.18);
-    animation:heroMarkIn 0.7s cubic-bezier(.34,1.56,.64,1) both 0.05s, heroMarkPress 0.72s ease-in-out 0.72s;
-  }
-  .hero-click-mark::after{
-    content:''; position:absolute; inset:-16px; border-radius:50%;
-    border:2px solid rgba(201,162,39,0.0);
-    animation:heroRipple 0.75s ease-out 0.76s both;
-  }
-  .hero-click-mark svg{
-    width:62%; height:62%; overflow:visible;
-    fill:none; stroke:var(--wine); stroke-width:1.8;
-    stroke-linecap:round; stroke-linejoin:round;
-    transform-origin:50% 50%;
-  }
-  .hero-click-intro-title{
-    margin:22px 0 4px;
-    font-family:'Suez One',serif;
-    font-size:clamp(34px, 6vw, 66px);
-    color:var(--gold-soft);
-    opacity:0;
-    animation:fadeUp 0.55s ease forwards 1.34s;
-  }
-  .hero-click-intro-sub{
-    margin:0; font-size:clamp(14px, 2vw, 21px);
-    color:var(--ivory-dim);
-    opacity:0;
-    animation:fadeUp 0.55s ease forwards 1.57s;
-  }
-  @keyframes heroMarkIn{from{opacity:0; transform:scale(.45) rotate(-10deg)} to{opacity:1; transform:scale(1) rotate(0)}}
-  @keyframes heroMarkPress{0%,100%{transform:scale(1)} 42%{transform:scale(.88)} 62%{transform:scale(1.05)} 78%{transform:scale(.97)}}
-  @keyframes heroRipple{0%{opacity:.8; transform:scale(.72); border-color:rgba(201,162,39,.7)} 100%{opacity:0; transform:scale(1.25); border-color:rgba(201,162,39,0)}}
-  @keyframes heroIntroDiveOut{0%{opacity:1; transform:translateY(0) scale(1)} 100%{opacity:0; visibility:hidden; transform:translateY(85px) scale(.96)}}
-  .hero:not(.intro-done) #heroPlatformLine,
-  .hero:not(.intro-done) #heroBizName{visibility:hidden;}
-  .hero.intro-done .hero-click-intro{display:none;}
-  .hero.intro-done #heroBizName, .hero.intro-done #heroPlatformLine{visibility:visible;}
-  @media (prefers-reduced-motion: reduce){
-    .hero-click-intro{display:none;}
-    .hero:not(.intro-done) #heroPlatformLine,
-    .hero:not(.intro-done) #heroBizName{visibility:visible;}
-  }
+     all at once — see the .fonts-ready staging below and the hero-intro-icon-wrap
+     choreography comment further down. */
   .hero-platform-line{
     font-size:clamp(18px, 2.4vw, 26px);
     color:var(--ivory);
@@ -276,43 +216,194 @@
     transition:font-size 0.32s ease, color 0.32s ease, margin-top 0.32s ease, max-width 0.32s ease;
   }
   .hero-platform-line .accent{color:var(--gold-soft); font-weight:500; display:inline-block; opacity:0;}
-  /* Pure layout wrapper now — no opacity/animation of its own — so its two
-     children (the click-logo icon and .tagline-rest, below) can each reveal
-     on their own independent schedule instead of only appearing once this
-     whole span becomes visible together. See the intro-sequence comment
-     further down for the full choreography. */
-  .hero-platform-line .reveal-rest{display:inline-block;}
   .hero-platform-line .tagline-rest{display:inline-block; opacity:0;}
-  /* ===== Choreographed hero intro sequence (triggered by the same
-     .fonts-ready class flip as everything else above/below — see the
-     fast-reveal script right after the .hero section; this only layers
-     extra staging on TOP of that existing fast trigger, it doesn't change
-     when it fires). She asked for the little click-logo icon to visually
-     "click" first — a quick scale/rotate pop with a brief gold flash,
-     simulating someone tapping it — and only once that finishes should the
-     rest of the tagline cascade in word by word, instead of the old
-     everything-fades-in-together timing. Order: icon click (starts 0.15s
-     in, ~0.5s to play out) -> accent word "הכל בקליק" -> rest of the
-     tagline, each ~130ms after the previous. prefers-reduced-motion is
-     handled by the existing ".hero *{animation:none!important;
-     opacity:1!important;}" rule further down: with the animation removed,
-     every element here just falls back to its plain (non-animated,
-     non-transformed) CSS, i.e. the finished state, immediately. ===== */
-  .hero-platform-line .click-logo{
-    vertical-align:-4px; margin:0 4px; opacity:0;
+  /* The small inline click-logo mark that used to sit between "הכל בקליק"
+     and "הכל במקום אחד, בלי מאמץ" (pre-dating the big intro-animation icon
+     below) — she asked for it back, in ADDITION to the big centered intro
+     icon, exactly where it always was. It's placed as the first child of
+     .tagline-rest specifically so it fades in "for free" together with the
+     rest of that span (same fadeUp keyframe, same timing, no dedicated
+     animation of its own needed) instead of being wired to the big intro
+     icon's animation — reusing that element for double duty is exactly what
+     made this small icon disappear from here in the first place, so the two
+     stay separate elements doing separate jobs. Same click-logo mark/shape
+     used elsewhere (see .phone-product-tag ~L1741), just sized for this
+     heading line. */
+  .hero-platform-line .inline-logo{ vertical-align:-3px; margin-inline-end:2px; flex-shrink:0; }
+  /* ===== Two-phase choreographed hero intro (rebuilt per her precise
+     storyboard — a genuine splash-then-reveal sequence, not "icon shrinks
+     into a permanent accent while the heading fades in behind it" like the
+     previous round did).
+     PHASE 1 — #heroSplash, a temporary, fully self-contained block (icon +
+     both lines of text) that is the very FIRST child of .hero, ahead of
+     #heroBizName/.hero-platform-line:
+       1. the click-logo icon appears big and centered, alone, and plays its
+          single press+dive click animation (heroIntroIconPlay below — this
+          exact keyframe/timing is untouched from the last round's fix: one
+          clean press then one continuous dive to rest, never a second
+          bounce) — 0.15s to 1.15s.
+       2. "הכל בקליק" (.hero-splash-heading) fades in right as the icon
+          settles, at 1.15s.
+       3. "לחצי לקביעת תור" (.hero-splash-subtitle) fades in ~175ms after
+          that, at 1.325s.
+       4. both lines then just sit still and readable for a ~700ms hold.
+       5. at 2.475s the ENTIRE #heroSplash block (icon + both lines, as one
+          unit) sinks down and fades out together (heroSplashSink below),
+          finishing at 3.025s.
+       6. the instant that sink animation ends, the small inline script
+          right after this .hero section sets #heroSplash's own
+          display:none, marks it aria-hidden (it already is, being purely
+          decorative — the real, permanent heading text lives in PHASE 2
+          below and carries the meaning for screen readers) and adds a
+          "splash-done" class to .hero — fully removing it from layout and
+          the accessibility tree, not just hiding it visually.
+     PHASE 2 — the real hero, unchanged in its final resting design from
+     before this rework: #heroBizName (business name, once loaded) OR
+     .hero-platform-line.primary (generic tagline, same existing swap logic
+     via revealBizNameAsHero() — never touched by this rework) as the big
+     heading, with the .accent/.tagline-rest pair (including the small
+     PERMANENT inline click-logo icon inside .tagline-rest — a completely
+     separate element from the big splash icon, and it stays exactly where
+     it always sits in the final design) fading in below it. Retimed below
+     to start at 3.03s/3.18s — i.e. only once PHASE 1 has fully sunk away —
+     instead of the old page-load-relative 1.15s/1.3s delays.
+     #heroBizName is additionally gated by ".hero:not(.splash-done)
+     #heroBizName{opacity:0 !important;}" further down: revealBizNameAsHero()
+     itself is untouched and can still fire at any moment (the real business
+     name may arrive before, during or after the splash plays), but this
+     override keeps it visually hidden — using its own existing opacity
+     transition, not a snap — until PHASE 1 has actually finished, so the
+     two phases never visually overlap no matter when the network resolves.
+     prefers-reduced-motion: reduce skips PHASE 1 entirely — #heroSplash is
+     display:none from the very first frame (a dedicated rule below, since
+     the generic ".hero *{opacity:1!important}" catch-all further down would
+     otherwise just show it fully-formed and stuck) — and the fast-reveal
+     script immediately adds "splash-done" to .hero too, so PHASE 2 lands
+     straight on its finished state with nothing ever stuck mid-animation. */
+  .hero-splash{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .hero.fonts-ready .hero-splash{
+    animation:heroSplashSink 0.55s ease forwards 2.475s;
+  }
+  @keyframes heroSplashSink{
+    0%{ opacity:1; transform:translateY(0); }
+    100%{ opacity:0; transform:translateY(26px); }
+  }
+  .hero-splash-heading{
+    font-family:'Suez One', serif;
+    font-size:clamp(34px, 6vw, 60px);
+    font-weight:400;
+    color:var(--gold-soft);
+    margin:0.9rem 0 0.35rem;
+    opacity:0;
+  }
+  .hero.fonts-ready .hero-splash-heading{ animation:fadeUp 0.45s ease forwards 1.15s; }
+  .hero-splash-subtitle{
+    font-size:clamp(14px, 2vw, 18px);
+    color:var(--ivory-dim);
+    opacity:0;
+    cursor:pointer;
+  }
+  .hero.fonts-ready .hero-splash-subtitle{ animation:fadeUp 0.45s ease forwards 1.325s; }
+  @media (prefers-reduced-motion: reduce){
+    #heroSplash{ display:none !important; }
+  }
+  /* The wrap's own box stays at its final settled-icon size the whole time
+     (30x30) — only the icon/ripple INSIDE it get scaled up via transform
+     during the intro, overflowing the small box visually while nothing
+     behind them is visible yet anyway. That's what lets the icon read as
+     big without ever having to animate layout-affecting width/height
+     (janky, and pointless when the whole splash — icon included — is about
+     to sink away and be removed entirely a moment later anyway). */
+  .hero-intro-icon-wrap{
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+    width:30px; height:30px;
+    margin:0 auto 0.9rem;
+    overflow:visible;
+  }
+  .hero-intro-icon-wrap .hero-intro-icon{
+    width:30px; height:30px;
+    stroke:#9B2C42;
+    opacity:0;
     transform-box:fill-box; transform-origin:50% 50%;
   }
-  @keyframes heroClickIntro{
-    0%{ opacity:0; transform:scale(0.35) rotate(-30deg); }
-    45%{ opacity:1; transform:scale(1.28) rotate(10deg); stroke:#E8CE7A; }
-    70%{ transform:scale(0.9) rotate(-6deg); }
-    100%{ opacity:1; transform:scale(1) rotate(0deg); stroke:#9B2C42; }
+  .hero-intro-icon-wrap .hero-intro-ripple{
+    position:absolute; inset:0; margin:auto;
+    width:30px; height:30px; border-radius:50%;
+    border:2px solid var(--gold-soft);
+    opacity:0; pointer-events:none;
   }
-  .hero.fonts-ready .hero-platform-line .click-logo{
-    animation:heroClickIntro 0.5s cubic-bezier(.34,1.56,.64,1) both 0.15s;
+  /* Scale/position trajectory (base size 30px): appear small+invisible ->
+     grow to a dramatic ~96px (scale 3.2) alone and centered -> ONE clean
+     press down (the "click"/impact: a quick squash with a brief
+     wine->gold->wine flash, and a downward translateY nudge, right as the
+     ripple fires) -> then ONE continuous, monotonic glide the rest of the
+     way down to scale(1) at its normal small resting size, with translateY
+     continuing to ease further down the whole time so the settle actually
+     reads as "diving down" into place rather than shrinking symmetrically
+     in a fixed spot. Scale only ever grows once then shrinks once (no
+     regrowth), and translateY only ever increases (never reverses back
+     up), so there is exactly one press/click, never a second bounce.
+     Reaching scale(1) is also the moment the heading text below starts
+     fading in. Per-keyframe animation-timing-function (rather than one
+     bouncy easing curve for the whole animation) keeps each phase reading
+     as one deliberate motion: a fast snap into the press, then a smooth
+     ease-out glide down to rest. translateY is listed BEFORE scale in each
+     transform (translateY(...) scale(...), not the other way round) so the
+     downward offset is applied in final, unscaled pixels — if scale came
+     first the same translateY value would get magnified by whatever the
+     current scale is, and the two could combine into a non-monotonic
+     on-screen path even though each function's own value only ever
+     increases. */
+  @keyframes heroIntroIconPlay{
+    0%{ opacity:0; transform:translateY(0) scale(0.5); }
+    28%{
+      opacity:1; transform:translateY(0) scale(3.2);
+      animation-timing-function:cubic-bezier(.6,0,.85,.25);
+    }
+    44%{
+      transform:translateY(2px) scale(2.5); stroke:#E8CE7A;
+      animation-timing-function:cubic-bezier(.16,1,.3,1);
+    }
+    100%{ opacity:1; transform:translateY(4px) scale(1); stroke:#9B2C42; }
   }
-  .hero.fonts-ready .hero-platform-line .accent{ animation:fadeUp 0.5s ease forwards 0.65s; }
-  .hero.fonts-ready .hero-platform-line .tagline-rest{ animation:fadeUp 0.55s ease forwards 0.78s; }
+  @keyframes heroIntroRipple{
+    0%{ opacity:0.6; transform:scale(2); }
+    100%{ opacity:0; transform:scale(7.5); }
+  }
+  .hero.fonts-ready .hero-intro-icon-wrap .hero-intro-icon{
+    animation:heroIntroIconPlay 1s linear both 0.15s;
+  }
+  /* Ripple fires exactly at the icon's single impact moment: icon's own
+     0.15s start delay + 44% of its 1s duration = 0.59s. (A previous version
+     of this rule set the ripple's delay to the icon's impact keyframe
+     PERCENTAGE as if it were seconds, without adding the icon's 0.15s start
+     delay — e.g. 0.58s instead of 0.15+0.58=0.73s — so the ripple actually
+     fired noticeably before the icon's own flash. Fixed here.) */
+  .hero.fonts-ready .hero-intro-icon-wrap .hero-intro-ripple{
+    animation:heroIntroRipple 0.6s ease-out both 0.59s;
+  }
+  /* PHASE 2 heading text starts fading in only once PHASE 1 (#heroSplash)
+     has fully sunk away and disappeared — the splash's own sink animation
+     runs 2.475s -> 3.025s (see .hero-splash/heroSplashSink above), so these
+     delays start right at that handoff point, never before. */
+  .hero.fonts-ready .hero-platform-line .accent{ animation:fadeUp 0.5s ease forwards 3.03s; }
+  .hero.fonts-ready .hero-platform-line .tagline-rest{ animation:fadeUp 0.55s ease forwards 3.18s; }
+  /* Keeps #heroBizName visually hidden until PHASE 1 is fully gone, even if
+     the real business name (revealBizNameAsHero(), untouched — see the big
+     comment above) arrives before or during the splash: the !important here
+     beats the non-important opacity:1 that .biz-name-visible sets below, but
+     leaves #heroBizName's own opacity transition (also below) intact, so the
+     moment "splash-done" gets added (script right after this .hero section)
+     the name fades in smoothly via that same transition instead of snapping. */
+  .hero:not(.splash-done) #heroBizName{ opacity:0 !important; }
+  @media (prefers-reduced-motion: reduce){
+    .hero .hero-intro-icon-wrap .hero-intro-ripple{ display:none !important; }
+  }
   .hero-platform-line.primary{
     font-family:'Suez One', serif;
     font-size:clamp(52px, 10vw, 116px);
@@ -349,7 +440,7 @@
     gap:8px;
     opacity:0;
   }
-  .hero.fonts-ready .scroll-hint{ animation:fadeUp 0.9s ease forwards 1.1s; }
+  .hero.fonts-ready .scroll-hint{ animation:fadeUp 0.9s ease forwards 3.43s; }
   .scroll-hint .line{width:1px; height:38px; background:linear-gradient(var(--gold), transparent); animation:pulse 2s ease-in-out infinite;}
   @keyframes fadeUp{from{opacity:0; transform:translateY(18px);} to{opacity:1; transform:translateY(0);}}
   @keyframes pulse{0%,100%{opacity:0.3;} 50%{opacity:1;}}
@@ -509,11 +600,26 @@
     cursor:pointer; line-height:1; padding:2px 4px; flex-shrink:0;
   }
   .mb-svc-chip-remove:hover{color:#6E1A2B;}
+  /* Manual-booking quick-pick chips (renderMbQuickPick()) — her top 2-3
+     historical treatments for an identified returning client, offered as
+     clearly-tappable pill buttons ahead of the full category grid. */
+  .mb-quickpick-chips{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;}
+  .mb-quickpick-chip{
+    display:flex; flex-direction:column; align-items:flex-start; gap:2px;
+    background:var(--wine); border:1.5px solid var(--wine);
+    color:#fff; border-radius:12px; padding:8px 14px;
+    cursor:pointer; transition:transform 0.15s ease, box-shadow 0.15s ease;
+    font-family:'Heebo';
+  }
+  .mb-quickpick-chip:hover{transform:translateY(-2px); box-shadow:0 4px 12px rgba(155,44,66,0.35);}
+  .mb-quickpick-chip:active{transform:translateY(0);}
+  .mb-quickpick-chip-name{font-weight:700; font-size:13.5px;}
+  .mb-quickpick-chip-meta{font-family:'JetBrains Mono'; font-size:11.5px; color:rgba(255,255,255,0.85);}
   .mb-svc-total{
     font-size:13px; font-weight:600; color:var(--panel-gold, #7A5E0C);
     padding:2px 2px 4px;
   }
-  .mb-add-more-btn, .fr-add-more-btn, .bk-add-more-btn{
+  .mb-add-more-btn, .fr-add-more-btn, .bk-add-more-btn, .mb-quickpick-more-btn{
     margin-top:6px; display:inline-block; font-weight:700;
   }
   .slot-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:22px;}
@@ -1560,6 +1666,14 @@
      changing its height) — exactly the "sometimes lands scrolled to the middle
      of the day instead of the top" bug. See showPanel()'s explicit scrollTop=0
      resets (immediate + settled) for the rest of the fix. */
+  /* .week-cal's 820px min-width and .cal-day-col's 104px min-width below are
+     both overridden on narrow phone widths (see the "MOBILE WEEK CALENDAR
+     COMPACTION" @media(max-width:480px) block further down) so the 7 columns
+     (6 weekdays + the "בקשות מיוחדות" special-requests column, which reuses
+     .cal-day-col too — see renderSpecialRequestsColumn()) divide the actually
+     available width evenly instead of forcing this wrap into horizontal
+     scroll/drag on a phone screen — that override is what fixes her "on the
+     phone I only see three days and have to drag" complaint. */
   .week-cal-wrap{border:1px solid rgba(var(--panel-line-rgb),0.12); border-radius:16px; overflow-x:auto; scroll-behavior:smooth; overflow-anchor:none;}
   .week-cal{display:flex; min-width:820px; scroll-snap-type:x proximity;}
   .cal-hours-col{width:52px; flex-shrink:0; padding-top:56px;}
@@ -2036,7 +2150,16 @@
      .stage/.switcher padding that otherwise exists to give the hero's dark
      section room to breathe (irrelevant once that section is gone). */
   body.admin-mode .stage{padding:1.5vh 3vw 2vh;}
-  body.admin-mode .switcher{margin-bottom:0.9rem;}
+  /* She asked for these top-level tabs gone entirely once she's inside the
+     admin/business panel — they serve no purpose there (the calendar top
+     bar's own 🚪 icon, wired to doLogout(), is the real way back out to the
+     customer-facing view — confirmed still callable via
+     document.querySelectorAll('.switcher button')[0].click() in doLogout()
+     itself, since a plain JS .click() on a display:none button still fires
+     its onclick handler) and just eat vertical space above a calendar she
+     wants as big as possible. Was only a shrunk margin-bottom before; now
+     fully hidden. */
+  body.admin-mode .switcher{display:none;}
   /* The public marketing footer (business tagline + version marker + a "כניסת
      בעלת עסק" login link that's meaningless once she's already logged in) adds
      real page height below the calendar for no reason once she's inside the
@@ -2091,6 +2214,80 @@
   @media (max-width:720px){
     .cal-topbar{flex-direction:column; align-items:stretch;}
     .cal-topbar-icons{margin-inline-start:0; justify-content:flex-end;}
+  }
+  /* =====================================================================
+     MOBILE WEEK CALENDAR COMPACTION (phone widths, <=480px — covers the
+     375/390/412px devices she actually uses). Three things happen together
+     here, all in service of her literal ask: "shrink according to the
+     device size so I see all the days of the week AND all the calendar's
+     hours without scrolling down":
+       1) The pink "תורים היום / מקומות פנויים" top bar (.cal-topbar and its
+          .cal-topbar-stats text) shrinks noticeably — smaller font/padding,
+          the redundant "היומן השבועי" label hidden (it only restates which
+          view-switch button is already active), smaller view-switch/icon
+          buttons — instead of the 4-row stacked box the max-width:720px
+          rule above produces at full size.
+       2) The other fixed-height chrome directly above the calendar
+          (biz-subnav-wrap's tab row, the יומן/דוחות inner-switcher, the
+          prev/next week nav, the staff-avatar filter row) all get tighter
+          margins/padding/fonts too — every one of these eats into the
+          vertical budget renderWeekCal()'s computeHourBandHeight() (see
+          further down) has left to fit the full 08:00-18:00 grid without
+          the calendar needing its own internal scroll on a real phone.
+       3) .week-cal's 820px min-width and .cal-day-col's 104px min-width
+          (tuned for desktop, where 7 columns at >=104px each safely exceeds
+          most screens and RELIES on .week-cal-wrap's horizontal scroll) are
+          both dropped to 0 here so the 7 columns (6 weekdays + the
+          "בקשות מיוחדות" special column) divide whatever width is actually
+          available evenly via their own flex:1 instead of overflowing and
+          forcing the drag-to-see-the-rest scroll she specifically
+          complained about. Header/appointment text shrinks to match so
+          nothing clips or wraps at the resulting ~45-55px column width.
+     ===================================================================== */
+  @media (max-width:480px){
+    #panel-business .biz-subnav-wrap{margin-bottom:0.4rem;}
+    #panel-business .inner-switcher{margin-bottom:0.5rem; gap:6px;}
+    #panel-business .inner-switcher button{padding:6px 12px; font-size:12px;}
+    .cal-topbar{padding:6px 8px; gap:5px; margin-bottom:6px;}
+    .cal-topbar-stats{font-size:10.5px; gap:4px;}
+    .cal-topbar-stats b{font-size:13px;}
+    /* Redundant once the view-switch buttons right next to it already show
+       which view (שבועי/יומי/חודשי) is active — dropped only here, at the
+       width where every row of the stacked top bar costs real, scarce
+       height; still shown normally at wider widths. */
+    .cal-topbar-label{display:none;}
+    .cal-topbar-viewswitch button{padding:4px 10px !important; font-size:10.5px !important;}
+    .cal-topbar-icons{gap:4px;}
+    .cal-icon-btn{width:27px; height:27px; font-size:11.5px; border-radius:7px;}
+    #weekNavRow{margin-bottom:6px;}
+    #weekNavRow button{padding:5px 9px; font-size:11px;}
+    #weekNavRow span{font-size:12px;}
+    #staffFilterRow{margin-bottom:6px; gap:8px;}
+    #staffFilterRow .staff-filter-chip{gap:3px;}
+    #staffFilterRow .staff-filter-chip .avatar{width:30px; height:30px; font-size:11px;}
+    #staffFilterRow .staff-filter-chip span{font-size:9px;}
+    /* The actual fix for the horizontal drag complaint — see the big comment
+       above. computeHourBandHeight() (renderWeekCal()/fitWeekCalToViewport())
+       is this block's JS counterpart for the vertical axis. */
+    .week-cal{min-width:0;}
+    .cal-hours-col{width:30px; padding-top:44px;}
+    .cal-hour-lbl{font-size:8.5px; padding-top:1px;}
+    .cal-day-col{min-width:0;}
+    .cal-day-head{height:44px; font-size:10px;}
+    .cal-day-head b{font-size:12px;}
+    .cal-day-head .heb-date{font-size:7px;}
+    .cal-appt{padding:1px 3px; font-size:8px;}
+    .cal-appt b{font-size:8px;}
+    /* The "בקשות מיוחדות" special-requests column reuses .cal-day-col for its
+       width, but its OWN header (.cal-special-head — the label + a round "+"
+       add-button, side by side) doesn't fit that text next to a flex-shrink:0
+       button at this column's new ~45px mobile width: the button was
+       overflowing clean off the edge of the calendar (confirmed via
+       #weekCalWrap.scrollWidth > clientWidth) rather than shrinking with it.
+       Stacked instead of side-by-side here, both shrunk to fit. */
+    .cal-special-head{height:44px; flex-direction:column; justify-content:center; gap:2px; padding:3px 2px;}
+    .cal-special-head b{font-size:8px; line-height:1.05; text-align:center;}
+    .cal-special-add-btn{width:16px; height:16px; min-width:16px; font-size:11px;}
   }
   /* ===== "בקשות מיוחדות" column — replaces Saturday's time-grid column (the salon
      is closed Saturday, so a real column there is useless) with a running list
@@ -2221,115 +2418,55 @@
     border:none; border-radius:50%; width:20px; height:20px; font-size:11px; cursor:pointer;
     display:flex; align-items:center; justify-content:center; padding:0;
   }
-/* =====================================================================
-   MOBILE OWNER CALENDAR — fit the entire week + working hours on one screen
-   ===================================================================== */
-body.admin-mode > .stage > .switcher{display:none;}
-body.admin-mode .stage{padding:6px 10px 8px;}
-body.admin-mode #panel-business .biz-subnav-wrap{margin-bottom:4px; padding:3px; border-radius:10px;}
-body.admin-mode #panel-business #bizSubNavRow.biz-subnav-row{gap:4px; padding:0 1px;}
-body.admin-mode #panel-business #bizSubNavRow.biz-subnav-row button{padding:5px 9px; font-size:11px; gap:4px;}
-body.admin-mode #panel-business #bizSubNavRow.biz-subnav-row button i{font-size:12px;}
-body.admin-mode #panel-business .inner-switcher{gap:4px; margin-bottom:4px;}
-body.admin-mode #panel-business .inner-switcher button{padding:5px 12px; font-size:11px;}
-body.admin-mode #panel-business .staff-filter-row{gap:8px; margin-bottom:4px; padding-bottom:0;}
-body.admin-mode #panel-business .staff-filter-chip{gap:2px;}
-body.admin-mode #panel-business .staff-filter-chip .avatar{width:36px; height:36px; font-size:12px;}
-body.admin-mode #panel-business .staff-filter-chip span{font-size:9px;}
-body.admin-mode #panel-business .week-cal-wrap{width:100%; overflow-x:hidden !important; overflow-y:hidden !important; border-radius:10px;}
-body.admin-mode #panel-business .week-cal{width:100%; min-width:0; display:flex; gap:0; scroll-snap-type:none;}
-body.admin-mode #panel-business .cal-hours-col{width:32px; padding-top:48px; flex:0 0 32px;}
-body.admin-mode #panel-business .cal-hour-lbl{font-size:8.5px; line-height:1; padding-top:1px;}
-body.admin-mode #panel-business .cal-day-col{min-width:0; width:auto; flex:1 1 0; overflow:hidden;}
-body.admin-mode #panel-business .cal-day-head{height:48px; font-size:9px;}
-body.admin-mode #panel-business .cal-day-head b{font-size:12px;}
-body.admin-mode #panel-business .cal-day-head .heb-date{font-size:7px;}
-body.admin-mode #panel-business .cal-day-closed-label{font-size:7.5px; top:4px; left:2px; right:2px; padding:2px;}
-body.admin-mode #panel-business .cal-appt{inset-inline:1px; padding:1px 2px; border-radius:3px; font-size:7.2px; line-height:1.05;}
-body.admin-mode #panel-business .cal-appt b{font-weight:600;}
-body.admin-mode #panel-business .cal-special-col{flex:0 0 76px; width:76px; min-width:76px;}
-body.admin-mode #panel-business .cal-special-head{height:48px; padding:0 4px; justify-content:center;}
-body.admin-mode #panel-business .cal-special-head b{font-family:'Heebo'; font-size:8px; line-height:1.15; text-align:center;}
-body.admin-mode #panel-business .cal-special-add-btn{width:18px; height:18px; min-width:18px; font-size:12px; display:none;}
-body.admin-mode #panel-business .cal-special-body{padding:3px; gap:3px; overflow:hidden;}
-body.admin-mode #panel-business .sr-block{padding:4px 3px; gap:3px; border-radius:4px; align-items:flex-start;}
-body.admin-mode #panel-business .sr-block-main{display:flex; min-width:0;}
-body.admin-mode #panel-business .sr-block-name{font-size:7.5px; line-height:1.15;}
-body.admin-mode #panel-business .sr-block-meta{font-size:6.5px; line-height:1.1;}
-body.admin-mode #panel-business .sr-block-icon{font-size:9px;}
-body.admin-mode #panel-business .cal-topbar{display:flex; flex-wrap:nowrap; align-items:center; gap:5px; margin-bottom:4px; padding:4px 6px; border-radius:9px; box-shadow:none;}
-body.admin-mode #panel-business .cal-topbar-stats{gap:3px; font-size:9px; flex:0 1 auto;}
-body.admin-mode #panel-business .cal-topbar-stats b{font-size:13px;}
-body.admin-mode #panel-business .cal-topbar-label{display:none;}
-body.admin-mode #panel-business .cal-topbar-viewswitch{flex:1 1 auto; min-width:0;}
-body.admin-mode #panel-business .cal-topbar-viewswitch button{padding:4px 6px !important; font-size:9px !important;}
-body.admin-mode #panel-business .cal-topbar-icons{gap:3px; margin-inline-start:0; flex:0 0 auto;}
-body.admin-mode #panel-business .cal-icon-btn{width:25px; height:25px; border-radius:6px; font-size:12px;}
-body.admin-mode #panel-business #weekNavRow{margin-bottom:4px;}
-body.admin-mode #panel-business #weekNavRow button{padding:5px 8px; font-size:10px; border-radius:7px;}
-body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
-@media (min-width:721px){
-  /* Desktop/tablet: the six days and the special-requests column share the
-     available width; no fixed 820px calendar is allowed to force side scrolling. */
-  body.admin-mode #panel-business .week-cal{min-width:0; width:100%;}
-  body.admin-mode #panel-business .cal-day-col{min-width:0;}
-  body.admin-mode #panel-business .cal-special-col{flex:0 0 clamp(110px, 12vw, 150px); width:auto; min-width:0;}
-}
-@media (max-width:720px){
-  body.admin-mode #panel-business .cal-topbar{flex-direction:row; align-items:center;}
-  body.admin-mode #panel-business .cal-topbar-icons{justify-content:flex-end;}
-}
-@media (max-width:380px){
-  body.admin-mode #panel-business .cal-hours-col{width:29px; flex-basis:29px;}
-  body.admin-mode #panel-business .cal-special-col{flex-basis:68px; width:68px; min-width:68px;}
-  body.admin-mode #panel-business .cal-day-head b{font-size:11px;}
-  body.admin-mode #panel-business .cal-appt{font-size:6.8px;}
-  body.admin-mode #panel-business .cal-topbar-stats{font-size:8px;}
-  body.admin-mode #panel-business .cal-topbar-stats b{font-size:12px;}
-  body.admin-mode #panel-business .cal-topbar-viewswitch button{padding-inline:4px !important;}
-}
 </style>
 </head>
 <body>
 <section class="hero">
-  <div class="hero-click-intro" aria-hidden="true">
-    <div class="hero-click-mark">
-      <svg viewBox="0 0 24 24"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>
-    </div>
-    <div class="hero-click-intro-title">הכל בקליק</div>
-    <div class="hero-click-intro-sub">לחצי לקביעת תור</div>
-  </div>
   <!-- Left empty here on purpose — this file is a shared template across
        clients, so no business name gets hardcoded into it. renderBranding()
        fills this in from THIS deployment's own Firestore data once it loads,
        and (since the reset-to-generic race condition below is now fixed)
        reliably keeps it filled in rather than ever reverting it back to
        nothing/generic — see the comment there for the full explanation. -->
+  <!-- PHASE 1 — temporary splash, first element in the hero on purpose (see
+       the big CSS comment above .hero-splash): big centered icon plays its
+       click animation, "הכל בקליק" and "לחצי לקביעת תור" fade in below it
+       one after the other, then the whole block sinks down, fades out and
+       (via the script right after this .hero section) gets display:none'd
+       and dropped from layout entirely once that finishes — it never
+       becomes a permanent part of the page. aria-hidden throughout since
+       it's purely decorative/transient — the PHASE 2 heading/tagline below
+       carry the real, permanent meaning for screen readers. The subtitle's
+       onclick is a lightweight, non-essential pointer affordance (scrolls
+       straight to the booking widget); it isn't part of the accessibility
+       tree while its aria-hidden ancestor is present. -->
+  <div class="hero-splash" id="heroSplash" aria-hidden="true">
+    <div class="hero-intro-icon-wrap" id="heroIntroIconWrap">
+      <span class="hero-intro-ripple"></span>
+      <svg class="hero-intro-icon" viewBox="0 0 24 24" fill="none" stroke="#9B2C42" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+        <path d="M13 13l6 6"/>
+      </svg>
+    </div>
+    <p class="hero-splash-heading">הכל בקליק</p>
+    <p class="hero-splash-subtitle" onclick="var t=document.querySelector('.phone'); if(t) t.scrollIntoView({behavior:'smooth', block:'center'});">לחצי לקביעת תור</p>
+  </div>
+  <!-- PHASE 2 — the real, permanent hero heading. Unchanged in final design
+       from before this rework; only its reveal timing (see the .fonts-ready
+       CSS rules above) now starts after PHASE 1 above has fully sunk away
+       and been removed, instead of at the old page-load-relative delays. -->
   <h1 class="serif" id="heroBizName" style="display:none;"></h1>
   <!-- "primary" here by default (big heading treatment, see .hero-platform-line.primary)
        is what actually makes this line act as the hero's giant heading before any
        business name has loaded — renderBranding()/revealBizNameAsHero() removes it
        the moment a real name arrives and #heroBizName takes over as the primary
        heading instead. -->
-  <p class="hero-platform-line primary" id="heroPlatformLine"><span class="accent">הכל בקליק</span> <span class="reveal-rest"><svg class="click-logo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#9B2C42" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg><span class="tagline-rest"> הכל במקום אחד, בלי מאמץ</span></span></p>
+  <p class="hero-platform-line primary" id="heroPlatformLine"><span class="accent">הכל בקליק</span> <span class="tagline-rest"><svg class="click-logo inline-logo" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#E8CE7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg> הכל במקום אחד, בלי מאמץ</span></p>
   <div class="scroll-hint">
     <span>גלילה למטה</span>
     <div class="line"></div>
   </div>
 </section>
-<script>
-  // Visual-only intro: reveals the existing hero content after the click animation.
-  // No application state, booking data, or Firebase logic is changed here.
-  (function(){
-    const hero = document.querySelector('.hero');
-    if (!hero) return;
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){
-      hero.classList.add('intro-done');
-      return;
-    }
-    setTimeout(function(){ hero.classList.add('intro-done'); }, 3000);
-  })();
-</script>
 <script>
   // Promise that the main app script (much further down the page) resolves once
   // it knows the REAL final state of the hero heading — i.e. once it knows whether
@@ -2377,11 +2514,54 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
   (function(){
     var heroEl = document.querySelector('.hero');
     if (!heroEl) return;
+    var splashEl = document.getElementById('heroSplash');
+    // Marks PHASE 1 (#heroSplash) as fully finished — removes it from layout
+    // and the a11y tree (not just visually hiding it), and adds "splash-done"
+    // to .hero, which is what lets #heroBizName's own opacity transition (see
+    // the ".hero:not(.splash-done) #heroBizName" override in the CSS above)
+    // finally take effect if the real business name already arrived while
+    // the splash was still playing.
+    var splashDone = false;
+    function finishSplash(){
+      if (splashDone || !splashEl) return;
+      splashDone = true;
+      splashEl.style.display = 'none';
+      splashEl.setAttribute('aria-hidden', 'true');
+      heroEl.classList.add('splash-done');
+    }
+    var reducedMotion = false;
+    try {
+      reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (e) {}
+    if (reducedMotion){
+      // The dedicated "#heroSplash{display:none!important}" reduced-motion
+      // CSS rule already keeps it from ever being shown — no sink animation
+      // will ever fire on it — so finish immediately, independent of the
+      // font-reveal timing below entirely.
+      finishSplash();
+    } else if (splashEl) {
+      // animationend bubbles up from every child animation (icon, ripple,
+      // the two text lines) too, not just the sink itself — only react to
+      // the event actually targeting #heroSplash (its own heroSplashSink
+      // keyframe).
+      splashEl.addEventListener('animationend', function(e){
+        if (e.target !== splashEl) return;
+        finishSplash();
+      });
+    }
     var revealed = false;
     function reveal(){
       if (revealed) return;
       revealed = true;
       heroEl.classList.add('fonts-ready');
+      // The splash's sink animation (.hero-splash/heroSplashSink above) is
+      // timed relative to THIS moment (.fonts-ready being added), not page
+      // load — so its safety-net fallback is armed from here too, instead
+      // of from a fixed point, to avoid ever firing early (and cutting the
+      // splash off mid-animation) on a slow font load that eats into the
+      // 1500ms reveal safety net below. Matches the sink's own worst-case
+      // end time (2.475s delay + 0.55s duration = 3.025s) plus margin.
+      if (!reducedMotion) setTimeout(finishSplash, 3400);
     }
     var fontPromise;
     try {
@@ -2799,15 +2979,15 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
         <input type="file" id="logoFile" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
         <div style="flex:1; min-width:200px;">
           <div class="label" style="margin-bottom:6px;">שם העסק</div>
-          <input type="text" id="bizNameInput" class="field-dark" placeholder="שם העסק שלך" value="" oninput="updateBranding()">
+          <input type="text" id="bizNameInput" class="field-dark" placeholder="שם העסק שלך" value="" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ פרטי העסק נשמרו בהצלחה')">
           <div class="label" style="margin:12px 0 6px;">טלפון ליצירת קשר (להתייעצות)</div>
-          <input type="tel" id="bizPhoneInput" class="field-dark" placeholder="050-0000000" oninput="updateBranding()">
+          <input type="tel" id="bizPhoneInput" class="field-dark" placeholder="050-0000000" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ פרטי העסק נשמרו בהצלחה')">
           <div class="label" style="margin:12px 0 6px;">מספר וואטסאפ<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">אם מספר הוואטסאפ שלך שונה ממספר הטלפון להתייעצות שמעליו — אפשר להזין אותו כאן. לקוחה שתלחץ על קישור הוואטסאפ תופנה למספר הזה; אם נשאר ריק, הקישור יפנה למספר הטלפון הרגיל.</span></span></div>
-          <input type="tel" id="bizWhatsappInput" class="field-dark" placeholder="050-0000000 (אם שונה מהטלפון למעלה)" oninput="updateBranding()">
+          <input type="tel" id="bizWhatsappInput" class="field-dark" placeholder="050-0000000 (אם שונה מהטלפון למעלה)" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ פרטי העסק נשמרו בהצלחה')">
           <div class="label" style="margin:12px 0 6px;">כתובת העסק<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">הכתובת שתופיע ללקוחה במייל אישור התור ובמייל התזכורת, כדי שתדע לאן להגיע — אם נשאר ריק, השורה הזו פשוט לא תופיע במיילים.</span></span></div>
-          <input type="text" id="bizAddressInput" class="field-dark" placeholder="לדוגמה: הרצל 12, תל אביב" oninput="updateBranding()">
+          <input type="text" id="bizAddressInput" class="field-dark" placeholder="לדוגמה: הרצל 12, תל אביב" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ פרטי העסק נשמרו בהצלחה')">
           <div class="label" style="margin:12px 0 6px;">מייל המנהלת (לקבלת התראות)<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">לכתובת הזו נשלחות התראות על מלאי נמוך, והיא מוצעת כברירת מחדל כששולחים דוח למייל — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות כאן.</span></span></div>
-          <input type="email" id="invAlertEmail" class="field-dark" placeholder="you@example.com" oninput="updateInvAlertEmail()">
+          <input type="email" id="invAlertEmail" class="field-dark" placeholder="you@example.com" oninput="updateInvAlertEmail()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ כתובת המייל להתראות נשמרה בהצלחה')">
           <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:4px;">לכתובת הזו מגיעות התראות מלאי נמוך, והיא מוצעת כברירת מחדל בשליחת דוחות למייל (בטאב "דוחות") — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות את זה כאן.</div>
         </div>
       </div>
@@ -2922,7 +3102,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 22.08-יב-תפריט-עליון-מחודש-ואנימציית-פתיחה</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 22.08-טז-מסך-פתיחה-דו-שלבי</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -3077,14 +3257,29 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
            as its own removable chip below with the total duration/price summed
            across all of them. See mbToggleService()/mbSelectedServicesChanged(). -->
       <div id="mbSelectedServicesList" class="mb-svc-chip-row"></div>
-      <div id="mbCatGridView">
-        <div class="cat-grid" id="mbCatGrid"></div>
+      <!-- Quick-pick: her most-frequently-booked treatments for an identified
+           returning client, shown BEFORE the full category grid so she doesn't
+           have to click through categories for what's almost always the same
+           2-3 treatments — see renderMbQuickPick()/computeMbQuickPickServices().
+           Tapping a chip adds that service exactly like tapping it in the
+           category list would (mbToggleService()). Hidden by default; a
+           brand-new client (or no client identified yet) skips straight to the
+           normal category grid below instead of showing an empty panel. -->
+      <div id="mbQuickPickPanel" style="display:none;">
+        <div class="label" style="margin-bottom:6px;">בחירה מהירה — הטיפולים הנפוצים אצל הלקוחה</div>
+        <div id="mbQuickPickChips" class="mb-quickpick-chips"></div>
+        <button type="button" class="cat-back-btn mb-quickpick-more-btn" onclick="mbShowFullCategoryFlow()">לכל הטיפולים ›</button>
       </div>
-      <div id="mbCatServicesView" style="display:none;">
-        <button type="button" class="cat-back-btn" onclick="showMbCategoryGrid()">‹ חזרה לקטגוריות</button>
-        <div class="label" id="mbCatServicesLabel" style="margin:6px 0;"></div>
-        <div id="mbSvcList" style="display:flex; flex-direction:column; gap:8px;"></div>
-        <button type="button" class="cat-back-btn mb-add-more-btn" onclick="showMbCategoryGrid()">+ הוספת טיפול נוסף</button>
+      <div id="mbCatFlowWrap">
+        <div id="mbCatGridView">
+          <div class="cat-grid" id="mbCatGrid"></div>
+        </div>
+        <div id="mbCatServicesView" style="display:none;">
+          <button type="button" class="cat-back-btn" onclick="showMbCategoryGrid()">‹ חזרה לקטגוריות</button>
+          <div class="label" id="mbCatServicesLabel" style="margin:6px 0;"></div>
+          <div id="mbSvcList" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <button type="button" class="cat-back-btn mb-add-more-btn" onclick="showMbCategoryGrid()">+ הוספת טיפול נוסף</button>
+        </div>
       </div>
       <input type="hidden" id="mbService">
       <label style="font-size:12px; color:var(--ivory-dim); margin-bottom:-4px;">משך הטיפול הכולל (בדקות) — מחושב אוטומטית מסכום הטיפולים שנבחרו, ואפשר לשנות במיוחד ללקוחה הזו</label>
@@ -3583,6 +3778,72 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     if (svcView) svcView.style.display = 'none';
     renderMbCategoryGrid();
   }
+  // ===== Manual-booking quick-pick: her top treatments for a returning client =====
+  // Counts every INDIVIDUAL service the given client has ever booked (not whole
+  // appointments), so a client who often books "פן + גבות" together gets both
+  // counted correctly rather than lumped into one combined-string bucket. Prefers
+  // the itemized appt.services breakdown (see submitManualBooking()); falls back
+  // to splitting the legacy combined appt.service string for older appointments
+  // saved before that itemized field existed.
+  function computeMbQuickPickServices(clientName, limit){
+    if (!clientName) return [];
+    const counts = {};
+    getClientAppointments(clientName).forEach(appt => {
+      if (Array.isArray(appt.services) && appt.services.length){
+        appt.services.forEach(s => { if (s && s.name) counts[s.name] = (counts[s.name] || 0) + 1; });
+      } else if (appt.service){
+        appt.service.split(' + ').forEach(part => {
+          const nm = part.trim();
+          if (nm) counts[nm] = (counts[nm] || 0) + 1;
+        });
+      }
+    });
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count, svcIndex: services.findIndex(s => s.name === name) }))
+      .filter(o => o.svcIndex !== -1)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit || 3);
+  }
+  // Shows the quick-pick panel (her top 2-3 treatments, tap to add — exactly
+  // like tapping them in the category grid does, via the same mbToggleService())
+  // ahead of the full category-tile flow for an identified returning client with
+  // real history; a brand-new client (or no client identified yet) has no
+  // history to suggest from, so this skips straight to the normal category grid
+  // instead of showing an empty panel. "לכל הטיפולים" always stays one tap away
+  // via mbShowFullCategoryFlow(). Safe to call repeatedly (e.g. on every
+  // keystroke while she types a תז/phone) — always leaves the modal in a
+  // consistent state either way.
+  function renderMbQuickPick(clientName){
+    const panel = document.getElementById('mbQuickPickPanel');
+    const chipsEl = document.getElementById('mbQuickPickChips');
+    if (!panel || !chipsEl) return;
+    const top = computeMbQuickPickServices(clientName, 3);
+    if (!clientName || !top.length){
+      panel.style.display = 'none';
+      mbShowFullCategoryFlow();
+      return;
+    }
+    chipsEl.innerHTML = top.map(o => {
+      const s = services[o.svcIndex];
+      return `<button type="button" class="mb-quickpick-chip" onclick="mbToggleService(${o.svcIndex})">`
+        + `<span class="mb-quickpick-chip-name">${s.name}</span>`
+        + `<span class="mb-quickpick-chip-meta">${s.price} ש"ח · ${s.duration} דק'</span>`
+        + `</button>`;
+    }).join('');
+    panel.style.display = 'block';
+    const flowWrap = document.getElementById('mbCatFlowWrap');
+    if (flowWrap) flowWrap.style.display = 'none';
+  }
+  // "לכל הטיפולים" — dismisses the quick-pick panel (if any) and reveals the
+  // normal category-tile flow, freshly rendered so any selections made via the
+  // quick-pick chips already show as selected counts on their category tiles.
+  function mbShowFullCategoryFlow(){
+    const panel = document.getElementById('mbQuickPickPanel');
+    if (panel) panel.style.display = 'none';
+    const flowWrap = document.getElementById('mbCatFlowWrap');
+    if (flowWrap) flowWrap.style.display = 'block';
+    showMbCategoryGrid();
+  }
   function showMbCategoryServices(cat){
     mbCurrentCategory = cat;
     const gridView = document.getElementById('mbCatGridView');
@@ -3916,7 +4177,6 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     // manual override belonged to whatever booking she was previously working
     // on (see mbSelectedServicesChanged()).
     mbDurationManuallySet = false;
-    showMbCategoryGrid();
     renderMbSelectedServicesUI();
     const durInput = document.getElementById('mbDuration');
     if (durInput) durInput.value = opts.duration || mbTotalDuration() || 30;
@@ -3950,6 +4210,13 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     document.getElementById('mbClientEmail').value = (mbOpenMatch && mbOpenMatch.email) || '';
     document.getElementById('mbClientNote').value = (mbOpenMatch && mbOpenMatch.note) || '';
     if (typeof updateMbClientIdStatus === 'function') updateMbClientIdStatus();
+    // Quick-pick (see renderMbQuickPick() below): for an identified existing
+    // client (either passed in directly as opts.clientName, e.g. opened from
+    // her client card, or matched here via opts.clientId/opts.clientPhone,
+    // e.g. from a special-request "קביעת תור" shortcut) show her most-booked
+    // treatments before the full category grid; a brand-new client with no
+    // match falls straight through to the normal grid — see that function.
+    renderMbQuickPick(opts.clientName || (mbOpenMatch && mbOpenMatch.name) || null);
     document.getElementById('mbError').style.display = 'none';
     document.getElementById('manualBookingOverlay').classList.add('show');
     resetManualBookingScroll();
@@ -4052,7 +4319,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     if (phoneInput) phoneInput.value = '';
     if (emailInput) emailInput.value = '';
     if (noteInput) noteInput.value = '';
-    if (this.value.length < 9){ updateMbClientIdStatus(); return; }
+    if (this.value.length < 9){ updateMbClientIdStatus(); renderMbQuickPick(null); return; }
     const match = clients.find(c => c.teudatZehut === this.value);
     if (match){
       mbLockClientName(match.name);
@@ -4061,6 +4328,11 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
       if (noteInput) noteInput.value = match.note || '';
     }
     updateMbClientIdStatus();
+    // Live quick-pick refresh: a תז match found (or lost) mid-typing, while the
+    // modal is already open, should update the quick-pick panel right away —
+    // same treatment-suggestion logic as when the modal opens already knowing
+    // the client (see openManualBookingModal()/renderMbQuickPick()).
+    renderMbQuickPick(match ? match.name : null);
   });
   document.getElementById('mbClientPhone')?.addEventListener('input', function(){
     const digits = this.value.replace(/[^0-9]/g, '');
@@ -4085,6 +4357,13 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
       if (noteInput) noteInput.value = '';
     }
     if (typeof updateMbClientIdStatus === 'function') updateMbClientIdStatus();
+    // Live quick-pick refresh — see the matching comment on the תז listener
+    // above. A phone match takes the name directly; otherwise fall back to
+    // whatever the תז field independently identifies (it takes priority as
+    // the real identity key), so clearing the phone alone doesn't hide a
+    // quick-pick panel that's still valid via a already-matched תז.
+    const idMatch = clients.find(c => c.teudatZehut === (idInput?.value || ''));
+    renderMbQuickPick((match && match.name) || (idMatch && idMatch.name) || null);
   });
   function closeManualBookingModal(){
     document.getElementById('manualBookingOverlay').classList.remove('show');
@@ -4759,6 +5038,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
         c.photos.splice(idx, 1);
         renderCpPhotoGrid();
         if (typeof saveState === 'function') saveState();
+        if (typeof showAdminToast === 'function') showAdminToast('✓ התמונה הוסרה בהצלחה');
       };
     });
     const atCap = photos.length >= CLIENT_PHOTO_CAP;
@@ -4777,6 +5057,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
       c.photos.push(dataUrl);
       renderCpPhotoGrid();
       if (typeof saveState === 'function') saveState();
+      if (typeof showAdminToast === 'function') showAdminToast('✓ התמונה הועלתה בהצלחה');
     }, { maxDim: 640, quality: 0.6 });
   }
   document.getElementById('cpAddPhotoBtn')?.addEventListener('click', () => document.getElementById('cpPhotoInput')?.click());
@@ -4828,13 +5109,32 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
       waitlist.forEach(w => { if (c.teudatZehut && w.teudatZehut ? w.teudatZehut === c.teudatZehut : w.name === oldName) w.name = newName; });
       cancellationLog.forEach(cl => { if (cl.client === oldName) cl.client = newName; });
       if (typeof saveState === 'function') saveState();
-      if (changedCount && typeof showAdminToast === 'function') showAdminToast(`השם עודכן — ${changedCount} תורים קושרו אוטומטית לשם החדש.`);
+      if (typeof showAdminToast === 'function') showAdminToast(changedCount
+        ? `✓ השם עודכן בהצלחה — ${changedCount} תורים קושרו אוטומטית לשם החדש`
+        : '✓ השם עודכן בהצלחה');
       renderClientProfileOverlay();
     });
     fieldsEl.querySelector('#cpTzInput').oninput = e => { e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 9); c.teudatZehut = e.target.value; };
     fieldsEl.querySelector('#cpPhoneInput').oninput = e => { c.phone = e.target.value; updateCpContactLinks(); };
     fieldsEl.querySelector('#cpEmailInput').oninput = e => { c.email = e.target.value; updateCpContactLinks(); };
     fieldsEl.querySelector('#cpNoteInput').oninput = e => { c.note = e.target.value; };
+    // ת.ז./phone/email/note here only ever updated the in-memory client record
+    // above (oninput) — with no explicit save point, persisting them relied
+    // entirely on the silent 4-second ambient autosave (see setInterval() far
+    // below), which never shows any on-screen confirmation. A blur-triggered
+    // save+toast (mirroring the name field's own blur handler just above) gives
+    // her the same clear "✓ ... בהצלחה" confirmation as every other edit,
+    // without spamming one per keystroke.
+    [['cpTzInput'], ['cpPhoneInput'], ['cpEmailInput'], ['cpNoteInput']].forEach(([id]) => {
+      const el = fieldsEl.querySelector('#' + id);
+      if (!el) return;
+      el.addEventListener('focus', e => { e.target.dataset.cpPrevVal = e.target.value; });
+      el.addEventListener('blur', e => {
+        if (e.target.dataset.cpPrevVal === e.target.value) return;
+        if (typeof saveState === 'function') saveState();
+        if (typeof showAdminToast === 'function') showAdminToast('✓ הפרטים עודכנו בהצלחה');
+      });
+    });
     updateCpContactLinks();
 
     // Recent appointments/history — same getClientAppointments() +
@@ -5623,6 +5923,19 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     renderBranding();
     if (typeof renderServices === 'function') renderServices();
   }
+  // These fields (business name/phone/whatsapp/address, plus invAlertEmail
+  // right after it) only ever updated the in-memory branding/invAlertEmail
+  // values live via oninput above — with no explicit save point, persisting
+  // relied entirely on the silent 4-second ambient autosave (see the
+  // setInterval() far below), which never shows any on-screen confirmation.
+  // A blur-triggered save+toast, only when the value actually changed since
+  // focus, gives her the same clear "✓ ... בהצלחה" confirmation as every
+  // other admin action, without spamming one per keystroke.
+  function saveSettingsFieldOnBlur(el, message){
+    if (!el || el.dataset.prevVal === el.value) return;
+    if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast(message);
+  }
   // Builds a wa.me link from an Israeli-format local number (e.g. 050-1234567)
   // by swapping the leading 0 for the 972 country code — used for both the
   // business's own WhatsApp contact link and could be reused elsewhere later.
@@ -6224,7 +6537,9 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
         waitlist.forEach(w => { if (c.teudatZehut && w.teudatZehut ? w.teudatZehut === c.teudatZehut : w.name === oldName) w.name = newName; });
         cancellationLog.forEach(cl => { if (cl.client === oldName) cl.client = newName; });
         if (typeof saveState === 'function') saveState();
-        if (changedCount && typeof showAdminToast === 'function') showAdminToast(`השם עודכן — ${changedCount} תורים קושרו אוטומטית לשם החדש.`);
+        if (typeof showAdminToast === 'function') showAdminToast(changedCount
+          ? `✓ השם עודכן בהצלחה — ${changedCount} תורים קושרו אוטומטית לשם החדש`
+          : '✓ השם עודכן בהצלחה');
         renderClients();
       });
       row.querySelectorAll('.client-mini-input').forEach(inp => {
@@ -6248,6 +6563,18 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
         } else {
           inp.oninput = (e) => { c[e.target.dataset.field] = e.target.value; };
         }
+        // Same reasoning as the client-profile page's equivalent fields (see
+        // renderClientProfileOverlay()): ת.ז./phone/email here only ever updated
+        // the in-memory record via oninput above, with no explicit save point —
+        // persisting relied entirely on the silent ambient autosave, which never
+        // shows any confirmation. Save+toast once on blur, only if it actually
+        // changed, gives her the same clear confirmation without per-keystroke spam.
+        inp.addEventListener('focus', (e) => { e.target.dataset.prevVal = e.target.value; });
+        inp.addEventListener('blur', (e) => {
+          if (e.target.dataset.prevVal === e.target.value) return;
+          if (typeof saveState === 'function') saveState();
+          if (typeof showAdminToast === 'function') showAdminToast('✓ הפרטים עודכנו בהצלחה');
+        });
       });
       const bdayWrap = row.querySelector('[data-birthday-picker]');
       if (bdayWrap){
@@ -6258,6 +6585,8 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
         const onBdayChange = () => {
           c.birthday = readDMYPickerEls(bdayDayEl, bdayMonthEl, bdayYearEl);
           renderClients();
+          if (typeof saveState === 'function') saveState();
+          if (typeof showAdminToast === 'function') showAdminToast('✓ יום ההולדת עודכן בהצלחה');
         };
         bdayDayEl.onchange = onBdayChange;
         bdayMonthEl.onchange = onBdayChange;
@@ -6295,7 +6624,14 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
         if (typeof renderBroadcastCount === 'function') renderBroadcastCount();
         showAdminToast(`✓ הלקוחה ${c.name} נמחקה בהצלחה`);
       };
-      row.querySelector('.client-note').oninput = (e) => { c.note = e.target.value; };
+      const noteEl = row.querySelector('.client-note');
+      noteEl.oninput = (e) => { c.note = e.target.value; };
+      noteEl.addEventListener('focus', (e) => { e.target.dataset.prevVal = e.target.value; });
+      noteEl.addEventListener('blur', (e) => {
+        if (e.target.dataset.prevVal === e.target.value) return;
+        if (typeof saveState === 'function') saveState();
+        if (typeof showAdminToast === 'function') showAdminToast('✓ ההערה נשמרה בהצלחה');
+      });
       row.querySelectorAll('[data-panel="history"] .visit-row').forEach(visitEl => {
         const apptId = visitEl.dataset.apptId;
         const appt = weekAppointments.find(a => a.id === apptId);
@@ -6306,6 +6642,12 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
             visitEl.querySelectorAll('.visit-status-btn').forEach(b => b.classList.remove('active-yes', 'active-no'));
             if (appt.status === 'completed') btn.classList.add('active-yes');
             if (appt.status === 'no-show') btn.classList.add('active-no');
+            if (typeof saveState === 'function') saveState();
+            if (typeof showAdminToast === 'function') showAdminToast(appt.status === 'completed'
+              ? '✓ הטיפול סומן כ"הגיעה" בהצלחה'
+              : appt.status === 'no-show'
+                ? '✓ הטיפול סומן כ"לא הגיעה" בהצלחה'
+                : '✓ סטטוס הטיפול עודכן בהצלחה');
           };
         });
         const noteEl = visitEl.querySelector('.visit-note');
@@ -6317,6 +6659,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
             if (logApptNoteFollowUp(appt, noteEl.dataset.origNote)){
               noteEl.dataset.origNote = appt.note || '';
               if (typeof saveState === 'function') saveState();
+              if (typeof showAdminToast === 'function') showAdminToast('✓ ההערה על הטיפול נשמרה בהצלחה');
             }
           };
         }
@@ -6333,6 +6676,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
             if (idx2 !== -1) weekAppointments.splice(idx2, 1);
             renderClients();
             if (typeof saveState === 'function') saveState();
+            if (typeof showAdminToast === 'function') showAdminToast('✓ הרשומה נמחקה בהצלחה');
           };
         }
       });
@@ -6649,6 +6993,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
             if (typeof saveState === 'function') saveState();
             if (typeof renderStaffPicker === 'function') renderStaffPicker();
             if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
+            if (typeof showAdminToast === 'function') showAdminToast('✓ תמונת העובדת עודכנה בהצלחה');
           }, { maxDim: 300, mime: 'image/png' });
         };
         row.querySelectorAll('.staff-cat-check').forEach(cb => {
@@ -6678,6 +7023,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
           if (typeof renderStaffPicker === 'function') renderStaffPicker();
           if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
           if (typeof renderWeekCal === 'function') renderWeekCal();
+          if (typeof showAdminToast === 'function') showAdminToast('✓ פרטי העובדת עודכנו בהצלחה');
         };
       }
       row.querySelector('.svc-del').onclick = () => {
@@ -6797,10 +7143,76 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderHoursStaffPicker === 'function') renderHoursStaffPicker();
     if (typeof renderHoursEditor === 'function') renderHoursEditor();
+    if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ העובדת נוספה בהצלחה');
   }
   renderStaff();
   const staffColors = ['#E8CE7A', '#9FBF93', '#E29AA8', '#9DBFE8', '#D9B27C'];
   const calStartHour = 8, calEndHour = 18;
+  // ===== Responsive hourBandHeight (replaces the old fixed 96px-per-hour) =====
+  // She asked for the calendar to "shrink according to the device size" so the
+  // full 08:00-18:00 grid is visible on a phone with no vertical scrolling —
+  // a fixed 96px/hour band (960px of grid body for a 10-hour day) never fits a
+  // real phone viewport. MOBILE_CAL_BREAKPOINT matches the width the CSS
+  // "MOBILE WEEK CALENDAR COMPACTION" @media block (day-column widths, topbar/
+  // chrome sizing) switches on, so the two stay in lockstep — above it nothing
+  // changes from before (still a flat 96, matching every desktop-viewport test
+  // already written against that exact number, e.g. test_quarter_hour.js's
+  // y=24/72px click-offset math and test_appt_overlap_layout.js's
+  // hourBandHeight/2===48 half-hour check both run at desktop widths and must
+  // keep seeing 96 unchanged); desktop keeps its existing internal-scroll
+  // behavior (fitWeekCalToViewport() sizing #weekCalWrap's box, the grid
+  // scrolling inside it) exactly as before. Only at phone widths does this
+  // shrink the band height to whatever actually fits.
+  const MOBILE_CAL_BREAKPOINT = 480;
+  // Keep in sync with .cal-day-head's height / .cal-hours-col's padding-top in
+  // both the desktop CSS and the <=480px mobile override (56px / 44px there).
+  const DAY_HEAD_HEIGHT_DESKTOP = 56;
+  const DAY_HEAD_HEIGHT_MOBILE = 44;
+  // Floor below which an hour band would make appointment/block text genuinely
+  // illegible or the block untappable — per her instructions, only a viewport
+  // shorter than can fit this is allowed to fall back to the calendar's own
+  // internal vertical scroll (fitWeekCalToViewport()'s #weekCalWrap max-height
+  // + overflow-y:auto already does exactly that, unchanged) instead of shrinking
+  // further.
+  const MIN_HOUR_BAND_HEIGHT = 28;
+  // What hourBandHeight renderWeekCal() actually built the currently-rendered
+  // grid with — read back by fitWeekCalToViewport() (and re-checked on every
+  // window resize) to notice when the ideal value has changed enough that the
+  // whole grid needs rebuilding at a new scale, without renderWeekCal() and
+  // fitWeekCalToViewport() calling each other forever (each only re-renders
+  // when the computed value actually moved from what's already on screen).
+  let lastRenderedHourBandHeight = null;
+  function computeHourBandHeight(){
+    if (window.innerWidth > MOBILE_CAL_BREAKPOINT) return 96;
+    const wrap = document.getElementById('weekCalWrap');
+    // Not visible yet (she's on a different tab, or this is the very first
+    // synchronous render before the admin panel is ever opened) — nothing
+    // sensible to measure yet, so keep whatever's already been used (or the
+    // desktop default on the very first call) rather than guessing off a
+    // collapsed/zero-height box. showPanel()/fitWeekCalToViewport() re-run
+    // this for real the moment the calendar actually becomes visible.
+    if (!wrap || wrap.offsetParent === null) return lastRenderedHourBandHeight || 96;
+    const rect = wrap.getBoundingClientRect();
+    // Same "-14" bottom safety margin fitWeekCalToViewport() already uses below
+    // for the wrap's own max-height, so the two stay consistent with each other.
+    const availableForWrap = window.innerHeight - rect.top - 14;
+    const dayHeadHeight = window.innerWidth <= MOBILE_CAL_BREAKPOINT ? DAY_HEAD_HEIGHT_MOBILE : DAY_HEAD_HEIGHT_DESKTOP;
+    const availableForBody = availableForWrap - dayHeadHeight;
+    // .week-cal is a row flex container with the (default) align-items:stretch,
+    // so EVERY column — including the day columns, whose own .cal-day-body is
+    // only ever (calEndHour-calStartHour)*hourBandHeight tall — ends up
+    // stretched to match whichever column's natural content is tallest. That's
+    // .cal-hours-col: its hour-LABEL loop deliberately runs from calStartHour
+    // through calEndHour INCLUSIVE (11 labels for an 08:00-18:00 day, not 10)
+    // so the closing boundary time ("18:00") gets its own label under the last
+    // real hour band — one whole extra hourBandHeight of height beyond the
+    // actual grid body. Dividing by the label count (calEndHour-calStartHour+1)
+    // rather than the band count is what actually keeps the whole rendered
+    // column — not just its grid body — inside the available space.
+    const naturalHeight = availableForBody / (calEndHour - calStartHour + 1);
+    return Math.max(MIN_HOUR_BAND_HEIGHT, Math.min(96, naturalHeight));
+  }
   const weekdayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
   const weekdayLabels = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
   const nowReal = new Date();
@@ -7074,11 +7486,11 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     calEl.innerHTML = '';
     const hoursCol = document.createElement('div');
     hoursCol.className = 'cal-hours-col';
-    // Fit the COMPLETE working day into the visible phone viewport. The old
-    // fixed 96px/hour made the calendar much taller than a phone screen, which
-    // forced vertical scrolling. We now calculate the hour height from the
-    // space actually left below the compact calendar chrome.
-    const hourBandHeight = getWeekCalendarHourHeight();
+    // See computeHourBandHeight() above — a flat 96 on desktop widths (every
+    // existing fixed-96 assumption elsewhere keeps working unchanged), shrunk
+    // to whatever actually fits on a phone width instead.
+    const hourBandHeight = computeHourBandHeight();
+    lastRenderedHourBandHeight = hourBandHeight;
     for (let h = calStartHour; h <= calEndHour; h++){
       const lbl = document.createElement('div');
       lbl.className = 'cal-hour-lbl';
@@ -7305,6 +7717,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
           if (idx !== -1) personalBlocks.splice(idx, 1);
           renderWeekCal();
           if (typeof saveState === 'function') saveState();
+          if (typeof showAdminToast === 'function') showAdminToast('✓ חסימת הזמן הוסרה בהצלחה');
           // Removing a personal-time block just freed up a real slot too — same
           // auto-rematch as a cancellation (see recheckAllPendingFlexibleRequests()).
           if (typeof recheckAllPendingFlexibleRequests === 'function') recheckAllPendingFlexibleRequests();
@@ -7356,6 +7769,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     });
     renderWeekCal();
     if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ הבקשה נוספה בהצלחה');
   }
   function deleteSpecialRequest(id){
     const req = specialRequests.find(r => r.id === id);
@@ -7364,6 +7778,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     specialRequests = specialRequests.filter(r => r.id !== id);
     renderWeekCal();
     if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ הבקשה נמחקה בהצלחה');
   }
   // ===== "בקשה כללית / זמן גמיש" (flexible special requests) =====
   // A flexible request (specialRequests entry with mode:'flexible') carries a
@@ -7762,28 +8177,64 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
   // reach or fully see the calendar area — see the call at the end of
   // renderWeekCal(). No-ops harmlessly if the calendar isn't actually visible
   // right now (e.g. she's on a different tab/sub-view).
-  function getWeekCalendarHourHeight(){
-    const wrap = document.getElementById('weekCalWrap');
-    if (!wrap || wrap.offsetParent === null) return window.innerWidth <= 720 ? 42 : 96;
-    const rect = wrap.getBoundingClientRect();
-    const hourCount = Math.max(1, calEndHour - calStartHour);
-    // The calendar header is 56px tall. Leave a tiny safety margin for the
-    // wrapper border so the last hour line remains visible without scrolling.
-    const available = window.innerHeight - rect.top - 8;
-    const byViewport = (available - 58) / hourCount;
-    return Math.max(window.innerWidth <= 720 ? 28 : 38, Math.min(96, byViewport));
-  }
   function fitWeekCalToViewport(){
     const wrap = document.getElementById('weekCalWrap');
     if (!wrap || wrap.offsetParent === null) return;
-    // The grid itself is now scaled to fit; do NOT create an internal vertical
-    // scrollbar. Horizontal scrolling is also disabled by the responsive CSS
-    // below so all six real week days remain visible together on a phone.
-    wrap.style.maxHeight = 'none';
-    wrap.style.overflowY = 'hidden';
-    wrap.style.overflowX = 'hidden';
+    // The calendar just became visible/resized — computeHourBandHeight() may
+    // now compute a different value than whatever the grid currently on
+    // screen was actually built with (most commonly: it was first drawn while
+    // hidden, before there was anything real to measure, and defaulted to 96;
+    // or the viewport was resized/rotated across the mobile breakpoint). When
+    // that happens the grid needs a full rebuild at the new scale — not just a
+    // box resize — so every quarter-hour gridline, appointment and
+    // personal-time block stays aligned to the real hour marks. renderWeekCal()
+    // records the value it just used in lastRenderedHourBandHeight and calls
+    // this function again at its own end, at which point computeHourBandHeight()
+    // reliably recomputes the SAME value (nothing above #weekCalWrap changes
+    // size as a result of rebuilding what's inside it) so this doesn't recurse.
+    const idealHourBandHeight = computeHourBandHeight();
+    if (typeof renderWeekCal === 'function' && lastRenderedHourBandHeight !== null && Math.abs(idealHourBandHeight - lastRenderedHourBandHeight) > 0.5){
+      renderWeekCal();
+      return;
+    }
+    const rect = wrap.getBoundingClientRect();
+    const available = window.innerHeight - rect.top - 14;
+    wrap.style.maxHeight = Math.max(240, available) + 'px';
+    wrap.style.overflowY = 'auto';
   }
   window.addEventListener('resize', () => { if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport(); });
+  // The custom webfonts (Suez One/Heebo, embedded as data: URIs — see the
+  // @font-face rules up top) still swap in a little after first paint
+  // (font-display:block's brief invisible-text window), which nudges the
+  // exact height of every text row above the calendar (biz-subnav-wrap tabs,
+  // the inner-switcher, day-nav-header, staff-filter-row) by a few pixels
+  // once they do. On a wide desktop viewport that drift is invisible (the
+  // calendar box already scrolls internally regardless), but on a phone
+  // width — where computeHourBandHeight() sizes the grid to land EXACTLY at
+  // the edge of the available space with no internal scroll — a stale
+  // pre-font-swap measurement could leave the grid a few pixels too tall (or
+  // leave a sliver of unused space). Re-fitting once the fonts are actually
+  // settled catches that, on top of showPanel()'s own immediate/rAF/300ms
+  // re-fit chain.
+  if (window.document && document.fonts && document.fonts.ready){
+    document.fonts.ready.then(() => { if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport(); }).catch(() => {});
+  }
+  // #panel-business.active runs the shared .panel fadeUp entrance animation
+  // (0.5s translateY(18px)->0 + opacity — see the ".panel{...animation:fadeUp
+  // 0.5s...}" / ".panel.active{display:block;}" rules) every time she opens
+  // the admin panel. A CSS transform like that shifts what
+  // getBoundingClientRect() reports for #weekCalWrap WHILE it's still running
+  // (it settles to its true rest position only once the animation ends) — so
+  // any fitWeekCalToViewport() call fired during those ~500ms (showPanel()'s
+  // own immediate/rAF/300ms re-fit chain included) can measure a still-
+  // shifting position and size the grid a little off. Re-fitting once more
+  // right as the animation actually finishes catches the true final position.
+  (function(){
+    const panelBiz = document.getElementById('panel-business');
+    if (panelBiz){
+      panelBiz.addEventListener('animationend', () => { if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport(); });
+    }
+  })();
   // The revenue stat used to live here too ("הכנסה צפויה") but she asked to
   // remove it from this everyday overview screen specifically because revenue
   // is now covered properly (and gated behind the owner-access code, unlike
@@ -8007,6 +8458,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
           if (typeof renderServices === 'function') renderServices();
           if (typeof renderStaff === 'function') renderStaff();
           if (typeof saveState === 'function') saveState();
+          if (typeof showAdminToast === 'function') showAdminToast('✓ הקטגוריה עודכנה בהצלחה');
         };
       }
       row.querySelector('.svc-del').onclick = () => {
@@ -8021,6 +8473,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
         renderCategoryOptions();
         if (typeof renderServices === 'function') renderServices();
         if (typeof saveState === 'function') saveState();
+        if (typeof showAdminToast === 'function') showAdminToast('✓ הקטגוריה נמחקה בהצלחה');
       };
       listEl.appendChild(row);
     });
@@ -8033,6 +8486,8 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     categories.push(name);
     nameEl.value = '';
     renderCategories();
+    if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ הקטגוריה נוספה בהצלחה');
   }
   const catTilePalette = ['#9B2C42', '#C9A227', '#3F6B5C', '#B5654B', '#5B7C99', '#8B5FA3'];
   function renderCategoryGrid(){
@@ -8279,6 +8734,8 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     if (photoPreview){ photoPreview.style.display = 'none'; photoPreview.src = ''; }
     if (photoPlaceholder) photoPlaceholder.style.display = '';
     renderServices();
+    if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ השירות נוסף בהצלחה');
   }
   let newSvcPhoto = null;
   function handleSvcPhotoUpload(event){
@@ -8299,6 +8756,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     renderServices();
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
     if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ השירות הוסר בהצלחה');
   }
   renderCategories();
   renderServices();
@@ -8338,6 +8796,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
         whatsNewItems.splice(i, 1);
         renderWhatsNew();
         if (typeof saveState === 'function') saveState();
+        if (typeof showAdminToast === 'function') showAdminToast('✓ העדכון נמחק בהצלחה');
       };
       adminEl.appendChild(row);
     });
@@ -8370,6 +8829,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     document.getElementById('wnPhotoPlaceholder').style.display = 'block';
     renderWhatsNew();
     if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ העדכון נוסף בהצלחה');
   }
   renderWhatsNew();
   const hourOptions = [];
@@ -10086,6 +10546,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
         // manager's phone), and a several-second gap where the old value is still
         // what's saved is exactly what caused "closed day doesn't work" reports.
         if (typeof saveState === 'function') saveState();
+        if (typeof showAdminToast === 'function') showAdminToast(`✓ ${label} נפתח מחדש בהצלחה`);
       };
       listEl.appendChild(row);
     });
@@ -10159,6 +10620,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     // showed it as bookable. That gap is exactly the few seconds before the normal
     // autosave interval fires; a closure has to take effect the moment it's set.
     if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ התאריך נסגר בהצלחה');
   }
   function renderHoursEditor(){
     const hoursList = document.getElementById('hoursList');
@@ -10302,6 +10764,7 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
         inventory.splice(i, 1);
         renderInventory();
         if (typeof saveState === 'function') saveState();
+        if (typeof showAdminToast === 'function') showAdminToast(`✓ ${item.name} הוסר מהמלאי בהצלחה`);
       };
       listEl.appendChild(row);
     });
@@ -10330,6 +10793,8 @@ body.admin-mode #panel-business #weekNavRow span{font-size:11px;}
     stockEl.value = '';
     thresholdEl.value = '';
     renderInventory();
+    if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ המוצר נוסף למלאי בהצלחה');
   }
   /* ===== CLOUD SYNC (Firestore) ===== */
   let cloudLoadComplete = false;
