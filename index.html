@@ -3041,7 +3041,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 31.08-יח-תפריט-צדדי-ואינפורו-SMS</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 31.08-ב-אישור-תור-וSMS-מיידי</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -3254,6 +3254,7 @@
     <span class="appt-detail-topbar-title">פרטי התור</span>
   </div>
   <div class="appt-detail-body">
+    <div id="apptDetailConfirmedBadge" style="display:none; color:#1c8a4b; background:rgba(28,138,75,0.1); border:1px solid rgba(28,138,75,0.3); border-radius:8px; padding:8px 12px; font-weight:700; text-align:center; margin-bottom:12px;">✓ אושר ע״י הלקוחה</div>
     <div class="appt-detail-card">
       <div class="appt-detail-row"><span class="appt-detail-label">לקוחה</span><span class="appt-detail-value" id="apptDetailClient"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">שירות</span><span class="appt-detail-value" id="apptDetailService"></span></div>
@@ -4720,6 +4721,13 @@
         `היי ${appt.client}, התור שלך ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time} בוטל. נשמח לראותך שוב בקרוב!\n\nלקביעת תור חדש:\n${getSiteUrl()}`
       );
     }
+    // כשהיא (המנהלת) מבטלת, הלקוחה לא נמצאת מול המסך ולא רואה שום אישור
+    // ביטול — בניגוד לביטול-עצמי שלה דרך "התור שלי" באתר, ששם המסך עצמו כבר
+    // מראה "התור בוטל" ברגע שהיא לוחצת (cancelListedAppointment/
+    // cancelAppointment בהמשך הקובץ, בכוונה בלי SMS נוסף משם — זה יהיה כפול).
+    // לכן רק כאן, בביטול על ידי המנהלת, שולחים גם SMS בנוסף למייל. בכוונה
+    // קצר (בלי קישור) — ראה getShortApptSmsText.
+    queueApptSms(appt, getShortApptSmsText('cancelled', appt.service, formatDateDMY(appt.date), appt.time));
     showAdminToast('✓ התור בוטל בהצלחה' + (cancelledClient && cancelledClient.email ? ' — נשלח מייל לעדכון הלקוחה' : ''));
     if (matches.length) renderWaitlistMatchAlert(matches, appt);
   }
@@ -4732,6 +4740,8 @@
   function openApptDetailOverlay(appt){
     if (!appt) return;
     apptDetailCurrent = appt;
+    const confirmedBadge = document.getElementById('apptDetailConfirmedBadge');
+    if (confirmedBadge) confirmedBadge.style.display = appt.confirmedByClient ? 'block' : 'none';
     document.getElementById('apptDetailClient').textContent = appt.client || '';
     document.getElementById('apptDetailService').textContent = appt.service || '';
     document.getElementById('apptDetailDate').textContent = formatDateDMY(appt.date);
@@ -9622,6 +9632,37 @@
     const addressLine = (branding && branding.address && branding.address.trim()) ? `\nכתובתנו: ${branding.address.trim()}` : '';
     return `היי ${name}, נקבע לך תור ל${service} בתאריך ${dateLabel} בשעה ${time}${staffName ? ' אצל ' + staffName : ''}. ${actionText || 'לביטול או שינוי מועד, ניתן לפנות אלינו.'}${addressLine}\n\nלניהול התור, לביטול או לקביעת תור נוסף:\n${buildMyAppointmentLink(teudatZehut, phone)}`;
   }
+  // טקסט SMS קצר בכוונה (עד בערך 70 תווים — מקטע חיוב אחד אצל Inforu, לא 2-3
+  // כמו בתזכורת) לאישור קביעת תור ולביטול. בלי קישור בכלל — היא החליטה שרק
+  // בתזכורת ה-24-שעות (functions/index.js) שווה "לשלם" על הקישור לניהול/
+  // ביטול/שינוי מועד, כי זה הרגע שבאמת רוצים לתת ללקוחה פעולה; באישור/ביטול
+  // מספיק שהיא תדע מה נקבע/בוטל. ה"כתובתנו" מוצגת רק באישור (שם היא רלוונטית
+  // - איפה להגיע), לא בביטול.
+  function getShortApptSmsText(kind, service, dateLabel, time){
+    if (kind === 'cancelled') return `התור לטיפול ${service} ביום ${dateLabel} בשעה ${time} בוטל.`;
+    const addressLine = (branding && branding.address && branding.address.trim()) ? ` כתובתנו: ${branding.address.trim()}` : '';
+    return `התור נקבע בהצלחה. לטיפול ${service} ביום ${dateLabel} בשעה ${time}.${addressLine}`;
+  }
+  // כותבת מסמך לאוסף smsQueue — בדיוק כמו ש-sendEmail() כותב לאוסף mail (והתוסף
+  // Trigger Email שולח אותו), רק שבמקום זה פונקציית הענן sendQueuedSms
+  // (functions/index.js) קוראת את המסמך, שולחת אותו בפועל דרך Inforu, ומוחקת
+  // אותו. נכתב רק אם: יש ללקוחה טלפון שמור, היא סימנה 'sms' כערוץ תזכורת
+  // עבור התור הזה (appt.reminderChannels), ויש שם שולח מוגדר בהגדרות
+  // (branding.smsSenderId) — בלי אחד מהתנאים האלה, פשוט לא נכתב כלום, בלי
+  // שגיאה ובלי להשפיע על שאר הפעולה (הזמנה/ביטול עצמם תמיד מצליחים).
+  function queueApptSms(appt, message){
+    try {
+      if (!appt) return;
+      if (!Array.isArray(appt.reminderChannels) || !appt.reminderChannels.includes('sms')) return;
+      const client = clients.find(c => c && c.name === appt.client);
+      if (!client || !client.phone) return;
+      const sender = (branding && branding.smsSenderId || '').trim();
+      if (!sender) return;
+      db.collection('smsQueue').add({ phone: client.phone, message: message, sender: sender });
+    } catch (e) {
+      console.error('queueApptSms failed (appointment itself is unaffected):', e);
+    }
+  }
   // Lets a "waitlist slot opened" email give the client a real way to remove
   // herself from the waitlist with one click — without this, a client who no
   // longer needs the slot (booked elsewhere, changed her mind) has no way to
@@ -9918,6 +9959,16 @@
           getAppointmentEmailText(clientNameVal, svc ? svc.name : 'שירות', dateLabel, selectedSlot, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:', idDigits, phoneVal)
         );
       }
+      // אישור מיידי גם ב-SMS (בנוסף למייל) — נכתב לתור עבודה (smsQueue),
+      // פונקציית הענן sendQueuedSms שולחת אותו בפועל. queueApptSms() בעצמה
+      // כבר בודקת שהלקוחה סימנה 'sms', שיש לה טלפון, ושיש שם שולח מוגדר —
+      // בלי אחד מהתנאים האלה פשוט לא נכתב כלום, בלי שגיאה. בכוונה קצר (בלי
+      // קישור) — ראה getShortApptSmsText.
+      const smsDateLabel = bookingSelectedDate.getDate() + '/' + (bookingSelectedDate.getMonth() + 1);
+      queueApptSms(
+        currentBookedAppointment,
+        getShortApptSmsText('confirmed', svc ? svc.name : 'שירות', smsDateLabel, selectedSlot)
+      );
     } catch (e) {
       console.error('confirmBooking: post-confirmation refresh/notify failed (appointment itself was saved fine):', e);
     }
@@ -10147,12 +10198,27 @@
           <a href="${gcalUrl}" target="_blank" rel="noopener" class="gcal-link">📅 הוספה ל-Google Calendar</a>
           <a href="${icsUrl}" download="תור-${appt.service}.ics" class="gcal-link">📥 הוספה ליומן (iPhone/Outlook)</a>
         </div>
+        ${appt.confirmedByClient
+          ? `<div style="color:#1c8a4b; font-weight:700; font-size:13px; margin-top:8px;">✓ אישרת שאת מגיעה</div>`
+          : `<div class="my-appt-actions" style="margin-top:8px;"><button onclick="confirmListedAppointment(${idx})" style="border-color:#1c8a4b; color:#1c8a4b;">✓ אשרי שאת מגיעה</button></div>`}
         <div class="my-appt-actions">
           <button onclick="rescheduleListedAppointment(${idx})">שינוי מועד</button>
           <button class="danger" onclick="cancelListedAppointment(${idx})">ביטול תור</button>
         </div>
       </div>`;
     }).join('') + `<button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
+  }
+  // מאפשרת ללקוחה לאשר מהקישור שהיא רואה את התזכורת ומתכוונת להגיע — בלי
+  // לשלוח שום SMS/מייל נוסף (רק תג ירוק "✓ אושר" שהמנהלת תראה בפרטי התור
+  // ביומן שלה, ראה openApptDetailOverlay). אם היא לא לוחצת על כלום — התור
+  // פשוט נשאר כמו שהוא, בלי סטטוס מיוחד; זה המקרה הכי נפוץ ולא דורש טיפול.
+  function confirmListedAppointment(idx){
+    const appt = lookedUpAppointmentsList[idx];
+    if (!appt) return;
+    appt.confirmedByClient = true;
+    appt.confirmedAt = new Date().toISOString();
+    if (typeof saveState === 'function') saveState();
+    renderLookedUpAppointment(lookedUpAppointmentsList);
   }
   function rescheduleListedAppointment(idx){
     currentBookedAppointment = lookedUpAppointmentsList[idx];
