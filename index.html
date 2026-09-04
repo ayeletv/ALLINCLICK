@@ -884,21 +884,47 @@
      icon again also closes it" (her spec) keeps working without her having
      to find the drawer's own ✕ instead. See body.admin-mode .stage's own
      top-padding bump above for why nothing ends up hidden underneath it. */
+  /* She pointed out this used to just be floating icons directly on the
+     page's own near-black base background — with no bar of its own behind
+     them, it read as an unstyled "black line" across the top rather than a
+     designed header. Now .biz-topbar itself is the actual full-width bar
+     (background + a soft gold hairline + shadow, in the same wine gradient
+     used elsewhere — .biz-subnav-toggle, .cal-day-tone-a, etc. — so it reads
+     as the same product, not a bolted-on strip), edge-to-edge at every
+     width. The old max-width/centering + button layout moved one level in,
+     onto .biz-topbar-inner, so the actual controls still line up with the
+     rest of the app's centered content while the bar behind them spans the
+     full viewport. */
   .biz-topbar{
     display:none;
     position:fixed; top:0; left:0; right:0; z-index:910;
-    align-items:center; justify-content:space-between; gap:10px;
-    max-width:1040px; margin:0 auto;
+    background:linear-gradient(120deg, var(--wine) 0%, var(--wine-deep) 100%);
+    border-bottom:1px solid rgba(232,206,122,0.35);
+    box-shadow:0 4px 18px rgba(10,8,9,0.3);
+    /* Purely a visual backdrop now (the actual controls live in
+       .biz-topbar-inner below) — pointer-events:none here means the colored
+       bar still paints normally but never itself catches a click/tap, so
+       anything underneath it (the drawer backdrop especially, once the
+       drawer is open) stays reachable everywhere except exactly on top of a
+       real button. Without this, the solid background this bar now has
+       (versus the old fully-transparent version) would swallow every tap
+       across its whole box, including the drawer's own close-by-tapping-the-
+       backdrop area right beneath it. */
+    pointer-events:none;
+  }
+  body.admin-mode .biz-topbar{display:flex;}
+  .biz-topbar-inner{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    max-width:1040px; margin:0 auto; width:100%;
     padding:10px 3vw;
-    /* The box itself spans the full bar width (including the empty middle
+    /* The row itself spans the full bar width (including the empty middle
        gap between the two button clusters), but only the buttons inside it
        should actually catch clicks — otherwise that invisible middle strip
        would sit on top of the backdrop/whatever's underneath, at this
        z-index, and silently swallow taps meant for them. */
     pointer-events:none;
   }
-  body.admin-mode .biz-topbar{display:flex;}
-  .biz-topbar > *{pointer-events:auto;}
+  .biz-topbar-inner > *{pointer-events:auto;}
   /* The 3 action icons (🖨️ my-day / ➕ add-appointment / 🚪 exit) that used to
      live inside the now-removed colored .cal-topbar card — .cal-icon-btn/
      .cal-topbar-icons keep their original names since other test/selector
@@ -911,26 +937,32 @@
     transition:border-color 0.2s ease;
   }
   .cal-icon-btn:hover{border-color:var(--gold);}
+  /* Now that .biz-topbar itself is a wine-gradient bar (see its own comment
+     above), a wine-colored toggle button on top of it would nearly vanish —
+     so this switched to the app's other accent, gold, the same color used
+     for every other "important, tap this" control (active tab pills, the
+     drawer's own active nav item below). That keeps it the one thing on the
+     bar that unmistakably pops. */
   .biz-subnav-toggle{
     width:42px; height:42px; flex-shrink:0;
     border-radius:12px;
-    background:linear-gradient(135deg, var(--wine), var(--wine-deep));
-    border:1.5px solid rgba(201,162,39,0.45);
-    color:#FCF3E2;
+    background:linear-gradient(135deg, var(--gold), #A9800F);
+    border:1.5px solid rgba(255,255,255,0.3);
+    color:var(--ink);
     display:flex; align-items:center; justify-content:center;
     cursor:pointer;
-    box-shadow:0 3px 10px rgba(26,20,22,0.22);
+    box-shadow:0 3px 10px rgba(10,8,9,0.35);
     transition:border-color 0.2s ease, transform 0.15s ease;
   }
-  .biz-subnav-toggle:hover{border-color:var(--gold-soft);}
+  .biz-subnav-toggle:hover{border-color:#fff;}
   .biz-subnav-toggle:active{transform:scale(0.94);}
   /* Plain 3-bar icon drawn in CSS (one span + its ::before/::after) instead of
      an icon-font glyph/emoji, so it renders identically regardless of the
      icon font's own load timing — it's the one control she must always be
      able to find at a glance, so it can't risk a brief blank/fallback state. */
-  .biz-subnav-toggle-bars{position:relative; display:block; width:19px; height:2px; border-radius:2px; background:#FCF3E2;}
+  .biz-subnav-toggle-bars{position:relative; display:block; width:19px; height:2px; border-radius:2px; background:var(--ink);}
   .biz-subnav-toggle-bars::before, .biz-subnav-toggle-bars::after{
-    content:''; position:absolute; right:0; left:0; height:2px; border-radius:2px; background:#FCF3E2;
+    content:''; position:absolute; right:0; left:0; height:2px; border-radius:2px; background:var(--ink);
   }
   .biz-subnav-toggle-bars::before{top:-6px;}
   .biz-subnav-toggle-bars::after{top:6px;}
@@ -2153,11 +2185,27 @@
      unconditionally — just hidden via .cal-topbar-stats/.cal-topbar-label
      below, so nothing else has to change to keep working. */
   .cal-topbar{
-    display:flex; align-items:center; margin-bottom:8px;
+    display:flex; align-items:center; margin-bottom:0;
   }
   .cal-topbar-stats, .cal-topbar-label{display:none;}
   .cal-topbar-viewswitch{margin:0 !important;}
   .cal-topbar-viewswitch button{padding:7px 15px !important; font-size:12.5px !important;}
+  /* Puts the prev/next-week date-nav and the week/day/month view-switch on
+     one shared line instead of two full stacked rows — see the HTML comment
+     above #calChromeRow for why. #weekNavRow gets the flexible share of the
+     width (its date-range label is the one piece of text here that can
+     genuinely vary in length); .cal-topbar only needs as much room as its 3
+     small pills actually take. Wraps to two lines (same as before, just with
+     less wasted margin between them) only if a screen is too narrow to fit
+     both on one — see the phone-width overrides below for how tight that
+     still manages to be. */
+  .cal-chrome-row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px; flex-wrap:wrap; margin-bottom:10px;
+  }
+  .cal-chrome-row #weekNavRow{flex:1 1 auto; min-width:0; margin-bottom:0;}
+  .cal-chrome-row #weekNavRow span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .cal-chrome-row .cal-topbar{flex:0 0 auto;}
   #staffFilterRow{margin-bottom:10px;}
   /* =====================================================================
      MOBILE WEEK CALENDAR COMPACTION (phone widths, <=480px — covers the
@@ -2203,10 +2251,14 @@
   @media (max-width:480px){
     #panel-business .inner-switcher{margin-bottom:0.5rem; gap:6px;}
     #panel-business .inner-switcher button{padding:6px 12px; font-size:12px;}
-    .cal-topbar{margin-bottom:6px;}
+    .cal-chrome-row{margin-bottom:6px; gap:6px;}
     .cal-topbar-viewswitch button{padding:4px 10px !important; font-size:10.5px !important;}
-    #weekNavRow{margin-bottom:6px;}
-    #weekNavRow button{padding:5px 9px; font-size:11px;}
+    /* Prev/next are bare arrows here (see the HTML comment above
+       #calChromeRow) specifically so the date range next to them has room to
+       breathe on one shared line with the view-switch — a fixed small
+       square keeps them just as tappable as before, just without the label
+       text that used to need the whole row to itself. */
+    #weekNavRow button{padding:0; width:30px; height:30px; flex-shrink:0; font-size:15px; display:flex; align-items:center; justify-content:center;}
     #weekNavRow span{font-size:12px;}
     #staffFilterRow{margin-bottom:6px; gap:8px;}
     #staffFilterRow .staff-filter-chip{gap:3px;}
@@ -2416,13 +2468,15 @@
      unchanged from the previous top-row version; only the container around
      them changed. -->
 <div class="biz-topbar" id="bizTopbar">
-  <button type="button" class="biz-subnav-toggle" id="bizSubNavToggle" onclick="toggleBizSubNavDrawer()" aria-haspopup="true" aria-expanded="false" aria-controls="bizSubNavDrawer" aria-label="תפריט ניווט">
-    <span class="biz-subnav-toggle-bars" aria-hidden="true"></span>
-  </button>
-  <div class="cal-topbar-icons">
-    <button type="button" class="cal-icon-btn" onclick="openMyDayView()" title="תצוגת היום שלי" aria-label="תצוגת היום שלי">🖨️</button>
-    <button type="button" class="cal-icon-btn" onclick="openManualBookingModal()" title="הוספת תור ידנית" aria-label="הוספת תור ידנית">➕</button>
-    <button type="button" class="cal-icon-btn" onclick="doLogout()" title="התנתקות" aria-label="התנתקות">🚪</button>
+  <div class="biz-topbar-inner">
+    <button type="button" class="biz-subnav-toggle" id="bizSubNavToggle" onclick="toggleBizSubNavDrawer()" aria-haspopup="true" aria-expanded="false" aria-controls="bizSubNavDrawer" aria-label="תפריט ניווט">
+      <span class="biz-subnav-toggle-bars" aria-hidden="true"></span>
+    </button>
+    <div class="cal-topbar-icons">
+      <button type="button" class="cal-icon-btn" onclick="openMyDayView()" title="תצוגת היום שלי" aria-label="תצוגת היום שלי">🖨️</button>
+      <button type="button" class="cal-icon-btn" onclick="openManualBookingModal()" title="הוספת תור ידנית" aria-label="הוספת תור ידנית">➕</button>
+      <button type="button" class="cal-icon-btn" onclick="doLogout()" title="התנתקות" aria-label="התנתקות">🚪</button>
+    </div>
   </div>
 </div>
 <div class="biz-subnav-backdrop" id="bizSubNavBackdrop" onclick="closeBizSubNavDrawer()"></div>
@@ -2450,12 +2504,22 @@
        reliably keeps it filled in rather than ever reverting it back to
        nothing/generic — see the comment there for the full explanation. -->
   <h1 class="serif" id="heroBizName" style="display:none;"></h1>
-  <!-- "primary" here by default (big heading treatment, see .hero-platform-line.primary)
-       is what actually makes this line act as the hero's giant heading before any
-       business name has loaded — renderBranding()/revealBizNameAsHero() removes it
-       the moment a real name arrives and #heroBizName takes over as the primary
-       heading instead. -->
-  <p class="hero-platform-line primary" id="heroPlatformLine"><span class="accent">הכל בקליק</span> <span class="tagline-rest"><svg class="click-logo inline-logo" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#E8CE7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg> הכל במקום אחד, בלי מאמץ</span></p>
+  <!-- NOT "primary" by default anymore — she specifically disliked the effect
+       this used to produce: the generic tagline flashing up as a giant
+       heading for a moment, then visibly shrinking down once the real
+       business name arrived a beat later. Starting small/secondary instead
+       means there's simply never a big generic heading to shrink away from —
+       the business name (see #heroBizName/revealBizNameAsHero() further
+       down) is the only thing that ever appears at "giant heading" size, and
+       it only ever grows in once, from nothing, never shrinks. The one
+       remaining case this needs to cover is a brand-new deployment of this
+       shared template with no business name saved yet at all — see the
+       fallback in the script just below, which promotes this line to
+       .primary (a deliberate, smooth GROW, not a snap) only if no name shows
+       up by the time branding is known to be settled, so a fresh/demo site
+       still ends up with a proper big heading instead of sitting there small
+       forever. -->
+  <p class="hero-platform-line" id="heroPlatformLine"><span class="accent">הכל בקליק</span> <span class="tagline-rest"><svg class="click-logo inline-logo" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#E8CE7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg> הכל במקום אחד, בלי מאמץ</span></p>
   <div class="scroll-hint">
     <span>גלילה למטה</span>
     <div class="line"></div>
@@ -2486,14 +2550,13 @@
   // exactly the delay she's now asking to remove.
   //
   // The actual fix: reveal immediately (this hero paints looking already
-  // complete and intentional, generic tagline as the giant heading, from the
-  // very first frame), and instead make the LATER swap itself graceful —
-  // revealBizNameAsHero() (further down this page, called from renderBranding()
-  // once the real name arrives) animates the tagline shrinking down and the
-  // business name fading/growing in over the .hero-platform-line/#heroBizName
-  // CSS transitions above, ~320ms, instead of an instant snap — so even a
-  // visitor on a slow connection sees one deliberate reveal a moment later,
-  // never a layout jump.
+  // complete and intentional — small tagline, no giant generic heading at
+  // all — from the very first frame), and let the real business name simply
+  // fade/grow in on its own once it arrives (revealBizNameAsHero(), further
+  // down this page, called from renderBranding()) via the #heroBizName CSS
+  // transition above, ~320ms. There's no shrink to watch for anymore: the
+  // tagline never was big to begin with, so this is a one-way grow-in, not a
+  // swap between two different "big heading" states.
   //
   // Important: we explicitly request the "Suez One" font by name via
   // document.fonts.load(), instead of just awaiting document.fonts.ready. The
@@ -2531,6 +2594,31 @@
     // for more than a fraction of a second no matter what.
     fontPromise.then(reveal);
     setTimeout(reveal, 1500); // absolute safety net — never leave the hero invisible
+
+    // Fallback for a brand-new deployment of this shared template with no
+    // business name saved yet at all: once branding is known to be settled
+    // (real data loaded, or confirmed there's nothing saved — see
+    // window.__brandingReady/loadCloudData() further down), if a real name
+    // still never showed up, promote the generic tagline to the big heading
+    // treatment itself instead of leaving the hero looking unfinished
+    // forever. This runs well after the reveal above, so it's a deliberate,
+    // smooth GROW via the existing font-size transition on .hero-platform-line
+    // — never the shrink she asked to remove, and it never fires at all on a
+    // real deployment like this one, where a name is always saved.
+    var brandingSettlePromise = (window.__brandingReady && window.__brandingReady.then)
+      ? window.__brandingReady
+      : new Promise(function(resolve){ setTimeout(resolve, 1500); });
+    Promise.race([
+      brandingSettlePromise,
+      new Promise(function(resolve){ setTimeout(resolve, 3000); })
+    ]).then(function(){
+      var bizNameEl = document.getElementById('heroBizName');
+      var platformEl = document.getElementById('heroPlatformLine');
+      if (!bizNameEl || !platformEl) return;
+      if (!bizNameEl.classList.contains('biz-name-visible')){
+        platformEl.classList.add('primary');
+      }
+    });
   })();
 </script>
 <section class="stage">
@@ -2663,30 +2751,40 @@
            #statApptsToday/#statOpenSlots/#calSectionLabel stay in the markup,
            hidden, purely so renderOverviewStats()/setOverviewView() keep
            finding the elements they already write into unconditionally.
-           All that's actually shown here now is the bare view-switch. -->
-      <div class="cal-topbar">
-        <div class="cal-topbar-stats">
-          <span><b id="statApptsToday">0</b> תורים היום</span>
-          <span class="sep">·</span>
-          <span><b id="statOpenSlots">0</b> מקומות פנויים</span>
+           All that's actually shown here now is the bare view-switch.
+           She pointed at a competitor screenshot where the date-nav and the
+           view-switch share one slim line, with the actual calendar grid
+           taking up virtually the whole rest of the screen — this used to be
+           two full separate rows (view-switch, then its own margin, then the
+           prev/next-week row, then ITS own margin) before the grid even
+           started. .cal-chrome-row below just puts them on the same line
+           (wrapping to two only if a narrow screen truly has no room), which
+           alone reclaims one whole row's height for the calendar. Neither
+           #weekNavRow's onclick handlers/IDs nor .cal-topbar-viewswitch's —
+           tests and other code key off those — changed at all, only the
+           layout around them and (see the buttons themselves) the prev/next
+           button LABELS, shortened to bare arrows now that they sit right
+           next to the date range they navigate instead of on their own line
+           with room to spell it out. -->
+      <div class="cal-chrome-row" id="calChromeRow">
+        <div class="day-nav-header" id="weekNavRow">
+          <button type="button" onclick="shiftWeek(-1)" aria-label="שבוע קודם">‹</button>
+          <span id="weekNavLabel"></span>
+          <button type="button" onclick="shiftWeek(1)" aria-label="שבוע הבא">›</button>
         </div>
-        <span class="cal-topbar-label" id="calSectionLabel">היומן השבועי</span>
-        <div class="subswitcher cal-topbar-viewswitch">
-          <button class="active" id="ovWeekViewBtn" onclick="setOverviewView('week', this)">שבועי</button>
-          <button onclick="setOverviewView('day', this)">יומי</button>
-          <button onclick="setOverviewView('month', this)">חודשי</button>
+        <div class="cal-topbar">
+          <div class="cal-topbar-stats">
+            <span><b id="statApptsToday">0</b> תורים היום</span>
+            <span class="sep">·</span>
+            <span><b id="statOpenSlots">0</b> מקומות פנויים</span>
+          </div>
+          <span class="cal-topbar-label" id="calSectionLabel">היומן השבועי</span>
+          <div class="subswitcher cal-topbar-viewswitch">
+            <button class="active" id="ovWeekViewBtn" onclick="setOverviewView('week', this)">שבועי</button>
+            <button onclick="setOverviewView('day', this)">יומי</button>
+            <button onclick="setOverviewView('month', this)">חודשי</button>
+          </div>
         </div>
-      </div>
-      <!-- Prev/next week navigation — she asked for a way to move the visible week
-           without disturbing the default "current week" the Saturday-rollover rule
-           computes: weekOffset stays 0 for that default week, and shiftWeek(±1)
-           moves the anchor a full 7 days at a time (see shiftWeek()/computeWeekDays()
-           above). Same RTL arrow convention already used by ovDayShift()'s
-           day-nav-header ("‹ ... קודם" / "... הבא ›"), reusing that exact class. -->
-      <div class="day-nav-header" id="weekNavRow">
-        <button type="button" onclick="shiftWeek(-1)">‹ שבוע קודם</button>
-        <span id="weekNavLabel"></span>
-        <button type="button" onclick="shiftWeek(1)">שבוע הבא ›</button>
       </div>
       <div class="staff-filter-row" id="staffFilterRow"></div>
       <div class="week-cal-wrap" id="weekCalWrap">
@@ -3041,7 +3139,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 31.08-ב-אישור-תור-וSMS-מיידי</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 04.09-ג-עיצוב-יומן-וכפתור-אחורה</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -9650,15 +9748,23 @@
   // עבור התור הזה (appt.reminderChannels), ויש שם שולח מוגדר בהגדרות
   // (branding.smsSenderId) — בלי אחד מהתנאים האלה, פשוט לא נכתב כלום, בלי
   // שגיאה ובלי להשפיע על שאר הפעולה (הזמנה/ביטול עצמם תמיד מצליחים).
+  // שולחת SMS מיידי (אישור קביעת תור / ביטול) על ידי קריאה ישירה לכתובת
+  // הפומבית של הפונקציה sendQueuedSms בענן — בלי לעבור דרך שום אוסף/טריגר
+  // באמצע. שם השולח נקבע בענן עצמו (מתוך ההגדרות שנשמרות ב-Firestore), לא
+  // כאן, כך שאין טעם לשלוח אותו מכאן.
+  const SMS_FUNCTION_URL = 'https://sendqueuedsms-737599524118.me-west1.run.app';
+  const SMS_APP_KEY = 'rz-sms-9f3k2m8x-2026';
   function queueApptSms(appt, message){
     try {
       if (!appt) return;
       if (!Array.isArray(appt.reminderChannels) || !appt.reminderChannels.includes('sms')) return;
       const client = clients.find(c => c && c.name === appt.client);
       if (!client || !client.phone) return;
-      const sender = (branding && branding.smsSenderId || '').trim();
-      if (!sender) return;
-      db.collection('smsQueue').add({ phone: client.phone, message: message, sender: sender });
+      fetch(SMS_FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-App-Key': SMS_APP_KEY },
+        body: JSON.stringify({ phone: client.phone, message: message })
+      }).catch(e => console.error('SMS send request failed (appointment itself is unaffected):', e));
     } catch (e) {
       console.error('queueApptSms failed (appointment itself is unaffected):', e);
     }
@@ -11475,6 +11581,81 @@
         errorEl.textContent = 'עדכון נכשל — ' + (err.code === 'auth/wrong-password' ? 'הסיסמה הנוכחית שגויה.' : err.code);
       });
   }
+
+  // ===== Phone "back" button should close the open overlay, not leave the
+  // site =====
+  // She asked specifically: on a phone, pressing the hardware/gesture back
+  // button while looking at an appointment's details (or the booking form,
+  // client page, etc.) was taking her straight out of the whole site instead
+  // of just closing that one screen — because none of these overlays ever
+  // touch the browser's own history, there was only ever the single history
+  // entry the page loaded with, so ANY back-press had nowhere to go but out.
+  //
+  // The fix: whenever one of the known overlays below opens, push one
+  // history entry for it (same URL — this never actually navigates
+  // anywhere, it just gives the browser something of ours to step back
+  // through first). A back-press then fires a 'popstate' event instead of
+  // leaving the page, and the handler below closes whichever of these
+  // overlays is currently open, via the exact same close function its own
+  // ✕/backdrop already calls. If she instead closes the overlay normally
+  // (✕, backdrop tap, a save action, etc.) without ever pressing back, the
+  // observer notices the overlay closing and quietly pops that same history
+  // entry back off on its own — via history.back() — so it never sits there
+  // as a "dead" entry that would otherwise eat one extra, confusing
+  // back-press later on. appBackNavSuppressPop is what keeps that
+  // self-cleanup from re-triggering the close logic a second time.
+  //
+  // Deliberately scoped to just these overlays for now, not the admin
+  // panel's own sub-tabs (סקירה/לקוחות/הגדרות/...) or the switch between the
+  // public site and the admin panel — those have more moving parts
+  // (guarded/code-gated tabs, login state) and are a reasonable next step if
+  // this isn't enough on its own, but this alone already covers the
+  // overwhelming majority of "I just wanted to close this one screen"
+  // moments: appointment details, the booking form, a client's page, and
+  // every other full-screen overlay in the app.
+  var APP_BACK_OVERLAY_CLOSERS = {
+    myDayOverlay: closeMyDayView,
+    flexibleRequestOverlay: closeFlexibleRequestOverlay,
+    manualBookingOverlay: closeManualBookingModal,
+    slotChoiceOverlay: closeSlotChoiceOverlay,
+    personalTimeOverlay: closePersonalTimeOverlay,
+    apptDetailOverlay: closeApptDetailOverlay,
+    clientProfileOverlay: closeClientProfileOverlay,
+    specialRequestDetailOverlay: closeSpecialRequestDetailOverlay,
+    apptLookupOverlay: closeApptLookup,
+    clientArrivalOverlay: closeClientArrivalOverlay,
+    loginOverlay: closeLoginOverlay
+  };
+  var appBackNavSuppressPop = false;
+  function appBackOpenOverlayId(){
+    return Object.keys(APP_BACK_OVERLAY_CLOSERS).find(function(id){
+      var el = document.getElementById(id);
+      return el && el.classList.contains('show');
+    }) || null;
+  }
+  window.addEventListener('popstate', function(){
+    if (appBackNavSuppressPop){ appBackNavSuppressPop = false; return; }
+    var openId = appBackOpenOverlayId();
+    if (!openId) return;
+    try { APP_BACK_OVERLAY_CLOSERS[openId](); } catch (e) { console.error('Back-button overlay close failed:', e); }
+  });
+  Object.keys(APP_BACK_OVERLAY_CLOSERS).forEach(function(id){
+    var el = document.getElementById(id);
+    if (!el) return;
+    new MutationObserver(function(){
+      var isOpenNow = el.classList.contains('show');
+      if (isOpenNow){
+        if (!history.state || history.state.__appOverlay !== id){
+          history.pushState({ __appOverlay: id }, '', location.href);
+        }
+      } else if (history.state && history.state.__appOverlay === id){
+        // Closed some other way (✕, backdrop, a save action...) — pop our
+        // own history entry back off so it doesn't linger as a dead one.
+        appBackNavSuppressPop = true;
+        history.back();
+      }
+    }).observe(el, { attributes: true, attributeFilter: ['class'] });
+  });
 </script>
 </body>
 </html>
