@@ -375,6 +375,13 @@
   .cat-tile:active{transform:translateY(-1px);}
   .cat-tile-name{font-family:'Suez One'; font-weight:400; font-size:17px; color:#fff;}
   .cat-tile-count{font-size:11.5px; color:rgba(255,255,255,0.8);}
+  /* היא ביקשה שבטאב "שירותים" (בחירת קטגוריה לניהול שירותים) הריבועים יהיו
+     קטנים יותר כדי שיהיה פחות גלילה — כאן בלבד (לא בבחירת הקטגוריה של
+     הלקוחה בקביעת תור, ששם הריבועים הגדולים נשארים כמו שהיו). */
+  #svcManageCatGrid.cat-grid{grid-template-columns:repeat(3, 1fr); gap:8px;}
+  #svcManageCatGrid .cat-tile{padding:6px; border-radius:12px; gap:2px;}
+  #svcManageCatGrid .cat-tile-name{font-size:12.5px;}
+  #svcManageCatGrid .cat-tile-count{font-size:9px;}
   .cat-back-btn{
     background:none; border:none;
     color:var(--wine); font-family:'Heebo'; font-size:13px; font-weight:500;
@@ -1718,6 +1725,18 @@
     text-align:center; font-size:10.5px; font-weight:700; color:var(--wine);
     background:rgba(28,23,25,0.55); border-radius:6px; padding:3px 4px;
     pointer-events:none; line-height:1.3;
+  }
+  /* יום פתוח בעיקרון, אבל שעות מסוימות בתחילתו/בסופו לפני/אחרי שעות העבודה
+     בפועל של העובדת המסוננת (למשל היא מתחילה ב-12:00) — אותה תבנית אלכסונים
+     כמו יום סגור לגמרי (day-closed), רק ממוקמת רק על טווח השעות החסום, לא
+     על כל העמודה. inset-inline:0 (לא left/right קבועים) כדי לעבוד נכון גם
+     ב-RTL. בלי z-index משלה בכוונה, ומתווספת ל-DOM לפני התורים (.cal-appt) —
+     כך תור אמיתי שבכל זאת קיים שם (למשל נקבע לפני ששעות העבודה השתנו) תמיד
+     יצויר מעליה ויישאר לחיץ. */
+  .cal-hour-blocked-band{
+    position:absolute; inset-inline:0;
+    background:repeating-linear-gradient(135deg, rgba(90,30,42,0.07) 0px, rgba(90,30,42,0.07) 10px, transparent 10px, transparent 20px);
+    cursor:not-allowed;
   }
   /* Hour/half/quarter line strengths were originally 0.08/0.05/0.045 — close
      enough together that the quarter-hour marks were nearly invisible against
@@ -3091,24 +3110,10 @@
         <button onclick="showInnerTab('sub-servicesgroup', 'inner-categories', this)">קטגוריות</button>
       </div>
       <div id="inner-services" class="inner-subpanel active">
-        <!-- She found the old flat list ("בלאגן... לא צריך לגלול למטה") too long to
-             scroll through once there were more than a handful of services — this
-             now mirrors the SAME tap-through category-tile pattern already used
-             for the manual-booking multi-service picker (renderMbCategoryGrid()/
-             showMbCategoryServices() above), just adapted for managing services
-             instead of selecting them for a booking: tiles first (reusing the
-             very same .cat-grid/.cat-tile CSS), tapping one reveals only that
-             category's svc-manage-rows — add/edit/delete are completely
-             unchanged, just no longer all rendered/scrolled through at once. -->
-        <div id="svcManageCatGridView">
-          <div class="cat-grid" id="svcManageCatGrid"></div>
-          <div id="svcManageCatEmpty" style="display:none; font-size:13px; color:var(--panel-text-dim); padding:16px 4px;">עדיין אין קטגוריות עם שירותים — יש להוסיף קטגוריה בטאב "קטגוריות", ואז שירות ראשון למטה.</div>
-        </div>
-        <div id="svcManageCatServicesView" style="display:none;">
-          <button type="button" class="cat-back-btn" onclick="showSvcManageCategoryGrid()">‹ חזרה לקטגוריות</button>
-          <div class="label" id="svcManageCatLabel" style="margin:6px 0;"></div>
-          <div class="svc-manage-list" id="svcManageList"></div>
-        </div>
+        <!-- היא ביקשה ששורת ההוספה תהיה הכי למעלה: כשנכנסים לטאב הזה זה כמעט
+             תמיד כדי להוסיף שירות חדש, ועם הרבה קטגוריות/שירותים הרשימה
+             שלמטה יכולה להיות ארוכה — כך אין צורך לגלול כלל כדי להגיע לשורת
+             ההוספה, ומיד אחרי ההוספה כל הרשימה נראית שלמה מתחתיה. -->
         <div class="svc-add-row">
           <!-- Hidden (in favor of the plain label next to it) whenever she's
                adding from inside an already-expanded category — see
@@ -3127,6 +3132,24 @@
           </div>
           <input type="file" id="newSvcPhotoFile" accept="image/*" style="display:none;" onchange="handleSvcPhotoUpload(event)">
           <button class="cta" style="width:auto; margin-top:0;" onclick="addService()">הוספת שירות</button>
+        </div>
+        <!-- She found the old flat list ("בלאגן... לא צריך לגלול למטה") too long to
+             scroll through once there were more than a handful of services — this
+             now mirrors the SAME tap-through category-tile pattern already used
+             for the manual-booking multi-service picker (renderMbCategoryGrid()/
+             showMbCategoryServices() above), just adapted for managing services
+             instead of selecting them for a booking: tiles first (reusing the
+             very same .cat-grid/.cat-tile CSS), tapping one reveals only that
+             category's svc-manage-rows — add/edit/delete are completely
+             unchanged, just no longer all rendered/scrolled through at once. -->
+        <div id="svcManageCatGridView">
+          <div class="cat-grid" id="svcManageCatGrid"></div>
+          <div id="svcManageCatEmpty" style="display:none; font-size:13px; color:var(--panel-text-dim); padding:16px 4px;">עדיין אין קטגוריות עם שירותים — יש להוסיף קטגוריה בטאב "קטגוריות", ואז שירות ראשון למעלה.</div>
+        </div>
+        <div id="svcManageCatServicesView" style="display:none;">
+          <button type="button" class="cat-back-btn" onclick="showSvcManageCategoryGrid()">‹ חזרה לקטגוריות</button>
+          <div class="label" id="svcManageCatLabel" style="margin:6px 0;"></div>
+          <div class="svc-manage-list" id="svcManageList"></div>
         </div>
       </div>
       <div id="inner-categories" class="inner-subpanel">
@@ -3179,7 +3202,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 04.09-ה-יומן-SMS-ביטולים-ועיצוב</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 04.09-סנכרון-חי-חסימת-שעות-זום-יומן</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -7352,18 +7375,37 @@
   // (hourBandHeight/2, /4 — see quarterHeight below) stays comfortably
   // tappable with a fingertip, not just a mouse pointer.
   const MOBILE_HOUR_BAND_HEIGHT = 60;
+  // היא ביקשה שבמסך קטן יוצגו בבת אחת רק כ-2 שעות מהיומן, כדי שכל תא/ריבוע
+  // יהיה גדול וברור מספיק ללחיצה קלה ומדויקת (ולא מוצג כל היום דחוס בבת
+  // אחת) — שאר השעות נגישות בגלילה בתוך #weekCalWrap כרגיל. גובה כל שעה
+  // מחושב מהשטח האמיתי הפנוי מתחת ל-#weekCalWrap (בדיוק אותו חישוב ש-
+  // fitWeekCalToViewport() כבר עושה) חלקי 2 — כך שבכל גובה מסך אמיתי
+  // נראות בערך שתי שעות שלמות בבת אחת, לא מספר קבוע של פיקסלים לשעה
+  // שהיה יכול להראות הרבה יותר שעות במסך גבוה. MOBILE_HOUR_BAND_HEIGHT
+  // הישן (60) נשאר כרצפה/גיבוי — משמש כשה-wrap עוד לא נגיש למדידה (למשל
+  // ה-render הראשון בזמן שהטאב מוסתר), וכרצפה מינימלית כדי שתא לא יהיה
+  // קטן מדי גם במסך נמוך במיוחד.
+  function computeMobileHourBandHeight(){
+    const wrap = document.getElementById('weekCalWrap');
+    if (wrap && wrap.offsetParent !== null){
+      const rect = wrap.getBoundingClientRect();
+      const available = window.innerHeight - rect.top - 14;
+      if (available > 0) return Math.max(MOBILE_HOUR_BAND_HEIGHT, available / 2);
+    }
+    return MOBILE_HOUR_BAND_HEIGHT;
+  }
   // What hourBandHeight renderWeekCal() actually built the currently-rendered
   // grid with — read back by fitWeekCalToViewport() (and re-checked on every
   // window resize) to notice when the ideal value has changed enough that the
-  // whole grid needs rebuilding at a new scale (in practice: only when
-  // crossing MOBILE_CAL_BREAKPOINT, since 96 and MOBILE_HOUR_BAND_HEIGHT are
-  // both fixed constants now rather than something that could drift on every
-  // resize), without renderWeekCal() and fitWeekCalToViewport() calling each
+  // whole grid needs rebuilding at a new scale (in practice: crossing
+  // MOBILE_CAL_BREAKPOINT, or the mobile "~2 hours visible" target height
+  // itself moving because the available space above/below the calendar
+  // changed), without renderWeekCal() and fitWeekCalToViewport() calling each
   // other forever (each only re-renders when the computed value actually
   // moved from what's already on screen).
   let lastRenderedHourBandHeight = null;
   function computeHourBandHeight(){
-    return window.innerWidth > MOBILE_CAL_BREAKPOINT ? 96 : MOBILE_HOUR_BAND_HEIGHT;
+    return window.innerWidth > MOBILE_CAL_BREAKPOINT ? 96 : computeMobileHourBandHeight();
   }
   const weekdayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
   const weekdayLabels = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
@@ -7725,6 +7767,36 @@
         body.style.cursor = 'pointer';
         body.title = 'לחיצה על שעה פנויה מוסיפה תור';
       }
+      // חסימה חלקית ביום פתוח: getWeekColClosedInfo למעלה מזהה רק יום סגור
+      // *לגמרי* (dayInfo.open===false) — אבל היא ציינה במפורש שאם עובדת
+      // מתחילה לעבוד מאוחר יותר ביום מסוים (למשל 12:00 בשני), השעות שלפני כן
+      // (ואותו דבר אחרי שהיא מסיימת) לא אמורות להיראות פנויות כמו כל שעה
+      // אחרת ביומן — אלא חסומות, בדיוק כמו יום סגור לגמרי, כדי שלא ילחצו שם
+      // בטעות ויקבעו תור בזמן שלא עובדים. מוצג ומחושב רק כשמסוננים לעובדת
+      // ספציפית אחת (לא "כולן") — בתצוגת "כולן" כמה עובדות עם שעות שונות
+      // חולקות עמודה אחת, ואין דרך נאמנה לצייר "חסום" אחיד לכולן יחד.
+      let blockedBands = [];
+      if (!closedInfo && selectedStaffFilter !== 'all'){
+        const s = staff[selectedStaffFilter];
+        const dayInfo = s && s.hours && s.hours[day.fullDate.getDay()];
+        if (dayInfo && dayInfo.open){
+          const rawRanges = (Array.isArray(dayInfo.ranges) && dayInfo.ranges.length)
+            ? dayInfo.ranges
+            : (dayInfo.from && dayInfo.to ? [{ from: dayInfo.from, to: dayInfo.to }] : []);
+          const openWindows = rawRanges
+            .map(r => [timeToMinutes(r.from), timeToMinutes(r.to)])
+            .filter(([ws, we]) => ws < we)
+            .sort((a, b) => a[0] - b[0]);
+          const viewStart = calStartHour * 60, viewEnd = calEndHour * 60;
+          let cursor = viewStart;
+          openWindows.forEach(([ws, we]) => {
+            if (ws > cursor) blockedBands.push([cursor, Math.min(ws, viewEnd)]);
+            cursor = Math.max(cursor, we);
+          });
+          if (cursor < viewEnd) blockedBands.push([cursor, viewEnd]);
+          blockedBands = blockedBands.filter(([bs, be]) => be > viewStart && bs < viewEnd && be > bs);
+        }
+      }
       body.onclick = (e) => {
         if (closedInfo) return;
         if (e.target.closest('.cal-appt')) return;
@@ -7736,6 +7808,10 @@
         const rawMinutes = calStartHour * 60 + (offsetY / hourBandHeight) * 60;
         const snappedMinutes = Math.round(rawMinutes / 15) * 15;
         const clampedMinutes = Math.min(Math.max(snappedMinutes, calStartHour * 60), calEndHour * 60);
+        if (blockedBands.some(([bs, be]) => clampedMinutes >= bs && clampedMinutes < be)){
+          if (typeof showAdminToast === 'function') showAdminToast('⛔ מחוץ לשעות העבודה בתאריך זה');
+          return;
+        }
         const timeStr = minutesToTimeGlobal(clampedMinutes);
         // Offer the quick choice (book a client / block personal time) instead
         // of jumping straight into the booking modal — see openSlotChoiceOverlay().
@@ -7762,6 +7838,13 @@
         body.appendChild(quarter1);
         body.appendChild(quarter3);
       }
+      blockedBands.forEach(([bs, be]) => {
+        const band = document.createElement('div');
+        band.className = 'cal-hour-blocked-band';
+        band.style.top = ((bs - calStartHour * 60) / 60) * hourBandHeight + 'px';
+        band.style.height = ((be - bs) / 60) * hourBandHeight + 'px';
+        body.appendChild(band);
+      });
       const dayAppts = weekAppointments
         .filter(a => a.date === formatDateKey(day.fullDate) && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
         .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
@@ -10357,9 +10440,19 @@
     // an appointment added or changed since then (e.g. by the business owner)
     // otherwise wouldn't show up here.
     resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">מחפשת...</p>';
+    // תוקן: היא דיווחה שהחיפוש נתקע לצמיתות על "מחפשת..." בלי להראות שום
+    // תוצאה. ה-await כאן לא היה מוגבל בזמן בכלל — אם הבקשה לענן נתקעת (חיבור
+    // חלש בטלפון, חזרה מהרקע ל-Safari בעיצומה של הבקשה וכו') הפונקציה פשוט
+    // ממתינה לנצח ולעולם לא מגיעה לשום שורת קוד אחרי ה-await, כולל שורות
+    // ה-catch. עכשיו יש הגבלת זמן: אם אחרי 8 שניות אין תשובה, ממשיכים הלאה עם
+    // הנתונים המקומיים האחרונים הידועים (בדיוק כמו כשיש שגיאת רשת אמיתית),
+    // במקום להישאר תקועים על "מחפשת..." בלי סוף.
     try {
-      const freshDoc = await CLOUD_DOC.get();
-      if (freshDoc.exists){
+      const freshDoc = await Promise.race([
+        CLOUD_DOC.get(),
+        new Promise(resolve => setTimeout(() => resolve(null), 8000))
+      ]);
+      if (freshDoc && freshDoc.exists){
         if (freshDoc.data().clients) clients = freshDoc.data().clients;
         if (freshDoc.data().weekAppointments) weekAppointments = freshDoc.data().weekAppointments;
       }
@@ -11581,6 +11674,33 @@
       lastLoadedSnapshot = cloneJSON(rawCloudData);
     }).catch(err => console.error('Refresh on tab return failed:', err));
   });
+  // היא ביקשה: אם לקוחה קובעת/מבטלת תור בזמן שהיומן של המנהלת פתוח אצלה
+  // (טאב פעיל, לא ברקע), זה חייב להופיע אצלה מעצמו — בלי שתצטרך לרענן את
+  // הדף. עד כאן הנתונים המקומיים היו מתעדכנים מהענן רק בטעינה ראשונה, בחזרה
+  // לטאב אחרי שהיה ברקע, או כשיש שינוי מקומי לשמור — אף אחד מהמצבים האלה לא
+  // קורה סתם כי לקוחה אחרת פעלה בזמן שהטאב הזה פתוח ופעיל מולה. הבדיקה כאן
+  // רצה כל כמה שניות ברקע ומרעננת את המסך אוטומטית ברגע שיש שינוי אמיתי
+  // בענן — בדיוק אותה לוגיקת רענון שכבר קיימת למעלה בחזרה לטאב, רק בלי
+  // שהמנהלת תצטרך לעזוב את הטאב ולחזור אליו כדי שזה יקרה. בדיוק כמו
+  // ב-attemptMidnightRefresh למטה, נזהרים לא "לחטוף" עריכה באמצע הקלדה או
+  // חלונית פתוחה — פשוט מדלגים לסבב הבדיקה הבא, בלי לאבד כלום.
+  function pollForRemoteUpdates(){
+    if (document.hidden || !cloudLoadComplete || !lastLoadedSnapshot) return;
+    const activeTag = document.activeElement && document.activeElement.tagName;
+    const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
+    const overlayOpen = document.querySelector('[id$="Overlay"].show');
+    if (isTyping || overlayOpen) return;
+    CLOUD_DOC.get().then(doc => {
+      if (!doc.exists) return;
+      const rawCloudData = doc.data();
+      if (rawCloudData.savedAt === lastLoadedSnapshot.savedAt) return; // שום דבר לא השתנה בענן מאז הבדיקה הקודמת
+      applyCloudData(rawCloudData);
+      pruneExpiredWaitlistEntries();
+      rerenderEverything();
+      lastLoadedSnapshot = cloneJSON(rawCloudData);
+    }).catch(err => console.error('Background live-sync check failed:', err));
+  }
+  setInterval(pollForRemoteUpdates, 6000);
   // A tab that's simply left open overnight (very plausible for a business owner
   // who doesn't close her browser) never naturally re-checks "today" — waitlist
   // requests whose date has passed keep showing until SOMETHING reloads the page,
