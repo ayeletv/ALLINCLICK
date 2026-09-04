@@ -2249,9 +2249,17 @@
      resulting ~45-55px column width.
      ===================================================================== */
   @media (max-width:480px){
-    #panel-business .inner-switcher{margin-bottom:0.5rem; gap:6px;}
-    #panel-business .inner-switcher button{padding:6px 12px; font-size:12px;}
-    .cal-chrome-row{margin-bottom:6px; gap:6px;}
+    /* Every one of these margins/paddings is deliberately as tight as it
+       gets without shrinking actual tap targets below a comfortable size
+       (that tradeoff already got made once, the other way, and reverted —
+       see the MOBILE WEEK CALENDAR COMPACTION comment above) — this is
+       purely reclaiming spacing between rows, not making anything smaller
+       to tap. */
+    .biz-topbar-inner{padding:8px 3vw;}
+    body.admin-mode .stage{padding:calc(0.5vh + 58px) 3vw 1.5vh;}
+    #panel-business .inner-switcher{margin-bottom:6px; gap:6px;}
+    #panel-business .inner-switcher button{padding:5px 12px; font-size:12px;}
+    .cal-chrome-row{margin-bottom:5px; gap:6px;}
     .cal-topbar-viewswitch button{padding:4px 10px !important; font-size:10.5px !important;}
     /* Prev/next are bare arrows here (see the HTML comment above
        #calChromeRow) specifically so the date range next to them has room to
@@ -2260,7 +2268,7 @@
        text that used to need the whole row to itself. */
     #weekNavRow button{padding:0; width:30px; height:30px; flex-shrink:0; font-size:15px; display:flex; align-items:center; justify-content:center;}
     #weekNavRow span{font-size:12px;}
-    #staffFilterRow{margin-bottom:6px; gap:8px;}
+    #staffFilterRow{margin-bottom:5px; gap:8px;}
     #staffFilterRow .staff-filter-chip{gap:3px;}
     #staffFilterRow .staff-filter-chip .avatar{width:30px; height:30px; font-size:11px;}
     #staffFilterRow .staff-filter-chip span{font-size:9px;}
@@ -3139,7 +3147,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 04.09-ג-עיצוב-יומן-וכפתור-אחורה</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 04.09-ד-יומן-גדול-ואחורה-מהאדמין</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -4638,7 +4646,26 @@
         }
       });
     }
-    if (hint) hint.textContent = anyAvailable ? 'מוצגות כאן רק שעות פנויות, בדיוק כמו בקביעת תור ללקוחה.' : 'אין שעות פנויות ביום הזה. אפשר לבחור יום אחר בלוח השנה.';
+    // She reported this reading as a bug: clicking a specific hour on the
+    // calendar pre-fills that exact time, but the moment she then picks a
+    // treatment, the time she clicked "disappears" with no explanation. What
+    // actually happens is legitimate — a treatment's duration changes which
+    // start times are even valid (a slot that fits a 30-minute default might
+    // not leave room for a 60-minute treatment before the next booking) — but
+    // silently clearing her selection with zero feedback is exactly what
+    // makes it FEEL like a glitch instead of an expected side effect of
+    // picking a longer/shorter treatment. So: if the previously-selected time
+    // didn't survive this re-render (it's simply no longer offered for the
+    // new duration) while other times still are, say so explicitly instead
+    // of leaving her to notice the empty selection on her own.
+    const previousTimeGotDropped = previouslySelected && timeInput.value !== previouslySelected;
+    if (hint){
+      if (previousTimeGotDropped && anyAvailable){
+        hint.textContent = `השעה ${previouslySelected} שנבחרה לא מתאימה למשך הטיפול הנוכחי — יש לבחור שעה אחרת מהרשימה.`;
+      } else {
+        hint.textContent = anyAvailable ? 'מוצגות כאן רק שעות פנויות, בדיוק כמו בקביעת תור ללקוחה.' : 'אין שעות פנויות ביום הזה. אפשר לבחור יום אחר בלוח השנה.';
+      }
+    }
   }
   function minutesToTimeGlobal(m){
     return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
@@ -7501,6 +7528,19 @@
       if (!sel || (sel.deleted && !weekAppointments.some(a => a.staff === selectedStaffFilter))) selectedStaffFilter = 'all';
     }
     rowEl.innerHTML = '';
+    // She specifically asked to reclaim more vertical space so the calendar
+    // grid itself starts higher on the page — filtering by staff member is
+    // meaningless when there's only "כולן" plus one real person to filter
+    // to anyway (choosing either shows the exact same thing), so with 0 or 1
+    // visible staff member this whole row just costs height for a choice
+    // that doesn't do anything. It reappears automatically the moment a
+    // second staff member exists to filter between.
+    const visibleStaff = staff.filter((s, i) => !(s.deleted && !weekAppointments.some(a => a.staff === i)));
+    if (visibleStaff.length <= 1){
+      rowEl.style.display = 'none';
+      return;
+    }
+    rowEl.style.display = '';
     const allChip = document.createElement('div');
     allChip.className = 'staff-filter-chip' + (selectedStaffFilter === 'all' ? ' active' : '');
     allChip.innerHTML = `<div class="avatar" style="background:rgba(var(--panel-line-rgb),0.12); color:var(--panel-text-dim);">כל</div><span>כולן</span>`;
@@ -11633,11 +11673,46 @@
       return el && el.classList.contains('show');
     }) || null;
   }
+  // ===== Same idea, one level up: back from the admin panel itself =====
+  // She asked for this specifically after trying the overlay fix above: with
+  // no overlay open — just sitting in the admin calendar, say — pressing
+  // back was STILL leaving the site outright, in one press, with no way to
+  // change her mind. What she wants instead: the first back-press takes her
+  // to the same public "קביעת תור" page a client would see (a real, useful
+  // screen, not a dead end), and only a SECOND back-press from there
+  // actually leaves — exactly like a native app returning to a home screen
+  // before actually closing. That's a deliberate two-step landing rather
+  // than a native confirm() popup (those block the whole page and look out
+  // of place here) — it directly fixes "it keeps leaving on me" because the
+  // first press no longer leaves at all.
+  var appAdminModeWasOn = document.body.classList.contains('admin-mode');
+  new MutationObserver(function(){
+    var isAdminNow = document.body.classList.contains('admin-mode');
+    if (isAdminNow === appAdminModeWasOn) return;
+    appAdminModeWasOn = isAdminNow;
+    if (isAdminNow){
+      if (!history.state || !history.state.__appAdminMode){
+        history.pushState({ __appAdminMode: true }, '', location.href);
+      }
+    } else if (history.state && history.state.__appAdminMode){
+      // Left admin mode some other way (the 🚪 exit icon, doLogout(), ...)
+      // rather than via back — pop our own entry so it doesn't linger.
+      appBackNavSuppressPop = true;
+      history.back();
+    }
+  }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
   window.addEventListener('popstate', function(){
     if (appBackNavSuppressPop){ appBackNavSuppressPop = false; return; }
     var openId = appBackOpenOverlayId();
-    if (!openId) return;
-    try { APP_BACK_OVERLAY_CLOSERS[openId](); } catch (e) { console.error('Back-button overlay close failed:', e); }
+    if (openId){
+      try { APP_BACK_OVERLAY_CLOSERS[openId](); } catch (e) { console.error('Back-button overlay close failed:', e); }
+      return;
+    }
+    if (document.body.classList.contains('admin-mode')){
+      var customerBtn = document.querySelector('.switcher button');
+      if (customerBtn) showPanel('customer', customerBtn);
+    }
   });
   Object.keys(APP_BACK_OVERLAY_CLOSERS).forEach(function(id){
     var el = document.getElementById(id);
