@@ -382,11 +382,27 @@
   #svcManageCatGrid .cat-tile{padding:6px; border-radius:12px; gap:2px;}
   #svcManageCatGrid .cat-tile-name{font-size:12.5px;}
   #svcManageCatGrid .cat-tile-count{font-size:9px;}
+  /* היא ביקשה: לחצן "חזרה לקטגוריות" (אחרי שבחרה קטגוריה, למשל בטאב שירותים,
+     ורוצה לחזור ולבחור אחרת) היה טקסט קטן וכמעט בלתי נראה — התבלבלה ולא ראתה
+     אותו בכלל. "אם זה היה מלא הייתי רואה מיד" — כפתור מלא, עגול וברור, לא
+     עוד קישור טקסט דק. משפיע גם על "+ הוספת טיפול נוסף"/"לכל הטיפולים ›"
+     שחולקים את אותה מחלקת בסיס — אותו שיפור נראות מגיע גם להם, לא רק
+     ל"חזרה". בסיס בגוון זהב-על-כהה (כמו .template-btn) כי זה בשימוש גם
+     בפאנל הלקוחה הכהה (הקטגוריות בקביעת תור/בקשה גמישה); דריסה לגוון בורדו-
+     על-בהיר בתוך #panel-business (הלוח הבהיר של המנהלת — ניהול שירותים,
+     הוספת תור ידנית). */
   .cat-back-btn{
-    background:none; border:none;
-    color:var(--wine); font-family:'Heebo'; font-size:13px; font-weight:500;
-    cursor:pointer; padding:0;
+    background:rgba(201,162,39,0.12); border:1px solid rgba(201,162,39,0.4);
+    color:var(--gold-soft); font-family:'Heebo'; font-size:13.5px; font-weight:700;
+    cursor:pointer; padding:9px 16px; border-radius:999px;
+    display:inline-flex; align-items:center; gap:4px;
   }
+  .cat-back-btn:hover, .cat-back-btn:active{background:rgba(201,162,39,0.22);}
+  #panel-business .cat-back-btn{
+    background:rgba(155,44,66,0.1); border-color:rgba(155,44,66,0.24);
+    color:var(--wine);
+  }
+  #panel-business .cat-back-btn:hover, #panel-business .cat-back-btn:active{background:rgba(155,44,66,0.18);}
   #svcManageList .svc-cat-header{
     color:var(--panel-gold);
     border-bottom-color:rgba(var(--panel-line-rgb),0.15);
@@ -820,6 +836,17 @@
     border-radius:999px;
     margin-inline-start:auto;
     white-space:nowrap;
+  }
+  /* "שעות פעילות" — unified weekly-hours cards shown to customers, merged
+     across the whole staff (see renderHoursOverview()). Reuses .new-card's
+     look so this new tab feels consistent with "פינוקים חדשים" right next
+     to it, rather than introducing a whole separate visual language. */
+  .hours-day-card .new-icon{font-size:18px;}
+  .hours-day-card.hours-day-closed .new-body p{color:#8A8178;}
+  .hours-today-tag{
+    font-size:10.5px; font-weight:400; font-family:'Heebo';
+    background:rgba(201,162,39,0.18); color:var(--gold-soft);
+    padding:2px 8px; border-radius:999px; margin-inline-start:6px; vertical-align:middle;
   }
   .subswitcher{
     display:flex;
@@ -2688,6 +2715,7 @@
   <div class="switcher">
     <button class="active" id="bookingTabBtn" onclick="showPanel('customer', this)"><i class="ti ti-calendar-event"></i> קביעת תור</button>
     <button onclick="showPanel('whatsnew', this)"><i class="ti ti-sparkles"></i> פינוקים חדשים 🎁</button>
+    <button onclick="showPanel('hours', this)"><i class="ti ti-clock"></i> שעות פעילות</button>
     <button id="businessTabBtn" onclick="handleBusinessTabClick(this)" style="display:none;"><i class="ti ti-briefcase"></i> ניהול העסק</button>
   </div>
   <div id="panel-customer" class="panel active">
@@ -2794,6 +2822,10 @@
   </div>
   <div id="panel-whatsnew" class="panel">
     <div class="new-grid" id="whatsNewList"></div>
+  </div>
+  <div id="panel-hours" class="panel">
+    <div class="label" style="text-align:center; margin-bottom:14px;">שעות הפעילות שלנו</div>
+    <div class="new-grid" id="hoursOverviewList"></div>
   </div>
   <div id="panel-business" class="panel">
     <!-- The persistent drawer-toggle + exit/add-appointment/my-day control
@@ -3202,7 +3234,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 04.09-סנכרון-חי-חסימת-שעות-זום-יומן</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 04.09-שעות-פעילות-זום-יומן-v8</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -3335,7 +3367,7 @@
       </div>
     </div>
     <div id="mbBookFields" style="display:flex; flex-direction:column; gap:10px;">
-      <input type="tel" inputmode="numeric" maxlength="9" id="mbClientId" class="field" placeholder="תעודת זהות (אם יש בכרטיסייה — ימלא שם, טלפון, אימייל והערה אוטומטית)">
+      <input type="tel" inputmode="numeric" maxlength="9" id="mbClientId" class="field" placeholder="תעודת זהות — מילוי תז יטען הכל אוטומטית">
       <!-- A clear, explicit status line for the תז field — she reported that
            typing an ID that matches no one felt ambiguous ("is this even
            working?"), even though the fields below were already unlocked and
@@ -3347,6 +3379,16 @@
       <input type="tel" id="mbClientPhone" class="field" placeholder="050-0000000">
       <input type="email" id="mbClientEmail" class="field" placeholder="אימייל (אופציונלי)">
       <textarea id="mbClientNote" class="client-note" style="min-height:44px; margin:0;" placeholder="הערה אישית על הלקוחה (העדפות, רגישויות...)"></textarea>
+      <!-- היא ביקשה שגם כשקובעים תור ידנית (במיוחד ללקוחה חדשה) יהיה מקום
+           לבחור איך לשלוח לה תזכורת/אישור — עד כה זה תמיד היה SMS קבוע בלי
+           שום בחירה. name="mbReminderChannel" (לא "reminderChannel") בכוונה —
+           שם שונה מהטופס הציבורי כדי ש-confirmBooking() שם לא "יראה" בטעות
+           גם את התיבות האלה כשהן קיימות באותו עמוד. -->
+      <div class="label" style="margin-top:4px;">איך לשלוח תזכורת/אישור התור? (אפשר לבחור יותר מאחת)</div>
+      <div class="reminder-choice" id="mbReminderChoice">
+        <label><input type="checkbox" name="mbReminderChannel" value="sms" checked> SMS</label>
+        <label><input type="checkbox" name="mbReminderChannel" value="call"> שיחת טלפון</label>
+      </div>
       <div class="label" style="margin-top:4px;">בחירת טיפול/ים — אפשר לבחור כמה טיפולים לאותו תור</div>
       <!-- Tap-through category flow, mirroring the public booking flow's own
            .cat-grid/.cat-tile pattern (renderCategoryGrid()/showCategoryServices()
@@ -5411,12 +5453,11 @@
       staff: staffIdx,
       status: 'pending',
       note: '',
-      // תור שנקבע ידנית ע"י המנהלת מקבל בדיוק את אותה תזכורת SMS מיידית
-      // שתור שהלקוחה קובעת לעצמה מקבל (ראה queueApptSms למטה) — אין כאן
-      // שדה לבחור ערוץ תזכורת כמו בטופס הציבורי, אז ברירת המחדל היא SMS
-      // (בדיוק כמו שהתיבה מסומנת כברירת מחדל שם). queueApptSms בעצמה כבר
-      // לא שולחת כלום אם אין ללקוחה טלפון שמור או שאין שם שולח מוגדר.
-      reminderChannels: ['sms']
+      // עכשיו יש בחירה אמיתית (התיבות mbReminderChannel למעלה בטופס), בדיוק
+      // כמו בטופס הציבורי — לא עוד SMS קבוע בלי אפשרות לבחור. queueApptSms
+      // בעצמה כבר לא שולחת כלום אם אין ללקוחה טלפון שמור או שאין שם שולח
+      // מוגדר, ולא שולחת SMS בכלל אם 'sms' לא נבחר כאן.
+      reminderChannels: Array.from(document.querySelectorAll('input[name="mbReminderChannel"]:checked')).map(cb => cb.value)
     };
     weekAppointments.push(manualAppointment);
     // Prefer matching by תז (the real identity key) when the admin entered one;
@@ -5438,7 +5479,11 @@
       if (emailVal && !existingByIdOrPhone.email) existingByIdOrPhone.email = emailVal;
       existingByIdOrPhone.note = noteVal;
     } else if (phone || idDigits){
-      clients.push({ name, phone, teudatZehut: idDigits || null, email: emailVal, photo: null, visits: 0, daysSinceVisit: null, note: noteVal, birthday: null });
+      // היא ביקשה שברגע שנוצרת לקוחה חדשה מתוך קביעת תור ידנית (ולא הקלידה
+      // בעצמה הערה משלה), ייכתב על הכרטיס שלה סימון שזו לקוחה שנוספה ככה —
+      // כדי שברור בהמשך מאיפה הכרטיס הזה הגיע, ולא נראה כמו כרטיס "יתום"
+      // בלי שום הקשר.
+      clients.push({ name, phone, teudatZehut: idDigits || null, email: emailVal, photo: null, visits: 0, daysSinceVisit: null, note: noteVal || 'לקוחה חדשה — נוספה דרך קביעת תור ידנית', birthday: null });
     }
     if (typeof saveState === 'function') saveState();
     // The appointment is saved at this point — show the success feedback and close
@@ -7220,6 +7265,7 @@
         if (typeof renderWeekCal === 'function') renderWeekCal();
         if (typeof renderHoursStaffPicker === 'function') renderHoursStaffPicker();
         if (typeof renderHoursEditor === 'function') renderHoursEditor();
+        if (typeof renderHoursOverview === 'function') renderHoursOverview();
         if (typeof saveState === 'function') saveState();
         showAdminToast(`✓ ${s.name} הוסרה מהצוות הפעיל`);
       };
@@ -7305,6 +7351,7 @@
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderHoursStaffPicker === 'function') renderHoursStaffPicker();
     if (typeof renderHoursEditor === 'function') renderHoursEditor();
+    if (typeof renderHoursOverview === 'function') renderHoursOverview();
     if (typeof saveState === 'function') saveState();
     if (typeof showAdminToast === 'function') showAdminToast('✓ העובדת נוספה בהצלחה');
   }
@@ -7375,22 +7422,26 @@
   // (hourBandHeight/2, /4 — see quarterHeight below) stays comfortably
   // tappable with a fingertip, not just a mouse pointer.
   const MOBILE_HOUR_BAND_HEIGHT = 60;
-  // היא ביקשה שבמסך קטן יוצגו בבת אחת רק כ-2 שעות מהיומן, כדי שכל תא/ריבוע
-  // יהיה גדול וברור מספיק ללחיצה קלה ומדויקת (ולא מוצג כל היום דחוס בבת
-  // אחת) — שאר השעות נגישות בגלילה בתוך #weekCalWrap כרגיל. גובה כל שעה
-  // מחושב מהשטח האמיתי הפנוי מתחת ל-#weekCalWrap (בדיוק אותו חישוב ש-
-  // fitWeekCalToViewport() כבר עושה) חלקי 2 — כך שבכל גובה מסך אמיתי
-  // נראות בערך שתי שעות שלמות בבת אחת, לא מספר קבוע של פיקסלים לשעה
-  // שהיה יכול להראות הרבה יותר שעות במסך גבוה. MOBILE_HOUR_BAND_HEIGHT
-  // הישן (60) נשאר כרצפה/גיבוי — משמש כשה-wrap עוד לא נגיש למדידה (למשל
-  // ה-render הראשון בזמן שהטאב מוסתר), וכרצפה מינימלית כדי שתא לא יהיה
-  // קטן מדי גם במסך נמוך במיוחד.
+  // אחרי כמה סבבים התברר שכל הפירוש הקודם היה שגוי: "עד השעה 2"/"עד השעה 3"
+  // שלה לא התכוונו למספר שעות גלויות (2 שעות, 3 שעות) אלא לשעון עצמו — עד
+  // השעה 14:00 בצהריים, לעומת מה שהיה קודם (עד השעה 15:00 בערך) לפני שהתחלנו
+  // לגעת בזה בכלל. מה שהיא רוצה בפועל: לראות כמעט את כל היום בלי לגלול (ככה
+  // שהיה תמיד), רק עם ריבועים קצת יותר גדולים/נוחים ללחיצה — שיראו עד 14:00
+  // בלי לגלול במקום עד 15:00, לא לצמצם דרסטית ל-2-3 שעות גלויות כמו בגרסאות
+  // הקודמות (טעות שלי). לכן החישוב כאן לא מחלק את השטח הפנוי במספר שרירותי —
+  // הוא מחשב כמה גובה צריך כל שעה כדי שבדיוק הטווח calStartHour (08:00) עד
+  // MOBILE_CAL_TARGET_END_HOUR (14:00) ימלא את השטח הפנוי האמיתי מתחת ל-
+  // #weekCalWrap, מה שמתאים את עצמו אוטומטית לכל מכשיר (לא משנה כמה שטח
+  // פנוי יש בפועל אצלה) — 18:00-14:00 (4 השעות האחרונות) עדיין נגישות
+  // בגלילה כרגיל.
+  const MOBILE_CAL_TARGET_END_HOUR = 14;
   function computeMobileHourBandHeight(){
     const wrap = document.getElementById('weekCalWrap');
     if (wrap && wrap.offsetParent !== null){
       const rect = wrap.getBoundingClientRect();
       const available = window.innerHeight - rect.top - 14;
-      if (available > 0) return Math.max(MOBILE_HOUR_BAND_HEIGHT, available / 2);
+      const targetHours = Math.max(1, MOBILE_CAL_TARGET_END_HOUR - calStartHour);
+      if (available > 0) return Math.max(MOBILE_HOUR_BAND_HEIGHT, available / targetHours);
     }
     return MOBILE_HOUR_BAND_HEIGHT;
   }
@@ -7398,9 +7449,10 @@
   // grid with — read back by fitWeekCalToViewport() (and re-checked on every
   // window resize) to notice when the ideal value has changed enough that the
   // whole grid needs rebuilding at a new scale (in practice: crossing
-  // MOBILE_CAL_BREAKPOINT, or the mobile "~2 hours visible" target height
-  // itself moving because the available space above/below the calendar
-  // changed), without renderWeekCal() and fitWeekCalToViewport() calling each
+  // MOBILE_CAL_BREAKPOINT, or the mobile "fit 08:00-14:00 into the available
+  // space" target height itself moving because the available space
+  // above/below the calendar changed), without renderWeekCal() and
+  // fitWeekCalToViewport() calling each
   // other forever (each only re-renders when the computed value actually
   // moved from what's already on screen).
   let lastRenderedHourBandHeight = null;
@@ -9135,6 +9187,57 @@
     { name: 'שישי', open: true, from: '08:00', to: '13:00' },
     { name: 'שבת', open: false, from: '09:00', to: '17:00' }
   ];
+  // "שעות פעילות" — a new customer-facing tab (alongside "קביעת תור" and
+  // "פינוקים חדשים") showing the business's overall opening hours WITHOUT
+  // going through the booking flow. Per her request this is a UNIFIED view
+  // ("בצורה מאוחדת") — every active (non-deleted) staff member's weekly hours
+  // are merged together per day, so a day reads as open at any time at least
+  // one staff member is working, rather than showing each staff member's
+  // schedule separately. Overlapping/touching shifts across different staff
+  // are merged into single ranges (e.g. one staff 09:00-13:00 + another
+  // 12:00-18:00 on the same day shows as one 09:00-18:00 block, not two
+  // overlapping ones); genuinely separate shifts (e.g. 09:00-12:00 and
+  // 16:00-19:00 with a real gap) still show as two distinct ranges.
+  function renderHoursOverview(){
+    const wrap = document.getElementById('hoursOverviewList');
+    if (!wrap) return;
+    const toMinutes = t => { const parts = String(t).split(':'); return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0); };
+    const toTimeStr = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+    const todayDow = new Date().getDay();
+    const perDay = days.map((day, dow) => {
+      const intervals = [];
+      (staff || []).forEach(s => {
+        if (!s || s.deleted) return;
+        const dayInfo = s.hours && s.hours[dow];
+        if (!dayInfo || !dayInfo.open) return;
+        const ranges = (Array.isArray(dayInfo.ranges) && dayInfo.ranges.length)
+          ? dayInfo.ranges
+          : (dayInfo.from && dayInfo.to ? [{ from: dayInfo.from, to: dayInfo.to }] : []);
+        ranges.forEach(r => {
+          if (!r || !r.from || !r.to) return;
+          intervals.push([toMinutes(r.from), toMinutes(r.to)]);
+        });
+      });
+      intervals.sort((a, b) => a[0] - b[0]);
+      const mergedRanges = [];
+      intervals.forEach(([start, end]) => {
+        const last = mergedRanges[mergedRanges.length - 1];
+        if (last && start <= last[1]) last[1] = Math.max(last[1], end);
+        else mergedRanges.push([start, end]);
+      });
+      return { name: day.name, dow, ranges: mergedRanges.map(([s, e]) => ({ from: toTimeStr(s), to: toTimeStr(e) })) };
+    });
+    wrap.innerHTML = perDay.map(d => `
+      <div class="new-card hours-day-card${!d.ranges.length ? ' hours-day-closed' : ''}">
+        <div class="new-icon"><i class="ti ti-clock"></i></div>
+        <div class="new-body">
+          <h4>${d.name}${d.dow === todayDow ? '<span class="hours-today-tag">היום</span>' : ''}</h4>
+          <p>${d.ranges.length ? d.ranges.map(r => `${r.from}–${r.to}`).join(' , ') : 'סגור'}</p>
+        </div>
+      </div>
+    `).join('');
+  }
+  renderHoursOverview();
   const todayMidnight = new Date(nowReal.getFullYear(), nowReal.getMonth(), nowReal.getDate());
   let bookingSelectedDate = new Date(todayMidnight);
   let calViewYear = todayMidnight.getFullYear();
@@ -11053,6 +11156,7 @@
     const refreshDownstream = () => {
       if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
       if (typeof renderMiniCal === 'function') renderMiniCal();
+      if (typeof renderHoursOverview === 'function') renderHoursOverview();
       if (typeof saveState === 'function') saveState();
     };
     days.forEach((day, i) => {
@@ -11507,6 +11611,7 @@
     if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
     if (typeof renderHoursStaffPicker === 'function') renderHoursStaffPicker();
     if (typeof renderHoursEditor === 'function') renderHoursEditor();
+    if (typeof renderHoursOverview === 'function') renderHoursOverview();
     if (typeof renderReports === 'function') renderReports('week');
     if (typeof renderOverviewDayView === 'function') renderOverviewDayView();
     if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal();
@@ -11603,6 +11708,7 @@
         console.log('No saved data yet in the cloud — using demo starter data.');
         lastLoadedSnapshot = {};
         cloudLoadComplete = true;
+        if (typeof attemptRestoreAdminView === 'function') attemptRestoreAdminView();
         handleAppointmentLookupFromUrl();
         handleWaitlistCancelFromUrl();
         // Tell the hero it can reveal now — see window.__brandingReady above.
@@ -11622,6 +11728,7 @@
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       cloudLoadComplete = true;
       console.log('Loaded saved data from the cloud.');
+      if (typeof attemptRestoreAdminView === 'function') attemptRestoreAdminView();
       handleAppointmentLookupFromUrl();
       handleWaitlistCancelFromUrl();
       // rerenderEverything() above already called renderBranding() with the real
@@ -11747,6 +11854,13 @@
     // which clicks this same button by position to return to the customer view.
     const bookingBtn = document.getElementById('bookingTabBtn');
     if (bookingBtn) bookingBtn.style.display = isLoggedIn ? 'none' : '';
+    // היא ביקשה: רענון דף (F5/משיכה לרענון בטלפון) כשהיא באמצע ניהול העסק
+    // (למשל בטאב "לקוחות") לא אמור לזרוק אותה החוצה לעמוד הלקוחה מההתחלה —
+    // אלא לחזור בדיוק לאותו טאב שהיא הייתה בו. Firebase Auth כבר שומר את
+    // ההתחברות שלה בין רענונים לבד (isLoggedIn יחזור true כאן שוב אחרי
+    // הרענון) — מה שהיה חסר זה רק לזכור/לשחזר איפה בדיוק היא הייתה. ראה
+    // attemptRestoreAdminView()/persistAdminViewState() למטה.
+    if (typeof attemptRestoreAdminView === 'function') attemptRestoreAdminView();
   });
   function handleBusinessTabClick(btn){
     if (isLoggedIn){
@@ -11799,6 +11913,10 @@
       // enter the owner-access code again for the gated tabs — this isn't
       // remembered across a logout.
       sensitiveAccessUnlocked = false;
+      // כדי שלא יישאר "זכרון" של איפה היא הייתה בניהול אחרי שהתנתקה בפועל —
+      // כניסה הבאה (גם אם זו אותה התחברות משותפת) תתחיל מסקירה כרגיל, לא
+      // תנסה לשחזר טאב מהתנתקות קודמת.
+      try { sessionStorage.removeItem('appAdminViewState'); } catch (e) {}
       document.querySelectorAll('.switcher button')[0].click();
     });
   }
@@ -11898,6 +12016,47 @@
       return el && el.classList.contains('show');
     }) || null;
   }
+  // ===== רענון דף שלא זורק אותה חזרה מההתחלה =====
+  // sessionStorage (לא localStorage) בכוונה — נשאר בדיוק לאורך חיי הטאב הזה
+  // (כולל רענון), ומתאפס לבד כשהטאב/החלון נסגר, בדיוק ההתנהגות הרצויה: טאב
+  // חדש אמור להתחיל מההתחלה, אבל רענון של אותו טאב לא. נשמר בכל שינוי מצב
+  // admin-mode/הטאב הפעיל (ראה שתי הקריאות ל-persistAdminViewState למטה),
+  // ונקרא ברגע ששני התנאים האמיתיים מוכנים — ההתחברות ידועה (isLoggedIn,
+  // ר' onAuthStateChanged למעלה) והנתונים מהענן נטענו (cloudLoadComplete,
+  // ר' loadCloudData למעלה) — כי אי אפשר לשחזר טאב שדורש נתונים אמיתיים
+  // (למשל "לקוחות") לפני שיש בכלל נתונים לרנדר. adminViewRestoreAttempted
+  // מוודא שזה קורה פעם אחת בלבד לכל טעינת עמוד, לא בכל פעם ששני התנאים
+  // "נוגעים" זה בזה (יכולים להתרחש בכל סדר).
+  function persistAdminViewState(){
+    try {
+      var isAdminNow = document.body.classList.contains('admin-mode');
+      sessionStorage.setItem('appAdminViewState', JSON.stringify({
+        adminMode: isAdminNow,
+        subTab: isAdminNow ? currentAdminSubTabName() : null
+      }));
+    } catch (e) { /* פרטי/חסום — פשוט לא נשמר, לא קריטי */ }
+  }
+  var adminViewRestoreAttempted = false;
+  function attemptRestoreAdminView(){
+    if (adminViewRestoreAttempted) return;
+    if (typeof isLoggedIn === 'undefined' || !isLoggedIn || !cloudLoadComplete) return;
+    adminViewRestoreAttempted = true;
+    var saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem('appAdminViewState') || 'null'); } catch (e) {}
+    if (!saved || !saved.adminMode) return;
+    var bizBtn = document.getElementById('businessTabBtn');
+    if (!bizBtn) return;
+    showPanel('business', bizBtn);
+    if (saved.subTab && saved.subTab !== 'overview'){
+      var tabBtn = document.querySelector('#bizSubNavRow button[onclick*="\'' + saved.subTab + '\'"]');
+      // guardedShowSub (לא showSub הישיר) גם לטאבים לא-חסומים — היא מטפלת
+      // בשני המקרים נכון ומחזירה תמיד Promise, ואם הטאב ששוחזר כן חסום בקוד
+      // (sensitiveAccessUnlocked מתאפס בכל רענון, ראה ההערה למעלה עליו) —
+      // היא תבקש את הקוד שוב, בדיוק כמו לחיצה רגילה על הטאב, ולא "תעקוף"
+      // בטעות את ההגנה רק כי זה שחזור אוטומטי.
+      if (tabBtn && typeof guardedShowSub === 'function') guardedShowSub(saved.subTab, tabBtn);
+    }
+  }
   // ===== Same idea, one level up: back from the admin panel itself =====
   // She asked for this specifically after trying the overlay fix above: with
   // no overlay open — just sitting in the admin calendar, say — pressing
@@ -11915,6 +12074,7 @@
     var isAdminNow = document.body.classList.contains('admin-mode');
     if (isAdminNow === appAdminModeWasOn) return;
     appAdminModeWasOn = isAdminNow;
+    persistAdminViewState();
     if (isAdminNow){
       if (!history.state || !history.state.__appAdminMode){
         history.pushState({ __appAdminMode: true }, '', location.href);
@@ -11971,12 +12131,56 @@
     }).observe(el, { attributes: true, attributeFilter: ['class'] });
   });
 
+  // ===== Same idea, one level deeper still: back from a non-overview admin tab =====
+  // She reported that pressing back while sitting in a tab like "לקוחות" threw
+  // her all the way out of admin mode to the customer-facing view in one press
+  // — forcing her to log back in just to get back to her own calendar. What she
+  // wants: back should first climb up to "סקירה" (the overview/calendar tab),
+  // exactly like a native app's back button climbing one level of a tab
+  // hierarchy before actually leaving the app — the same admin-mode-exit-in-
+  // two-steps idea above, just with one more step inserted above it for the
+  // tab she's actually in. Same push/pop pattern as everywhere else on this
+  // page: switching away from "סקירה" into any other tab pushes one history
+  // entry; switching back to "סקירה" some other way (clicking its own nav
+  // button) pops it so a later phone-back press never wastes itself on a
+  // stale entry; switching directly between two non-overview tabs (למשל
+  // לקוחות ← צוות, בלי לעבור דרך סקירה) replaces the pending entry instead of
+  // stacking a second one, so a single back-press still only ever costs one
+  // level no matter how many non-overview tabs she hopped through.
+  function currentAdminSubTabName(){
+    var active = document.querySelector('#panel-business > .subpanel.active');
+    return active ? active.id.replace(/^sub-/, '') : null;
+  }
+  var appAdminSubTabWas = currentAdminSubTabName();
+  document.querySelectorAll('#panel-business > .subpanel').forEach(function(el){
+    new MutationObserver(function(){
+      var nowTab = currentAdminSubTabName();
+      if (nowTab === null || nowTab === appAdminSubTabWas) return;
+      var prevTab = appAdminSubTabWas;
+      appAdminSubTabWas = nowTab;
+      persistAdminViewState();
+      if (prevTab === 'overview' && nowTab !== 'overview'){
+        history.pushState({ __appAdminSubTab: nowTab }, '', location.href);
+      } else if (nowTab === 'overview' && history.state && history.state.__appAdminSubTab === prevTab){
+        appBackNavSuppressPop = true;
+        history.back();
+      } else if (prevTab !== 'overview' && nowTab !== 'overview' && history.state && history.state.__appAdminSubTab === prevTab){
+        history.replaceState({ __appAdminSubTab: nowTab }, '', location.href);
+      }
+    }).observe(el, { attributes: true, attributeFilter: ['class'] });
+  });
+
   window.addEventListener('popstate', function(){
     if (appBackNavSuppressPop){ appBackNavSuppressPop = false; return; }
     var openId = appBackOpenOverlayId();
     if (openId){
       try { APP_BACK_OVERLAY_CLOSERS[openId](); } catch (e) { console.error('Back-button overlay close failed:', e); }
       return;
+    }
+    var curAdminTab = currentAdminSubTabName();
+    if (document.body.classList.contains('admin-mode') && curAdminTab && curAdminTab !== 'overview'){
+      var overviewBtn = document.querySelector('#bizSubNavRow button[onclick*="showSub(\'overview\'"]');
+      if (overviewBtn){ showSub('overview', overviewBtn); return; }
     }
     var curStep = currentBookingStepNum();
     if (curStep && curStep > 1){
