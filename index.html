@@ -213,8 +213,20 @@
        script further down) read as one deliberate, graceful resize instead of
        an instant snap, whether that happens a beat after the hero first paints
        or several seconds later on a slow connection. */
-    transition:font-size 0.32s ease, color 0.32s ease, margin-top 0.32s ease, max-width 0.32s ease;
+    transition:font-size 0.32s ease, color 0.32s ease, margin-top 0.32s ease, max-width 0.32s ease, opacity 0.22s ease;
   }
+  /* היא דיווחה שוב ושוב על "קפיצה" בשם העסק, גם אחרי שהמתנו לגופן — כי
+     בפועל שתי התנועות (השורה הכללית "הכל בקליק" מתכווצת, השם האמיתי גדל)
+     קרו בו-זמנית, באותה רגע ממש (ראו revealBizNameAsHero() למטה) — שני
+     שינויי-גודל חופפים בזמן, שנראים לעין כמו קפיצה/גליץ' מבלבל אחד, לא
+     שני מעברים חלקים. היא ביקשה רצף פשוט במקום זה, בלי הרבה אנימציה: קודם
+     "הכל בקליק" נעלם (רק דהיה — לא משנה גודל בזמן שעדיין נראה), ורק אחרי
+     זה השם האמיתי מופיע. המחלקה הזו היא שלב-הביניים השקוף: מוסיפים אותה
+     רגע לפני שמחליפים גודל (primary מוסר בזמן שהיא כבר שקופה, כך שאף אחד
+     לא רואה את שינוי הגודל בכלל), ומסירים אותה שוב אחרי שהשם האמיתי כבר
+     מוצג, כדי שהשורה הכללית תחזור להיראות — עכשיו כבר בגודל הקטן, כתת-
+     כותרת מתחת לשם. */
+  .hero-platform-line.hero-line-fading{opacity:0;}
   .hero-platform-line .accent{color:var(--gold-soft); font-weight:500; display:inline-block; opacity:0;}
   .hero-platform-line .tagline-rest{display:inline-block; opacity:0;}
   /* The small inline click-logo mark that used to sit between "הכל בקליק"
@@ -260,14 +272,15 @@
     letter-spacing:-0.01em;
     color:var(--wine);
     opacity:0;
-    transform:translateY(10px);
-    /* Own dedicated transition (not the .fonts-ready keyframe cascade below) —
+    /* היא ביקשה במפורש "בלי הרבה אנימציה" — הוסרה תנועת ה-translateY
+       (החלקה מלמטה למעלה) שהייתה כאן קודם, נשארה רק דהיית שקיפות פשוטה.
+       Own dedicated transition (not the .fonts-ready keyframe cascade below) —
        this element's appearance is triggered independently, whenever the real
        business name actually arrives (see revealBizNameAsHero()), which can be
        well before or well after the rest of the hero has already revealed. */
-    transition:opacity 0.32s ease, transform 0.32s ease;
+    transition:opacity 0.28s ease;
   }
-  #heroBizName.biz-name-visible{ opacity:1; transform:translateY(0); }
+  #heroBizName.biz-name-visible{ opacity:1; }
   .scroll-hint{
     margin-top:4rem;
     font-size:13px;
@@ -664,11 +677,17 @@
   .staff-chip .avatar img{width:100%; height:100%; object-fit:cover;}
   .staff-chip span{font-size:11px; color:#6B6259; max-width:60px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .staff-chip.selected span{color:var(--wine); font-weight:500;}
-  .step-dots{display:flex; justify-content:center; gap:8px; margin-bottom:18px;}
-  .step-dot{width:8px; height:8px; border-radius:50%; background:#E4DACB;}
-  .step-dot.active{background:var(--wine); width:20px; border-radius:4px;}
-  .booking-step{display:none;}
-  .booking-step.active{display:block; animation:fadeUp 0.3s ease forwards;}
+  .step-dots, .mb-step-dots{display:flex; justify-content:center; gap:8px; margin-bottom:18px;}
+  .step-dot, .mb-step-dot{width:8px; height:8px; border-radius:50%; background:#E4DACB;}
+  .step-dot.active, .mb-step-dot.active{background:var(--wine); width:20px; border-radius:4px;}
+  /* .mb-wizard-step is the admin manual-booking modal's own version of
+     .booking-step (see the big HTML comment above #manualBookingOverlay for
+     why it's a separate class/id set rather than reusing bstep-1/2/3
+     directly) — visually identical, same base rule aliased here so both
+     stay pixel-for-pixel the same "no design change, just steps" look she
+     asked for. */
+  .booking-step, .mb-wizard-step{display:none;}
+  .booking-step.active, .mb-wizard-step.active{display:block; animation:fadeUp 0.3s ease forwards;}
   .step-nav{display:flex; gap:8px; margin-top:6px;}
   .step-back{
     background:none;
@@ -1694,16 +1713,14 @@
     box-sizing:border-box;
   }
   .cal-day-col{flex:1; min-width:104px; border-inline-start:1px solid rgba(var(--panel-line-rgb),0.08); position:relative; scroll-snap-align:start;}
-  /* REDESIGNED (round 2) — the bold alternating wine/gold gradient banner
-     treatment from before (kept as a comment further down for history) read
-     as "too much, messy for my eyes" on her phone. New direction, which she
-     described concretely and pointed at a reference screenshot for: every
-     day plain and clean (white/near-white card, same family as the panel's
-     own light background), and ONLY today's column singled out using the
-     site's actual accent color — the date NUMBER itself becomes a small
-     filled circle (.cal-day-today .cal-day-num) rather than recoloring the
-     whole header block. Every other day looks identical to each other; nothing
-     to visually parse except "which one is today" and "which one did I tap".
+  /* REDESIGNED (round 3 — matching her actual reference screenshot) — the
+     bold alternating wine/gold gradient banner from before, and then a
+     small colored circle around just today's date number, both read as
+     "not what the picture shows" once she sent the real reference image.
+     Final direction, copied straight from that image: every day plain and
+     clean (white/near-white card), and ONLY today's column singled out by
+     tinting its WHOLE header cell — no circle, no colored text, nothing
+     else changes. See .cal-day-today below.
   */
   /* position:sticky + top:0 pins every day-column header to the top of
      #weekCalWrap (the actual scrolling box — see fitWeekCalToViewport())
@@ -1736,12 +1753,18 @@
     transition:background 0.2s ease, color 0.2s ease;
   }
   .cal-day-head .heb-date{font-size:8.5px; color:var(--panel-text-dim); opacity:0.75;}
-  /* Today's own column: the accent color lands ONLY on the date-number circle
-     (filled solid) and the weekday label text — not the whole header block —
-     exactly the "square of the date gets the site's color" look she asked
-     for, matching the reference image's treatment. */
-  .cal-day-head.cal-day-today .cal-day-name{color:var(--wine);}
-  .cal-day-head.cal-day-today .cal-day-num{background:var(--wine); color:#fff;}
+  /* Today's own column — she sent the exact reference screenshot she meant
+     (a real calendar app: 30.8–4.9 week, Monday the 1st highlighted) and
+     asked to mimic it precisely, just in the site's own color instead of
+     its purple. Looking at that image closely: today's ENTIRE header cell
+     gets one flat, fairly visible tint — nothing else changes. The weekday
+     name and date number stay the exact same plain dark text as every other
+     day (no colored circle badge, no colored name) — the earlier round's
+     wine-filled circle around the date number doesn't exist in her
+     reference at all, so it's removed here. Only the cell background
+     differs; everything printed on top of it looks identical to any other
+     day. */
+  .cal-day-head.cal-day-today{background:rgba(155,44,66,0.12);}
   .cal-day-body{position:relative;}
   /* A day that's fully closed (weekly day off, or a one-off closed date like a
      wedding/holiday) for whichever staff the calendar is currently filtered
@@ -2266,11 +2289,12 @@
      visible reads any more — see the HTML comment there) — this rule stays
      only as documentation, nothing currently depends on it being visible. */
   .cal-topbar{display:none;}
-  /* Puts the prev/next-week date-nav on its own slim line — see the HTML
-     comment above #calChromeRow for why the view-switch/staff-filter used to
-     share this row and now don't (they moved to #calFilterRow below, both as
-     plain <select>s instead of button rows — she asked for the whole top of
-     this screen stripped down to the minimum). */
+  /* Date-nav + the יומן/דוחות select share ONE line — #weekNavRow grows to
+     fill the available width (flex:1 1 auto below), the select just takes
+     its own natural width at the end. See the big HTML comment above
+     #inner-overview-calendar for why these two specifically ended up
+     sharing a row (round 2 of this redesign — the first pass split them
+     apart and lost the space savings entirely). */
   .cal-chrome-row{
     display:flex; align-items:center;
     gap:10px; margin-bottom:8px;
@@ -2287,11 +2311,11 @@
      span itself lets it actually shrink and ellipsize. */
   .cal-chrome-row #weekNavRow span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1 1 auto;}
   /* The plain <select> she asked for instead of a button row ("לא כפתורים
-     אלא בחירה, משהו אחר") — used both by the top-of-screen יומן/דוחות select
-     and the two selects in #calFilterRow below, so all three read as one
-     consistent, minimal control language instead of three different widget
-     styles. Native <select> styling (the popup itself, the dropdown arrow)
-     is left to the browser/OS — only the closed-state pill is themed. */
+     אלא בחירה, משהו אחר") — used by the top-of-screen יומן/דוחות select.
+     (#calFilterRow below went through a couple of redesign rounds since —
+     see the .cal-mini-btn comment further down for the current version.)
+     Native <select> styling (the popup itself, the dropdown
+     arrow) is left to the browser/OS — only the closed-state pill is themed. */
   .mini-select{
     -webkit-appearance:none; appearance:none;
     background:var(--panel-card-bg);
@@ -2305,17 +2329,57 @@
     background-repeat:no-repeat; background-position:left 10px center;
   }
   .mini-select:focus{outline:none; border-color:var(--wine);}
-  /* The יומן/דוחות select sits alone at the top of #sub-overview, right-
-     aligned, taking only as much height/width as the pill itself needs —
-     nowhere near the full-width button bar it replaced. */
-  .inner-switcher-select{display:flex; justify-content:flex-end; margin-bottom:8px;}
   /* ONE row for both "sort by staff" and "week/day/month" — she asked for
      these two, previously a whole avatar-chip row PLUS a whole button row,
      to become a single row instead ("שורה שיהיה אפשר לבחור מיון לפי עובדת
-     ויומי חודשי"). #calStaffFilterSelect is hidden by renderStaffFilterRow()
-     when there's 0-1 real staff to filter between, same as the old chip row
-     used to be — this row then simply holds just the one remaining select. */
-  .cal-filter-row{display:flex; gap:8px; margin-bottom:10px;}
+     ויומי חודשי"). */
+  /* WALKED BACK from a connected 4-segment button group (a previous round
+     tried matching a reference screenshot's full-width stretched segmented
+     switch — see git history/older comments if this ever needs revisiting).
+     After actually seeing that built, she asked for something much smaller
+     instead: two small, independent, nicely-colored pill buttons, tucked
+     together in a corner rather than stretched across the row — not
+     flex:1 anymore, just their own natural (compact) width, pushed to one
+     side via justify-content below. */
+  .cal-filter-row{display:flex; gap:8px; margin-bottom:10px; justify-content:flex-end;}
+  /* Each "button" is a real native <select> (exactly what she described:
+     "כפתור שרשום עליו שבועי עם חץ קטן בסוף שאפשר להחליף" — a button showing
+     its current value with a small arrow at the end that switches it) —
+     the browser already renders a closed <select> as "current option text +
+     dropdown arrow", so no separate label/overlay layer is needed here at
+     all, unlike the old connected-segment version. Built on top of the
+     existing .mini-select look (same pill/arrow mechanics used by the
+     יומן/דוחות select above) but recolored into the site's wine accent and
+     shrunk down, so the two read as small, deliberately-styled buttons
+     rather than a plain generic dropdown. */
+  .cal-mini-btn{
+    /* background-color (NOT the "background" shorthand) — the shorthand
+       resets background-repeat/position/image back to their initial values
+       even when only a color is given, which silently undid .mini-select's
+       own background-repeat:no-repeat and tiled the small chevron below
+       across the whole pill instead of showing it once. Explicit repeat/
+       position here too, so this rule is correct on its own regardless of
+       cascade order with .mini-select. */
+    background-color:rgba(155,44,66,0.09);
+    background-repeat:no-repeat;
+    background-position:left 9px center;
+    color:var(--wine);
+    border:1.5px solid rgba(155,44,66,0.28);
+    font-weight:700;
+    flex:0 0 auto; min-width:0; max-width:132px;
+    /* She reported the arrow actually sitting ON TOP of "שבועי"/"כולם"'s own
+       text ("שהחץ לא יעלה על המילה") — .mini-select's own padding
+       (6px 28px 6px 12px: only 12px of clearance on the arrow's side) was
+       tuned for its own wider/shorter-word use (יומן/דוחות) and left too
+       little room once this select's own natural width shrank to fit a
+       longer word like "שבועי" tightly. Explicit padding here instead,
+       asymmetric on purpose: generous clearance on the arrow's (left) side
+       so the icon + a real gap never reaches the text, modest padding on
+       the text's own (right, where RTL text starts) side. */
+    padding:7px 12px 7px 24px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239B2C42' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+  .cal-mini-btn:focus{outline:none; border-color:var(--wine);}
   /* =====================================================================
      MOBILE WEEK CALENDAR COMPACTION (phone widths, <=480px — covers the
      375/390/412px devices she actually uses).
@@ -2383,7 +2447,12 @@
        calendar grid down further than it needs to. */
     .cal-filter-row{margin-bottom:5px; gap:6px;}
     .mini-select{padding:5px 22px 5px 10px; font-size:11px; background-position:left 8px center;}
-    .inner-switcher-select{margin-bottom:5px;}
+    /* Overrides the .mini-select mobile padding/arrow-position two lines up
+       (same specificity, but .cal-mini-btn needs its own asymmetric spacing
+       here too — see the base .cal-mini-btn comment for why) so the arrow
+       still clears "שבועי"/"כולם"'s own text at phone widths, not just on
+       desktop. */
+    .cal-mini-btn{max-width:104px; padding:6px 10px 6px 20px; font-size:11px; background-position:left 8px center;}
     /* The actual fix for the horizontal drag complaint — see the big comment
        above. computeHourBandHeight() (renderWeekCal()/fitWeekCalToViewport())
        is this block's JS counterpart for the vertical axis. */
@@ -2708,6 +2777,15 @@
         fontPromise = new Promise(function(resolve){ setTimeout(resolve, 300); });
       }
     } catch (e) { fontPromise = Promise.resolve(); }
+    // Exposed globally so any OTHER place the business name renders in this
+    // same font (right now: #phoneBrand inside the booking widget, see
+    // renderBranding() below) can wait on the exact same "Suez One is ready"
+    // signal before showing its text — she asked specifically for the name
+    // to "come after it has its font, that's it, no jumps" after noticing it
+    // could still render once in a fallback font and then visibly reflow
+    // when Suez One finished loading a moment later, independent of whether
+    // the business-name DATA itself had already arrived.
+    window.__suezFontPromise = fontPromise;
     // No longer waiting on window.__brandingReady here — see the comment above.
     // The font wait alone is already individually time-capped (1200ms) above,
     // plus this absolute safety net below, so the hero is never left invisible
@@ -2873,29 +2951,28 @@
          active one), so functionally it behaves as if it were this panel's
          own header even though it isn't nested inside it. -->
     <div id="sub-overview" class="subpanel active">
-      <!-- REDESIGNED — she said the whole top of this screen felt cluttered
-           and asked for it stripped down to the minimum: everything that
-           used to be buttons (יומן/דוחות here, and the week/day/month +
-           staff filter below) is now a plain <select> ("לא כפתורים אלא
-           בחירה, משהו אחר" — not buttons, a choice, something else) styled as
-           a small pill instead of a full-width button bar, and the old
-           2-separate-rows staff-filter-chips + view-switch became ONE row
-           (#calFilterRow) as she asked ("שורה שיהיה אפשר לבחור מיון לפי
-           עובדת ויומי חודשי"). Net: 3 old rows of chrome (inner-switcher,
-           chrome-row, staff-filter-row) down to 2, and the calendar grid
-           itself now starts noticeably higher on the screen.
-           onOverviewInnerTabChange() below replaces the old
-           showInnerTab()/guardedShowInnerTab() button onclicks — same two
-           functions underneath, still respects the reports tab's PIN gate
-           (gatedTabsConfig.reports), just called from a select's onchange
-           instead of two separate button onclicks, and reverts the select
-           back to its previous value if she cancels/fails the PIN prompt. -->
-      <div class="inner-switcher inner-switcher-select">
-        <select id="overviewInnerTabSelect" class="mini-select" onchange="onOverviewInnerTabChange(this)">
-          <option value="inner-overview-calendar" selected>יומן</option>
-          <option value="inner-overview-reports">דוחות</option>
-        </select>
-      </div>
+      <!-- REDESIGNED (round 2) — the first pass here still left 3 separate
+           chrome rows (inner-switcher-select alone, date-nav alone, staff+view
+           row) because splitting the date-nav off of the old combined
+           date-nav+view-switch line actually UNDID the original space-saving
+           merge instead of improving on it — she immediately noticed the
+           calendar hadn't actually gained any room. Fixed for real now: the
+           יומן/דוחות select moved onto the SAME line as the date-nav (inside
+           #calChromeRow, at the end — the select doesn't have to live inside
+           #inner-overview-calendar to work, onOverviewInnerTabChange() below
+           only needs its id), so there are only 2 chrome rows total instead
+           of the original 3: (1) date-nav + יומן/דוחות select, (2) staff
+           filter + week/day/month view, in one connected row ("שורה שיהיה
+           אפשר לבחור מיון לפי עובדת ויומי חודשי" — one row for both). That
+           second row went through a connected-4-segment-button-group round
+           (after a reference screenshot she'd sent) before she walked it
+           back to two small independent "button" selects — see the
+           .cal-mini-btn CSS comment for the current version.
+           onOverviewInnerTabChange() still routes through the exact
+           same showInnerTab()/guardedShowInnerTab() functions, still respects
+           the reports tab's PIN gate (gatedTabsConfig.reports), and reverts
+           the select back to its previous value if she cancels/fails the PIN
+           prompt. -->
       <div id="inner-overview-calendar" class="inner-subpanel active">
       <!-- #statApptsToday/#statOpenSlots/#calSectionLabel stay in the markup,
            hidden, purely so renderOverviewStats()/setOverviewView() keep
@@ -2916,19 +2993,31 @@
           <span id="weekNavLabel"></span>
           <button type="button" onclick="shiftWeek(1)" aria-label="שבוע הבא">›</button>
         </div>
+        <select id="overviewInnerTabSelect" class="mini-select" onchange="onOverviewInnerTabChange(this)">
+          <option value="inner-overview-calendar" selected>יומן</option>
+          <option value="inner-overview-reports">דוחות</option>
+        </select>
       </div>
-      <!-- ONE consolidated row: sort by staff member + week/day/month view,
-           both plain selects (renderStaffFilterRow() fills the first one in
-           and hides it entirely when there's only one real staff member to
-           filter to — same "meaningless choice costs no space" behavior as
-           before, just on a <select> now instead of a chip row). -->
+      <!-- Walked back from the earlier connected-4-segment button group (a
+           previous round tried matching a reference screenshot's stretched
+           segmented switch) — she asked for something much smaller instead:
+           two independent, compact, nicely-colored "buttons" tucked into a
+           corner rather than stretched across the row, each just showing its
+           current value with a small dropdown arrow at the end (a native
+           <select> IS exactly that — no separate label/overlay layer needed,
+           the browser already shows the selected option's own text). See the
+           .cal-mini-btn CSS comment for the styling. renderStaffFilterRow()
+           still fills/hides #calStaffFilterSelect exactly as before (hidden
+           entirely when there's only one real staff member to filter to);
+           its default option now reads "כולם" instead of the old "כל הצוות"
+           per her explicit wording. -->
       <div class="cal-filter-row" id="calFilterRow">
-        <select id="calStaffFilterSelect" class="mini-select" onchange="onCalStaffFilterSelectChange(this)"></select>
-        <select id="calViewModeSelect" class="mini-select" onchange="setOverviewView(this.value)">
-          <option value="week" id="ovWeekViewOption" selected>שבועי</option>
+        <select id="calViewModeSelect" class="mini-select cal-mini-btn" onchange="setOverviewView(this.value)">
+          <option value="week" selected>שבועי</option>
           <option value="day">יומי</option>
           <option value="month">חודשי</option>
         </select>
+        <select id="calStaffFilterSelect" class="mini-select cal-mini-btn" onchange="onCalStaffFilterSelectChange(this)"></select>
       </div>
       <div class="week-cal-wrap" id="weekCalWrap">
         <div class="week-cal" id="weekCal"></div>
@@ -3287,7 +3376,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 05.09-עיצוב-יומן-נקי-כניסה-מהירה-v9</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 05.09-תיקון-קפיצת-שם-כפתורי-יומן-קטנים-v11</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -3419,88 +3508,120 @@
         <button onclick="closeManualBookingModal()">✕ סגירה</button>
       </div>
     </div>
+    <!-- שינוי מבני (הסבב הזה): הטופס הארוך שהיה גלילה אחת ארוכה פוצל ל-3
+         שלבים עם כפתורי "המשך" — בדיוק אותו רעיון שכבר קיים בטופס ההזמנה
+         הציבורי (#bstep-1/2/3, .step-dots/.step-dot, goToStep()) — אבל עם
+         מזהים/מחלקות נפרדים (mb-*) ופונקציה נפרדת (mbGoToStep) כדי שלא
+         "יתנגשו" עם אותם אלמנטים בטופס הציבורי (שני הטפסים לא פתוחים
+         בו-זמנית בפועל, אבל עדיף הפרדה נקייה ולא לסמוך על זה). העיצוב
+         הוויזואלי של כל שדה בעצמו לא השתנה כלל — רק הקיבוץ שלהם לשלבים.
+         שלב 1: זיהוי/פרטי לקוחה. שלב 2: בחירת טיפולים ומשך. שלב 3: עובדת
+         ותאריך/שעה + השליחה עצמה. -->
+    <div class="mb-step-dots" id="mbStepDots">
+      <span class="mb-step-dot active" data-mbstep="1"></span>
+      <span class="mb-step-dot" data-mbstep="2"></span>
+      <span class="mb-step-dot" data-mbstep="3"></span>
+    </div>
     <div id="mbBookFields" style="display:flex; flex-direction:column; gap:10px;">
-      <input type="tel" inputmode="numeric" maxlength="9" id="mbClientId" class="field" placeholder="תעודת זהות — מילוי תז יטען הכל אוטומטית">
-      <!-- A clear, explicit status line for the תז field — she reported that
-           typing an ID that matches no one felt ambiguous ("is this even
-           working?"), even though the fields below were already unlocked and
-           empty. This makes the mode unmistakable: a green "existing client
-           found" line, or a gold "new client" line the moment 9 digits are
-           typed with no match — see updateMbClientIdStatus() below. -->
-      <div id="mbClientIdStatus" class="mb-client-id-status" style="display:none;"></div>
-      <input type="text" id="mbClientName" class="field" placeholder="שם הלקוחה">
-      <input type="tel" id="mbClientPhone" class="field" placeholder="050-0000000">
-      <input type="email" id="mbClientEmail" class="field" placeholder="אימייל (אופציונלי)">
-      <textarea id="mbClientNote" class="client-note" style="min-height:44px; margin:0;" placeholder="הערה אישית על הלקוחה (העדפות, רגישויות...)"></textarea>
-      <!-- היא ביקשה שגם כשקובעים תור ידנית (במיוחד ללקוחה חדשה) יהיה מקום
-           לבחור איך לשלוח לה תזכורת/אישור — עד כה זה תמיד היה SMS קבוע בלי
-           שום בחירה. name="mbReminderChannel" (לא "reminderChannel") בכוונה —
-           שם שונה מהטופס הציבורי כדי ש-confirmBooking() שם לא "יראה" בטעות
-           גם את התיבות האלה כשהן קיימות באותו עמוד. -->
-      <div class="label" style="margin-top:4px;">איך לשלוח תזכורת/אישור התור? (אפשר לבחור יותר מאחת)</div>
-      <div class="reminder-choice" id="mbReminderChoice">
-        <label><input type="checkbox" name="mbReminderChannel" value="sms" checked> SMS</label>
-        <label><input type="checkbox" name="mbReminderChannel" value="call"> שיחת טלפון</label>
-      </div>
-      <div class="label" style="margin-top:4px;">בחירת טיפול/ים — אפשר לבחור כמה טיפולים לאותו תור</div>
-      <!-- Tap-through category flow, mirroring the public booking flow's own
-           .cat-grid/.cat-tile pattern (renderCategoryGrid()/showCategoryServices()
-           further down) instead of the old plain <select>. Unlike the public flow,
-           tapping a service here ADDS it to mbSelectedServices rather than
-           replacing a single selection — she can keep tapping to build up several
-           treatments on the SAME appointment (her example: פן + גבות), each shown
-           as its own removable chip below with the total duration/price summed
-           across all of them. See mbToggleService()/mbSelectedServicesChanged(). -->
-      <div id="mbSelectedServicesList" class="mb-svc-chip-row"></div>
-      <!-- Quick-pick: her most-frequently-booked treatments for an identified
-           returning client, shown BEFORE the full category grid so she doesn't
-           have to click through categories for what's almost always the same
-           2-3 treatments — see renderMbQuickPick()/computeMbQuickPickServices().
-           Tapping a chip adds that service exactly like tapping it in the
-           category list would (mbToggleService()). Hidden by default; a
-           brand-new client (or no client identified yet) skips straight to the
-           normal category grid below instead of showing an empty panel. -->
-      <div id="mbQuickPickPanel" style="display:none;">
-        <div class="label" style="margin-bottom:6px;">בחירה מהירה — הטיפולים הנפוצים אצל הלקוחה</div>
-        <div id="mbQuickPickChips" class="mb-quickpick-chips"></div>
-        <button type="button" class="cat-back-btn mb-quickpick-more-btn" onclick="mbShowFullCategoryFlow()">לכל הטיפולים ›</button>
-      </div>
-      <div id="mbCatFlowWrap">
-        <div id="mbCatGridView">
-          <div class="cat-grid" id="mbCatGrid"></div>
+      <div class="mb-wizard-step active" id="mbstep-1">
+        <input type="tel" inputmode="numeric" maxlength="9" id="mbClientId" class="field" placeholder="תעודת זהות — מילוי תז יטען הכל אוטומטית">
+        <!-- A clear, explicit status line for the תז field — she reported that
+             typing an ID that matches no one felt ambiguous ("is this even
+             working?"), even though the fields below were already unlocked and
+             empty. This makes the mode unmistakable: a green "existing client
+             found" line, or a gold "new client" line the moment 9 digits are
+             typed with no match — see updateMbClientIdStatus() below. -->
+        <div id="mbClientIdStatus" class="mb-client-id-status" style="display:none;"></div>
+        <input type="text" id="mbClientName" class="field" placeholder="שם הלקוחה">
+        <input type="tel" id="mbClientPhone" class="field" placeholder="050-0000000">
+        <input type="email" id="mbClientEmail" class="field" placeholder="אימייל (אופציונלי)">
+        <textarea id="mbClientNote" class="client-note" style="min-height:44px; margin:0;" placeholder="הערה אישית על הלקוחה (העדפות, רגישויות...)"></textarea>
+        <!-- היא ביקשה שגם כשקובעים תור ידנית (במיוחד ללקוחה חדשה) יהיה מקום
+             לבחור איך לשלוח לה תזכורת/אישור — עד כה זה תמיד היה SMS קבוע בלי
+             שום בחירה. name="mbReminderChannel" (לא "reminderChannel") בכוונה —
+             שם שונה מהטופס הציבורי כדי ש-confirmBooking() שם לא "יראה" בטעות
+             גם את התיבות האלה כשהן קיימות באותו עמוד. -->
+        <div class="label" style="margin-top:4px;">איך לשלוח תזכורת/אישור התור? (אפשר לבחור יותר מאחת)</div>
+        <div class="reminder-choice" id="mbReminderChoice">
+          <label><input type="checkbox" name="mbReminderChannel" value="sms" checked> SMS</label>
+          <label><input type="checkbox" name="mbReminderChannel" value="call"> שיחת טלפון</label>
         </div>
-        <div id="mbCatServicesView" style="display:none;">
-          <button type="button" class="cat-back-btn" onclick="showMbCategoryGrid()">‹ חזרה לקטגוריות</button>
-          <div class="label" id="mbCatServicesLabel" style="margin:6px 0;"></div>
-          <div id="mbSvcList" style="display:flex; flex-direction:column; gap:8px;"></div>
-          <button type="button" class="cat-back-btn mb-add-more-btn" onclick="showMbCategoryGrid()">+ הוספת טיפול נוסף</button>
+        <div id="mbStep1Error" style="display:none; color:var(--wine); font-size:13px;"></div>
+        <div class="step-nav">
+          <button class="cta" id="mbStep1ContinueBtn" style="flex:1;" onclick="mbContinueToStep2()">המשך</button>
         </div>
       </div>
-      <input type="hidden" id="mbService">
-      <label style="font-size:12px; color:var(--ivory-dim); margin-bottom:-4px;">משך הטיפול הכולל (בדקות) — מחושב אוטומטית מסכום הטיפולים שנבחרו, ואפשר לשנות במיוחד ללקוחה הזו</label>
-      <input type="number" id="mbDuration" class="field" min="5" step="5" placeholder="משך בדקות">
-      <div class="label" style="margin-top:4px;">בחירת עובדת — בדיוק כמו אצל הלקוחה</div>
-      <input type="hidden" id="mbStaff">
-      <div class="staff-picker" id="mbStaffPicker"></div>
-      <input type="hidden" id="mbDate">
-      <div class="label" style="margin-top:4px;">בחירת יום — בדיוק כמו היומן שהלקוחה רואה</div>
-      <div class="mini-cal" id="mbMiniCal" style="max-width:420px;">
-        <div class="mini-cal-header">
-          <button type="button" onclick="mbCalShiftMonth(-1)" id="mbCalPrevBtn">‹</button>
-          <span id="mbCalTitle"></span>
-          <button type="button" onclick="mbCalShiftMonth(1)">›</button>
+      <div class="mb-wizard-step" id="mbstep-2">
+        <div class="label" style="margin-top:4px;">בחירת טיפול/ים — אפשר לבחור כמה טיפולים לאותו תור</div>
+        <!-- Tap-through category flow, mirroring the public booking flow's own
+             .cat-grid/.cat-tile pattern (renderCategoryGrid()/showCategoryServices()
+             further down) instead of the old plain <select>. Unlike the public flow,
+             tapping a service here ADDS it to mbSelectedServices rather than
+             replacing a single selection — she can keep tapping to build up several
+             treatments on the SAME appointment (her example: פן + גבות), each shown
+             as its own removable chip below with the total duration/price summed
+             across all of them. See mbToggleService()/mbSelectedServicesChanged(). -->
+        <div id="mbSelectedServicesList" class="mb-svc-chip-row"></div>
+        <!-- Quick-pick: her most-frequently-booked treatments for an identified
+             returning client, shown BEFORE the full category grid so she doesn't
+             have to click through categories for what's almost always the same
+             2-3 treatments — see renderMbQuickPick()/computeMbQuickPickServices().
+             Tapping a chip adds that service exactly like tapping it in the
+             category list would (mbToggleService()). Hidden by default; a
+             brand-new client (or no client identified yet) skips straight to the
+             normal category grid below instead of showing an empty panel. -->
+        <div id="mbQuickPickPanel" style="display:none;">
+          <div class="label" style="margin-bottom:6px;">בחירה מהירה — הטיפולים הנפוצים אצל הלקוחה</div>
+          <div id="mbQuickPickChips" class="mb-quickpick-chips"></div>
+          <button type="button" class="cat-back-btn mb-quickpick-more-btn" onclick="mbShowFullCategoryFlow()">לכל הטיפולים ›</button>
         </div>
-        <div class="mini-cal-weekdays">
-          <span>א</span><span>ב</span><span>ג</span><span>ד</span><span>ה</span><span>ו</span><span>ש</span>
+        <div id="mbCatFlowWrap">
+          <div id="mbCatGridView">
+            <div class="cat-grid" id="mbCatGrid"></div>
+          </div>
+          <div id="mbCatServicesView" style="display:none;">
+            <button type="button" class="cat-back-btn" onclick="showMbCategoryGrid()">‹ חזרה לקטגוריות</button>
+            <div class="label" id="mbCatServicesLabel" style="margin:6px 0;"></div>
+            <div id="mbSvcList" style="display:flex; flex-direction:column; gap:8px;"></div>
+            <button type="button" class="cat-back-btn mb-add-more-btn" onclick="showMbCategoryGrid()">+ הוספת טיפול נוסף</button>
+          </div>
         </div>
-        <div class="mini-cal-grid" id="mbCalGrid"></div>
+        <input type="hidden" id="mbService">
+        <label style="font-size:12px; color:var(--ivory-dim); margin-bottom:-4px;">משך הטיפול הכולל (בדקות) — מחושב אוטומטית מסכום הטיפולים שנבחרו, ואפשר לשנות במיוחד ללקוחה הזו</label>
+        <input type="number" id="mbDuration" class="field" min="5" step="5" placeholder="משך בדקות">
+        <div id="mbStep2Error" style="display:none; color:var(--wine); font-size:13px;"></div>
+        <div class="step-nav">
+          <button class="step-back" onclick="mbGoToStep(1)">חזרה</button>
+          <button class="cta" id="mbStep2ContinueBtn" style="flex:1;" onclick="mbContinueToStep3()">המשך</button>
+        </div>
       </div>
-      <div class="label" style="margin-top:4px;">שעות פנויות</div>
-      <input type="hidden" id="mbTime">
-      <div class="slot-grid" id="mbSlotGrid"></div>
-      <div id="mbSlotsHint" style="font-size:12px;color:#8A8178;margin-top:-4px;"></div>
-      <div id="mbError" style="display:none; color:var(--wine); font-size:13px;"></div>
-      <button class="cta" onclick="submitManualBooking()">הוספת תור</button>
+      <div class="mb-wizard-step" id="mbstep-3">
+        <div class="label" style="margin-top:4px;">בחירת עובדת — בדיוק כמו אצל הלקוחה</div>
+        <input type="hidden" id="mbStaff">
+        <div class="staff-picker" id="mbStaffPicker"></div>
+        <input type="hidden" id="mbDate">
+        <div class="label" style="margin-top:4px;">בחירת יום — בדיוק כמו היומן שהלקוחה רואה</div>
+        <div class="mini-cal" id="mbMiniCal" style="max-width:420px;">
+          <div class="mini-cal-header">
+            <button type="button" onclick="mbCalShiftMonth(-1)" id="mbCalPrevBtn">‹</button>
+            <span id="mbCalTitle"></span>
+            <button type="button" onclick="mbCalShiftMonth(1)">›</button>
+          </div>
+          <div class="mini-cal-weekdays">
+            <span>א</span><span>ב</span><span>ג</span><span>ד</span><span>ה</span><span>ו</span><span>ש</span>
+          </div>
+          <div class="mini-cal-grid" id="mbCalGrid"></div>
+        </div>
+        <div class="label" style="margin-top:4px;">שעות פנויות</div>
+        <input type="hidden" id="mbTime">
+        <div class="slot-grid" id="mbSlotGrid"></div>
+        <div id="mbSlotsHint" style="font-size:12px;color:#8A8178;margin-top:-4px;"></div>
+        <div id="mbError" style="display:none; color:var(--wine); font-size:13px;"></div>
+        <div class="step-nav">
+          <button class="step-back" onclick="mbGoToStep(2)">חזרה</button>
+          <button class="cta" id="mbSubmitBtn" style="flex:1;" onclick="submitManualBooking()">הוספת תור</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -3660,7 +3781,7 @@
       <input type="email" id="loginEmail" class="field" placeholder="אימייל">
       <input type="password" id="loginPassword" class="field" placeholder="סיסמה">
       <div id="loginError" style="display:none; color:var(--wine); font-size:13px;"></div>
-      <button class="cta" onclick="doLogin()">התחברות</button>
+      <button class="cta" id="loginSubmitBtn" onclick="doLogin()">התחברות</button>
     </div>
   </div>
 </div>
@@ -4402,6 +4523,14 @@
     // match falls straight through to the normal grid — see that function.
     renderMbQuickPick(opts.clientName || (mbOpenMatch && mbOpenMatch.name) || null);
     document.getElementById('mbError').style.display = 'none';
+    // כל פתיחה טרייה של המודל מתחילה מחדש משלב 1 — גם אם היא סגרה אותו
+    // באמצע שלב 2/3 בפעם הקודמת. מנקה גם את הודעות השגיאה של השלבים
+    // הקודמים כדי שלא יישארו מוצגות משלב קודם שכבר לא רלוונטי.
+    const mbStep1ErrEl = document.getElementById('mbStep1Error');
+    const mbStep2ErrEl = document.getElementById('mbStep2Error');
+    if (mbStep1ErrEl) mbStep1ErrEl.style.display = 'none';
+    if (mbStep2ErrEl) mbStep2ErrEl.style.display = 'none';
+    if (typeof mbGoToStep === 'function') mbGoToStep(1);
     document.getElementById('manualBookingOverlay').classList.add('show');
     resetManualBookingScroll();
     mbRefreshCalendarAndSlots();
@@ -4551,6 +4680,45 @@
   });
   function closeManualBookingModal(){
     document.getElementById('manualBookingOverlay').classList.remove('show');
+  }
+  // ===== מבנה השלבים בהוספת תור ידנית ("כפתורי המשך") =====
+  // היא ביקשה להפוך את הטופס הארוך (גלילה אחת) לשלושה שלבים עם כפתורי
+  // "המשך" — בדיוק כמו הרעיון שכבר קיים בטופס ההזמנה הציבורי (bstep-1/2/3,
+  // goToStep()) — במפורש "לא נשנה עיצוב אלא רק נעשה את זה בצורה של כפתורי
+  // המשך". מזהים/פונקציות נפרדים (mb*) כדי לא להתנגש עם ה-goToStep()/
+  // .booking-step/.step-dot של הטופס הציבורי (ראו גם ההערה ב-HTML מעל
+  // #manualBookingOverlay). שלב 1: זיהוי/פרטי לקוחה. שלב 2: טיפולים ומשך.
+  // שלב 3: עובדת + תאריך/שעה + השליחה עצמה (submitManualBooking() לא השתנה
+  // בכלל, רק עבר לשבת בתוך שלב 3).
+  function mbGoToStep(n){
+    document.querySelectorAll('#manualBookingOverlay .mb-wizard-step').forEach(s => s.classList.remove('active'));
+    const stepEl = document.getElementById('mbstep-' + n);
+    if (stepEl) stepEl.classList.add('active');
+    document.querySelectorAll('#manualBookingOverlay .mb-step-dot').forEach(d => {
+      d.classList.toggle('active', parseInt(d.dataset.mbstep, 10) === n);
+    });
+    // בדיוק כמו resetManualBookingScroll() בפתיחת המודל — כדי שמעבר בין
+    // שלבים תמיד יתחיל מלמעלה, ולא ישאיר אותה גלולה לאמצע השלב הקודם.
+    if (typeof resetManualBookingScroll === 'function') resetManualBookingScroll();
+  }
+  function mbContinueToStep2(){
+    const errEl = document.getElementById('mbStep1Error');
+    const name = document.getElementById('mbClientName').value.trim();
+    if (!name){
+      if (errEl){ errEl.style.display = 'block'; errEl.textContent = 'יש למלא שם לקוחה לפני שממשיכים.'; }
+      return;
+    }
+    if (errEl) errEl.style.display = 'none';
+    mbGoToStep(2);
+  }
+  function mbContinueToStep3(){
+    const errEl = document.getElementById('mbStep2Error');
+    if (!mbSelectedServices.length){
+      if (errEl){ errEl.style.display = 'block'; errEl.textContent = 'יש לבחור לפחות טיפול אחד לפני שממשיכים.'; }
+      return;
+    }
+    if (errEl) errEl.style.display = 'none';
+    mbGoToStep(3);
   }
   // ===== Empty-slot quick choice: "קביעת תור ללקוחה" vs "חסימת זמן אישי" =====
   // Replaces the old setMbMode() tab toggle inside the manual-booking modal —
@@ -6287,36 +6455,78 @@
   // text refreshed in place, without re-triggering the transition.
   function revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, name){
     const alreadyShown = heroBizNameEl.classList.contains('biz-name-visible');
-    heroBizNameEl.textContent = name;
     // Set this SYNCHRONOUSLY, right now — not inside the requestAnimationFrame
-    // below. She reported the name appearing, then visibly growing/shrinking
-    // TWICE, like a double-take. Root cause: the fallback in the hero-reveal
-    // IIFE (a few hundred lines up) waits on window.__brandingReady and then
-    // checks heroBizNameEl's 'biz-name-visible' class to decide whether to
-    // promote the generic tagline instead — but that check ran as a promise
-    // microtask, which can fire BEFORE the rAF callback below has actually
-    // added that class (microtasks drain before the next animation frame, not
-    // after) — even on a perfectly normal load with a real business name. So
-    // on every normal load: the fallback saw "not visible yet", made the
-    // tagline grow big (wrongly, name WAS coming) — one frame later THIS
-    // function's own rAF fired, shrinking the tagline back down while growing
-    // the real name in. Two competing animations, looking exactly like a
-    // double up/down jump. This flag is the fix: it's true the instant
-    // revealBizNameAsHero() is called with a real name (synchronously, no
-    // rAF/microtask gap), so the fallback below can reliably tell "a real
-    // name IS on its way" apart from "truly no name was ever saved".
+    // below, and not inside the font-wait below either. She reported the name
+    // appearing, then visibly growing/shrinking TWICE, like a double-take.
+    // Root cause: the fallback in the hero-reveal IIFE (a few hundred lines
+    // up) waits on window.__brandingReady and then checks heroBizNameEl's
+    // 'biz-name-visible' class to decide whether to promote the generic
+    // tagline instead — but that check ran as a promise microtask, which can
+    // fire BEFORE the rAF callback below has actually added that class
+    // (microtasks drain before the next animation frame, not after) — even on
+    // a perfectly normal load with a real business name. So on every normal
+    // load: the fallback saw "not visible yet", made the tagline grow big
+    // (wrongly, name WAS coming) — one frame later THIS function's own rAF
+    // fired, shrinking the tagline back down while growing the real name in.
+    // Two competing animations, looking exactly like a double up/down jump.
+    // This flag is the fix: it's true the instant revealBizNameAsHero() is
+    // called with a real name (synchronously, no rAF/microtask/font-wait gap),
+    // so the fallback below can reliably tell "a real name IS on its way"
+    // apart from "truly no name was ever saved".
     window.__heroBizNameWillShow = true;
-    if (alreadyShown) return;
-    heroBizNameEl.style.display = 'block';
-    // Force the display:none->block change above to actually paint (at
-    // opacity:0, per the base #heroBizName rule) before adding the classes
-    // below on the next frame — otherwise the browser can coalesce both style
-    // changes into one paint and skip the transition entirely, snapping
-    // straight to the end state instead of animating into it.
-    requestAnimationFrame(function(){
-      heroPlatformLineEl.classList.remove('primary');
-      heroBizNameEl.classList.add('biz-name-visible');
-    });
+    const doReveal = function(){
+      heroBizNameEl.textContent = name;
+      if (alreadyShown) return;
+      heroBizNameEl.style.display = 'block';
+      // Force the display:none->block change above to actually paint (at
+      // opacity:0, per the base #heroBizName rule) before starting the fade
+      // sequence below on the next frame — otherwise the browser can coalesce
+      // both style changes into one paint and skip the transition entirely,
+      // snapping straight to the end state instead of animating into it.
+      //
+      // רצף מכוון (לא בו-זמנית!) — היא דיווחה שוב ושוב על "קפיצה" בשם העסק
+      // גם אחרי שהמתנו לגופן, כי בגרסה הקודמת שני השינויים (השורה הכללית
+      // "הכל בקליק" מתכווצת + השם האמיתי גדל) קרו באותו רגע בדיוק, ונראו
+      // כמו קפיצה/גליץ' אחד מבלבל. עכשיו: קודם השורה הכללית רק דוהה
+      // (hero-line-fading, ~180ms) — בלי לשנות לה גודל בזמן שהיא עדיין
+      // נראית. ברגע שהיא כבר שקופה לגמרי מחליפים לה בשקט את הגודל (מסירים
+      // primary), מציגים את השם האמיתי (דהיה פשוטה, בלי הרבה אנימציה כמו
+      // שביקשה), ורק אז מחזירים את השורה הכללית להיראות — עכשיו כבר בגודל
+      // הקטן שלה כתת-כותרת מתחת לשם. שלוש תנועות ברורות בזו אחר זו, לא
+      // שתיים חופפות.
+      requestAnimationFrame(function(){
+        heroPlatformLineEl.classList.add('hero-line-fading');
+        setTimeout(function(){
+          heroPlatformLineEl.classList.remove('primary');
+          heroBizNameEl.classList.add('biz-name-visible');
+          requestAnimationFrame(function(){
+            heroPlatformLineEl.classList.remove('hero-line-fading');
+          });
+        }, 200);
+      });
+    };
+    if (alreadyShown){
+      // Already shown once this page load (e.g. she's editing the name live
+      // in Settings) — the font is obviously already ready by now, just
+      // update the text in place instantly, no need to wait/re-animate.
+      doReveal();
+      return;
+    }
+    // THE ACTUAL FIX for her repeated "the name jumps" complaint: this used to
+    // reveal as soon as the NAME DATA was known, with no regard for whether
+    // the actual font (Suez One) had finished loading yet — so on a load
+    // where Firestore happened to answer before the embedded font finished
+    // decoding, the name rendered once in a fallback font and then visibly
+    // reflowed/resized a moment later when Suez One swapped in. That's a
+    // completely different jump than the empty-state/double-take ones
+    // already fixed above and in #phoneBrand's own reveal (renderBranding()) —
+    // and it's exactly what she clarified she meant: "let it come after it
+    // has its font, that's it, no jumps". window.__suezFontPromise (set by
+    // the font-loading IIFE near the top of the page) is the same signal that
+    // IIFE already uses for its own reveal — shared here instead of
+    // duplicated, so both stay in sync automatically.
+    const fp = (window.__suezFontPromise && typeof window.__suezFontPromise.then === 'function') ? window.__suezFontPromise : Promise.resolve();
+    fp.then(doReveal);
   }
   function renderBranding(){
     const logoHtml = branding.logo
@@ -6328,17 +6538,40 @@
     const phoneBrandWrap = document.getElementById('phoneBrand');
     const bizNameTrimmedForPhone = (branding.name || '').trim();
     if (bizNameTrimmedForPhone){
-      phoneBrandWrap.innerHTML = `
-        <div class="logo-dot">${logoHtml}</div>
-        <span class="biz-name">${branding.name}</span>`;
-      if (!phoneBrandWrap.classList.contains('brand-visible')){
-        // Double rAF (same trick used by revealBizNameAsHero() below) — one
-        // frame to let the freshly-set innerHTML actually paint at opacity:0
-        // first, so the class change on the NEXT frame is a real transition
-        // instead of the browser coalescing both into one instant jump.
-        requestAnimationFrame(function(){
-          requestAnimationFrame(function(){ phoneBrandWrap.classList.add('brand-visible'); });
-        });
+      // She clarified exactly what "no jump" means to her: the name should
+      // only ever appear once its real font (Suez One) is actually ready —
+      // not once the DATA is ready. Those are two different moments: the
+      // Firestore branding fetch can resolve before the embedded font has
+      // finished decoding, and setting this text before that would render it
+      // once in a fallback font, then visibly reflow/resize a moment later
+      // when Suez One swaps in — exactly the residual jump she kept seeing
+      // even after the previous fix (which only solved the OTHER jump: an
+      // empty logo circle popping straight to filled). So the very first
+      // reveal here is gated on window.__suezFontPromise (set by the hero's
+      // own font-loading IIFE, shared rather than duplicated) — content and
+      // fade-in only ever happen together, already in the right font.
+      const showPhoneBrand = function(){
+        phoneBrandWrap.innerHTML = `
+          <div class="logo-dot">${logoHtml}</div>
+          <span class="biz-name">${branding.name}</span>`;
+        if (!phoneBrandWrap.classList.contains('brand-visible')){
+          // Double rAF (same trick used by revealBizNameAsHero() below) — one
+          // frame to let the freshly-set innerHTML actually paint at opacity:0
+          // first, so the class change on the NEXT frame is a real transition
+          // instead of the browser coalescing both into one instant jump.
+          requestAnimationFrame(function(){
+            requestAnimationFrame(function(){ phoneBrandWrap.classList.add('brand-visible'); });
+          });
+        }
+      };
+      if (phoneBrandWrap.classList.contains('brand-visible')){
+        // Already shown once this page load (e.g. she's editing the name live
+        // in Settings) — the font is obviously already ready by now, just
+        // update the text in place, no need to wait/re-fade.
+        showPhoneBrand();
+      } else {
+        const fp = (window.__suezFontPromise && typeof window.__suezFontPromise.then === 'function') ? window.__suezFontPromise : Promise.resolve();
+        fp.then(showPhoneBrand);
       }
     } else {
       // No name known yet (still loading, or a brand-new deployment with
@@ -7511,7 +7744,17 @@
     const wrap = document.getElementById('weekCalWrap');
     if (wrap && wrap.offsetParent !== null){
       const rect = wrap.getBoundingClientRect();
-      const available = window.innerHeight - rect.top - 14;
+      // תיקון קריטי (הסבב הזה): "available" חישב את כל השטח מתחת ל-top של
+      // ה-wrap כאילו כולו פנוי ל-6 שעות הרשת עצמה — אבל בפועל 50px הראשונים
+      // (currentDayHeadHeight, ה-mobile) בתוך ה-wrap תפוסים ע"י כותרת הימים
+      // הדביקה (cal-day-head/hoursSpacer) שנשארת קבועה בראש בזמן גלילה, לא
+      // חלק מ-6 השעות עצמן. בלי להחסיר את זה, כל שורת שעה יצאה גבוהה מדי
+      // ב"1/6 מ-50px" בערך, מה שגרם לקו של 14:00 בפועל לנחות כ-50px מתחת
+      // לתחתית ה-wrap הנראית — בדיוק העיכוב שהיא המשיכה לדווח עליו
+      // ("רוצה לראות עד 14:00 בלי לגלול") גם אחרי שתיקנו את מספר השורות
+      // בצ'רום מעל היומן. עכשיו השטח שמחולק ל-6 השעות הוא רק מה שבאמת פנוי
+      // אחרי הכותרת הדביקה, כך שקו ה-14:00 עצמו נוחת בדיוק בתחתית ה-wrap.
+      const available = window.innerHeight - rect.top - currentDayHeadHeight() - 14;
       const targetHours = Math.max(1, MOBILE_CAL_TARGET_END_HOUR - calStartHour);
       if (available > 0) return Math.max(MOBILE_HOUR_BAND_HEIGHT, available / targetHours);
     }
@@ -7729,12 +7972,15 @@
       containerEl.appendChild(row);
     });
   }
-  // REDESIGNED — used to build a row of avatar chips into #staffFilterRow;
-  // now fills a plain <select id="calStaffFilterSelect"> instead, sharing
-  // one slim row with the week/day/month select (#calFilterRow) rather than
-  // costing its own separate row — see the HTML comment above #calFilterRow.
-  // The name is kept as-is (renderStaffFilterRow) since every call site
-  // elsewhere already calls it by this name; only what's INSIDE changed.
+  // Fills the small "עובדת" filter select (#calStaffFilterSelect) — see the
+  // HTML comment above #calFilterRow for why this is back to being a plain,
+  // independent native <select> (walked back from the connected-segment
+  // group) rather than needing its own separate label/overlay: the browser
+  // already shows the selected option's own text as the closed control's
+  // face, so setting the default option's text to "כולם" here is the whole
+  // fix for what used to be a separate synced label. The name is kept as-is
+  // (renderStaffFilterRow) since every call site elsewhere already calls it
+  // by this name; only what's INSIDE changed.
   function renderStaffFilterRow(){
     const selectEl = document.getElementById('calStaffFilterSelect');
     if (!selectEl) return;
@@ -7750,9 +7996,9 @@
     // grid itself starts higher on the page — filtering by staff member is
     // meaningless when there's only "כולן" plus one real person to filter
     // to anyway (choosing either shows the exact same thing), so with 0 or 1
-    // visible staff member this select just costs space for a choice that
-    // doesn't do anything. It reappears automatically the moment a second
-    // staff member exists to filter between.
+    // visible staff member this whole select just costs space for a choice
+    // that doesn't do anything. It reappears automatically the moment a
+    // second staff member exists to filter between.
     const visibleStaff = staff.filter((s, i) => !(s.deleted && !weekAppointments.some(a => a.staff === i)));
     if (visibleStaff.length <= 1){
       selectEl.style.display = 'none';
@@ -7760,7 +8006,9 @@
       return;
     }
     selectEl.style.display = '';
-    let optionsHtml = `<option value="all"${selectedStaffFilter === 'all' ? ' selected' : ''}>כל הצוות</option>`;
+    // "כולם" (not the old "כל הצוות") — she asked for this exact wording as
+    // the select's default/at-rest label.
+    let optionsHtml = `<option value="all"${selectedStaffFilter === 'all' ? ' selected' : ''}>כולם</option>`;
     staff.forEach((s, i) => {
       // A deleted staff member with zero appointments on record (past or future)
       // has nothing to filter TO — showing her here just clutters the list and
@@ -8716,15 +8964,16 @@
     document.querySelectorAll('#sub-overview .subswitcher button').forEach(b => b.classList.remove('active'));
     // btn is normally the clicked switcher button from an older button-row
     // version of this control — kept optional/harmless for any stray caller
-    // still passing one — but the real UI control now is #calViewModeSelect
-    // (a plain <select>, see the HTML comment above #calFilterRow), so THAT
-    // is what actually needs to stay in sync, regardless of whether this was
-    // triggered by her picking a new option there or by a programmatic caller
-    // (e.g. submitManualBooking() jumping back to week view after a booking)
-    // that only ever knows the mode string, not any UI element.
+    // still passing one. The real UI control is #calViewModeSelect (a small
+    // independent native <select>, walked back from an earlier connected-
+    // segment button group — see the CSS comment above .cal-mini-btn) — this
+    // keeps its value in sync regardless of whether this was triggered by
+    // her actually changing that select, or by a programmatic caller (e.g.
+    // submitManualBooking() jumping back to week view after a booking) that
+    // only ever knows the mode string, not any UI element.
     if (btn) btn.classList.add('active');
     const viewSelectEl = document.getElementById('calViewModeSelect');
-    if (viewSelectEl && viewSelectEl.value !== mode) viewSelectEl.value = mode;
+    if (viewSelectEl) viewSelectEl.value = mode;
     const labels = { week: 'היומן השבועי', day: 'היומן היומי', month: 'היומן החודשי' };
     document.getElementById('calSectionLabel').textContent = labels[mode];
     document.getElementById('weekCalWrap').style.display = mode === 'week' ? 'block' : 'none';
@@ -11994,13 +12243,32 @@
   function closeLoginOverlay(){
     document.getElementById('loginOverlay').classList.remove('show');
   }
+  // מונע שתי כניסות-מנהלת בו-זמנית: אם ההתחברות באמת לוקחת כמה שניות ברשת
+  // איטית, בלי השמירה הזו לחיצה נוספת מרוב חוסר-סבלנות (בצדק, בלי שום
+  // משוב על המסך שמשהו בכלל קורה) הייתה יורה בקשת signInWithEmailAndPassword
+  // שנייה במקביל לראשונה.
+  let loginInFlight = false;
   function doLogin(){
+    if (loginInFlight) return;
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
     const errorEl = document.getElementById('loginError');
     errorEl.style.display = 'none';
+    // משוב מיידי על המסך שהיא לא תקועה — היא דיווחה שההתחברות "לוקחת דקה"
+    // בלי שום סימן שמשהו קורה, מה שגרם לה להרגיש שהאתר קפא. הכפתור עצמו לא
+    // יכול לתקן עיכוב רשת אמיתי (אם יש), אבל לפחות עכשיו רואים בבירור
+    // שהבקשה יצאה ועדיין מחכה לתשובה, ולא לוחצים שוב על "התחברות" בינתיים.
+    loginInFlight = true;
+    const btnEl = document.getElementById('loginSubmitBtn');
+    const btnOriginalText = btnEl ? btnEl.textContent : '';
+    if (btnEl){ btnEl.disabled = true; btnEl.textContent = 'מתחברת...'; }
+    const restoreBtn = function(){
+      loginInFlight = false;
+      if (btnEl){ btnEl.disabled = false; btnEl.textContent = btnOriginalText; }
+    };
     auth.signInWithEmailAndPassword(email, password)
       .then(() => {
+        restoreBtn();
         closeLoginOverlay();
         document.getElementById('loginEmail').value = '';
         document.getElementById('loginPassword').value = '';
@@ -12013,6 +12281,18 @@
         // שמקלידים אימייל וסיסמה" שהיא דיווחה עליו: לא היה תקוע, פשוט רינדר
         // את כל היומן פעמיים ברצף. אם היא כבר בפאנל הניהול (כי השחזור כבר
         // קרה), אין צורך לקרוא לזה שוב.
+        //
+        // הערה חשובה (סבב תיקון נוסף, אחרי שדיווחה שזה עדיין לא נפתר): התיקון
+        // הזה כיסה רק את המקרה שבו attemptRestoreAdminView() מספיק לרוץ *לפני*
+        // ה-then הזה. אבל אם טעינת הנתונים מהענן עדיין לא הסתיימה באותו רגע
+        // (cloudLoadComplete=false), attemptRestoreAdminView() חוזר מיד בלי
+        // לעשות כלום — והשורה הבאה כן פותחת את הפאנל, פעם אחת, תקין. הבעיה
+        // האמיתית שנשארה: ברגע שטעינת הענן כן מסתיימת (יכול לקחת כמה שניות,
+        // ובחיבור איטי/לא יציב הרבה יותר — ראה loadCloudData למעלה),
+        // attemptRestoreAdminView() נקרא שוב משם, ובלי בדיקה דומה הוא היה
+        // פותח את אותו פאנל הניהול פעם שנייה — בדיוק אותו רינדור כבד כפול,
+        // רק ממקור אחר. זה תוקן עכשיו בתוך attemptRestoreAdminView() עצמו
+        // (ראה שם).
         if (pendingBusinessBtn && !document.body.classList.contains('admin-mode')) showPanel('business', pendingBusinessBtn);
         pendingBusinessBtn = null;
         // ה"ברוכה הבאה" עם הסבר על כל טאב הוסר לגמרי — היא ביקשה, מיותר לה
@@ -12020,6 +12300,7 @@
         // #onboardOverlay (הוסר).
       })
       .catch(err => {
+        restoreBtn();
         errorEl.style.display = 'block';
         errorEl.textContent = 'התחברות נכשלה — בדקי את המייל והסיסמה (' + err.code + ')';
       });
@@ -12167,7 +12448,16 @@
     if (!saved || !saved.adminMode) return;
     var bizBtn = document.getElementById('businessTabBtn');
     if (!bizBtn) return;
-    showPanel('business', bizBtn);
+    // אם היא כבר בפאנל הניהול ברגע הזה — למשל כי doLogin() עצמו כבר פתח
+    // אותו, ופונקציה זו רק "מגיעה באיחור" אחרי שטעינת הענן (loadCloudData)
+    // הייתה איטית וסיימה רק עכשיו — אין שום סיבה לקרוא ל-showPanel שוב
+    // ולגרום לכל הרינדור הכבד של היומן לרוץ פעמיים ברצף. זה בדיוק המקור
+    // השני (שלא כוסה בתיקון הקודם ב-doLogin) לעיכוב הארוך שהיא דיווחה עליו
+    // אחרי התחברות: לא תקיעות רשת, אלא שתי כניסות נפרדות לאותו פאנל —
+    // התחברות עצמה, ואחר כך השחזור הזה שוב — כל אחת מרנדרת הכל מחדש.
+    if (!document.body.classList.contains('admin-mode')){
+      showPanel('business', bizBtn);
+    }
     if (saved.subTab && saved.subTab !== 'overview'){
       var tabBtn = document.querySelector('#bizSubNavRow button[onclick*="\'' + saved.subTab + '\'"]');
       // guardedShowSub (לא showSub הישיר) גם לטאבים לא-חסומים — היא מטפלת
