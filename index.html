@@ -1694,13 +1694,17 @@
     box-sizing:border-box;
   }
   .cal-day-col{flex:1; min-width:104px; border-inline-start:1px solid rgba(var(--panel-line-rgb),0.08); position:relative; scroll-snap-align:start;}
-  /* Bold two-tone banner treatment, same visual language that already landed
-     on #clientProfileOverlay's .cp-banner and the client-list cards' .cc-banner
-     (see their comments): a solid saturated wine/gold gradient fill with bold
-     cream text, alternating per day column (cal-day-tone-a/b, set in
-     renderWeekCal() by day index) instead of the previous flat pale-pink
-     header. She asked for this specifically on "מראה חדשני ולא של תוכנה של
-     פעם" grounds — modern, not dated software. */
+  /* REDESIGNED (round 2) — the bold alternating wine/gold gradient banner
+     treatment from before (kept as a comment further down for history) read
+     as "too much, messy for my eyes" on her phone. New direction, which she
+     described concretely and pointed at a reference screenshot for: every
+     day plain and clean (white/near-white card, same family as the panel's
+     own light background), and ONLY today's column singled out using the
+     site's actual accent color — the date NUMBER itself becomes a small
+     filled circle (.cal-day-today .cal-day-num) rather than recoloring the
+     whole header block. Every other day looks identical to each other; nothing
+     to visually parse except "which one is today" and "which one did I tap".
+  */
   /* position:sticky + top:0 pins every day-column header to the top of
      #weekCalWrap (the actual scrolling box — see fitWeekCalToViewport())
      while she scrolls down through the hour grid, at BOTH desktop widths
@@ -1717,32 +1721,35 @@
   .cal-day-head{
     height:56px;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    font-size:12px; color:#FCF3E2;
-    border-bottom:2px solid #1A1416;
+    gap:1px;
+    font-size:12px;
+    background:var(--panel-card-bg);
+    border-bottom:1px solid rgba(var(--panel-line-rgb),0.14);
     position:sticky; top:0; z-index:5;
-    box-shadow:0 2px 6px rgba(0,0,0,0.22);
+    box-shadow:0 2px 6px rgba(0,0,0,0.06);
   }
-  .cal-day-head.cal-day-tone-a{background:linear-gradient(135deg, var(--wine), var(--wine-deep));}
-  .cal-day-head.cal-day-tone-b{background:linear-gradient(135deg, var(--gold), #A9800F);}
-  .cal-day-head span{color:rgba(255,255,255,0.85);}
-  .cal-day-head b{font-family:'Suez One'; font-weight:400; font-size:15px; color:#FCF3E2;}
-  .cal-day-head .heb-date{font-size:9px; color:rgba(255,255,255,0.8); opacity:1;}
-  /* Today's own column gets an extra bright gold ring on top of whichever
-     tone it already is, so it's obvious at a glance which column is "now".
-     Listed as a second, comma-separated shadow alongside the sticky-header
-     shadow above (rather than a plain override) so BOTH survive together —
-     today's column keeps its floating-above-content shadow once pinned too,
-     it doesn't lose it to this more specific selector. */
-  .cal-day-head.cal-day-today{box-shadow:inset 0 0 0 3px var(--gold-soft), 0 2px 6px rgba(0,0,0,0.22);}
+  .cal-day-head .cal-day-name{font-size:10.5px; font-weight:600; color:var(--panel-text-dim); letter-spacing:0.01em;}
+  .cal-day-head .cal-day-num{
+    font-family:'Suez One'; font-weight:400; font-size:16px; color:var(--panel-text);
+    width:24px; height:24px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    transition:background 0.2s ease, color 0.2s ease;
+  }
+  .cal-day-head .heb-date{font-size:8.5px; color:var(--panel-text-dim); opacity:0.75;}
+  /* Today's own column: the accent color lands ONLY on the date-number circle
+     (filled solid) and the weekday label text — not the whole header block —
+     exactly the "square of the date gets the site's color" look she asked
+     for, matching the reference image's treatment. */
+  .cal-day-head.cal-day-today .cal-day-name{color:var(--wine);}
+  .cal-day-head.cal-day-today .cal-day-num{background:var(--wine); color:#fff;}
   .cal-day-body{position:relative;}
   /* A day that's fully closed (weekly day off, or a one-off closed date like a
      wedding/holiday) for whichever staff the calendar is currently filtered
      to — she asked for this to be visually obvious here too, not just on the
      client-facing booking calendar which already grays these out. Comes after
-     the tone rules above so a closed day's muted look always wins over
-     whichever alternating banner color it would otherwise get. */
-  .cal-day-head.day-closed{background:rgba(90,30,42,0.55);}
-  .cal-day-head.day-closed b{color:#F0B9C4;}
+     the base rule above so a closed day's muted look always wins. */
+  .cal-day-head.day-closed{background:rgba(155,44,66,0.07);}
+  .cal-day-head.day-closed .cal-day-name, .cal-day-head.day-closed .cal-day-num{color:var(--wine);}
   .cal-day-body.day-closed{
     background:repeating-linear-gradient(135deg, rgba(155,44,66,0.05) 0px, rgba(155,44,66,0.05) 10px, transparent 10px, transparent 20px);
     cursor:not-allowed;
@@ -1881,7 +1888,18 @@
     margin-bottom:16px;
     padding-bottom:14px;
     border-bottom:1px solid #E4DACB;
+    /* She reported the business name "jumping" into place here — it starts
+       empty (before branding loads from the cloud) then suddenly pops in
+       with an empty logo circle showing first for a beat. Now it stays
+       invisible (no empty circle rendered at all — see renderBranding(),
+       which only writes real markup in once branding.name is known) and
+       fades/slides in as ONE unit — the logo dot and the name together,
+       exactly what she asked for — the moment the real name is ready,
+       instead of appearing instantly mid-render. */
+    opacity:0; transform:translateY(6px);
+    transition:opacity 0.45s ease, transform 0.45s ease;
   }
+  .phone-brand.brand-visible{opacity:1; transform:translateY(0);}
   .phone-brand .logo-dot{
     width:36px; height:36px;
     border-radius:50%;
@@ -2243,41 +2261,61 @@
      the DOM — renderOverviewStats()/setOverviewView() still write into them
      unconditionally — just hidden via .cal-topbar-stats/.cal-topbar-label
      below, so nothing else has to change to keep working. */
-  .cal-topbar{
-    display:flex; align-items:center; margin-bottom:0;
-  }
-  .cal-topbar-stats, .cal-topbar-label{display:none;}
-  .cal-topbar-viewswitch{margin:0 !important;}
-  .cal-topbar-viewswitch button{padding:7px 15px !important; font-size:12.5px !important;}
-  /* Puts the prev/next-week date-nav and the week/day/month view-switch on
-     one shared line instead of two full stacked rows — see the HTML comment
-     above #calChromeRow for why. #weekNavRow gets the flexible share of the
-     width (its date-range label is the one piece of text here that can
-     genuinely vary in length); .cal-topbar only needs as much room as its 3
-     small pills actually take. Wraps to two lines (same as before, just with
-     less wasted margin between them) only if a screen is too narrow to fit
-     both on one — see the phone-width overrides below for how tight that
-     still manages to be. */
+  /* .cal-topbar itself is now display:none inline in the HTML (it only ever
+     held #statApptsToday/#statOpenSlots/#calSectionLabel, which nothing
+     visible reads any more — see the HTML comment there) — this rule stays
+     only as documentation, nothing currently depends on it being visible. */
+  .cal-topbar{display:none;}
+  /* Puts the prev/next-week date-nav on its own slim line — see the HTML
+     comment above #calChromeRow for why the view-switch/staff-filter used to
+     share this row and now don't (they moved to #calFilterRow below, both as
+     plain <select>s instead of button rows — she asked for the whole top of
+     this screen stripped down to the minimum). */
   .cal-chrome-row{
-    display:flex; align-items:center; justify-content:space-between;
-    gap:10px; flex-wrap:wrap; margin-bottom:10px;
+    display:flex; align-items:center;
+    gap:10px; margin-bottom:8px;
   }
   .cal-chrome-row #weekNavRow{flex:1 1 auto; min-width:0; margin-bottom:0;}
   /* min-width:0 here is the actual fix for the wrap bug she hit on her real
      phone: a flex item's default min-width is "auto" (= its content size),
      NOT 0 — so with white-space:nowrap forcing the label onto one line, the
      span refused to shrink below the full text's width no matter how tight
-     the row got, no matter what .cal-chrome-row #weekNavRow above already
-     said, and once the row genuinely had no room left it fell back to
-     wrapping the whole .cal-chrome-row onto two lines instead — silently
-     undoing the whole one-line merge. That only showed up for a date-range
-     label long enough to not fit (a week spanning two calendar months, e.g.
-     "30 באוגוסט - 4 בספטמבר") — every date range tested before shipping
-     happened to be a same-month, short label, so this never got caught.
-     min-width:0 on the span itself lets it actually shrink and ellipsize. */
+     the row got. That only showed up for a date-range label long enough to
+     not fit (a week spanning two calendar months, e.g. "30 באוגוסט - 4
+     בספטמבר") — every date range tested before shipping happened to be a
+     same-month, short label, so this never got caught. min-width:0 on the
+     span itself lets it actually shrink and ellipsize. */
   .cal-chrome-row #weekNavRow span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1 1 auto;}
-  .cal-chrome-row .cal-topbar{flex:0 0 auto;}
-  #staffFilterRow{margin-bottom:10px;}
+  /* The plain <select> she asked for instead of a button row ("לא כפתורים
+     אלא בחירה, משהו אחר") — used both by the top-of-screen יומן/דוחות select
+     and the two selects in #calFilterRow below, so all three read as one
+     consistent, minimal control language instead of three different widget
+     styles. Native <select> styling (the popup itself, the dropdown arrow)
+     is left to the browser/OS — only the closed-state pill is themed. */
+  .mini-select{
+    -webkit-appearance:none; appearance:none;
+    background:var(--panel-card-bg);
+    color:var(--panel-text);
+    border:1px solid rgba(var(--panel-line-rgb),0.22);
+    border-radius:999px;
+    padding:6px 28px 6px 12px;
+    font-family:'Heebo'; font-size:12.5px; font-weight:600;
+    cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236E625C' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:left 10px center;
+  }
+  .mini-select:focus{outline:none; border-color:var(--wine);}
+  /* The יומן/דוחות select sits alone at the top of #sub-overview, right-
+     aligned, taking only as much height/width as the pill itself needs —
+     nowhere near the full-width button bar it replaced. */
+  .inner-switcher-select{display:flex; justify-content:flex-end; margin-bottom:8px;}
+  /* ONE row for both "sort by staff" and "week/day/month" — she asked for
+     these two, previously a whole avatar-chip row PLUS a whole button row,
+     to become a single row instead ("שורה שיהיה אפשר לבחור מיון לפי עובדת
+     ויומי חודשי"). #calStaffFilterSelect is hidden by renderStaffFilterRow()
+     when there's 0-1 real staff to filter between, same as the old chip row
+     used to be — this row then simply holds just the one remaining select. */
+  .cal-filter-row{display:flex; gap:8px; margin-bottom:10px;}
   /* =====================================================================
      MOBILE WEEK CALENDAR COMPACTION (phone widths, <=480px — covers the
      375/390/412px devices she actually uses).
@@ -2331,24 +2369,21 @@
     #panel-business .inner-switcher{margin-bottom:6px; gap:6px;}
     #panel-business .inner-switcher button{padding:5px 12px; font-size:12px;}
     .cal-chrome-row{margin-bottom:5px; gap:6px;}
-    .cal-topbar-viewswitch button{padding:4px 10px !important; font-size:10.5px !important;}
     /* Prev/next are bare arrows here (see the HTML comment above
        #calChromeRow) specifically so the date range next to them has room to
-       breathe on one shared line with the view-switch — a fixed small
-       square keeps them just as tappable as before, just without the label
-       text that used to need the whole row to itself. */
+       breathe on its own line — a fixed small square keeps them just as
+       tappable as before, just without the label text that used to need the
+       whole row to itself. */
     #weekNavRow button{padding:0; width:30px; height:30px; flex-shrink:0; font-size:15px; display:flex; align-items:center; justify-content:center;}
     #weekNavRow span{font-size:12px;}
     /* She has 3 real staff members (not 1), so renderStaffFilterRow() can
-       never hide this row for her account — it always costs some of the
-       "top third" budget for her specifically. Shrunk further here (was
-       30px avatars/8px gaps) since these are just filter chips, not
-       something that needs a large comfortable tap target the way the
-       calendar's own hour cells do. */
-    #staffFilterRow{margin-bottom:4px; gap:6px;}
-    #staffFilterRow .staff-filter-chip{gap:2px;}
-    #staffFilterRow .staff-filter-chip .avatar{width:24px; height:24px; font-size:9.5px;}
-    #staffFilterRow .staff-filter-chip span{font-size:8px;}
+       never hide the staff select for her account — it always costs some of
+       the "top third" budget for her specifically. Shrunk further here so
+       both selects in the row stay comfortably tappable without pushing the
+       calendar grid down further than it needs to. */
+    .cal-filter-row{margin-bottom:5px; gap:6px;}
+    .mini-select{padding:5px 22px 5px 10px; font-size:11px; background-position:left 8px center;}
+    .inner-switcher-select{margin-bottom:5px;}
     /* The actual fix for the horizontal drag complaint — see the big comment
        above. computeHourBandHeight() (renderWeekCal()/fitWeekCalToViewport())
        is this block's JS counterpart for the vertical axis. */
@@ -2370,7 +2405,8 @@
        appointment chips get sized for actual legibility instead, matched by
        DAY_HEAD_HEIGHT_MOBILE in the JS below (keep the two in sync). */
     .cal-day-head{height:50px; font-size:11px;}
-    .cal-day-head b{font-size:13.5px;}
+    .cal-day-head .cal-day-name{font-size:9.5px;}
+    .cal-day-head .cal-day-num{font-size:14.5px; width:22px; height:22px;}
     .cal-day-head .heb-date{font-size:8px;}
     .cal-appt{padding:2px 4px; font-size:10.5px;}
     .cal-appt b{font-size:10.5px;}
@@ -2837,51 +2873,63 @@
          active one), so functionally it behaves as if it were this panel's
          own header even though it isn't nested inside it. -->
     <div id="sub-overview" class="subpanel active">
-      <div class="inner-switcher">
-        <button class="active" onclick="showInnerTab('sub-overview', 'inner-overview-calendar', this)">יומן</button>
-        <button onclick="guardedShowInnerTab('sub-overview', 'inner-overview-reports', this)">דוחות</button>
+      <!-- REDESIGNED — she said the whole top of this screen felt cluttered
+           and asked for it stripped down to the minimum: everything that
+           used to be buttons (יומן/דוחות here, and the week/day/month +
+           staff filter below) is now a plain <select> ("לא כפתורים אלא
+           בחירה, משהו אחר" — not buttons, a choice, something else) styled as
+           a small pill instead of a full-width button bar, and the old
+           2-separate-rows staff-filter-chips + view-switch became ONE row
+           (#calFilterRow) as she asked ("שורה שיהיה אפשר לבחור מיון לפי
+           עובדת ויומי חודשי"). Net: 3 old rows of chrome (inner-switcher,
+           chrome-row, staff-filter-row) down to 2, and the calendar grid
+           itself now starts noticeably higher on the screen.
+           onOverviewInnerTabChange() below replaces the old
+           showInnerTab()/guardedShowInnerTab() button onclicks — same two
+           functions underneath, still respects the reports tab's PIN gate
+           (gatedTabsConfig.reports), just called from a select's onchange
+           instead of two separate button onclicks, and reverts the select
+           back to its previous value if she cancels/fails the PIN prompt. -->
+      <div class="inner-switcher inner-switcher-select">
+        <select id="overviewInnerTabSelect" class="mini-select" onchange="onOverviewInnerTabChange(this)">
+          <option value="inner-overview-calendar" selected>יומן</option>
+          <option value="inner-overview-reports">דוחות</option>
+        </select>
       </div>
       <div id="inner-overview-calendar" class="inner-subpanel active">
-      <!-- The pink stats card is gone (see the CSS comment on .cal-topbar) —
-           #statApptsToday/#statOpenSlots/#calSectionLabel stay in the markup,
+      <!-- #statApptsToday/#statOpenSlots/#calSectionLabel stay in the markup,
            hidden, purely so renderOverviewStats()/setOverviewView() keep
-           finding the elements they already write into unconditionally.
-           All that's actually shown here now is the bare view-switch.
-           She pointed at a competitor screenshot where the date-nav and the
-           view-switch share one slim line, with the actual calendar grid
-           taking up virtually the whole rest of the screen — this used to be
-           two full separate rows (view-switch, then its own margin, then the
-           prev/next-week row, then ITS own margin) before the grid even
-           started. .cal-chrome-row below just puts them on the same line
-           (wrapping to two only if a narrow screen truly has no room), which
-           alone reclaims one whole row's height for the calendar. Neither
-           #weekNavRow's onclick handlers/IDs nor .cal-topbar-viewswitch's —
-           tests and other code key off those — changed at all, only the
-           layout around them and (see the buttons themselves) the prev/next
-           button LABELS, shortened to bare arrows now that they sit right
-           next to the date range they navigate instead of on their own line
-           with room to spell it out. -->
+           finding the elements they already write into unconditionally —
+           nothing here is actually shown any more (see the CSS comment on
+           .cal-topbar). -->
+      <div class="cal-topbar" style="display:none;">
+        <div class="cal-topbar-stats">
+          <span><b id="statApptsToday">0</b> תורים היום</span>
+          <span class="sep">·</span>
+          <span><b id="statOpenSlots">0</b> מקומות פנויים</span>
+        </div>
+        <span class="cal-topbar-label" id="calSectionLabel">היומן השבועי</span>
+      </div>
       <div class="cal-chrome-row" id="calChromeRow">
         <div class="day-nav-header" id="weekNavRow">
           <button type="button" onclick="shiftWeek(-1)" aria-label="שבוע קודם">‹</button>
           <span id="weekNavLabel"></span>
           <button type="button" onclick="shiftWeek(1)" aria-label="שבוע הבא">›</button>
         </div>
-        <div class="cal-topbar">
-          <div class="cal-topbar-stats">
-            <span><b id="statApptsToday">0</b> תורים היום</span>
-            <span class="sep">·</span>
-            <span><b id="statOpenSlots">0</b> מקומות פנויים</span>
-          </div>
-          <span class="cal-topbar-label" id="calSectionLabel">היומן השבועי</span>
-          <div class="subswitcher cal-topbar-viewswitch">
-            <button class="active" id="ovWeekViewBtn" onclick="setOverviewView('week', this)">שבועי</button>
-            <button onclick="setOverviewView('day', this)">יומי</button>
-            <button onclick="setOverviewView('month', this)">חודשי</button>
-          </div>
-        </div>
       </div>
-      <div class="staff-filter-row" id="staffFilterRow"></div>
+      <!-- ONE consolidated row: sort by staff member + week/day/month view,
+           both plain selects (renderStaffFilterRow() fills the first one in
+           and hides it entirely when there's only one real staff member to
+           filter to — same "meaningless choice costs no space" behavior as
+           before, just on a <select> now instead of a chip row). -->
+      <div class="cal-filter-row" id="calFilterRow">
+        <select id="calStaffFilterSelect" class="mini-select" onchange="onCalStaffFilterSelectChange(this)"></select>
+        <select id="calViewModeSelect" class="mini-select" onchange="setOverviewView(this.value)">
+          <option value="week" id="ovWeekViewOption" selected>שבועי</option>
+          <option value="day">יומי</option>
+          <option value="month">חודשי</option>
+        </select>
+      </div>
       <div class="week-cal-wrap" id="weekCalWrap">
         <div class="week-cal" id="weekCal"></div>
       </div>
@@ -3165,6 +3213,11 @@
           <input type="file" id="newSvcPhotoFile" accept="image/*" style="display:none;" onchange="handleSvcPhotoUpload(event)">
           <button class="cta" style="width:auto; margin-top:0;" onclick="addService()">הוספת שירות</button>
         </div>
+        <!-- ריווח מתחת לשורת ההוספה (שהיא הכי למעלה כאן, ראה ההערה למעלה) —
+             בלעדיו רשת הקטגוריות שמתחתיה נדבקת ממש צמוד אליה, מרגישה דחוסה.
+             נשאר רק פה (לא ב-.svc-add-row עצמו) כדי לא להשפיע על שימוש נוסף
+             של אותה מחלקה בטופס עריכת קטגוריה למטה. -->
+        <div style="height:18px;"></div>
         <!-- She found the old flat list ("בלאגן... לא צריך לגלול למטה") too long to
              scroll through once there were more than a handful of services — this
              now mirrors the SAME tap-through category-tile pattern already used
@@ -3234,7 +3287,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 04.09-שעות-פעילות-זום-יומן-v8</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 05.09-עיצוב-יומן-נקי-כניסה-מהירה-v9</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -5503,7 +5556,7 @@
       // first since that's the only view the highlight/scroll target lives in.
       if (typeof weekOffsetForDate === 'function') weekOffset = weekOffsetForDate(apptDate);
       if (typeof computeWeekDays === 'function') weekDays = computeWeekDays();
-      if (typeof setOverviewView === 'function') setOverviewView('week', document.getElementById('ovWeekViewBtn'));
+      if (typeof setOverviewView === 'function') setOverviewView('week');
       pendingCalHighlightApptId = manualAppointment.id;
       if (typeof renderWeekCal === 'function') renderWeekCal();
       if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
@@ -6272,9 +6325,28 @@
     document.getElementById('brandPreview').innerHTML = `
       <div class="logo-dot">${logoHtml}</div>
       <span class="biz-name">${branding.name}</span>`;
-    document.getElementById('phoneBrand').innerHTML = `
-      <div class="logo-dot">${logoHtml}</div>
-      <span class="biz-name">${branding.name}</span>`;
+    const phoneBrandWrap = document.getElementById('phoneBrand');
+    const bizNameTrimmedForPhone = (branding.name || '').trim();
+    if (bizNameTrimmedForPhone){
+      phoneBrandWrap.innerHTML = `
+        <div class="logo-dot">${logoHtml}</div>
+        <span class="biz-name">${branding.name}</span>`;
+      if (!phoneBrandWrap.classList.contains('brand-visible')){
+        // Double rAF (same trick used by revealBizNameAsHero() below) — one
+        // frame to let the freshly-set innerHTML actually paint at opacity:0
+        // first, so the class change on the NEXT frame is a real transition
+        // instead of the browser coalescing both into one instant jump.
+        requestAnimationFrame(function(){
+          requestAnimationFrame(function(){ phoneBrandWrap.classList.add('brand-visible'); });
+        });
+      }
+    } else {
+      // No name known yet (still loading, or a brand-new deployment with
+      // nothing saved) — stay empty and invisible rather than showing a bare
+      // empty logo circle that would itself look like a glitch.
+      phoneBrandWrap.innerHTML = '';
+      phoneBrandWrap.classList.remove('brand-visible');
+    }
     const nameInputEl = document.getElementById('bizNameInput');
     const phoneInputEl = document.getElementById('bizPhoneInput');
     if (nameInputEl && document.activeElement !== nameInputEl) nameInputEl.value = branding.name;
@@ -7657,54 +7729,57 @@
       containerEl.appendChild(row);
     });
   }
+  // REDESIGNED — used to build a row of avatar chips into #staffFilterRow;
+  // now fills a plain <select id="calStaffFilterSelect"> instead, sharing
+  // one slim row with the week/day/month select (#calFilterRow) rather than
+  // costing its own separate row — see the HTML comment above #calFilterRow.
+  // The name is kept as-is (renderStaffFilterRow) since every call site
+  // elsewhere already calls it by this name; only what's INSIDE changed.
   function renderStaffFilterRow(){
-    const rowEl = document.getElementById('staffFilterRow');
-    if (!rowEl) return;
+    const selectEl = document.getElementById('calStaffFilterSelect');
+    if (!selectEl) return;
     // Safety net: if the currently-selected filter points at a staff member who
     // is now hidden below (deleted with no appointment history), fall back to
-    // "כולן" instead of silently filtering the calendar down to a chip that no
-    // longer exists on screen.
+    // "כולן" instead of silently filtering the calendar down to an option that
+    // no longer exists on screen.
     if (typeof selectedStaffFilter === 'number'){
       const sel = staff[selectedStaffFilter];
       if (!sel || (sel.deleted && !weekAppointments.some(a => a.staff === selectedStaffFilter))) selectedStaffFilter = 'all';
     }
-    rowEl.innerHTML = '';
     // She specifically asked to reclaim more vertical space so the calendar
     // grid itself starts higher on the page — filtering by staff member is
     // meaningless when there's only "כולן" plus one real person to filter
     // to anyway (choosing either shows the exact same thing), so with 0 or 1
-    // visible staff member this whole row just costs height for a choice
-    // that doesn't do anything. It reappears automatically the moment a
-    // second staff member exists to filter between.
+    // visible staff member this select just costs space for a choice that
+    // doesn't do anything. It reappears automatically the moment a second
+    // staff member exists to filter between.
     const visibleStaff = staff.filter((s, i) => !(s.deleted && !weekAppointments.some(a => a.staff === i)));
     if (visibleStaff.length <= 1){
-      rowEl.style.display = 'none';
+      selectEl.style.display = 'none';
+      selectEl.innerHTML = '';
       return;
     }
-    rowEl.style.display = '';
-    const allChip = document.createElement('div');
-    allChip.className = 'staff-filter-chip' + (selectedStaffFilter === 'all' ? ' active' : '');
-    allChip.innerHTML = `<div class="avatar" style="background:rgba(var(--panel-line-rgb),0.12); color:var(--panel-text-dim);">כל</div><span>כולן</span>`;
-    allChip.onclick = () => { selectedStaffFilter = 'all'; renderStaffFilterRow(); renderWeekCal(); if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal(); };
-    rowEl.appendChild(allChip);
+    selectEl.style.display = '';
+    let optionsHtml = `<option value="all"${selectedStaffFilter === 'all' ? ' selected' : ''}>כל הצוות</option>`;
     staff.forEach((s, i) => {
       // A deleted staff member with zero appointments on record (past or future)
-      // has nothing to filter TO — showing her here just clutters the row and
+      // has nothing to filter TO — showing her here just clutters the list and
       // confuses whoever's looking (she asked specifically about this: a removed
       // staff member showing up in the calendar when she never even had an
       // appointment). Only keep a deleted staff member visible here if she DOES
       // have real history worth being able to filter down to.
       if (s.deleted && !weekAppointments.some(a => a.staff === i)) return;
-      const chip = document.createElement('div');
-      chip.className = 'staff-filter-chip' + (selectedStaffFilter === i ? ' active' : '');
-      const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
       // Deleted staff WITH history stay in this specific filter (unlike every
       // booking-facing staff picker) so the calendar can still be filtered to
       // see her past appointments — just labeled so it's clear she's no longer active.
-      chip.innerHTML = `<div class="avatar">${avatarHtml}</div><span>${s.name}${s.deleted ? ' (הוסרה)' : ''}</span>`;
-      chip.onclick = () => { selectedStaffFilter = i; renderStaffFilterRow(); renderWeekCal(); if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal(); };
-      rowEl.appendChild(chip);
+      optionsHtml += `<option value="${i}"${selectedStaffFilter === i ? ' selected' : ''}>${s.name}${s.deleted ? ' (הוסרה)' : ''}</option>`;
     });
+    selectEl.innerHTML = optionsHtml;
+  }
+  function onCalStaffFilterSelectChange(selectEl){
+    selectedStaffFilter = selectEl.value === 'all' ? 'all' : parseInt(selectEl.value, 10);
+    renderWeekCal();
+    if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal();
   }
   // Is this date fully closed (weekly day off, or a one-off closedDates entry)
   // for every staff member the calendar is currently showing? 'all' means every
@@ -7781,12 +7856,22 @@
       col.className = 'cal-day-col';
       col.id = 'weekcol-' + dayIdx;
       const head = document.createElement('div');
-      // Bold alternating wine/gold banner per column (see .cal-day-tone-a/b
-      // CSS) plus extra emphasis on today's own column (.cal-day-today) — she
-      // asked for the week calendar's chrome to read as modern, not "old
-      // software", the same request that already led to the client-profile
-      // page's bold banner headers (.cp-banner) and the client-list cards'
-      // matching redesign (.cc-banner).
+      // REDESIGNED — she said the earlier bold alternating wine/gold banner
+      // treatment (kept below in a comment for history) ended up reading as
+      // "too much, messy for my eyes" on the phone, and asked for something
+      // cleaner: every day plain/white, with ONLY today's own column singled
+      // out using the site's actual accent color, and the date NUMBER itself
+      // (not the weekday name) as the prominent, tappable-looking element —
+      // she specifically pointed at a reference screenshot built exactly this
+      // way (white day cells, today's date in a filled colored circle) as
+      // inspiration. So: no more per-column alternating tone at all, just a
+      // plain card; .cal-day-today fills the date-number circle with --wine
+      // and gives the weekday label the same accent color, instead of
+      // recoloring the whole header block.
+      // [PREVIOUS: "Bold alternating wine/gold banner per column (see
+      // .cal-day-tone-a/b CSS) plus extra emphasis on today's own column
+      // (.cal-day-today) — she asked for the week calendar's chrome to read
+      // as modern, not 'old software'..." — superseded by the above.]
       // getTodayDateOnly() rather than the top-level `todayMidnight` const —
       // renderWeekCal() can run very early (synchronously, from the mocked/real
       // firebase snapshot callback during initial page load) before that later
@@ -7795,8 +7880,8 @@
       // getTodayDateOnly() is a hoisted function declaration computed fresh
       // each call, so it's always safe to call this early.
       const isTodayCol = typeof sameDate === 'function' && typeof getTodayDateOnly === 'function' && sameDate(day.fullDate, getTodayDateOnly());
-      head.className = 'cal-day-head' + (dayIdx % 2 === 0 ? ' cal-day-tone-a' : ' cal-day-tone-b') + (isTodayCol ? ' cal-day-today' : '');
-      head.innerHTML = `<span>${day.date}</span><b>${day.label}</b><span class="heb-date">${hebrewDateStr(day.fullDate)}</span>`;
+      head.className = 'cal-day-head' + (isTodayCol ? ' cal-day-today' : '');
+      head.innerHTML = `<span class="cal-day-name">${day.label}</span><span class="cal-day-num">${day.date}</span><span class="heb-date">${hebrewDateStr(day.fullDate)}</span>`;
       col.appendChild(head);
       const body = document.createElement('div');
       body.className = 'cal-day-body';
@@ -8629,15 +8714,17 @@
   function setOverviewView(mode, btn){
     overviewViewMode = mode;
     document.querySelectorAll('#sub-overview .subswitcher button').forEach(b => b.classList.remove('active'));
-    // btn is normally the clicked switcher button, but a few programmatic callers
-    // (e.g. submitManualBooking() jumping back to week view after a booking) look
-    // the button up by id themselves and may not always find it — never let a
-    // missing reference here break the actual view switch.
+    // btn is normally the clicked switcher button from an older button-row
+    // version of this control — kept optional/harmless for any stray caller
+    // still passing one — but the real UI control now is #calViewModeSelect
+    // (a plain <select>, see the HTML comment above #calFilterRow), so THAT
+    // is what actually needs to stay in sync, regardless of whether this was
+    // triggered by her picking a new option there or by a programmatic caller
+    // (e.g. submitManualBooking() jumping back to week view after a booking)
+    // that only ever knows the mode string, not any UI element.
     if (btn) btn.classList.add('active');
-    else {
-      const fallbackBtn = document.querySelector(`#sub-overview .cal-topbar-viewswitch button[onclick^="setOverviewView('${mode}'"]`);
-      if (fallbackBtn) fallbackBtn.classList.add('active');
-    }
+    const viewSelectEl = document.getElementById('calViewModeSelect');
+    if (viewSelectEl && viewSelectEl.value !== mode) viewSelectEl.value = mode;
     const labels = { week: 'היומן השבועי', day: 'היומן היומי', month: 'היומן החודשי' };
     document.getElementById('calSectionLabel').textContent = labels[mode];
     document.getElementById('weekCalWrap').style.display = mode === 'week' ? 'block' : 'none';
@@ -10983,7 +11070,31 @@
     container.querySelectorAll('.inner-subpanel').forEach(p => p.classList.remove('active'));
     document.getElementById(innerId).classList.add('active');
     container.querySelectorAll('.inner-switcher button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    // btn used to always be a real button (every .inner-switcher was a row of
+    // buttons) — the sub-overview one is now a <select> instead (see
+    // onOverviewInnerTabChange()), which has nothing to pass here, so this
+    // has to tolerate a missing btn instead of assuming one always exists.
+    if (btn) btn.classList.add('active');
+  }
+  // Replaces the old two-button onclicks (showInnerTab(...) for "יומן",
+  // guardedShowInnerTab(...) for "דוחות") now that #overviewInnerTabSelect is
+  // a single <select> — still routes through the exact same two underlying
+  // functions, so the reports tab's PIN gate (gatedTabsConfig.reports) still
+  // applies exactly as before. If the PIN prompt is cancelled/fails,
+  // guardedShowInnerTab's promise resolves false and the select is reverted
+  // back to whatever it was showing before, instead of sitting on "דוחות"
+  // while actually still displaying the calendar.
+  let overviewInnerTabSelectValue = 'inner-overview-calendar';
+  function onOverviewInnerTabChange(selectEl){
+    const target = selectEl.value;
+    const prev = overviewInnerTabSelectValue;
+    const result = (target === 'inner-overview-reports')
+      ? guardedShowInnerTab('sub-overview', target, null)
+      : (showInnerTab('sub-overview', target, null), Promise.resolve(true));
+    result.then(shown => {
+      if (shown) overviewInnerTabSelectValue = target;
+      else selectEl.value = prev;
+    });
   }
   let hoursEditorStaffIndex = 0;
   function renderHoursStaffPicker(){
@@ -11893,7 +12004,17 @@
         closeLoginOverlay();
         document.getElementById('loginEmail').value = '';
         document.getElementById('loginPassword').value = '';
-        if (pendingBusinessBtn) showPanel('business', pendingBusinessBtn);
+        // הרגע שהסיסמה מאושרת, onAuthStateChanged (למעלה) כבר יורה כמעט באותו
+        // רגע ומפעיל את attemptRestoreAdminView() — ואם יש שחזור-טאב שמור
+        // מרענון קודם באותה לשונית (sessionStorage), זה כבר פותח את פאנל
+        // הניהול לבד, עם כל הרינדור הכבד של היומן. בלי הבדיקה הזו היינו
+        // קוראים ל-showPanel('business', ...) פעם שנייה מיד אחרי זה ומכפילים
+        // בטעות את כל אותו רינדור כבד — בדיוק מה שגרם ל"לוקח המון זמן אחרי
+        // שמקלידים אימייל וסיסמה" שהיא דיווחה עליו: לא היה תקוע, פשוט רינדר
+        // את כל היומן פעמיים ברצף. אם היא כבר בפאנל הניהול (כי השחזור כבר
+        // קרה), אין צורך לקרוא לזה שוב.
+        if (pendingBusinessBtn && !document.body.classList.contains('admin-mode')) showPanel('business', pendingBusinessBtn);
+        pendingBusinessBtn = null;
         // ה"ברוכה הבאה" עם הסבר על כל טאב הוסר לגמרי — היא ביקשה, מיותר לה
         // עכשיו שהיא כבר מכירה את המערכת. ראה גם הערת ה-HTML שהייתה מעל
         // #onboardOverlay (הוסר).
