@@ -343,6 +343,44 @@
   }
   .panel{display:none; animation:fadeUp 0.5s ease forwards;}
   .panel.active{display:block;}
+  /* היא דיווחה שההתחברות לניהול "לוקחת דקה עד שמגיע מה שצריך" — אחרי בדיקה
+     חוזרת התברר שזו לא כפילות-רינדור (שתי הבעיות מהסוג הזה כבר תוקנו בסבבים
+     קודמים, ר' doLogin()/attemptRestoreAdminView() למטה), אלא שהפאנל עצמו
+     נפתח מיד אחרי ההתחברות אבל ריק/עם נתונים ישנים עד שהקריאה הראשונה
+     ל-Firestore (loadCloudData) מסיימת בפועל — ותקשורת אמיתית לענן, בעיקר
+     בחיבור לא יציב, יכולה לקחת כמה שניות ואף יותר, כולל ניסיונות חוזרים על
+     כשל (ר' cloudLoadRetryCount). בלי שום סימן מסך זה בדיוק מרגיש כמו "תקוע"
+     — אותה בעיה בדיוק שכבר תוקנה עבור כפתור ההתחברות עצמו. הכיסוי הזה נותן
+     את אותו משוב, הפעם על הפאנל: ר' updateCloudLoadingOverlay() בסקריפט. */
+  #panel-business{position:relative;}
+  .cloud-loading-overlay{
+    display:none; position:absolute; inset:0; z-index:40;
+    flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    background:rgba(20,16,20,0.74);
+    backdrop-filter:blur(2px);
+    -webkit-backdrop-filter:blur(2px);
+    color:var(--ivory);
+    font-size:14.5px;
+    text-align:center;
+    border-radius:10px;
+    /* לא חוסם קליקים בכוונה: אם טעינת הענן נכשלת/נתקעת לגמרי (חיבור גרוע
+       מאוד, בעיית תצורה וכו') לא רצינו שהפאנל כולו יינעל לצמיתות מאחורי
+       הכיסוי הזה — בדיוק כמו שגם באנר השגיאה האדום (showCloudErrorBanner)
+       רק מזהיר ולא חוסם עריכה. זה נשאר תצוגה בלבד; ההגנה על שמירת נתונים
+       ריקים היא cloudLoadComplete עצמו (ר' autosave), לא החסימה כאן. */
+    pointer-events:none;
+  }
+  .cloud-loading-overlay.show{display:flex;}
+  .cloud-spinner{
+    width:34px; height:34px; border-radius:50%;
+    border:3px solid rgba(245,238,228,0.22);
+    border-top-color:var(--gold-soft);
+    animation:cloudSpin 0.8s linear infinite;
+  }
+  @keyframes cloudSpin{ to{ transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce){
+    .cloud-spinner{ animation:none; border-top-color:rgba(245,238,228,0.22); }
+  }
   .phone{
     max-width:380px;
     margin:0 auto;
@@ -2299,7 +2337,21 @@
     display:flex; align-items:center;
     gap:10px; margin-bottom:8px;
   }
-  .cal-chrome-row #weekNavRow{flex:1 1 auto; min-width:0; margin-bottom:0;}
+  .cal-chrome-row #weekNavRow{
+    flex:1 1 auto; min-width:0; margin-bottom:0;
+    /* She reported the prev-arrow sitting far from the date-range text with
+       an awkward empty gap, while the next-arrow already sat right next to
+       it — the old .day-nav-header base rule (justify-content:space-between,
+       meant for a standalone nav that fills its own dedicated row) combined
+       with the label below growing to fill ALL the leftover space (flex:1 1
+       auto) so the label's own box stretched the full width even though its
+       actual (right-aligned) text only needed a fraction of it, leaving that
+       empty stretch looking like a gap before the prev arrow. Clustering
+       here instead: the label no longer grows (see the span rule below), so
+       the whole "‹ / date range / ›" group just sits together at its own
+       natural width, with a small deliberate gap between all three pieces. */
+    justify-content:flex-start; gap:6px;
+  }
   /* min-width:0 here is the actual fix for the wrap bug she hit on her real
      phone: a flex item's default min-width is "auto" (= its content size),
      NOT 0 — so with white-space:nowrap forcing the label onto one line, the
@@ -2308,8 +2360,10 @@
      not fit (a week spanning two calendar months, e.g. "30 באוגוסט - 4
      בספטמבר") — every date range tested before shipping happened to be a
      same-month, short label, so this never got caught. min-width:0 on the
-     span itself lets it actually shrink and ellipsize. */
-  .cal-chrome-row #weekNavRow span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1 1 auto;}
+     span itself lets it actually shrink and ellipsize.
+     flex-grow is 0 (not 1) — see the #weekNavRow comment above: growing to
+     fill the whole row is exactly what made the prev-arrow look stranded. */
+  .cal-chrome-row #weekNavRow span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:0 1 auto;}
   /* The plain <select> she asked for instead of a button row ("לא כפתורים
      אלא בחירה, משהו אחר") — used by the top-of-screen יומן/דוחות select.
      (#calFilterRow below went through a couple of redesign rounds since —
@@ -2340,8 +2394,10 @@
      instead: two small, independent, nicely-colored pill buttons, tucked
      together in a corner rather than stretched across the row — not
      flex:1 anymore, just their own natural (compact) width, pushed to one
-     side via justify-content below. */
-  .cal-filter-row{display:flex; gap:8px; margin-bottom:10px; justify-content:flex-end;}
+     side via justify-content below. justify-content:flex-start (not -end) —
+     in this RTL page "start" is the physical RIGHT edge, and she specifically
+     asked for these "צמוד לימין" (stuck to the right), not the left. */
+  .cal-filter-row{display:flex; gap:8px; margin-bottom:10px; justify-content:flex-start;}
   /* Each "button" is a real native <select> (exactly what she described:
      "כפתור שרשום עליו שבועי עם חץ קטן בסוף שאפשר להחליף" — a button showing
      its current value with a small arrow at the end that switches it) —
@@ -2380,6 +2436,18 @@
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239B2C42' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
   .cal-mini-btn:focus{outline:none; border-color:var(--wine);}
+  /* She asked for the two buttons to NOT be the same shade ("אחד מהם תעשה
+     בצבע שונה של התאר שלא ייהו באותו צבע") — #calStaffFilterSelect ("כולם")
+     gets recolored into the panel's gold accent instead of wine, so the two
+     read as visually distinct at a glance rather than a repeated color. */
+  #calStaffFilterSelect.cal-mini-btn{
+    background-color:rgba(122,94,12,0.10);
+    border-color:rgba(122,94,12,0.32);
+    color:var(--panel-gold);
+    background-position:left 9px center;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A5E0C' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+  #calStaffFilterSelect.cal-mini-btn:focus{border-color:var(--panel-gold);}
   /* =====================================================================
      MOBILE WEEK CALENDAR COMPACTION (phone widths, <=480px — covers the
      375/390/412px devices she actually uses).
@@ -2950,6 +3018,13 @@
          while body.admin-mode is set (i.e. exactly while this panel is the
          active one), so functionally it behaves as if it were this panel's
          own header even though it isn't nested inside it. -->
+    <!-- ר' updateCloudLoadingOverlay() בסקריפט: מוצג רק בזמן שפאנל הניהול
+         פעיל וטעינת הנתונים מהענן (loadCloudData) עדיין לא הסתיימה — כדי
+         שהיא תראה בבירור שמשהו קורה במקום מסך ריק/תקוע. -->
+    <div id="cloudLoadingOverlay" class="cloud-loading-overlay">
+      <div class="cloud-spinner"></div>
+      <div>טוענת את הנתונים…</div>
+    </div>
     <div id="sub-overview" class="subpanel active">
       <!-- REDESIGNED (round 2) — the first pass here still left 3 separate
            chrome rows (inner-switcher-select alone, date-nav alone, staff+view
@@ -3376,7 +3451,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 05.09-תיקון-קפיצת-שם-כפתורי-יומן-קטנים-v11</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-חצי-יומן-וטעינת-ענן-v12</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -11099,6 +11174,7 @@
     const heroEl = document.querySelector('.hero');
     if (heroEl) heroEl.style.display = isAdmin ? 'none' : '';
     document.body.classList.toggle('admin-mode', isAdmin);
+    if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
     if (isAdmin) resetWeekCalScrollPosition();
     if (isAdmin && typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
     // Opening the admin/calendar panel is one of the trigger points for
@@ -11120,6 +11196,27 @@
         if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
         setTimeout(resetWeekCalScrollPosition, 300);
       });
+      // GUARANTEED re-fit, independent of the #panel-business 'animationend'
+      // listener (see the big comment above that listener, further down this
+      // script): she kept seeing the calendar cut off around ~13:00 instead
+      // of reaching 14:00 on her real phone even though this whole mechanism
+      // was supposedly already in place. Root cause found by instrumenting
+      // the real timeline: #weekCalWrap's max-height genuinely DOES start
+      // wrong (measured while .panel's own fadeUp translateY(18px)->0
+      // entrance animation is still mid-flight, so getBoundingClientRect()
+      // reports a still-shifting position) and DOES self-correct — but only
+      // once the panel's 'animationend' event actually fires. That event is
+      // a single, one-shot, easy-to-miss signal in the real world (a
+      // backgrounded tab, an interrupted/cancelled animation, or any other
+      // browser-specific quirk that skips firing it) — if it doesn't fire,
+      // nothing ever re-measures the settled position and she's stuck with
+      // the too-small height for the rest of the visit. A plain, unconditional
+      // timer fires safely after the 0.5s animation regardless of whether
+      // that event ever arrives, so the correction always happens at least
+      // once no matter what.
+      setTimeout(function(){
+        if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
+      }, 560);
     }
   }
   // Forces both the page-level scroll AND the week calendar's own internal
@@ -11981,6 +12078,16 @@
     // flexible special request, so re-check all of them right here too.
     if (typeof recheckAllPendingFlexibleRequests === 'function') recheckAllPendingFlexibleRequests();
   }
+  // ר' ההערה ליד .cloud-loading-overlay ב-CSS: משוב-מסך שהיא בהחלט "רואה
+  // משהו קורה" בזמן שממתינים לטעינת הנתונים הראשונה מהענן, ולא מרגיש כאילו
+  // הפאנל תקוע. נקרא גם מ-showPanel() (בכל פתיחה/סגירה של פאנל הניהול) וגם
+  // משני המקומות ב-loadCloudData() בהם cloudLoadComplete הופך ל-true.
+  function updateCloudLoadingOverlay(){
+    var overlay = document.getElementById('cloudLoadingOverlay');
+    if (!overlay) return;
+    var isAdminNow = document.body.classList.contains('admin-mode');
+    overlay.classList.toggle('show', isAdminNow && !cloudLoadComplete);
+  }
   let cloudLoadRetryCount = 0;
   function showCloudErrorBanner(){
     if (document.getElementById('cloudErrorBanner')) return;
@@ -12068,6 +12175,7 @@
         console.log('No saved data yet in the cloud — using demo starter data.');
         lastLoadedSnapshot = {};
         cloudLoadComplete = true;
+        if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
         if (typeof attemptRestoreAdminView === 'function') attemptRestoreAdminView();
         handleAppointmentLookupFromUrl();
         handleWaitlistCancelFromUrl();
@@ -12088,6 +12196,7 @@
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       cloudLoadComplete = true;
       console.log('Loaded saved data from the cloud.');
+      if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
       if (typeof attemptRestoreAdminView === 'function') attemptRestoreAdminView();
       handleAppointmentLookupFromUrl();
       handleWaitlistCancelFromUrl();
