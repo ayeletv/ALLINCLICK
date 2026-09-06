@@ -2751,17 +2751,23 @@
        עמודת-יום רגילה (ר' ההערה למעלה ליד .cal-special-col עצמו), כך
        שבמובייל, כששבע העמודות (6 ימים + העמודה הזו) מתחלקות בשווה ברוחב
        המסך, לכל אחת יוצא רק כ-40-45px. (2) גם אחרי שהעמודה הזו קיבלה
-       flex-grow גדול יותר (עכשיו 2.2, כמעט פי 2 מעמודת-יום רגילה — תואם את
-       התמונה הישנה שהיא שלחה, ששם העמודה הזו נראתה בעליל רחבה יותר), כמעט
-       כל הרווח הנוסף עדיין נבלע ע"י padding/gap קבועים (.sr-block/
+       flex-grow גדול יותר (בהתחלה 2.2, כמעט פי 2 מעמודת-יום רגילה), כמעט כל
+       הרווח הנוסף עדיין נבלע ע"י padding/gap קבועים (.sr-block/
        .cal-special-body, שנועדו במקור לעמודה שיכולה להיות רחבה כרצונה
        בדסקטופ) ואייקון שישב כ-span נפרד עם gap ורוחב משלו — לא נשאר כמעט
        כלום בפועל ל-.sr-block-name (עם white-space:nowrap;overflow:hidden
-       נחתך כמעט לגמרי, ובפועל נראה כאילו יש רק שעון). מכווץ את ה-padding/gap
+       נחתך כמעט לגמרי, ובפועל נראה כאילו יש רק שעון). כיווצתי את ה-padding/gap
        כאן, וגם — התיקון המשמעותי יותר — האייקון עצמו הפך לתו-קידומת בתוך
        שורת השם עצמה (ר' renderSpecialRequestsColumn() בסקריפט) במקום
-       span-אח נפרד, כך שכל הרוחב שהיה שמור בשבילו חוזר לטקסט השם. */
-    .cal-special-col{flex:2.2;}
+       span-אח נפרד, כך שכל הרוחב שהיה שמור בשבילו חוזר לטקסט השם.
+       אחרי זה היא דיווחה בחזרה: "עמודה של בקשות מיוחדות התרחבה לטובת כל
+       שאר העמודות" — צדק שלה: 2.2 היה יותר מדי על חשבון עמודות היום עצמן,
+       שהן "הכי חשוב" לפי דבריה (לראות את כל התורים של כל השבוע בבירור).
+       הורדתי ל-1.5 — עדיין קצת יותר רחבה מעמודת-יום רגילה (מספיק כדי
+       שהאייקון + תחילת השם יופיעו, עם text-overflow:ellipsis על השם השלם אם
+       הוא לא נכנס — הפרטים המלאים תמיד זמינים בלחיצה על הבקשה), אבל בלי
+       לגזול משמעותית מרוחב עמודות היום כמו 2.2 עשה. */
+    .cal-special-col{flex:1.5;}
     .cal-special-body{padding:5px;}
     .sr-block{padding:5px 6px; gap:4px;}
     .sr-block-name{font-size:12.5px;}
@@ -2935,7 +2941,24 @@
   .cp-followup-text{font-size:13.5px; margin-top:3px; color:var(--panel-text); line-height:1.5; white-space:pre-wrap;}
   .cp-photo-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(92px,1fr)); gap:10px; margin-bottom:14px;}
   .cp-photo-thumb{position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden; border:1px solid rgba(var(--panel-line-rgb),0.18);}
-  .cp-photo-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .cp-photo-thumb img{width:100%; height:100%; object-fit:cover; display:block; cursor:zoom-in;}
+  /* תצוגת-תמונה-מוגדלת (lightbox) לגלריית התמונות בכרטסת לקוחה — ר' ההערה
+     ליד ה-HTML של cpPhotoLightbox. רקע כהה קבוע על כל המסך, מעל כל שאר
+     ה-overlay-ים הקיימים (z-index גבוה מ-appt-detail-overlay ומכל מודל אחר),
+     עם התמונה עצמה במרכז בגודל מקסימלי שנשאר קריא/שלם על המסך. */
+  .cp-photo-lightbox{
+    display:none; position:fixed; inset:0; z-index:2000;
+    background:rgba(10,8,10,0.92);
+    align-items:center; justify-content:center; padding:24px;
+  }
+  .cp-photo-lightbox.show{display:flex;}
+  .cp-photo-lightbox img{max-width:100%; max-height:100%; border-radius:12px; box-shadow:0 8px 40px rgba(0,0,0,0.5); object-fit:contain;}
+  .cp-photo-lightbox-close{
+    position:absolute; top:18px; left:18px;
+    background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.25);
+    color:#F5EEE4; border-radius:10px; width:40px; height:40px;
+    font-size:18px; line-height:1; cursor:pointer;
+  }
   .cp-photo-del{
     position:absolute; top:4px; left:4px; background:rgba(20,16,20,0.6); color:#fff;
     border:none; border-radius:50%; width:20px; height:20px; font-size:11px; cursor:pointer;
@@ -3806,7 +3829,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-חיזוק-ריבוי-מכשירים-וחלון-זמן-v21</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-מניעת-כפילות-לקוחה-ותמונה-מוגדלת-v22</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -4197,6 +4220,14 @@
       </div>
     </div>
   </div>
+</div>
+<!-- היא ביקשה: לחיצה על תמונה בגלריית תמונות הלקוחה (cpPhotoGrid למעלה) צריכה
+     לפתוח אותה מוגדלת, לא רק להציג את התמונה הקטנה כפי שהייתה עד עכשיו בלי שום
+     דרך לראות אותה בגודל אמיתי. תצוגה פשוטה במרכז המסך על רקע כהה — לחיצה על
+     הרקע, על כפתור ה-✕, או על Escape סוגרת אותה. -->
+<div id="cpPhotoLightbox" class="cp-photo-lightbox" role="dialog" aria-modal="true" aria-label="תמונה מוגדלת">
+  <button type="button" class="cp-photo-lightbox-close" id="cpPhotoLightboxClose" title="סגירה" aria-label="סגירה">✕</button>
+  <img id="cpPhotoLightboxImg" src="" alt="תמונת לקוחה מוגדלת">
 </div>
 <div id="adminToast" class="admin-toast" role="status" aria-live="polite"></div>
 <div id="loginOverlay" class="myday-overlay">
@@ -5877,9 +5908,12 @@
     const photos = Array.isArray(c.photos) ? c.photos : [];
     grid.innerHTML = photos.map((src, i) => `
       <div class="cp-photo-thumb">
-        <img src="${src}">
+        <img src="${src}" data-photo-idx="${i}" title="לחיצה להגדלה">
         <button type="button" class="cp-photo-del" data-photo-idx="${i}" title="מחיקת תמונה" aria-label="מחיקת תמונה">✕</button>
       </div>`).join('');
+    grid.querySelectorAll('.cp-photo-thumb img').forEach(img => {
+      img.onclick = () => openCpPhotoLightbox(photos[parseInt(img.dataset.photoIdx)]);
+    });
     grid.querySelectorAll('.cp-photo-del').forEach(btn => {
       btn.onclick = () => {
         const idx = parseInt(btn.dataset.photoIdx);
@@ -5911,6 +5945,35 @@
   }
   document.getElementById('cpAddPhotoBtn')?.addEventListener('click', () => document.getElementById('cpPhotoInput')?.click());
   document.getElementById('cpPhotoInput')?.addEventListener('change', handleCpPhotoUpload);
+  // ר' ההערה ליד ה-HTML/CSS של cpPhotoLightbox: פתיחת תמונה מוגדלת מתוך
+  // גלריית התמונות בכרטסת לקוחה — בקשה מפורשת שלה ("אין אופציה לראות את
+  // התמונה בגדול... צריך אופציה כזאת").
+  function openCpPhotoLightbox(src){
+    if (!src) return;
+    const lb = document.getElementById('cpPhotoLightbox');
+    const img = document.getElementById('cpPhotoLightboxImg');
+    if (!lb || !img) return;
+    img.src = src;
+    lb.classList.add('show');
+  }
+  function closeCpPhotoLightbox(){
+    const lb = document.getElementById('cpPhotoLightbox');
+    const img = document.getElementById('cpPhotoLightboxImg');
+    if (!lb) return;
+    lb.classList.remove('show');
+    if (img) img.src = '';
+  }
+  document.getElementById('cpPhotoLightboxClose')?.addEventListener('click', closeCpPhotoLightbox);
+  document.getElementById('cpPhotoLightbox')?.addEventListener('click', (e) => {
+    // סגירה בלחיצה על הרקע הכהה עצמו — אבל לא כשהלחיצה היא על התמונה או על
+    // כפתור הסגירה עצמם (שכבר טופלו למעלה/יגרמו לסגירה כפולה מיותרת).
+    if (e.target.id === 'cpPhotoLightbox') closeCpPhotoLightbox();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('cpPhotoLightbox')?.classList.contains('show')){
+      closeCpPhotoLightbox();
+    }
+  });
   function renderClientProfileOverlay(){
     const c = clientProfileCurrent;
     if (!c) return;
@@ -6113,6 +6176,17 @@
           : 'היום הזה סגור לעובדת זו (יום חופש שבועי או סגירה חד-פעמית).';
         return;
       }
+    }
+    // Last-word check: does this exact client already have a DIFFERENT
+    // appointment overlapping this same time (any staff)? The checks above
+    // only ever verified the STAFF member is free — never that the client
+    // herself isn't already double-booked (e.g. this tab's weekAppointments
+    // was already stale when the slot grid was drawn, and the same client
+    // got booked again from elsewhere in the meantime).
+    if (clientHasOverlappingAppointment(name, dateVal, startMin, endMin, null)){
+      errorEl.style.display = 'block';
+      errorEl.textContent = `ל${name} כבר יש תור אחר שחופף לשעה הזו — נא לבדוק ביומן לפני שממשיכים.`;
+      return;
     }
     const manualAppointment = {
       id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000),
@@ -6999,7 +7073,7 @@
       if (document.body.classList.contains('admin-mode')) return;
       const target = document.querySelector('.switcher');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 2500);
+    }, 2000);
   }
   function revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, name, skipFontWait){
     const alreadyShown = heroBizNameEl.classList.contains('biz-name-visible');
@@ -8341,7 +8415,22 @@
       // עצמו מקבל.
       const vv = window.visualViewport;
       const viewportBottom = vv ? (vv.height + vv.offsetTop) : window.innerHeight;
-      const available = viewportBottom - rect.top - currentDayHeadHeight() - 14;
+      // תיקון נוסף (הסבב הזה): המספרים ששלחה מהכפתור-האבחון האמיתי בטלפון שלה
+      // הראו שקו ה-14:00 נחת ב-561px בעוד ה-max-height עצמו רק 560px — הבדל
+      // של פיקסל בודד. זה לא עוד חוסר-סנכרון מהותי כמו לפני (window.innerHeight
+      // מול visualViewport, כבר תוקן) — שני החישובים כאן ובתוך
+      // fitWeekCalToViewport() מגיעים מתמטית לאותו viewportBottom-rect.top-14
+      // בדיוק, אז ברוב המקרים זה אמור לצאת שווה. אבל "שווה בדיוק, בלי שום רזרבה"
+      // הוא בעייתי בפני עצמו: MOBILE_HOUR_BAND_HEIGHT מחולק ל-6 שורות בנפרד
+      // (כל אחת מקבלת ערך לא-עגול, למשל 90.5px), וצבירת עיגול תת-פיקסל קטן על
+      // פני 6 שורות (רינדור בפועל של הדפדפן) יכולה בקלות להזיז את הסכום
+      // ב-1-2px — בדיוק ההבדל שנראה. כשאין שום רזרבה, זה עלול לצאת לפעמים
+      // "בדיוק בגבול" ולפעמים "פיקסל אחד מעבר לגבול" תלוי בעיגול, כלומר בדיוק
+      // התופעה הלא-עקבית שהיא דיווחה עליה. פתרון: רזרבת ביטחון קבועה
+      // (EXTRA_SAFETY_MARGIN) כך שקו ה-14:00 המחושב תמיד ננעל כמה פיקסלים
+      // בבירור *מעל* ה-max-height בפועל, לא בדיוק עליו.
+      const EXTRA_SAFETY_MARGIN = 10;
+      const available = viewportBottom - rect.top - currentDayHeadHeight() - 14 - EXTRA_SAFETY_MARGIN;
       const targetHours = Math.max(1, MOBILE_CAL_TARGET_END_HOUR - calStartHour);
       if (available > 0) return Math.max(MOBILE_HOUR_BAND_HEIGHT, available / targetHours);
     }
@@ -8497,6 +8586,30 @@
         const s = timeToMinutes(b.time);
         return [s, s + (b.duration || 15)];
       });
+  }
+  // She reported ending up with two real appointments for the SAME client
+  // overlapping in time — an actual duplicate, not just two different clients
+  // in one slot (the staff-conflict checks in submitManualBooking()/
+  // confirmBooking() only ever checked "is this STAFF free", never "does this
+  // CLIENT already have something else right now"). This is a general
+  // last-word safety net, checked right before any of the three ways a new
+  // appointment gets created actually commits it: manual booking by the
+  // admin, a customer's own self-service booking, and a flexible request's
+  // auto-match. clientName matching is deliberately exact-string (mirrors how
+  // every appointment already stores appt.client as a plain name, with no
+  // separate client-id foreign key) — good enough to catch the real-world
+  // "same client, same moment" duplicate this was written for, at the cost of
+  // treating two different clients who happen to share an identical name as
+  // one (rare, and already true everywhere else appt.client is matched by name).
+  function clientHasOverlappingAppointment(clientName, dateKey, startMin, endMin, excludeApptId){
+    if (!clientName) return false;
+    return weekAppointments.some(a => {
+      if (!a || a.id === excludeApptId) return false;
+      if (a.client !== clientName || a.date !== dateKey) return false;
+      const aStart = timeToMinutes(a.time);
+      const aEnd = aStart + (a.dur || 30);
+      return startMin < aEnd && endMin > aStart;
+    });
   }
   function setApptStatus(appt, status, refreshFn){
     appt.status = status;
@@ -9235,6 +9348,16 @@
           return startMin < e && (startMin + duration) > s;
         });
         if (conflict) return null; // another device already booked something into this exact slot
+        // Same last-word check as the manual/public booking forms — this
+        // exact client should never end up with two overlapping appointments,
+        // even with a different staff member, even if the slot-conflict check
+        // above passed.
+        const clientConflict = req.name && serverAppts.some(a => {
+          if (!a || a.client !== req.name || a.date !== match.date) return false;
+          const s = timeToMinutes(a.time), e = s + (a.dur || 30);
+          return startMin < e && (startMin + duration) > s;
+        });
+        if (clientConflict) return null;
         const dayKey = weekdayKeys[dateObj.getDay()];
         const svcList = (req.services || []).map(s => ({ name: s.name, duration: s.duration || 0, price: s.price || 0 }));
         const combinedServiceName = svcList.map(s => s.name).join(' + ') || 'שירות';
@@ -11338,6 +11461,16 @@
     const clientNameVal = document.getElementById('bookingNameInput').value.trim() || 'לקוחה';
     const dayKey = weekdayKeys[bookingSelectedDate.getDay()];
     const existingClient = clients.find(c => c.teudatZehut === idDigits);
+    // Same last-word check as the admin's manual booking form: block an exact
+    // duplicate for the SAME client overlapping this same time (a double
+    // submit, a second tab, or two browsers open at once) — the check above
+    // only ever verified the STAFF/slot itself was free.
+    const existingClientNameForOverlap = existingClient ? existingClient.name : clientNameVal;
+    if (clientHasOverlappingAppointment(existingClientNameForOverlap, dateKeyForSlot, slotStartMin, slotEndMin, null)){
+      if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+      document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">כבר קיים תור על שמך שחופף לשעה הזו. אם זו טעות, אפשר לבדוק ב"התור שלי" או ליצור איתנו קשר.</div>`;
+      return;
+    }
     // Email is always required now — not conditional on picking it as a reminder
     // channel (that option no longer exists) — so there's always a real address
     // for the booking confirmation, and for notifying her later if she ever ends
@@ -13023,6 +13156,43 @@
   // ממש לפני הקריאה הזו) וגם טעינת הנתונים מהענן (window.__lastCloudLoadDiag
   // — כמעט תמיד כבר קיים באותו רגע, כי הטעינה הזו מתחילה מיד עם טעינת הדף,
   // הרבה לפני שהיא מספיקה להקליד ולהתחבר).
+  // תיקון (סבב נוסף אחרי שדיווחה — סותר לכאורה — גם "עדיין איטי גם בפלאפונים
+  // אחרים, לא רק שלי" וגם הרצה חיה אחת שהראתה מספרים מהירים 0.5+0.3 שניות):
+  // שני המספרים הכוללים (loginDiag/cloudDiag) לא מספיקים יותר כדי לפענח את
+  // הסתירה הזאת — "0.5 שניות" יכול להסתיר בפנים המתנת-DNS ארוכה שקוזזה
+  // ברשת-חיבור אחרת, TLS handshake איטי, TTFB (המתנה לשרת) לעומת זמן-הורדה,
+  // או פשוט חיבור סלולרי גרוע שידוע-מראש (navigator.connection). בלי לנחש
+  // רביעית איזה מהם זה, נאספים כאן בפועל, מה-Resource Timing API האמיתי של
+  // הדפדפן על הבקשה האמיתית ל-signInWithEmailAndPassword (identitytoolkit),
+  // כל שלבי הרשת בנפרד — כדי שהפעם צילום מסך אחד יראה בדיוק היכן הזמן
+  // באמת הולך, בלי עוד ניחוש.
+  function getNetworkTimingBreakdown(sinceMs){
+    try {
+      if (typeof performance === 'undefined' || typeof performance.getEntriesByType !== 'function') return null;
+      const entries = performance.getEntriesByType('resource')
+        .filter(e => e.startTime >= sinceMs - 50 && /identitytoolkit|securetoken/i.test(e.name));
+      if (!entries.length) return null;
+      const e = entries[entries.length - 1]; // האחרונה מבין אלה — הכי קרובה לבקשת ההתחברות הזו עצמה
+      const round = (n) => Math.max(0, Math.round(n * 10) / 10);
+      return {
+        dnsMs: round(e.domainLookupEnd - e.domainLookupStart),
+        connectMs: round(e.connectEnd - e.connectStart),
+        tlsMs: e.secureConnectionStart > 0 ? round(e.connectEnd - e.secureConnectionStart) : null,
+        ttfbMs: round(e.responseStart - e.requestStart),
+        downloadMs: round(e.responseEnd - e.responseStart),
+        totalMs: round(e.duration)
+      };
+    } catch (err) { return null; }
+  }
+  function getConnectionInfo(){
+    // navigator.connection קיים היום בפועל רק ב-Chrome/Samsung Internet
+    // באנדרואיד (לא ב-iOS Safari בכלל) — כשהוא כן קיים, זה בדיוק המספר
+    // שיגיד אם מדובר בחיבור סלולרי גרוע ידוע-מראש (למשל "3g" עם rtt גבוה)
+    // ולא במשהו ספציפי לאתר הזה.
+    const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!c) return null;
+    return { effectiveType: c.effectiveType || null, downlinkMbps: c.downlink || null, rttMs: c.rtt || null, saveData: !!c.saveData };
+  }
   let loginTimingDiagShown = false;
   function showLoginTimingDiagOnce(){
     if (loginTimingDiagShown) return;
@@ -13032,6 +13202,20 @@
     const lines = ['אבחון זמני טעינה:'];
     lines.push('ההתחברות עצמה: ' + (login ? login.elapsedSec.toFixed(1) + ' שניות' : 'לא נמדד'));
     lines.push('טעינת נתוני היומן מהענן: ' + (cloud ? cloud.elapsedSec.toFixed(1) + ' שניות' + (cloud.approxKb !== null ? ` (~${cloud.approxKb}KB)` : '') : 'עדיין לא הסתיימה / לא נמדדה (כנראה שכבר הסתיימה בשקט לפני שהתחברת)'));
+    const net = login && login.networkBreakdown;
+    if (net){
+      lines.push('פירוט רשת של ההתחברות עצמה:');
+      lines.push('  DNS: ' + net.dnsMs + ' מ"ש, חיבור: ' + net.connectMs + ' מ"ש' + (net.tlsMs !== null ? ', TLS: ' + net.tlsMs + ' מ"ש' : ''));
+      lines.push('  המתנה לשרת (TTFB): ' + net.ttfbMs + ' מ"ש, הורדה: ' + net.downloadMs + ' מ"ש, סה"כ בקשה: ' + net.totalMs + ' מ"ש');
+    } else {
+      lines.push('פירוט רשת: לא זמין (הדפדפן הזה לא חשף את הבקשה, או שכבר הייתה שמורה/מהירה מדי לפני שנמדדה)');
+    }
+    const conn = getConnectionInfo();
+    if (conn){
+      lines.push('מידע חיבור (navigator.connection): סוג=' + (conn.effectiveType || '?') + ', מהירות≈' + (conn.downlinkMbps !== null ? conn.downlinkMbps + 'Mbps' : '?') + ', RTT≈' + (conn.rttMs !== null ? conn.rttMs + 'מ"ש' : '?') + (conn.saveData ? ', מצב חיסכון בנתונים פעיל' : ''));
+    } else {
+      lines.push('מידע חיבור (navigator.connection): לא זמין במכשיר/דפדפן הזה');
+    }
     alert(lines.join('\n'));
   }
   function loadCloudData(){
@@ -13298,7 +13482,7 @@
     auth.signInWithEmailAndPassword(email, password)
       .then(() => {
         const loginElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - loginStartedAt) / 1000;
-        window.__lastLoginDiag = { elapsedSec: Math.round(loginElapsedSec * 10) / 10 };
+        window.__lastLoginDiag = { elapsedSec: Math.round(loginElapsedSec * 10) / 10, networkBreakdown: (typeof getNetworkTimingBreakdown === 'function' ? getNetworkTimingBreakdown(loginStartedAt) : null) };
         console.log(`Login (signInWithEmailAndPassword) took ${loginElapsedSec.toFixed(1)}s.`);
         // תיקון (היא דיווחה שוב: "אין לי הודעה, פשוט ספרתי" — ה-toast הקודם
         // כנראה נעלם מהר מדי/נבלע בתוך כל השינוי החזותי של סגירת מסך
