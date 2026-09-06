@@ -109,6 +109,25 @@
     // "לתקן" תשתית שממילא לא הכרחית. אם זו אכן הייתה הסיבה, ההתחברות בטלפון
     // אמורה להרגיש עכשיו בדיוק כמו במחשב.
     auth = firebase.auth();
+    // תיקון נוסף (סבב שני), אחרי שדיווחה שהכניסה "עדיין איטית מאוד" גם אחרי
+    // הסרת enablePersistence למעלה: ל-Firebase Auth עצמו (לא ל-Firestore) יש
+    // שכבת "persistence" נפרדת משלו — המנגנון שזוכר את המשתמש המחובר בין
+    // רענוני-דף — וברירת המחדל (LOCAL) כותבת אותה גם היא ל-IndexedDB. זו
+    // בדיוק אותה תשתית שכבר זיהינו כבעייתית/איטית ב-Safari-אייפון, אבל הפעם
+    // בציר ה-AUTH: כל קריאה ל-signInWithEmailAndPassword()/signInAnonymously()
+    // צריכה "לחכות" לכתיבה הזו לפני שהיא בכלל נחשבת גמורה — כלומר גם ההתחברות
+    // הגלויה (כפתור "התחברות") וגם ההתחברות האנונימית השקטה שרצה עם כל טעינת
+    // עמוד (למטה) עוברות דרך אותה שכבה. עוברים ל-SESSION persistence
+    // (sessionStorage — סינכרוני, בלי IndexedDB בכלל) לפני כל קריאת auth
+    // אחרת: המחיר היחיד הוא שסגירת הטאב/הדפדפן לגמרי תדרוש התחברות מחדש
+    // (בניגוד ל-LOCAL שנשאר מחובר גם אחרי סגירה מלאה) — מחיר סביר מול כניסה
+    // מהירה בפועל, אם זו אכן הסיבה. בלי setPersistence כלל אם ה-API לא זמין
+    // מסיבה כלשהי (safety net, לא אמור לקרות בגרסת ה-SDK הנוכחית).
+    const authReady = (auth.setPersistence && firebase.auth && firebase.auth.Auth)
+      ? auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(err => {
+          console.error('auth.setPersistence(SESSION) failed — continuing with the SDK default persistence:', err);
+        })
+      : Promise.resolve();
     // Sign every visitor in anonymously (invisible — no login screen, no prompt).
     // This is NOT the business-owner login (that's still email/password below).
     // The only reason this exists: Firestore security rules can then require
@@ -119,7 +138,7 @@
     // be rejected. If this fails (e.g. Anonymous sign-in isn't enabled yet in
     // the Firebase console), we deliberately do nothing else here — the rest of
     // the app keeps working exactly as before under the current rules.
-    anonAuthPromise = auth.signInAnonymously().catch(err => {
+    anonAuthPromise = authReady.then(() => auth.signInAnonymously()).catch(err => {
       console.error('Anonymous sign-in failed (only matters once Firestore rules require auth):', err);
     });
   } catch (e) {
@@ -317,17 +336,30 @@
     display:flex; align-items:center; justify-content:center;
     filter:drop-shadow(0 0 0.1em rgba(232,206,122,0.55));
     transition:filter 0.15s ease;
+    /* "יסתובב כמו הגה כמה סיבובים" — היא הציעה שהאייקון יסתובב כמה סיבובים
+       כשהוא נטען, לפני שמחכים ללחיצה — סוג של "הזמנה ללחוץ". רץ פעם אחת
+       אוטומטית עם טעינת הדף (בלי JS, ר' @keyframes heroIconIntroSpin למטה),
+       ולא חוזר שוב אחר-כך; animation-fill-mode:both משאיר את הסיבוב הסופי
+       (1080deg=3 סיבובים שלמים) שנראה זהה חזותית ל-0deg. הכיתה .tapped
+       (שנוספת ב-onHeroIconTap()) גוברת עליה כרגיל — ר' למטה — כך שלחיצה
+       תוך כדי הסיבוב "עוצרת" אותו מיד ועוברת לאנימציית הטאפ במקום. */
+    animation:heroIconIntroSpin 1.5s cubic-bezier(0.25,0.85,0.35,1) 1 both;
   }
   .hero-name-icon:hover .hero-name-icon-badge{ filter:drop-shadow(0 0 0.16em rgba(232,206,122,0.8)); }
   .hero-icon-ring-svg{ width:100%; height:100%; display:block; }
   .hero-icon-ring{ fill:none; stroke:var(--gold-soft); stroke-width:5; }
   .hero-icon-rays{ stroke:var(--gold-soft); stroke-width:5; stroke-linecap:round; }
   .hero-icon-cursor{ fill:none; stroke:var(--wine); stroke-width:4.5; stroke-linecap:round; stroke-linejoin:round; }
+  @keyframes heroIconIntroSpin{
+    0%{ transform:rotate(0deg); }
+    100%{ transform:rotate(1080deg); }
+  }
   /* אנימציית "טאפ" — לחיצה על האייקון (ר' onHeroIconTap() בסקריפט למטה)
      מפעילה כיווץ-ואז-קפיצה קטנה על התג עצמו, כדי שהלחיצה תרגיש כאילו היא זו
      שמביאה את השם, לא רק עיטור פסיבי. מוסיפים/מסירים את המחלקה הזו בכל
      לחיצה (ר' ה-JS) כדי שאפשר יהיה להפעיל אותה שוב ברצף גם בלי שהאלמנט
-     "יתאושש" קודם. */
+     "יתאושש" קודם. מחלקה זו (specificity גבוה יותר) גוברת על אנימציית
+     הסיבוב-בטעינה שלמעלה אם היא עדיין פעילה. */
   @keyframes heroIconTap{
     0%{ transform:scale(1); }
     35%{ transform:scale(0.82); }
@@ -336,6 +368,7 @@
   }
   .hero-name-icon-badge.tapped{ animation:heroIconTap 0.45s cubic-bezier(0.34,1.56,0.64,1); }
   @media (prefers-reduced-motion: reduce){
+    .hero-name-icon-badge{ animation:none; }
     .hero-name-icon-badge.tapped{ animation:none; }
   }
   .hero-name-text{
@@ -528,6 +561,13 @@
     color:var(--wine);
   }
   #panel-business .cat-back-btn:hover, #panel-business .cat-back-btn:active{background:rgba(155,44,66,0.18);}
+  /* היא שמה לב: "חזרה לקטגוריות" (.cat-back-btn, אליפסה/פיל — border-radius:999px)
+     ו"המשך" הצמוד אליו (.cta הרגיל, border-radius:12px — מלבן מעוגל) לא
+     תואמים בצורה כשהם יושבים אחד ליד השני באותה שורה. משאיר את .cta הרגיל
+     בכל שאר האתר בדיוק כמו שהוא (מלבן מעוגל, כמו הכפתור המלא-רוחב הרגיל),
+     ומתאים את הצורה רק כאן — בשורה הספציפית הזו שבה שני הכפתורים יושבים
+     ממש זה-לצד-זה — לפיל אחיד, כמו ה"חזרה לקטגוריות" שלידו. */
+  #catServicesView .step-nav .cta{ border-radius:999px; }
   #svcManageList .svc-cat-header{
     color:var(--panel-gold);
     border-bottom-color:rgba(var(--panel-line-rgb),0.15);
@@ -1208,10 +1248,12 @@
     /* היא דיווחה שבטאבים כמו "לקוחות"/"צוות" (וגם "שירותים" קודם) הכפתורים
        (למשל "לקוחות"/"הודעות ללקוחות") צמודים מדי לפס העליון (.biz-topbar)
        ונראים כאילו נחתכים. מדידה בפועל הראתה פער של פחות מ-8px בין תחתית
-       הפס לראש הכפתורים — הוספתי margin-top קבוע כאן (חל אחיד על כל טאב
-       שמשתמש ב-.inner-switcher: לקוחות, צוות, שירותים) כדי שיהיה מרווח נוח
-       וברור מתחת לקו המפריד הדק שכבר קיים על .biz-topbar עצמו. */
-    margin-top:14px;
+       הפס לראש הכפתורים — הוספתי margin-top כדי שיהיה מרווח נוח וברור מתחת
+       לקו המפריד הדק שכבר קיים על .biz-topbar עצמו (border-bottom שם).
+       סבב נוסף: היא המשיכה לדווח שזה "ממש דבוק" גם אחרי 14px — הגדלתי
+       ל-20px כדי לתת עוד קצת אוויר בכוונה, ליתר ביטחון (חל אחיד על כל טאב
+       שמשתמש ב-.inner-switcher: לקוחות, צוות, שירותים). */
+    margin-top:20px;
     display:flex; gap:8px; margin-bottom:1.5rem; flex-wrap:wrap;
   }
   .inner-switcher button{
@@ -2237,7 +2279,9 @@
     0%, 100%{box-shadow:0 0 0 0 rgba(155,44,66,0.45);}
     50%{box-shadow:0 0 0 8px rgba(155,44,66,0);}
   }
-  .client-add-row.quick-add-highlight{animation:quickAddPulse 0.9s ease 2;}
+  .client-add-row.quick-add-highlight,
+  .custom-tpl-form.quick-add-highlight,
+  .svc-add-row.quick-add-highlight{animation:quickAddPulse 0.9s ease 2;}
   .switcher button i, .subswitcher button i, .onboard-list i, .template-btn i{
     margin-inline-end:4px;
     vertical-align:-2px;
@@ -3083,16 +3127,14 @@
               <div class="cat-grid" id="catGrid"></div>
             </div>
             <div id="catServicesView" style="display:none;">
-              <!-- היא דיווחה: "חזרה לקטגוריות" יושב למעלה, אבל "המשך" (שמוביל
-                   לבחירת עובדת/תאריך) יושב רק בסוף הכל — אחרי רשימת השירותים
-                   ואחרי בוחר העובדת. עם רשימת שירותים ארוכה זה קל לפספס
-                   לגמרי ("לא קולטים שזה נמצא בסוף"). הוספתי כאן, צמוד ל"חזרה
-                   לקטגוריות", כפתור "המשך" שני שעושה בדיוק את אותה פעולה
-                   (goToBookingStep2() — הבדיקה היחידה שם היא שנבחר לפחות
-                   טיפול אחד, לא תלויה כלל בבחירת עובדת) — כך שברגע שבחרה
-                   טיפול היא רואה מיד שאפשר להמשיך, בלי לגלול. הכפתור המקורי
-                   למטה (אחרי בוחר העובדת) נשאר בדיוק כמו שהיה, לנוחות מי
-                   שכבר גללה עד שם ובחרה עובדת. -->
+              <!-- היא ביקשה שהזרימה הציבורית תהיה "בול אותו דבר" כמו ההזמנה
+                   הידנית של המנהלת (mbstep-1/2/3): שם בחירת שירות היא שלב
+                   נפרד לגמרי, ורק אחריו מגיע שלב אחד משולב של עובדת+תאריך+שעה.
+                   לכן שלב 1 כאן מכיל רק בחירת שירות (כפתור "המשך" יחיד למעלה,
+                   צמוד ל"חזרה לקטגוריות" — ר' ההערה על אחידות הצורה שלהם
+                   ב-CSS, .step-nav .cta), ובוחר העובדת + ההודעה "לתשומת ליבך"
+                   עברו לשלב 2 (ר' למטה), יחד עם היומן עצמו — בדיוק כמו אצל
+                   המנהלת. -->
               <div class="step-nav" style="margin-bottom:4px;">
                 <button class="cat-back-btn" onclick="showCategoryGrid()">‹ חזרה לקטגוריות</button>
                 <button class="cta" style="flex:1;" onclick="goToBookingStep2()">המשך</button>
@@ -3100,14 +3142,13 @@
               <div class="label" id="catServicesLabel" style="margin-top:12px;">בחירת שירות</div>
               <div id="custSvcList"></div>
               <button type="button" class="cat-back-btn bk-add-more-btn" onclick="showCategoryGrid()">+ הוספת טיפול נוסף</button>
-              <div id="svcBillingNotice" class="billing-notice"></div>
-              <div class="label" style="margin-top:18px;">בחירת עובדת</div>
-              <div class="staff-picker" id="staffPicker"></div>
-              <button class="cta" onclick="goToBookingStep2()">המשך</button>
             </div>
           </div>
           <div class="booking-step" id="bstep-2">
-            <div class="label">בחירת יום</div>
+            <div class="label">בחירת עובדת</div>
+            <div class="staff-picker" id="staffPicker"></div>
+            <div id="svcBillingNotice" class="billing-notice"></div>
+            <div class="label" style="margin-top:18px;">בחירת יום</div>
             <div class="mini-cal" id="miniCal">
               <div class="mini-cal-header">
                 <button type="button" onclick="calShiftMonth(-1)" id="calPrevBtn">‹</button>
@@ -3233,33 +3274,41 @@
         </div>
         <span class="cal-topbar-label" id="calSectionLabel">היומן השבועי</span>
       </div>
+      <!-- היא ביקשה: "שכפתורי שבועי וכולם יהיו בשורה של התאריך עם החצים" —
+           כדי לחסוך שורה שלמה (+המרווח שלה) ולתת ליומן עצמו עוד גובה (עדיין
+           נחתך סביב 13:00 בפון במקום 14:00 לדבריה). איחדתי את מה שהיה קודם
+           שתי שורות נפרדות (.cal-chrome-row עם הניווט בין שבועות, ומתחתיו
+           .cal-filter-row עם שני ה-select הקטנים) לשורה אחת: שני ה-select
+           קודם ב-DOM (נשארים "צמודים לימין" כמו שביקשה במקור — ר' ההערה
+           למטה — ב-flex-start של RTL זה הקצה הימני), וניווט התאריך אחריהם,
+           תופס את שאר הרוחב (flex:1 1 auto כבר קיים על #weekNavRow, כולל
+           ה-ellipsis על התווית הארוכה — ר' ההערה שם). #calFilterRow (המזהה)
+           לא היה בשימוש בשום JS/CSS מלבד עצמו, בטוח להסיר את המעטפת. -->
       <div class="cal-chrome-row" id="calChromeRow">
-        <div class="day-nav-header" id="weekNavRow">
-          <button type="button" onclick="shiftWeek(-1)" aria-label="שבוע קודם">‹</button>
-          <span id="weekNavLabel"></span>
-          <button type="button" onclick="shiftWeek(1)" aria-label="שבוע הבא">›</button>
-        </div>
-      </div>
-      <!-- Walked back from the earlier connected-4-segment button group (a
-           previous round tried matching a reference screenshot's stretched
-           segmented switch) — she asked for something much smaller instead:
-           two independent, compact, nicely-colored "buttons" tucked into a
-           corner rather than stretched across the row, each just showing its
-           current value with a small dropdown arrow at the end (a native
-           <select> IS exactly that — no separate label/overlay layer needed,
-           the browser already shows the selected option's own text). See the
-           .cal-mini-btn CSS comment for the styling. renderStaffFilterRow()
-           still fills/hides #calStaffFilterSelect exactly as before (hidden
-           entirely when there's only one real staff member to filter to);
-           its default option now reads "כולם" instead of the old "כל הצוות"
-           per her explicit wording. -->
-      <div class="cal-filter-row" id="calFilterRow">
+        <!-- Walked back from the earlier connected-4-segment button group (a
+             previous round tried matching a reference screenshot's stretched
+             segmented switch) — she asked for something much smaller instead:
+             two independent, compact, nicely-colored "buttons" tucked into a
+             corner rather than stretched across the row, each just showing its
+             current value with a small dropdown arrow at the end (a native
+             <select> IS exactly that — no separate label/overlay layer needed,
+             the browser already shows the selected option's own text). See the
+             .cal-mini-btn CSS comment for the styling. renderStaffFilterRow()
+             still fills/hides #calStaffFilterSelect exactly as before (hidden
+             entirely when there's only one real staff member to filter to);
+             its default option now reads "כולם" instead of the old "כל הצוות"
+             per her explicit wording. -->
         <select id="calViewModeSelect" class="mini-select cal-mini-btn" onchange="setOverviewView(this.value)">
           <option value="week" selected>שבועי</option>
           <option value="day">יומי</option>
           <option value="month">חודשי</option>
         </select>
         <select id="calStaffFilterSelect" class="mini-select cal-mini-btn" onchange="onCalStaffFilterSelectChange(this)"></select>
+        <div class="day-nav-header" id="weekNavRow">
+          <button type="button" onclick="shiftWeek(-1)" aria-label="שבוע קודם">‹</button>
+          <span id="weekNavLabel"></span>
+          <button type="button" onclick="shiftWeek(1)" aria-label="שבוע הבא">›</button>
+        </div>
       </div>
       <div class="week-cal-wrap" id="weekCalWrap">
         <div class="week-cal" id="weekCal"></div>
@@ -3590,6 +3639,13 @@
       </div>
     </div>
     <div id="sub-whatsnewadmin" class="subpanel">
+      <!-- אותו קיצור "+" כמו בלקוחות/צוות — קופצת ישר לטופס ההוספה שכבר קיים
+           למטה (ר' scrollToQuickAdd() ב-JS, שהורחב לזהות גם .custom-tpl-form
+           לא רק .client-add-row). justify-content:flex-end כדי שהאייקון יישב
+           באותו צד (שמאל, פיזית ב-RTL) כמו בלקוחות/צוות, לעקביות חזותית. -->
+      <div class="search-with-add-row" style="justify-content:flex-end;">
+        <button type="button" class="quick-add-fab" onclick="scrollToQuickAdd('sub-whatsnewadmin', 'newWnTitle')" title="הוספת עדכון" aria-label="הוספת עדכון">+</button>
+      </div>
       <div class="client-list" id="whatsNewAdminList"></div>
       <div class="custom-tpl-form">
         <input type="text" id="newWnTitle" placeholder="כותרת (למשל: מבצע לקיץ)">
@@ -3607,6 +3663,11 @@
       </div>
     </div>
     <div id="sub-inventory" class="subpanel">
+      <!-- אותו קיצור "+" כמו בלקוחות/צוות/מה חדש — קופץ ישר לטופס ההוספה
+           שכבר קיים למטה (.svc-add-row, ר' scrollToQuickAdd() ב-JS). -->
+      <div class="search-with-add-row" style="justify-content:flex-end;">
+        <button type="button" class="quick-add-fab" onclick="scrollToQuickAdd('sub-inventory', 'newInvName')" title="הוספת מוצר" aria-label="הוספת מוצר">+</button>
+      </div>
       <div style="font-size:12px; color:var(--panel-text-dim); margin-bottom:14px;">מייל ההתראות (למלאי נמוך, ולברירת המחדל בשליחת דוחות) מוגדר כעת בטאב <b>הגדרות</b> → מיתוג, לצד פרטי העסק.</div>
       <div class="inv-alert" id="invAlert"></div>
       <div class="inv-list">
@@ -3630,7 +3691,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-איקון-טבעת-ואנטר-v13</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-זרימת-הזמנה-ואישור-יציאה-v14</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -6730,11 +6791,22 @@
     const heroPlatformLineEl = document.getElementById('heroPlatformLine');
     const nameKnown = (branding && branding.name || '').trim();
     if (heroBizNameEl && heroPlatformLineEl && nameKnown && !heroBizNameEl.classList.contains('biz-name-visible')){
-      // true = skipFontWait: זו לחיצה יזומה ומודעת שלה, לא החלפה אוטומטית
-      // ברקע — לכן מוותרים כאן על ההמתנה הרגילה לגופן Suez One (ר' ההערה
-      // המלאה בפרמטר של revealBizNameAsHero() למטה) כדי שהלחיצה תרגיש כמו
-      // זו שבאמת "מביאה" את השם, כפי שביקשה, במקום לחכות בשקט לתור שלה.
-      revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, nameKnown, true);
+      // "השארתי אותו עוד שנייה" — היא ביקשה שהאייקון לא ייעלם/יוחלף מיד עם
+      // הלחיצה (זה הרגיש מהיר/פתאומי מדי), אלא שיהיה רגע ברור של "לוחצים...
+      // ואז" השם מגיע. לכן דוחים כאן בכוונה את ההחלפה עצמה (revealBizNameAsHero)
+      // בכ-900 מ"ש אחרי הלחיצה — נותנים לאנימציית הטאפ (heroIconTap, 0.45s)
+      // להיראות בבירור קודם, ורק אז השם "מגיע". אם היא מספיקה ללחוץ שוב
+      // תוך כדי ההמתנה, מבטלים את הטיימר הקודם ומתחילים ספירה חדשה — כדי
+      // שכל לחיצה תיתן את אותה תחושה, לא תצטבר/תואץ.
+      if (window.__heroIconTapRevealTimer) clearTimeout(window.__heroIconTapRevealTimer);
+      window.__heroIconTapRevealTimer = setTimeout(function(){
+        window.__heroIconTapRevealTimer = null;
+        // true = skipFontWait: זו לחיצה יזומה ומודעת שלה, לא החלפה אוטומטית
+        // ברקע — לכן מוותרים כאן על ההמתנה הרגילה לגופן Suez One (ר' ההערה
+        // המלאה בפרמטר של revealBizNameAsHero() למטה) כדי שהלחיצה תרגיש כמו
+        // זו שבאמת "מביאה" את השם, כפי שביקשה, במקום לחכות בשקט לתור שלה.
+        revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, nameKnown, true);
+      }, 900);
     }
   }
   function revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, name, skipFontWait){
@@ -7524,7 +7596,12 @@
   // באותה מחלקה למטרה שונה), focusFieldId הוא שדה השם להתמקד בו אחרי הגלילה.
   function scrollToQuickAdd(subpanelId, focusFieldId){
     const subEl = document.getElementById(subpanelId);
-    const addRow = subEl ? subEl.querySelector('.client-add-row') : null;
+    // .client-add-row (לקוחות/צוות/ימים סגורים/קטגוריות), .custom-tpl-form
+    // (מה חדש/תבניות הודעה) ו-.svc-add-row (מלאי) — כל טופסי ה"הוספה" בעמוד
+    // חולקים את אותו רעיון (טופס בתחתית טאב עם רשימה ארוכה מעליו), רק בשמות
+    // מחלקה שונים היסטורית. querySelector עם כמה סלקטורים בפסיק מוצא את מה
+    // שקיים בפועל בטאב הזה, בלי צורך לדעת מראש איזו מחלקה שייכת לאיזה טאב.
+    const addRow = subEl ? subEl.querySelector('.client-add-row, .custom-tpl-form, .svc-add-row') : null;
     if (!addRow) return;
     addRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
     addRow.classList.remove('quick-add-highlight');
@@ -11552,10 +11629,19 @@
     btn.click();
   });
   function showSub(name, btn){
+    // היא דיווחה: הייתה בטאב "לקוחות", גללה למטה, עברה לטאב "צוות" — והדף
+    // לא חזר לראש העמוד, נשאר בערך באותו מקום שהיא גללה אליו בטאב הקודם
+    // ("כאילו זכר שגללתי למטה"). מעבר בין טאבים הוא בעצם מעבר לתוכן חדש
+    // לגמרי — צריך תמיד להתחיל מלמעלה, לא לשמר גלילה מהטאב הקודם.
+    window.scrollTo(0, 0);
     document.querySelectorAll('.subpanel').forEach(p => p.classList.remove('active'));
     document.getElementById('sub-' + name).classList.add('active');
     document.querySelectorAll('.subswitcher button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    // קריאה שנייה, אחרי שינוי ה-DOM — ר' אותה הערה ב-showInnerTab() למטה
+    // (CSS scroll anchoring יכול "לתקן" כמה פיקסלים בעצמו מיד אחרי שינוי
+    // גובה התוכן, גם אחרי שכבר איפסנו למעלה).
+    window.scrollTo(0, 0);
   }
   // Small "?" help hints (see .help-hint CSS) — click/tap toggles the tip open,
   // clicking anywhere else closes it. Deliberately click-based rather than
@@ -11701,6 +11787,9 @@
   function showInnerTab(containerId, innerId, btn){
     const container = document.getElementById(containerId);
     if (!container) return;
+    // אותו תיקון כמו ב-showSub() למעלה — מעבר לתת-טאב פנימי (למשל
+    // קטגוריות/שירותים) הוא גם מעבר לתוכן חדש, לא אמור לשמר גלילה קודמת.
+    window.scrollTo(0, 0);
     container.querySelectorAll('.inner-subpanel').forEach(p => p.classList.remove('active'));
     document.getElementById(innerId).classList.add('active');
     container.querySelectorAll('.inner-switcher button').forEach(b => b.classList.remove('active'));
@@ -11709,6 +11798,11 @@
     // onOverviewInnerTabChange()), which has nothing to pass here, so this
     // has to tolerate a missing btn instead of assuming one always exists.
     if (btn) btn.classList.add('active');
+    // קורא שוב אחרי שינוי ה-DOM (לא רק לפני) — Chromium's CSS "scroll
+    // anchoring" יכול "לתקן" בעצמו כמה פיקסלים של גלילה מיד אחרי ששינוי
+    // התוכן הזה משנה את גובה העמוד, גם אחרי שכבר איפסנו ל-0 למעלה. הקריאה
+    // השנייה, אחרי שהכל כבר החליף active, היא המילה האחרונה בפועל.
+    window.scrollTo(0, 0);
   }
   // Replaces the old two-button onclicks (showInnerTab(...) for "יומן",
   // guardedShowInnerTab(...) for "דוחות") now that #overviewInnerTabSelect is
@@ -12996,8 +13090,35 @@
       return;
     }
     if (document.body.classList.contains('admin-mode')){
-      var customerBtn = document.querySelector('.switcher button');
-      if (customerBtn) showPanel('customer', customerBtn);
+      // She asked specifically for a confirmation here: "כשלוחצים אחורה
+      // כיוצאים מהיומן, תיתן הודעה של אתה בטוח רוצה לצאת". This is the ONE
+      // moment back-navigation actually leaves the whole admin/calendar area
+      // for the public page — unlike the smaller in-admin back-steps above
+      // (closing an overlay, climbing from a tab to סקירה, stepping back a
+      // booking step), which were deliberately left WITHOUT a confirm() (see
+      // the big comment further up about native popups feeling out of place
+      // for those frequent, low-stakes moves) — leaving the calendar entirely
+      // is rare and meaningful enough, exactly like the destructive-action
+      // confirm() already used elsewhere in this app (see the client-delete
+      // handler above), that the interruption is worth it here.
+      //
+      // The browser has ALREADY popped our __appAdminMode history entry by
+      // the time this fires (popstate only ever fires after the navigation
+      // happened) — push it right back BEFORE asking, so a "cancel" leaves
+      // her exactly where she was, with a normal working back-entry for next
+      // time, and so we're not left one entry short if she confirms either.
+      history.pushState({ __appAdminMode: true }, '', location.href);
+      if (confirm('את בטוחה שברצונך לצאת מהיומן?')){
+        var customerBtn = document.querySelector('.switcher button');
+        // No history.back() here on purpose: switching to the customer panel
+        // flips body.admin-mode off, and the existing MutationObserver above
+        // (the very one that already cleans up this exact entry when she
+        // leaves admin mode some OTHER way, like the 🚪 exit icon) notices
+        // that and pops the entry we just pushed back, on its own — reusing
+        // that already-correct cleanup instead of popping it a second time
+        // ourselves, which would cost her an extra, unintended back-press.
+        if (customerBtn) showPanel('customer', customerBtn);
+      }
     }
   });
   Object.keys(APP_BACK_OVERLAY_CLOSERS).forEach(function(id){
