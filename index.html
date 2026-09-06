@@ -92,26 +92,22 @@
   try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
-    // Offline/local-cache persistence for the single shared business/default
-    // doc this whole app reads/writes (see CLOUD_DOC below) — lets a repeat
-    // visitor's browser show the LAST cached branding/schedule data near-
-    // instantly (before the network round-trip even finishes) instead of
-    // waiting on a fresh Firestore read every single time, while still
-    // confirming/updating from the network in the background exactly as
-    // before. Purely a nice-to-have: best-effort and silently skipped if the
-    // browser/context refuses it (private browsing, an older browser, or
-    // another already-open tab without synchronizeTabs) — the app already
-    // handles slow/absent Firestore data gracefully everywhere else, so
-    // nothing here depends on this actually succeeding.
-    try {
-      if (db && typeof db.enablePersistence === 'function'){
-        db.enablePersistence({ synchronizeTabs: true }).catch(function(err){
-          console.warn('Firestore offline persistence not enabled (safe to ignore):', err && err.code);
-        });
-      }
-    } catch (e) {
-      console.warn('Firestore offline persistence not available:', e);
-    }
+    // הוסר בכוונה (היה כאן db.enablePersistence({synchronizeTabs:true})): היא
+    // דיווחה שוב ושוב על התחברות/טעינת נתונים איטית — "לוקח דקה" — אבל אך ורק
+    // בטלפון, בעוד שמאותו חשבון בדיוק מהמחשב זה קצר וכמעט מיידי. שני סבבי
+    // תיקון קודמים (מניעת רינדור כפול) כבר טופלו וּודאו, אבל ההבדל החד בין
+    // מחשב לטלפון לא מתיישב איתם — הוא כן מתיישב בול עם הפעלת ה-persistence
+    // המקומית הזו: זו הפעולה היחידה שרצה על db *לפני* כל קריאה/כתיבה אחרת,
+    // ומשתמשת מאחורי הקלעים ב-IndexedDB עם פרוטוקול תיאום בין-טאבים (heartbeat)
+    // בגלל synchronizeTabs — בדיוק סוג התשתית שידועה כבעייתית/איטית ב-Safari
+    // של אייפון (יש לזה תיעוד ציבורי רחב: פתיחת IndexedDB יכולה להיתקע לשניות
+    // ארוכות שם, בעיקר אחרי שהדפדפן היה ברקע, נעילות low-storage וכו'). מכיוון
+    // שההערה המקורית כאן כבר תיארה את זה כ"נחמד לשיפור" בלבד (הצגת נתונים
+    // מהמטמון המקומי מהר יותר בין טאבים) ולא כקריטי לתפקוד — ובלי שום דרך
+    // אמינה לשחזר/לבדוק תקלת IndexedDB אמיתית של Safari בסביבת הבדיקה
+    // האוטומטית כאן — ההחלטה הבטוחה ביותר הייתה להסיר את זה לגמרי במקום לנסות
+    // "לתקן" תשתית שממילא לא הכרחית. אם זו אכן הייתה הסיבה, ההתחברות בטלפון
+    // אמורה להרגיש עכשיו בדיוק כמו במחשב.
     auth = firebase.auth();
     // Sign every visitor in anonymously (invisible — no login screen, no prompt).
     // This is NOT the business-owner login (that's still email/password below).
@@ -271,16 +267,94 @@
     line-height:0.95;
     letter-spacing:-0.01em;
     color:var(--wine);
-    opacity:0;
-    /* היא ביקשה במפורש "בלי הרבה אנימציה" — הוסרה תנועת ה-translateY
-       (החלקה מלמטה למעלה) שהייתה כאן קודם, נשארה רק דהיית שקיפות פשוטה.
-       Own dedicated transition (not the .fonts-ready keyframe cascade below) —
-       this element's appearance is triggered independently, whenever the real
-       business name actually arrives (see revealBizNameAsHero()), which can be
-       well before or well after the rest of the hero has already revealed. */
-    transition:opacity 0.28s ease;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    /* גובה מינימלי קבוע, שווה בדיוק לגובה-השורה של הטקסט (font-size * 0.95,
+       אותו line-height שמוגדר פה) — כדי שהחלפת אייקון<->טקסט לא תשנה את
+       הגובה הכולל של הכותרת ותזיז את מה שמתחתיה (השורה "הכל בקליק"). בלי זה
+       האייקון (שגובהו הטבעי שונה מגובה-שורת-טקסט) גרם לקפיצה קטנה בדיוק
+       מהסוג שהיא ביקשה להיפטר ממנו. */
+    min-height:calc(clamp(52px, 10vw, 116px) * 0.95);
+    /* תמיד גלוי מהפריים הראשון (לא מחכה לשום דבר) — ר' ההערה הגדולה ב-HTML
+       מעל האלמנט הזה: הוא מציג את אייקון הקליק כברירת מחדל, ורק כשהשם האמיתי
+       מוכן revealBizNameAsHero() מחליף אותו בטקסט השם — בלי אנימציית
+       opacity/transform כלשהי על האלמנט הזה עצמו, רק על הטקסט הפנימי
+       (.hero-name-text) כשהוא מחליף את האייקון. */
   }
-  #heroBizName.biz-name-visible{ opacity:1; }
+  .hero-name-icon{
+    display:inline-flex; align-items:center; justify-content:center; height:100%;
+    cursor:pointer;
+    position:relative; /* עוגן ל-::before של שטח-המגע המורחב למטה */
+    border-radius:50%;
+    transition:background-color 0.15s ease;
+  }
+  /* שטח-מגע מורחב לנוחות באצבע/עכבר — position:absolute בכוונה (לא padding
+     אמיתי על האלמנט עצמו): padding היה מגדיל את הגובה הכולל של האלמנט הזה
+     בתוך שורת ה-flex של #heroBizName, וזה בדיוק מה שגרם לתקלה שנתפסה
+     בבדיקה: הכותרת הייתה גבוהה יותר כשהאייקון מוצג מאשר כשהטקסט מוצג, מה
+     שהזיז את השורה "הכל בקליק" מתחתיה בין שני המצבים — בדיוק סוג ה"קפיצה"
+     שהיא ביקשה לבטל. עם position:absolute השטח המורחב "צף" מעל/סביב
+     האייקון בלי להשפיע כלל על גובה תא ה-flex. */
+  .hero-name-icon::before{
+    content:'';
+    position:absolute;
+    inset:-0.3em;
+  }
+  .hero-name-icon:focus-visible{ outline:2px solid var(--gold-soft); outline-offset:3px; }
+  /* "טבעת + קרניים + סמן" — לפי תמונת ההשראה השנייה ששלחה (עיגול-מתאר זהב
+     דק, קווי-קרניים קטנים סביב כמו זריחה/נצנוץ, וסמן-עכבר בגוון היין
+     במרכז — בדיוק צבעי האתר, לא הוורוד שבתמונת ההשראה הראשונה). היא ביקשה
+     גם במפורש שהאייקון הגדול הזה לא ייראה זהה לאייקון הקטן שכבר קיים בשורת
+     "הכל במקום אחד..." (הקו הפשוט ליד "הכל בקליק", ר' #heroPlatformLine
+     למטה בעמוד) — הטבעת+הקרניים הן בדיוק ההבדל הזה, למראה יוקרתי/עשיר יותר
+     ולא סתם העתקה של אותו קו קטן. הכל מצויר כ-SVG שטוח אחד (לא gradient על
+     div כמו בניסיון הקודם) כדי להימנע מבעיית ה-CSS var שלא היה בטווח.
+     0.85em — אותו תקציב-גובה שכבר הוכח לא לגרום לקפיצה בשורה מתחת. */
+  .hero-name-icon-badge{
+    position:relative;
+    width:0.85em; height:0.85em;
+    display:flex; align-items:center; justify-content:center;
+    filter:drop-shadow(0 0 0.1em rgba(232,206,122,0.55));
+    transition:filter 0.15s ease;
+  }
+  .hero-name-icon:hover .hero-name-icon-badge{ filter:drop-shadow(0 0 0.16em rgba(232,206,122,0.8)); }
+  .hero-icon-ring-svg{ width:100%; height:100%; display:block; }
+  .hero-icon-ring{ fill:none; stroke:var(--gold-soft); stroke-width:5; }
+  .hero-icon-rays{ stroke:var(--gold-soft); stroke-width:5; stroke-linecap:round; }
+  .hero-icon-cursor{ fill:none; stroke:var(--wine); stroke-width:4.5; stroke-linecap:round; stroke-linejoin:round; }
+  /* אנימציית "טאפ" — לחיצה על האייקון (ר' onHeroIconTap() בסקריפט למטה)
+     מפעילה כיווץ-ואז-קפיצה קטנה על התג עצמו, כדי שהלחיצה תרגיש כאילו היא זו
+     שמביאה את השם, לא רק עיטור פסיבי. מוסיפים/מסירים את המחלקה הזו בכל
+     לחיצה (ר' ה-JS) כדי שאפשר יהיה להפעיל אותה שוב ברצף גם בלי שהאלמנט
+     "יתאושש" קודם. */
+  @keyframes heroIconTap{
+    0%{ transform:scale(1); }
+    35%{ transform:scale(0.82); }
+    65%{ transform:scale(1.16); }
+    100%{ transform:scale(1); }
+  }
+  .hero-name-icon-badge.tapped{ animation:heroIconTap 0.45s cubic-bezier(0.34,1.56,0.64,1); }
+  @media (prefers-reduced-motion: reduce){
+    .hero-name-icon-badge.tapped{ animation:none; }
+  }
+  .hero-name-text{
+    display:none; opacity:0;
+    /* "פופ" קטן בהופעת השם (לא רק דהייה שקטה כמו קודם) — היא ביקשה שהלחיצה
+       תרגיש כאילו היא "מביאה" את המילים; transform:scale עם easing עם overshoot
+       קל (cubic-bezier עם ערך>1 באמצע) נותן בדיוק את התחושה הזו. transform-origin
+       במרכז כדי שהגדילה תהיה סימטרית ולא תמשוך את הטקסט הצידה. */
+    transform:scale(0.75);
+    transform-origin:center;
+    transition:opacity 0.32s ease, transform 0.38s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  #heroBizName.biz-name-visible .hero-name-icon{ display:none; }
+  #heroBizName.biz-name-visible .hero-name-text{ display:inline-block; }
+  #heroBizName.biz-name-visible.name-settled .hero-name-text{ opacity:1; transform:scale(1); }
+  @media (prefers-reduced-motion: reduce){
+    .hero-name-text{ transition:opacity 0.32s ease; transform:none; }
+    #heroBizName.biz-name-visible.name-settled .hero-name-text{ transform:none; }
+  }
   .scroll-hint{
     margin-top:4rem;
     font-size:13px;
@@ -726,7 +800,7 @@
      asked for. */
   .booking-step, .mb-wizard-step{display:none;}
   .booking-step.active, .mb-wizard-step.active{display:block; animation:fadeUp 0.3s ease forwards;}
-  .step-nav{display:flex; gap:8px; margin-top:6px;}
+  .step-nav{display:flex; gap:8px; margin-top:6px; align-items:center;}
   .step-back{
     background:none;
     border:1.5px solid #E4DACB;
@@ -1131,6 +1205,13 @@
   .subpanel{display:none;}
   .subpanel.active{display:block; animation:fadeUp 0.4s ease forwards;}
   .inner-switcher{
+    /* היא דיווחה שבטאבים כמו "לקוחות"/"צוות" (וגם "שירותים" קודם) הכפתורים
+       (למשל "לקוחות"/"הודעות ללקוחות") צמודים מדי לפס העליון (.biz-topbar)
+       ונראים כאילו נחתכים. מדידה בפועל הראתה פער של פחות מ-8px בין תחתית
+       הפס לראש הכפתורים — הוספתי margin-top קבוע כאן (חל אחיד על כל טאב
+       שמשתמש ב-.inner-switcher: לקוחות, צוות, שירותים) כדי שיהיה מרווח נוח
+       וברור מתחת לקו המפריד הדק שכבר קיים על .biz-topbar עצמו. */
+    margin-top:14px;
     display:flex; gap:8px; margin-bottom:1.5rem; flex-wrap:wrap;
   }
   .inner-switcher button{
@@ -2136,6 +2217,27 @@
     margin-bottom:14px;
   }
   .search-input::placeholder{color:var(--panel-text-dim);}
+  /* היא ביקשה: כפתור פלוס גלוי ממש למעלה (ליד החיפוש) בכל טאב עם רשימה+הוספה
+     (לקוחות, צוות) — במקום שתצטרך לגלול עד סוף הרשימה כדי לראות שיש בכלל
+     טופס הוספה למטה. לחיצה עליו (ר' scrollToQuickAdd() בסקריפט) גוללת בעדינות
+     ישר לשורת ההוספה הקיימת ומדגישה אותה רגע, ואז שמה פוקוס בשדה השם. */
+  .search-with-add-row{display:flex; gap:8px; align-items:center; margin:4px 2px 14px;}
+  .search-with-add-row .search-input{margin-bottom:0;}
+  .quick-add-fab{
+    flex-shrink:0; width:40px; height:40px; border-radius:50%;
+    background:linear-gradient(135deg, var(--panel-gold), #A9800F);
+    color:#fff; border:none; font-size:20px; font-weight:700; line-height:1;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 8px rgba(122,94,12,0.35);
+    transition:transform 0.15s ease;
+  }
+  .quick-add-fab:hover{transform:scale(1.06);}
+  .quick-add-fab:active{transform:scale(0.96);}
+  @keyframes quickAddPulse{
+    0%, 100%{box-shadow:0 0 0 0 rgba(155,44,66,0.45);}
+    50%{box-shadow:0 0 0 8px rgba(155,44,66,0);}
+  }
+  .client-add-row.quick-add-highlight{animation:quickAddPulse 0.9s ease 2;}
   .switcher button i, .subswitcher button i, .onboard-list i, .template-btn i{
     margin-inline-end:4px;
     vertical-align:-2px;
@@ -2760,7 +2862,61 @@
        and (since the reset-to-generic race condition below is now fixed)
        reliably keeps it filled in rather than ever reverting it back to
        nothing/generic — see the comment there for the full explanation. -->
-  <h1 class="serif" id="heroBizName" style="display:none;"></h1>
+  <!-- REDESIGNED (round 4 of the hero name-reveal) — every previous round tried
+       to make the OLD approach (name fades/grows in while the tagline beneath it
+       shrinks/fades in careful sequence, see revealBizNameAsHero()'s history)
+       glitch-free, and she kept seeing some kind of jump anyway despite several
+       rounds of fixes for different real races (font not ready yet, two
+       overlapping animations, etc.) — at this point the mechanism itself, not
+       any one specific race inside it, is the risk. She asked for something
+       fundamentally simpler instead: show the click icon (the same one used
+       elsewhere on the page) right here, in the business name's own spot, from
+       the very first frame — no fade-in needed, it doesn't depend on any data
+       or font loading — and ONLY once the real name is actually ready, swap the
+       icon out for the name text (see revealBizNameAsHero() further down: it
+       now just hides #heroBizNameIcon and fills/shows #heroBizNameText, a plain
+       content swap with nothing else moving at the same time — no more
+       synchronized shrink/grow of .hero-platform-line underneath it at all). -->
+  <h1 class="serif" id="heroBizName">
+    <!-- לחיצה על האייקון: בקשה שלה — האייקון גדול יותר עכשיו, ותופס אנימציית
+         "טאפ" קטנה בלחיצה, וכאילו הלחיצה היא זו שמביאה את השם (ר' onHeroIconTap()
+         למטה בסקריפט: אם השם כבר ידוע אבל טרם הוצג, לחיצה מציגה אותו מיד במקום
+         לחכות לגמר-טעינת-הגופן הרגיל). role/tabindex/aria-label כדי שזה יהיה
+         נגיש גם למי שמנווט במקלדת, לא רק עיטור חזותי. -->
+    <span class="hero-name-icon" id="heroBizNameIcon" role="button" tabindex="0" aria-label="הצג את שם העסק" onclick="onHeroIconTap()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();onHeroIconTap();}">
+      <!-- עיצוב "טבעת + קרניים + סמן" (סבב 6, לפי תמונת ההשראה השנייה ששלחה):
+           עיגול-מתאר זהב דק, 8 קווי-קרניים קטנים סביבו (כמו זריחה/נצנוץ), וסמן
+           עכבר בגוון היין במרכז — הכל בפלטת האתר (זהב/יין), לא הוורוד/הלבן
+           שבתמונות ההשראה. בכוונה שונה מהאייקון הקטן הקיים ליד "הכל בקליק"
+           בשורה #heroPlatformLine למטה (שם זה רק קו חלול פשוט, בלי טבעת/קרניים)
+           — היא ביקשה במפורש ששני האייקונים לא ייראו זהים, ושהמראה כאן יהיה
+           יוקרתי/עשיר יותר. בלי שום טקסט מתחת לפי בקשתה. SVG שטוח אחד (לא
+           gradient על div) — כל הקווים/העיגול/הסמן הם אלמנטים בתוך אותו
+           viewBox 0 0 100 100, ה-glow הוא drop-shadow (לא משפיע על גודל
+           הקופסה), כך שנשארים בדיוק באותו תקציב-גובה (0.85em) שכבר הוכח
+           (בבדיקה) לא לגרום לקפיצה בשורה "הכל בקליק" מתחת. -->
+      <span class="hero-name-icon-badge">
+        <svg viewBox="0 0 100 100" class="hero-icon-ring-svg" aria-hidden="true">
+          <circle cx="50" cy="50" r="30" class="hero-icon-ring"/>
+          <g class="hero-icon-rays">
+            <line x1="85" y1="50" x2="93" y2="50"/>
+            <line x1="74.75" y1="74.75" x2="80.4" y2="80.4"/>
+            <line x1="50" y1="85" x2="50" y2="93"/>
+            <line x1="25.25" y1="74.75" x2="19.6" y2="80.4"/>
+            <line x1="15" y1="50" x2="7" y2="50"/>
+            <line x1="25.25" y1="25.25" x2="19.6" y2="19.6"/>
+            <line x1="50" y1="15" x2="50" y2="7"/>
+            <line x1="74.75" y1="25.25" x2="80.4" y2="19.6"/>
+          </g>
+          <g class="hero-icon-cursor" transform="translate(33,31) scale(1.35)">
+            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+            <path d="M13 13l6 6"/>
+          </g>
+        </svg>
+      </span>
+    </span>
+    <span class="hero-name-text" id="heroBizNameText"></span>
+  </h1>
   <!-- NOT "primary" by default anymore — she specifically disliked the effect
        this used to produce: the generic tagline flashing up as a giant
        heading for a moment, then visibly shrinking down once the real
@@ -2927,7 +3083,20 @@
               <div class="cat-grid" id="catGrid"></div>
             </div>
             <div id="catServicesView" style="display:none;">
-              <button class="cat-back-btn" onclick="showCategoryGrid()">‹ חזרה לקטגוריות</button>
+              <!-- היא דיווחה: "חזרה לקטגוריות" יושב למעלה, אבל "המשך" (שמוביל
+                   לבחירת עובדת/תאריך) יושב רק בסוף הכל — אחרי רשימת השירותים
+                   ואחרי בוחר העובדת. עם רשימת שירותים ארוכה זה קל לפספס
+                   לגמרי ("לא קולטים שזה נמצא בסוף"). הוספתי כאן, צמוד ל"חזרה
+                   לקטגוריות", כפתור "המשך" שני שעושה בדיוק את אותה פעולה
+                   (goToBookingStep2() — הבדיקה היחידה שם היא שנבחר לפחות
+                   טיפול אחד, לא תלויה כלל בבחירת עובדת) — כך שברגע שבחרה
+                   טיפול היא רואה מיד שאפשר להמשיך, בלי לגלול. הכפתור המקורי
+                   למטה (אחרי בוחר העובדת) נשאר בדיוק כמו שהיה, לנוחות מי
+                   שכבר גללה עד שם ובחרה עובדת. -->
+              <div class="step-nav" style="margin-bottom:4px;">
+                <button class="cat-back-btn" onclick="showCategoryGrid()">‹ חזרה לקטגוריות</button>
+                <button class="cta" style="flex:1;" onclick="goToBookingStep2()">המשך</button>
+              </div>
               <div class="label" id="catServicesLabel" style="margin-top:12px;">בחירת שירות</div>
               <div id="custSvcList"></div>
               <button type="button" class="cat-back-btn bk-add-more-btn" onclick="showCategoryGrid()">+ הוספת טיפול נוסף</button>
@@ -3026,28 +3195,30 @@
       <div>טוענת את הנתונים…</div>
     </div>
     <div id="sub-overview" class="subpanel active">
-      <!-- REDESIGNED (round 2) — the first pass here still left 3 separate
-           chrome rows (inner-switcher-select alone, date-nav alone, staff+view
-           row) because splitting the date-nav off of the old combined
-           date-nav+view-switch line actually UNDID the original space-saving
-           merge instead of improving on it — she immediately noticed the
-           calendar hadn't actually gained any room. Fixed for real now: the
-           יומן/דוחות select moved onto the SAME line as the date-nav (inside
-           #calChromeRow, at the end — the select doesn't have to live inside
-           #inner-overview-calendar to work, onOverviewInnerTabChange() below
-           only needs its id), so there are only 2 chrome rows total instead
-           of the original 3: (1) date-nav + יומן/דוחות select, (2) staff
-           filter + week/day/month view, in one connected row ("שורה שיהיה
-           אפשר לבחור מיון לפי עובדת ויומי חודשי" — one row for both). That
-           second row went through a connected-4-segment-button-group round
-           (after a reference screenshot she'd sent) before she walked it
-           back to two small independent "button" selects — see the
-           .cal-mini-btn CSS comment for the current version.
-           onOverviewInnerTabChange() still routes through the exact
-           same showInnerTab()/guardedShowInnerTab() functions, still respects
-           the reports tab's PIN gate (gatedTabsConfig.reports), and reverts
-           the select back to its previous value if she cancels/fails the PIN
-           prompt. -->
+      <!-- REDESIGNED (round 3) — round 2's version (see the git history of this
+           comment if that ever matters) placed #overviewInnerTabSelect INSIDE
+           #calChromeRow, which is itself inside #inner-overview-calendar, to
+           save a chrome row. That saved the row, but created a real trap: once
+           she switched to "דוחות" (guardedShowInnerTab hides the whole
+           #inner-overview-calendar subpanel, select and all), the ONLY control
+           that could switch back to "יומן" disappeared along with it — she had
+           no way back to the calendar short of reloading the page. Fixed for
+           real this time: the select now lives here, directly under
+           #sub-overview, as a sibling of BOTH #inner-overview-calendar and
+           #inner-overview-reports — so it stays visible and usable no matter
+           which of the two is currently showing. Costs the one row back that
+           round 2 had saved; a control that's sometimes unreachable is worse
+           than one extra row. onOverviewInnerTabChange() below still routes
+           through the exact same showInnerTab()/guardedShowInnerTab()
+           functions, still respects the reports tab's PIN gate
+           (gatedTabsConfig.reports), and reverts the select back to its
+           previous value if she cancels/fails the PIN prompt. -->
+      <div class="cal-chrome-row" id="overviewInnerTabRow" style="margin-bottom:8px;">
+        <select id="overviewInnerTabSelect" class="mini-select" onchange="onOverviewInnerTabChange(this)">
+          <option value="inner-overview-calendar" selected>יומן</option>
+          <option value="inner-overview-reports">דוחות</option>
+        </select>
+      </div>
       <div id="inner-overview-calendar" class="inner-subpanel active">
       <!-- #statApptsToday/#statOpenSlots/#calSectionLabel stay in the markup,
            hidden, purely so renderOverviewStats()/setOverviewView() keep
@@ -3068,10 +3239,6 @@
           <span id="weekNavLabel"></span>
           <button type="button" onclick="shiftWeek(1)" aria-label="שבוע הבא">›</button>
         </div>
-        <select id="overviewInnerTabSelect" class="mini-select" onchange="onOverviewInnerTabChange(this)">
-          <option value="inner-overview-calendar" selected>יומן</option>
-          <option value="inner-overview-reports">דוחות</option>
-        </select>
       </div>
       <!-- Walked back from the earlier connected-4-segment button group (a
            previous round tried matching a reference screenshot's stretched
@@ -3179,7 +3346,10 @@
              שרשימת ההמתנה עברה לעמודת "בקשות מיוחדות" ביומן — נראה כמו מסך
              שחור ריק, "מיותר"). renderClients() ממלא את זה בדיוק כמו קודם. -->
         <div class="inv-alert bday" id="birthdayAlert"></div>
-        <input type="text" id="clientSearch" class="search-input" placeholder="חיפוש לקוחה לפי שם, טלפון או תעודת זהות..." oninput="renderClients()">
+        <div class="search-with-add-row">
+          <input type="text" id="clientSearch" class="search-input" placeholder="חיפוש לקוחה לפי שם, טלפון או תעודת זהות..." oninput="renderClients()">
+          <button type="button" class="quick-add-fab" onclick="scrollToQuickAdd('sub-clients', 'newClientName')" title="הוספת לקוחה" aria-label="הוספת לקוחה">+</button>
+        </div>
         <div class="client-list" id="clientList"></div>
         <div class="client-add-row">
           <div class="brand-logo-upload small" id="clientPhotoUpload" onclick="document.getElementById('clientPhotoFile').click()">
@@ -3190,6 +3360,12 @@
           <input type="text" id="newClientName" placeholder="שם הלקוחה">
           <input type="text" id="newClientPhone" placeholder="050-0000000">
           <input type="email" id="newClientEmail" placeholder="אימייל">
+          <!-- היא דיווחה שלא ברור שיום/חודש/שנה כאן הם תאריך יום ההולדת של
+               הלקוחה (יש aria-label על כל select, אבל זה לא נראה למי שלא
+               משתמשת בקורא-מסך) — הוספתי תווית גלויה, בדיוק כמו שכבר קיים
+               באותו שדה בכרטיס לקוחה קיימת (ר' "🎂 יום הולדת" ב-mini-field
+               למטה בקובץ). -->
+          <div class="mini-field-label" style="margin-bottom:-4px;">🎂 יום הולדת</div>
           <div class="dmy-date-picker" id="newClientBirthdayWrap">
             <select id="newClientBirthdayDay" aria-label="יום לידה"></select>
             <select id="newClientBirthdayMonth" aria-label="חודש לידה"></select>
@@ -3244,7 +3420,10 @@
         <button onclick="showInnerTab('sub-staff', 'inner-hours', this)">שעות פעילות</button>
       </div>
       <div id="inner-staff" class="inner-subpanel active">
-        <input type="text" id="staffSearch" class="search-input" placeholder="חיפוש עובדת לפי שם..." oninput="renderStaff()">
+        <div class="search-with-add-row">
+          <input type="text" id="staffSearch" class="search-input" placeholder="חיפוש עובדת לפי שם..." oninput="renderStaff()">
+          <button type="button" class="quick-add-fab" onclick="scrollToQuickAdd('sub-staff', 'newStaffName')" title="הוספת עובדת" aria-label="הוספת עובדת">+</button>
+        </div>
         <div class="client-list" id="staffList"></div>
         <div class="client-add-row">
           <div class="brand-logo-upload small" id="staffPhotoUpload" onclick="document.getElementById('staffPhotoFile').click()">
@@ -3451,7 +3630,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-חצי-יומן-וטעינת-ענן-v12</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-איקון-טבעת-ואנטר-v13</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -6528,78 +6707,88 @@
   // on every later renderBranding() pass, e.g. after a Firestore onSnapshot
   // update) — a name that's already showing and already matches just gets its
   // text refreshed in place, without re-triggering the transition.
-  function revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, name){
+  // לחיצה על אייקון הקליק שמעל "הכל בקליק" — בקשתה: אנימציית טאפ + שהלחיצה
+  // תרגיש כאילו היא זו ש"מביאה" את שם העסק. מפעילה תמיד את אנימציית הטאפ
+  // (משוב מיידי גם אם השם עוד לא ידוע/עוד לא הגיע), ובנוסף — אם branding.name
+  // כבר ידוע בפועל אבל טרם הוצג (למשל עדיין ממתינים לגופן Suez One להיטען,
+  // ר' revealBizNameAsHero() למטה) — מריצה את ההחלפה מיד, "עוקפת" את ההמתנה
+  // הרגילה כדי שהלחיצה תהיה זו שבאמת גורמת לשם להופיע, לא רק עיטור. הבטיחות
+  // כאן: revealBizNameAsHero() כבר אידמפוטנטית (ר' alreadyShown למעלה), אז אין
+  // סיכון שקריאה כפולה (הטאפ הזה + ה-fp.then(doReveal) הרגיל שכבר תלוי/ממתין)
+  // תגרום לבאג — השנייה מביניהן פשוט לא עושה כלום.
+  function onHeroIconTap(){
+    // האנימציה עצמה (כיווץ-קפיצה) רצה על התג העגול הפנימי (.hero-name-icon-badge),
+    // לא על העטיפה הלוחצת החיצונית (#heroBizNameIcon) — ר' ההערה ליד
+    // @keyframes heroIconTap ב-CSS.
+    const badgeEl = document.querySelector('#heroBizNameIcon .hero-name-icon-badge');
+    if (badgeEl){
+      badgeEl.classList.remove('tapped');
+      void badgeEl.offsetWidth; // force reflow כדי שאפשר יהיה להוסיף את המחלקה שוב ולהריץ את האנימציה גם בלחיצות חוזרות ברצף
+      badgeEl.classList.add('tapped');
+    }
+    const heroBizNameEl = document.getElementById('heroBizName');
+    const heroPlatformLineEl = document.getElementById('heroPlatformLine');
+    const nameKnown = (branding && branding.name || '').trim();
+    if (heroBizNameEl && heroPlatformLineEl && nameKnown && !heroBizNameEl.classList.contains('biz-name-visible')){
+      // true = skipFontWait: זו לחיצה יזומה ומודעת שלה, לא החלפה אוטומטית
+      // ברקע — לכן מוותרים כאן על ההמתנה הרגילה לגופן Suez One (ר' ההערה
+      // המלאה בפרמטר של revealBizNameAsHero() למטה) כדי שהלחיצה תרגיש כמו
+      // זו שבאמת "מביאה" את השם, כפי שביקשה, במקום לחכות בשקט לתור שלה.
+      revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, nameKnown, true);
+    }
+  }
+  function revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, name, skipFontWait){
     const alreadyShown = heroBizNameEl.classList.contains('biz-name-visible');
-    // Set this SYNCHRONOUSLY, right now — not inside the requestAnimationFrame
-    // below, and not inside the font-wait below either. She reported the name
-    // appearing, then visibly growing/shrinking TWICE, like a double-take.
-    // Root cause: the fallback in the hero-reveal IIFE (a few hundred lines
-    // up) waits on window.__brandingReady and then checks heroBizNameEl's
-    // 'biz-name-visible' class to decide whether to promote the generic
-    // tagline instead — but that check ran as a promise microtask, which can
-    // fire BEFORE the rAF callback below has actually added that class
-    // (microtasks drain before the next animation frame, not after) — even on
-    // a perfectly normal load with a real business name. So on every normal
-    // load: the fallback saw "not visible yet", made the tagline grow big
-    // (wrongly, name WAS coming) — one frame later THIS function's own rAF
-    // fired, shrinking the tagline back down while growing the real name in.
-    // Two competing animations, looking exactly like a double up/down jump.
-    // This flag is the fix: it's true the instant revealBizNameAsHero() is
-    // called with a real name (synchronously, no rAF/microtask/font-wait gap),
-    // so the fallback below can reliably tell "a real name IS on its way"
-    // apart from "truly no name was ever saved".
+    // Set this SYNCHRONOUSLY, right now — see the fallback check further up
+    // the page (the Promise.race block right after the hero-reveal IIFE) that
+    // reads this flag to tell "a real name IS on its way" apart from "truly
+    // no name was ever saved", so it doesn't wrongly promote the generic
+    // tagline to a big heading when a real name is actually about to show.
     window.__heroBizNameWillShow = true;
+    const textEl = document.getElementById('heroBizNameText');
     const doReveal = function(){
-      heroBizNameEl.textContent = name;
-      if (alreadyShown) return;
-      heroBizNameEl.style.display = 'block';
-      // Force the display:none->block change above to actually paint (at
-      // opacity:0, per the base #heroBizName rule) before starting the fade
-      // sequence below on the next frame — otherwise the browser can coalesce
-      // both style changes into one paint and skip the transition entirely,
-      // snapping straight to the end state instead of animating into it.
-      //
-      // רצף מכוון (לא בו-זמנית!) — היא דיווחה שוב ושוב על "קפיצה" בשם העסק
-      // גם אחרי שהמתנו לגופן, כי בגרסה הקודמת שני השינויים (השורה הכללית
-      // "הכל בקליק" מתכווצת + השם האמיתי גדל) קרו באותו רגע בדיוק, ונראו
-      // כמו קפיצה/גליץ' אחד מבלבל. עכשיו: קודם השורה הכללית רק דוהה
-      // (hero-line-fading, ~180ms) — בלי לשנות לה גודל בזמן שהיא עדיין
-      // נראית. ברגע שהיא כבר שקופה לגמרי מחליפים לה בשקט את הגודל (מסירים
-      // primary), מציגים את השם האמיתי (דהיה פשוטה, בלי הרבה אנימציה כמו
-      // שביקשה), ורק אז מחזירים את השורה הכללית להיראות — עכשיו כבר בגודל
-      // הקטן שלה כתת-כותרת מתחת לשם. שלוש תנועות ברורות בזו אחר זו, לא
-      // שתיים חופפות.
+      if (textEl) textEl.textContent = name;
+      if (alreadyShown) return; // just a text update (e.g. she's editing it live in Settings) — already swapped once, nothing else to animate
+      // הגישה הנוכחית (סבב 4): במקום שהשם ידהה/יגדל תוך כדי שהשורה
+      // "הכל בקליק" מתחתיו מתכווצת/דוהה בו-זמנית (המנגנון הקודם, שהמשיכה
+      // לדווח על "קפיצה" בו גם אחרי כמה סבבי תיקון לגזעי-בעיה שונים) —
+      // האייקון (שכבר מוצג כאן מהפריים הראשון, ר' ההערה ב-HTML) פשוט נעלם
+      // והשם מופיע במקומו. שום דבר אחר בעמוד (השורה "הכל בקליק" למטה כולל)
+      // לא זז/משנה גודל בו-זמנית איתו יותר — זו החלפת תוכן בודדת ומבודדת.
+      heroBizNameEl.classList.add('biz-name-visible');
+      // רשת-ביטחון (לא אנימציה!): אם עדיין קרה מרוץ נדיר כלשהו שבו הפולבאק
+      // (ה-Promise.race ליד ה-IIFE הגדול למעלה בעמוד) כבר הספיק לקדם את
+      // השורה "הכל בקליק" ל-primary לפני שהדגל __heroBizNameWillShow נבדק —
+      // למשל שם עודכן מאוחר יותר דרך onSnapshot אחרי שהפולבאק כבר "החליט"
+      // שאין שם — צריך בכל זאת להחזיר אותה לגודלה הרגיל ברגע שכן מגיע שם
+      // אמיתי, אחרת היא תישאר גדולה לצמיתות. הסרה ישירה, בלי דיליי/מחלקת
+      // דהייה משלה — במקרה הרגיל (הדגל כן עבד) זה פשוט לא עושה כלום כי
+      // 'primary' אף פעם לא נוסף מלכתחילה.
+      heroPlatformLineEl.classList.remove('primary');
+      // כפול-rAF (אותו טריק שכבר בשימוש ב-renderBranding()/showPhoneBrand()
+      // למטה) — פריים אחד כדי שהחלפת ה-display:none->inline למעלה תצויר
+      // בפועל (ב-opacity:0, לפי הכלל הבסיסי) לפני שמתחילים את הדהייה בפריים
+      // הבא; אחרת הדפדפן עלול לאחד את שני שינויי הסגנון לציור אחד ולדלג על
+      // האנימציה, קופץ ישר למצב הסופי.
       requestAnimationFrame(function(){
-        heroPlatformLineEl.classList.add('hero-line-fading');
-        setTimeout(function(){
-          heroPlatformLineEl.classList.remove('primary');
-          heroBizNameEl.classList.add('biz-name-visible');
-          requestAnimationFrame(function(){
-            heroPlatformLineEl.classList.remove('hero-line-fading');
-          });
-        }, 200);
+        requestAnimationFrame(function(){ heroBizNameEl.classList.add('name-settled'); });
       });
     };
-    if (alreadyShown){
-      // Already shown once this page load (e.g. she's editing the name live
-      // in Settings) — the font is obviously already ready by now, just
-      // update the text in place instantly, no need to wait/re-animate.
+    if (alreadyShown || skipFontWait){
+      // skipFontWait=true (מגיע רק מ-onHeroIconTap() למעלה): לחיצה יזומה
+      // ומודעת שלה על האייקון — במקרה הנדיר שהיא מספיקה ללחוץ עוד לפני
+      // שהגופן Suez One נטען, מוותרים כאן בכוונה על ההמתנה הרגילה (שמיועדת
+      // למנוע reflow שקט ברקע) כדי שהלחיצה תרגיש אמיתית ומיידית, כמו שביקשה
+      // ("כאילו הלחיצה תביא את המילים"). זה טרייד-אוף מכוון ומוגבל למקרה קצה
+      // נדיר מאוד הלכה למעשה, בניגוד להחלפה האוטומטית הפסיבית (fp.then למטה)
+      // שממשיכה לשמור על ההמתנה לגופן כרגיל.
       doReveal();
       return;
     }
-    // THE ACTUAL FIX for her repeated "the name jumps" complaint: this used to
-    // reveal as soon as the NAME DATA was known, with no regard for whether
-    // the actual font (Suez One) had finished loading yet — so on a load
-    // where Firestore happened to answer before the embedded font finished
-    // decoding, the name rendered once in a fallback font and then visibly
-    // reflowed/resized a moment later when Suez One swapped in. That's a
-    // completely different jump than the empty-state/double-take ones
-    // already fixed above and in #phoneBrand's own reveal (renderBranding()) —
-    // and it's exactly what she clarified she meant: "let it come after it
-    // has its font, that's it, no jumps". window.__suezFontPromise (set by
-    // the font-loading IIFE near the top of the page) is the same signal that
-    // IIFE already uses for its own reveal — shared here instead of
-    // duplicated, so both stay in sync automatically.
+    // עדיין ממתינים לגופן (Suez One) לפני שמציגים את הטקסט בפועל — לא כדי
+    // למנוע קפיצה בגודל/מיקום (כבר אין כזו, ר' למעלה) אלא כדי שהטקסט לא
+    // יוצג פעם אחת בגופן חלופי ואז ירונדר מחדש (reflow) ברגע ש-Suez One
+    // נטען, ממש כמו ב-showPhoneBrand() למטה שמשתמשת באותו איתות בדיוק.
     const fp = (window.__suezFontPromise && typeof window.__suezFontPromise.then === 'function') ? window.__suezFontPromise : Promise.resolve();
     fp.then(doReveal);
   }
@@ -7327,6 +7516,30 @@
       document.getElementById('clientPhotoPreview').style.display = 'block';
       document.getElementById('clientPhotoPlaceholder').style.display = 'none';
     });
+  }
+  // היא ביקשה: כפתור פלוס גלוי למעלה (ליד החיפוש) בכל טאב עם רשימה+הוספה
+  // (לקוחות/צוות), כדי שלא תצטרך לגלול עד סוף רשימה ארוכה כדי להגיע לטופס
+  // ההוספה שיושב שם למטה. subpanelId הוא #sub-clients/#sub-staff (כדי לחפש
+  // את .client-add-row הנכון, כי יש כמה כאלה בדף — לא כל הרשימות משתמשות
+  // באותה מחלקה למטרה שונה), focusFieldId הוא שדה השם להתמקד בו אחרי הגלילה.
+  function scrollToQuickAdd(subpanelId, focusFieldId){
+    const subEl = document.getElementById(subpanelId);
+    const addRow = subEl ? subEl.querySelector('.client-add-row') : null;
+    if (!addRow) return;
+    addRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    addRow.classList.remove('quick-add-highlight');
+    // Force reflow so re-adding the class always restarts the pulse animation,
+    // even if she clicks the + button again shortly after the previous pulse.
+    void addRow.offsetWidth;
+    addRow.classList.add('quick-add-highlight');
+    setTimeout(function(){ addRow.classList.remove('quick-add-highlight'); }, 2000);
+    const focusEl = document.getElementById(focusFieldId);
+    if (focusEl){
+      // A little after the smooth-scroll has actually landed — focusing
+      // immediately can yank the scroll position (mobile browsers especially
+      // like to snap-scroll an input into view the instant it's focused).
+      setTimeout(function(){ focusEl.focus(); }, 400);
+    }
   }
   function addClient(){
     const nameEl = document.getElementById('newClientName');
@@ -8949,11 +9162,46 @@
       return;
     }
     const rect = wrap.getBoundingClientRect();
-    const available = window.innerHeight - rect.top - 14;
+    // מדידה מול visualViewport ולא רק window.innerHeight כשזמין (כל דפדפן
+    // מובייל מודרני): בטלפון (בעיקר Safari של אייפון) שורת הכתובת המתקפלת
+    // משנה את הגובה הזמין בפועל על המסך בלי שום הבטחה ש-window.innerHeight
+    // או אירוע ה-resize הרגיל בכלל יתעדכנו בעקבות זה — visualViewport הוא
+    // ה-API הספציפי שנועד בדיוק לזה, ומתעדכן אמין. visualViewport.offsetTop
+    // מתווסף כי הקואורדינטות של getBoundingClientRect() הן ביחס ל"ויופורט
+    // הלייאאוט" הרחב יותר, לא ביחס לחלון הנראה בפועל.
+    const vv = window.visualViewport;
+    const viewportBottom = vv ? (vv.height + vv.offsetTop) : window.innerHeight;
+    const available = viewportBottom - rect.top - 14;
     wrap.style.maxHeight = Math.max(240, available) + 'px';
     wrap.style.overflowY = 'auto';
   }
   window.addEventListener('resize', () => { if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport(); });
+  // ===== visualViewport: המקור האמין היחיד לשינויי-גובה אמיתיים בטלפון =====
+  // היא דיווחה שוב שהיומן עדיין נחתך סביב 13:00 בפון, גם אחרי שהוספנו את
+  // ה-setTimeout הגיבוי (שפתר רק מירוץ-תזמון מול אנימציית הכניסה של הפאנל —
+  // באג אמיתי, אבל לא זה שהיא עדיין רואה). ולפי מה שהיא אמרה בנפרד — ההתחברות
+  // איטית "רק בפון", לא במחשב — ברור שיש כאן משהו ספציפי לדפדפן מובייל:
+  // שורת הכתובת המתקפלת/מתרחבת ב-Safari (ובדפדפני מובייל אחרים) לא בהכרח
+  // משנה את window.innerHeight ולא בהכרח מפעילה 'resize' רגיל, ולכן ההתאמה
+  // שכבר קרתה (מיד עם פתיחת הפאנל, כשהדפדפן עדיין מציג את שורת הכתובת
+  // המלאה) נשארת "תקועה" על הגובה הקטן יותר גם אחרי ששורת הכתובת מתקפלת
+  // בגלילה והופך גובה אמיתי גדול יותר לפנוי. visualViewport.addEventListener
+  // הוא ה-API שבאמת מיועד בדיוק למקרה הזה ומעודכן אמין בכל הדפדפנים
+  // המודרניים בטלפון. מוגבל ל-requestAnimationFrame כדי לא להריץ את זה
+  // עשרות פעמים בשנייה תוך כדי גלילה רציפה.
+  if (window.visualViewport){
+    let vvFitScheduled = false;
+    const scheduleVvFit = function(){
+      if (vvFitScheduled) return;
+      vvFitScheduled = true;
+      requestAnimationFrame(function(){
+        vvFitScheduled = false;
+        if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
+      });
+    };
+    window.visualViewport.addEventListener('resize', scheduleVvFit);
+    window.visualViewport.addEventListener('scroll', scheduleVvFit);
+  }
   // The custom webfonts (Suez One/Heebo, embedded as data: URIs — see the
   // @font-face rules up top) still swap in a little after first paint
   // (font-display:block's brief invisible-text window), which nudges the
@@ -11217,6 +11465,22 @@
       setTimeout(function(){
         if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
       }, 560);
+      // עוד גיבוי, ספציפית עבור טלפון: היא דיווחה שהיומן עדיין נחתך סביב
+      // 13:00 גם עם התיקון שמעל (שפתר את מירוץ-האנימציה, לא את זה). החשד
+      // המרכזי עכשיו הוא שורת הכתובת המתקפלת של הדפדפן בטלפון (בעיקר
+      // Safari) — היא יכולה להתקפל/להתרחב בלי שום resize/'animationend'/
+      // visualViewport event אמין בכל גרסת דפדפן, ובלי דרך לשחזר את זה
+      // באמת בסביבת בדיקה אוטומטית (אין שורת כתובת אמיתית ב-headless
+      // Chromium). "בודק שוב כמה פעמים במרווחים לאורך השניות הראשונות"
+      // הוא הפתרון הכי עמיד שאפשר לתת בלי תלות באף אירוע ספציפי — לא אמור
+      // לעלות כלום אם הגובה כבר נכון (fitWeekCalToViewport() רק כותב ערך
+      // חדש, לא הורס כלום), ועוצר לגמרי אחרי 4 שניות כדי לא לרוץ לנצח.
+      let calFitWatchdogCount = 0;
+      const calFitWatchdogId = setInterval(function(){
+        calFitWatchdogCount++;
+        if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
+        if (calFitWatchdogCount >= 8) clearInterval(calFitWatchdogId);
+      }, 500);
     }
   }
   // Forces both the page-level scroll AND the week calendar's own internal
@@ -11262,6 +11526,30 @@
   // small polish touch expected of any real slide-in panel, costs nothing.
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && document.body.classList.contains('biz-subnav-open')) closeBizSubNavDrawer();
+  });
+  // אנטר במקלדת = "אישור/המשך" — היא ביקשה שלחיצה על Enter בתוך שדה טקסט
+  // תפעל בדיוק כמו לחיצה על כפתור ה"המשך"/"אישור" הרלוונטי, בלי שתצטרך
+  // לגעת בעכבר/במסך בשביל זה. מאזין גלובלי אחד (לא עשרות onkeydown נפרדים
+  // על כל שדה) שמזהה טווח "שלבים"/טפסים מוכרים — שלב אשף פעיל (הזמנת
+  // תור ציבורית/ידנית), חלונית כניסת מנהלת, בקשה גמישה, וכל שורת "הוספה"
+  // (client-add-row/custom-tpl-form — משותפים ללקוחות, צוות, קטגוריות, ימים
+  // סגורים, תבניות הודעה, עדכוני "מה חדש") — ולוחץ על כפתור ה-.cta הראשון
+  // והלא-מנוטרל/גלוי בתוכו. שמרני בכוונה: לא נוגע ב-textarea (כדי לא לשבור
+  // ירידת שורה), לא ב-select/checkbox/radio/date, ולא כש-focus כבר על כפתור
+  // עצמו (שם לדפדפן כבר יש טיפול ברירת-מחדל ל-Enter, וטיפול כפול היה גורם
+  // ללחיצה כפולה בפועל).
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.isComposing) return;
+    const target = e.target;
+    if (!target || target.tagName !== 'INPUT') return;
+    const submittableTypes = ['text', 'tel', 'email', 'password', 'number', 'search', 'url', ''];
+    if (submittableTypes.indexOf(target.type) === -1) return;
+    const scope = target.closest('.booking-step.active, .mb-wizard-step.active, #loginOverlay, #flexibleRequestOverlay, .client-add-row, .custom-tpl-form');
+    if (!scope) return;
+    const btn = scope.querySelector('button.cta:not([disabled])');
+    if (!btn || btn.offsetParent === null) return; // offsetParent===null => לא גלוי/לא ברנדור כרגע, לא ללחוץ על כפתור מוסתר
+    e.preventDefault();
+    btn.click();
   });
   function showSub(name, btn){
     document.querySelectorAll('.subpanel').forEach(p => p.classList.remove('active'));
