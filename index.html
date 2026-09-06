@@ -1606,12 +1606,11 @@
   .report-actions-row .cta{width:auto; margin-top:0; padding:10px 18px; font-size:13px;}
   .report-actions-row .search-input{flex:1 1 200px; width:auto; margin:0;}
   .report-actions-row .cta.ghost{background:transparent; border:1px solid rgba(var(--panel-line-rgb),0.25); color:var(--panel-text);}
-  /* היא ביקשה: לא רווח לבן/בהיר בין כרטיס לקוחה אחד לשני, אלא שהרקע הכהה
-     (--ink, אותו רקע שה-body כולו משתמש בו) יבדיל ביניהם כקו דק — לא פער
-     גדול. gap צומצם ל-3px (קו דק, לא רווח), ורקע כהה + padding קטן על
-     העטיפה עצמה הם מה שהופך את ה-gap הזה (וה"מסגרת" סביב כל הרשימה) לכהה
-     במקום לתת לרקע הבהיר של הפאנל (--panel-bg) להציץ דרכו. */
-  .client-list{display:flex; flex-direction:column; gap:3px; margin-bottom:20px; background:var(--ink); padding:3px; border-radius:16px;}
+  /* היא ביקשה בסבב קודם רקע כהה דק בין כרטיסי הלקוחות במקום רווח בהיר —
+     וביקשה עכשיו במפורש להחזיר את זה בחזרה ("שמת רקע שחור פתאום למה? תוריד",
+     "מה שהיה היה טוב") — כנראה שברקע הכהה כאן הרגיש לה כמו שגיאה חזותית
+     (מסגרת שחורה) ולא כמו שיפור. חזרה לרווח הבהיר הפשוט שהיה קודם. */
+  .client-list{display:flex; flex-direction:column; gap:12px; margin-bottom:20px;}
   /* She asked the client-list cards to get the same bold two-tone treatment
      that already landed on #clientProfileOverlay's .cp-section boxes (see the
      big comment above that CSS): a full-bleed, saturated color banner strip
@@ -3341,24 +3340,16 @@
            display logic (staff-count-based) — two independent visibility
            switches that just compose normally via nested elements, instead of
            one function's inline style silently overwriting the other's. -->
-      <!-- ROUND 3 (same space-reclaiming request, she asked again after
-           seeing round 2's result: "כל הכפתורים... יעלו ממש ליד הריבוע
-           הזהב... אז יהיה ליומן יותר מקום"): the date-nav arrows themselves
-           (#weekNavRow, previously alone in its own #calChromeRow one row
-           down) now ALSO share this exact same line — so the whole calendar
-           chrome is ONE row instead of two, buying back a full row's worth of
-           height for computeMobileHourBandHeight() to hand straight to the
-           grid (see MOBILE_CAL_TARGET_END_HOUR above — that calculation
-           already auto-adapts to however much real space is left above it,
-           so freeing this row directly helps reach 14:00 without a scroll,
-           exactly what she asked). #weekNavRow's own visibility still has to
-           respect BOTH independent conditions that used to gate it
-           separately (only in week-mode — setOverviewView() — and only while
-           the calendar inner-tab, not reports, is showing —
-           onOverviewInnerTabChange()) now that it's not automatically hidden
-           just by being inside the calendar-only subpanel any more; see
-           updateWeekNavRowVisibility() further down in the script, called
-           from both of those. -->
+      <!-- ROUND 3 (same space-reclaiming request) tried moving #weekNavRow up
+           to share this exact line too, buying back a whole row of height for
+           computeMobileHourBandHeight(). REVERTED per her explicit feedback
+           after actually trying it on her real phone: it made this row look
+           worse ("פחות יפה") AND still didn't reach 14:00 (her own screenshot
+           still cut off ~13:00 — the MOBILE_HOUR_BAND_HEIGHT floor was the
+           real limiter, not this row's height) — "עדיף מה שהיה קודם". Back to
+           round 2: just the יומן/דוחות select and the שבועי/כולם selects share
+           this line; #weekNavRow is back in its own #calChromeRow row below,
+           inside #inner-overview-calendar (see the comment there). -->
       <div class="cal-chrome-row" id="overviewInnerTabRow" style="margin-bottom:8px;">
         <select id="overviewInnerTabSelect" class="mini-select cal-mini-btn cal-mini-btn-primary" onchange="onOverviewInnerTabChange(this)">
           <option value="inner-overview-calendar" selected>יומן</option>
@@ -3372,11 +3363,6 @@
           </select>
           <select id="calStaffFilterSelect" class="mini-select cal-mini-btn" onchange="onCalStaffFilterSelectChange(this)"></select>
         </span>
-        <div class="day-nav-header" id="weekNavRow">
-          <button type="button" onclick="shiftWeek(-1)" aria-label="שבוע קודם">‹</button>
-          <span id="weekNavLabel"></span>
-          <button type="button" onclick="shiftWeek(1)" aria-label="שבוע הבא">›</button>
-        </div>
       </div>
       <div id="inner-overview-calendar" class="inner-subpanel active">
       <!-- #statApptsToday/#statOpenSlots/#calSectionLabel stay in the markup,
@@ -3392,14 +3378,19 @@
         </div>
         <span class="cal-topbar-label" id="calSectionLabel">היומן השבועי</span>
       </div>
-      <!-- #calChromeRow (which used to hold #weekNavRow alone, on its own
-           row) is GONE as of round 3 — #weekNavRow itself moved up to share
-           #overviewInnerTabRow's line instead (see the big comment there).
-           Kept only as history: round 1 merged the old separate
-           .cal-filter-row into this row; round 2 moved the two mini-selects
-           up one more row to share the יומן/דוחות select's line; round 3
-           moved this nav row up to join them, so the calendar grid gets an
-           entire extra row of height back. -->
+      <!-- #calChromeRow: round 1 merged the old separate .cal-filter-row into
+           this row; round 2 moved the two mini-selects up one more row to
+           share the יומן/דוחות select's line, leaving #weekNavRow alone here.
+           Round 3 tried moving #weekNavRow up too — REVERTED per her explicit
+           feedback (see the comment above #overviewInnerTabRow) — so this is
+           back to exactly round 2's layout. -->
+      <div class="cal-chrome-row" id="calChromeRow">
+        <div class="day-nav-header" id="weekNavRow">
+          <button type="button" onclick="shiftWeek(-1)" aria-label="שבוע קודם">‹</button>
+          <span id="weekNavLabel"></span>
+          <button type="button" onclick="shiftWeek(1)" aria-label="שבוע הבא">›</button>
+        </div>
+      </div>
       <div class="week-cal-wrap" id="weekCalWrap">
         <div class="week-cal" id="weekCal"></div>
       </div>
@@ -3781,7 +3772,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-תיקון-בקשה-גמישה-ויומן-v16</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-שחזור-יומן-ותיקון-שעות-אמיתי-v17</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -8263,7 +8254,28 @@
       // ("רוצה לראות עד 14:00 בלי לגלול") גם אחרי שתיקנו את מספר השורות
       // בצ'רום מעל היומן. עכשיו השטח שמחולק ל-6 השעות הוא רק מה שבאמת פנוי
       // אחרי הכותרת הדביקה, כך שקו ה-14:00 עצמו נוחת בדיוק בתחתית ה-wrap.
-      const available = window.innerHeight - rect.top - currentDayHeadHeight() - 14;
+      //
+      // תיקון שני, קריטי לא פחות (הסבב הזה): החישוב כאן המשיך להשתמש ב-
+      // window.innerHeight — בזמן ש-fitWeekCalToViewport() (שקובע את
+      // ה-max-height האמיתי של ה-wrap עצמו, כלומר כמה שטח בפועל אפשר לגלול
+      // אליו) כבר עבר להשתמש ב-visualViewport במיוחד כי בדפדפן מובייל
+      // (במיוחד Chrome/Samsung Internet באנדרואיד, לא רק Safari) שורת
+      // הכתובת המתקפלת/מתרחבת לא בהכרח מעדכנת את window.innerHeight באופן
+      // אמין ומיידי (ר' ההערה הגדולה למטה על visualViewport). כשהשניים לא
+      // מסונכרנים — הגובה ששימש לחשב "כמה גובה כל שעה צריכה כדי שבדיוק 6
+      // שעות ימלאו את השטח הפנוי" שונה מהגובה ששימש לחשב את ה-max-height
+      // האמיתי של אותו שטח פנוי עצמו — קו ה-14:00 מחושב שיישב בדיוק בתחתית
+      // "שטח פנוי" אחד, בזמן שהאזור שבאמת אפשר לגלול אליו (ה-max-height) הוא
+      // בגודל אחר לגמרי. זה בדיוק מסביר דיווח עקבי וקשה-לשחזור של "עדיין
+      // נחתך בערך ב-13:00" שממשיך לקרות בלי קשר לכמה שורות צ'רום מזיזים —
+      // הבעיה מעולם לא הייתה כמות המקום מעל היומן, אלא שני מקורות גובה
+      // שונים שלא הסכימו ביניהם. עכשיו שניהם קוראים בדיוק את אותו מקור
+      // (visualViewport כשקיים, בדיוק כמו fitWeekCalToViewport), כך שקו
+      // ה-14:00 שהחישוב כאן "מבטיח" תמיד יתאים בפועל ל-max-height שהיומן
+      // עצמו מקבל.
+      const vv = window.visualViewport;
+      const viewportBottom = vv ? (vv.height + vv.offsetTop) : window.innerHeight;
+      const available = viewportBottom - rect.top - currentDayHeadHeight() - 14;
       const targetHours = Math.max(1, MOBILE_CAL_TARGET_END_HOUR - calStartHour);
       if (available > 0) return Math.max(MOBILE_HOUR_BAND_HEIGHT, available / targetHours);
     }
@@ -9509,13 +9521,13 @@
   }
   renderStaffFilterRow();
   renderClients();
-  // #weekNavRow moved (round 3) to share #overviewInnerTabRow's own line
-  // instead of sitting alone inside #inner-overview-calendar — so it's no
-  // longer automatically hidden just by that whole subpanel being hidden
-  // when she switches to "דוחות". It now needs BOTH of its old independent
-  // conditions checked together, in one place, called from both spots that
-  // used to gate it separately: week-mode only (setOverviewView) AND the
-  // calendar inner-tab only, not reports (onOverviewInnerTabChange).
+  // #weekNavRow lives inside #inner-overview-calendar (back to round 2's
+  // layout — round 3 briefly moved it out, reverted per her feedback), so
+  // it's already hidden whenever that whole subpanel is hidden (she's on
+  // "דוחות"). This function is kept anyway as the one place both of its
+  // visibility conditions are checked together — week-mode only
+  // (setOverviewView) AND the calendar inner-tab (onOverviewInnerTabChange)
+  // — a harmless belt-and-suspenders check, not load-bearing any more.
   function updateWeekNavRowVisibility(){
     const el = document.getElementById('weekNavRow');
     if (!el) return;
@@ -11997,11 +12009,8 @@
       // שרק מצטרפים זה לזה, לא דורסים אחד את השני.
       const filtersWrap = document.getElementById('calWeekFiltersInline');
       if (filtersWrap) filtersWrap.style.display = (overviewInnerTabSelectValue === 'inner-overview-calendar') ? 'flex' : 'none';
-      // #weekNavRow (round 3 — see the big HTML comment above
-      // #overviewInnerTabRow) now shares this same row too, and needs the
-      // same "only while the calendar inner-tab is showing" condition
-      // ANDed with its other (week-view-only) condition — see
-      // updateWeekNavRowVisibility().
+      // Kept in sync too, belt-and-suspenders (see the comment on
+      // updateWeekNavRowVisibility() itself).
       if (typeof updateWeekNavRowVisibility === 'function') updateWeekNavRowVisibility();
     });
   }
