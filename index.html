@@ -576,7 +576,14 @@
      בכל שאר האתר בדיוק כמו שהוא (מלבן מעוגל, כמו הכפתור המלא-רוחב הרגיל),
      ומתאים את הצורה רק כאן — בשורה הספציפית הזו שבה שני הכפתורים יושבים
      ממש זה-לצד-זה — לפיל אחיד, כמו ה"חזרה לקטגוריות" שלידו. */
-  #catServicesView .step-nav .cta{ border-radius:999px; }
+  /* היא המשיכה לדווח שגם אחרי אחידות הצורה (border-radius:999px למעלה),
+     "המשך" עדיין נראה גדול יותר מ"חזרה לקטגוריות" כשהם צמודים זה לצד זה —
+     כי רק הצורה תוקנה, לא הגודל בפועל: .cta הבסיסי משתמש ב-padding:14px
+     ו-font-size:15px (כפתור מלא-רוחב רגיל), בעוד .cat-back-btn משתמש ב-
+     padding:9px 16px ו-font-size:13.5px — פער אמיתי במידות, לא רק באשליה.
+     דריסה נוספת כאן, מתואמת בדיוק לאותם מספרים של .cat-back-btn, כך ששני
+     הכפתורים נראים כעת באותו "משקל" בדיוק, לא רק באותה צורה. */
+  #catServicesView .step-nav .cta{ border-radius:999px; padding:9px 16px; font-size:13.5px; }
   #svcManageList .svc-cat-header{
     color:var(--panel-gold);
     border-bottom-color:rgba(var(--panel-line-rgb),0.15);
@@ -654,9 +661,22 @@
     font-size:13px; font-weight:600; color:var(--panel-gold, #7A5E0C);
     padding:2px 2px 4px;
   }
-  .mb-add-more-btn, .fr-add-more-btn, .bk-add-more-btn, .mb-quickpick-more-btn{
+  .mb-add-more-btn, .fr-add-more-btn, .bk-add-more-btn, .mb-quickpick-more-btn, .bk-continue-bottom-btn{
     margin-top:6px; display:inline-block; font-weight:700;
   }
+  /* היא ביקשה כפתור "המשך" נוסף, קטן, ממש ליד "+ הוספת טיפול נוסף" שבתחתית
+     רשימת השירותים (כדי שברשימה ארוכה לא תצטרך לגלול חזרה למעלה) — "באותו
+     פרמט" (אותה צורה/גודל כמו כפתור ההוספה, .cat-back-btn) אבל בצבע אחר,
+     כדי שיהיה ברור מיד שזו פעולה שונה (בורדו, כמו .cta הראשי, ולא זהב כמו
+     כפתור ההוספה). */
+  .bk-continue-bottom-btn{
+    background:rgba(224,120,143,0.16); border:1px solid rgba(224,120,143,0.45);
+    /* גוון בורדו-בהיר קריא על הרקע הכהה של הפאנל הציבורי — באותה רוח בדיוק
+       כמו --gold-soft של כפתור ההוספה, רק במשפחת הצבע הבורדואית של .cta
+       הראשי, לא הזהב. */
+    color:#E7A8B8;
+  }
+  .bk-continue-bottom-btn:hover, .bk-continue-bottom-btn:active{background:rgba(224,120,143,0.28);}
   .slot-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:22px;}
   .slot{
     position:relative;
@@ -1254,16 +1274,22 @@
   .subpanel{display:none;}
   .subpanel.active{display:block; animation:fadeUp 0.4s ease forwards;}
   .inner-switcher{
-    /* היא דיווחה שבטאבים כמו "לקוחות"/"צוות" (וגם "שירותים" קודם) הכפתורים
-       (למשל "לקוחות"/"הודעות ללקוחות") צמודים מדי לפס העליון (.biz-topbar)
-       ונראים כאילו נחתכים. מדידה בפועל הראתה פער של פחות מ-8px בין תחתית
-       הפס לראש הכפתורים — הוספתי margin-top כדי שיהיה מרווח נוח וברור מתחת
-       לקו המפריד הדק שכבר קיים על .biz-topbar עצמו (border-bottom שם).
-       סבב נוסף: היא המשיכה לדווח שזה "ממש דבוק" גם אחרי 14px — הגדלתי
-       ל-20px. סבב שלישי: שוב דיווחה "שוב לא הוזזת... קצת דבוק" — הגדלתי
-       עכשיו משמעותית יותר, ל-30px, כדי שההבדל יהיה בלתי-ניתן-לפספוס בפועל
-       (חל אחיד על כל טאב שמשתמש ב-.inner-switcher: לקוחות, צוות, שירותים). */
-    margin-top:30px;
+    /* היא צדקה לגמרי ותיקנה אותי (סבב 4): כל שלושת הסבבים הקודמים (14px,
+       20px, 30px) היו margin-top — וזו בדיוק הבעיה. #panel-business (ההורה,
+       כמה רמות מעלה) אין לו padding-top/border-top משלו, אז margin-top של
+       הילד-הראשון-בפועל הזה "קורס" (CSS margin collapsing) דרכו כלפי מעלה:
+       בפועל כל ה-margin-top הפך לתזוזה של הקופסה הבהירה של #panel-business
+       עצמה כלפי מטה — כלומר גדל הפס השחור החשוף מעל הפאנל (רקע הכהה של
+       body), ולא נוצר שום מרווח אמיתי בין קצה הפאנל הבהיר לכפתור עצמו (בדיוק
+       מה שהיא תיארה: "אתה מגדיל את המרווח השחור ולא את הכפתור עצמו"). הפתרון
+       האמיתי: padding-top במקום margin-top. padding אף פעם לא "קורס" — הוא
+       תמיד נשאר בתוך הקופסה הבהירה של האלמנט עצמו, כך שקצה הפאנל הבהיר נשאר
+       בדיוק באותו מקום מינימלי כמו ב"סקירה" (שלא משתמשת ב-.inner-switcher
+       בכלל ולכן מעולם לא סבלה מהבאג הזה), בעוד שהכפתור עצמו מקבל מרווח נוח
+       אמיתי מלמעלה, בתוך השטח הבהיר. מתחיל מחדש מ-14px (לא 30px) — עכשיו
+       שהמנגנון באמת עובד, אין צורך בערך המנופח שרק פיצה על מנגנון שלא עבד.
+       חל אחיד על כל טאב שמשתמש ב-.inner-switcher: לקוחות, צוות, שירותים. */
+    padding-top:14px;
     display:flex; gap:8px; margin-bottom:1.5rem; flex-wrap:wrap;
   }
   .inner-switcher button{
@@ -1580,7 +1606,12 @@
   .report-actions-row .cta{width:auto; margin-top:0; padding:10px 18px; font-size:13px;}
   .report-actions-row .search-input{flex:1 1 200px; width:auto; margin:0;}
   .report-actions-row .cta.ghost{background:transparent; border:1px solid rgba(var(--panel-line-rgb),0.25); color:var(--panel-text);}
-  .client-list{display:flex; flex-direction:column; gap:12px; margin-bottom:20px;}
+  /* היא ביקשה: לא רווח לבן/בהיר בין כרטיס לקוחה אחד לשני, אלא שהרקע הכהה
+     (--ink, אותו רקע שה-body כולו משתמש בו) יבדיל ביניהם כקו דק — לא פער
+     גדול. gap צומצם ל-3px (קו דק, לא רווח), ורקע כהה + padding קטן על
+     העטיפה עצמה הם מה שהופך את ה-gap הזה (וה"מסגרת" סביב כל הרשימה) לכהה
+     במקום לתת לרקע הבהיר של הפאנל (--panel-bg) להציץ דרכו. */
+  .client-list{display:flex; flex-direction:column; gap:3px; margin-bottom:20px; background:var(--ink); padding:3px; border-radius:16px;}
   /* She asked the client-list cards to get the same bold two-tone treatment
      that already landed on #clientProfileOverlay's .cp-section boxes (see the
      big comment above that CSS): a full-bleed, saturated color banner strip
@@ -3177,7 +3208,13 @@
               </div>
               <div class="label" id="catServicesLabel" style="margin-top:12px;">בחירת שירות</div>
               <div id="custSvcList"></div>
+              <!-- היא ביקשה: ברשימת שירותים ארוכה שלא תצטרך לגלול חזרה למעלה
+                   רק כדי ללחוץ "המשך" — כפתור המשך נוסף, קטן, באותו פרמט
+                   כמו "+ הוספת טיפול נוסף" הקיים, ממש לידו, בצבע אחר (בורדו,
+                   לא זהב) כדי שיהיה ברור שזו פעולה שונה — אותו handler בדיוק
+                   כמו כפתור ה"המשך" העליון. -->
               <button type="button" class="cat-back-btn bk-add-more-btn" onclick="showCategoryGrid()">+ הוספת טיפול נוסף</button>
+              <button type="button" class="cat-back-btn bk-continue-bottom-btn" onclick="goToBookingStep2()">המשך ›</button>
             </div>
           </div>
           <div class="booking-step" id="bstep-2">
@@ -3304,6 +3341,24 @@
            display logic (staff-count-based) — two independent visibility
            switches that just compose normally via nested elements, instead of
            one function's inline style silently overwriting the other's. -->
+      <!-- ROUND 3 (same space-reclaiming request, she asked again after
+           seeing round 2's result: "כל הכפתורים... יעלו ממש ליד הריבוע
+           הזהב... אז יהיה ליומן יותר מקום"): the date-nav arrows themselves
+           (#weekNavRow, previously alone in its own #calChromeRow one row
+           down) now ALSO share this exact same line — so the whole calendar
+           chrome is ONE row instead of two, buying back a full row's worth of
+           height for computeMobileHourBandHeight() to hand straight to the
+           grid (see MOBILE_CAL_TARGET_END_HOUR above — that calculation
+           already auto-adapts to however much real space is left above it,
+           so freeing this row directly helps reach 14:00 without a scroll,
+           exactly what she asked). #weekNavRow's own visibility still has to
+           respect BOTH independent conditions that used to gate it
+           separately (only in week-mode — setOverviewView() — and only while
+           the calendar inner-tab, not reports, is showing —
+           onOverviewInnerTabChange()) now that it's not automatically hidden
+           just by being inside the calendar-only subpanel any more; see
+           updateWeekNavRowVisibility() further down in the script, called
+           from both of those. -->
       <div class="cal-chrome-row" id="overviewInnerTabRow" style="margin-bottom:8px;">
         <select id="overviewInnerTabSelect" class="mini-select cal-mini-btn cal-mini-btn-primary" onchange="onOverviewInnerTabChange(this)">
           <option value="inner-overview-calendar" selected>יומן</option>
@@ -3317,6 +3372,11 @@
           </select>
           <select id="calStaffFilterSelect" class="mini-select cal-mini-btn" onchange="onCalStaffFilterSelectChange(this)"></select>
         </span>
+        <div class="day-nav-header" id="weekNavRow">
+          <button type="button" onclick="shiftWeek(-1)" aria-label="שבוע קודם">‹</button>
+          <span id="weekNavLabel"></span>
+          <button type="button" onclick="shiftWeek(1)" aria-label="שבוע הבא">›</button>
+        </div>
       </div>
       <div id="inner-overview-calendar" class="inner-subpanel active">
       <!-- #statApptsToday/#statOpenSlots/#calSectionLabel stay in the markup,
@@ -3332,22 +3392,14 @@
         </div>
         <span class="cal-topbar-label" id="calSectionLabel">היומן השבועי</span>
       </div>
-      <!-- היא ביקשה (סבב 1): "שכפתורי שבועי וכולם יהיו בשורה של התאריך עם
-           החצים" — כדי לחסוך שורה שלמה (+המרווח שלה) ולתת ליומן עצמו עוד
-           גובה (עדיין נחתך סביב 13:00 בפון במקום 14:00 לדבריה). איחדתי אז את
-           מה שהיה קודם שתי שורות נפרדות (.cal-chrome-row עם הניווט בין
-           שבועות, ומתחתיו .cal-filter-row עם שני ה-select הקטנים) לשורה
-           אחת. סבב 2 (למעלה, ר' #overviewInnerTabRow): שני ה-select עצמם
-           עברו עוד שורה למעלה, לשורה של יומן/דוחות — ולכן #weekNavRow הוא
-           עכשיו התוכן היחיד כאן, וממורכז (justify-content:center למטה) כמו
-           שביקשה, במקום צמוד לימין כשהיו לו שכנים לשתף איתם את הרוחב. -->
-      <div class="cal-chrome-row" id="calChromeRow">
-        <div class="day-nav-header" id="weekNavRow">
-          <button type="button" onclick="shiftWeek(-1)" aria-label="שבוע קודם">‹</button>
-          <span id="weekNavLabel"></span>
-          <button type="button" onclick="shiftWeek(1)" aria-label="שבוע הבא">›</button>
-        </div>
-      </div>
+      <!-- #calChromeRow (which used to hold #weekNavRow alone, on its own
+           row) is GONE as of round 3 — #weekNavRow itself moved up to share
+           #overviewInnerTabRow's line instead (see the big comment there).
+           Kept only as history: round 1 merged the old separate
+           .cal-filter-row into this row; round 2 moved the two mini-selects
+           up one more row to share the יומן/דוחות select's line; round 3
+           moved this nav row up to join them, so the calendar grid gets an
+           entire extra row of height back. -->
       <div class="week-cal-wrap" id="weekCalWrap">
         <div class="week-cal" id="weekCal"></div>
       </div>
@@ -3729,7 +3781,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-יומן-מאוחד-וגלילה-אוטומטית-v15</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-תיקון-בקשה-גמישה-ויומן-v16</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -4684,7 +4736,15 @@
     }
   });
   function openFlexibleRequestOverlay(){
-    frSelectedServices = [];
+    // היא ביקשה: "לא מוצאת שעה מתאימה?" נלחץ אחרי שהיא כבר בחרה טיפול/קטגוריה
+    // בזרימת הקביעה הרגילה (bkSelectedServices, שלב 1) — אין שום סיבה
+    // לאפס את זה ולהכריח אותה לבחור שוב מאפס; הבחירה שלה צריכה "לעבור" לטופס
+    // הבקשה הגמישה, כך שכל מה שנשאר לה זה לקבוע העדפת יום/שעה. אם הגיעה
+    // לכאן מקום אחר לגמרי (בלי בחירה קודמת), ההתנהגות הישנה (התחלה מאפס,
+    // גריד קטגוריות ריק) נשארת בדיוק כמו שהייתה.
+    frSelectedServices = (typeof bkSelectedServices !== 'undefined' && bkSelectedServices.length)
+      ? bkSelectedServices.map(sel => ({ svcIndex: sel.svcIndex }))
+      : [];
     frCurrentCategory = null;
     showFrCategoryGrid();
     renderFrSelectedServicesUI();
@@ -6847,18 +6907,27 @@
       }, 900);
     }
   }
-  // ===== גלילה אוטומטית לקביעת תור, 5 שניות אחרי שהשם נחשף =====
-  // "5 שניות אחרי שהכל נטען וראים את השם רותי זולברג... שאוטומטית יגלול
+  // ===== גלילה אוטומטית לקביעת תור, 4 שניות אחרי שהשם נחשף =====
+  // "4 שניות אחרי שהכל נטען וראים את השם רותי זולברג... שאוטומטית יגלול
   // למטה בשביל הלקוחה למקום של קביעת תור" — נקרא פעם אחת בדיוק מתוך
   // doReveal() בתוך revealBizNameAsHero() למעלה, ברגע שהשם באמת מופיע
   // בפעם הראשונה (לא בכל עדכון-טקסט חוזר). היא הבהירה אחר-כך: "אם הלקוחה
   // לא גללה אז זה יקרה כמובן אבל אם הלקוחה מתחילה לגלול אז לא יקרה כלום" —
   // כלומר לא מספיק לבדוק את מיקום הגלילה ברגע שהטיימר יורה (היא יכולה
-  // לגלול ואז לחזור למעלה בטעות/כוונה לפני שה-5 שניות חלפו); צריך לזכור
+  // לגלול ואז לחזור למעלה בטעות/כוונה לפני שה-4 שניות חלפו); צריך לזכור
   // שהיא בכלל התחילה לגלול, בכל שלב בחלון הזמן, ולוותר על הגלילה
   // האוטומטית לגמרי אם כן — מאזין 'scroll' חד-פעמי שמסמן דגל, לא רק בדיקת
   // window.scrollY נקודתית. תנאי-בטיחות נוסף: לא במצב-ניהול — הפאנל
   // הציבורי הזה בכלל לא מוצג שם.
+  //
+  // תיקון (סבב 2): היא דיווחה שהגלילה יורדת יותר מדי — "הוא צריך לעצור אחרי
+  // הפס הדקיק שמבדיל בין קביעת תור לבין מה שקורה למעלה", ושבגלל זה טאב
+  // "קביעת תור" עצמו (.switcher) יצא מהתצוגה. המטרה הקודמת, #bookingFormWrap,
+  // יושבת עמוק בתוך #panel-customer (אחרי תגית ה-פרודקט, שם העסק, קישור
+  // "יש לך תור קיים") — לגלול אליה דוחפת את .switcher (והכל שמעליו) הרחק
+  // מעל לחלון התצוגה. המטרה עכשיו היא .switcher עצמו — כך שהוא נוחת בדיוק
+  // בראש המסך (הפס הדק שמתחתיו הוא בדיוק "הפס הדקיק שמבדיל" שהיא מתארת),
+  // וטופס הקביעה עצמו כבר נמצא ממש קצת מתחתיו, לא הרחק מתחת לקיפול.
   function scheduleAutoScrollToBooking(){
     if (window.__autoScrollToBookingTimer) clearTimeout(window.__autoScrollToBookingTimer);
     if (window.__autoScrollUserScrolledHandler) window.removeEventListener('scroll', window.__autoScrollUserScrolledHandler);
@@ -6872,9 +6941,9 @@
       window.__autoScrollUserScrolledHandler = null;
       if (userScrolled) return;
       if (document.body.classList.contains('admin-mode')) return;
-      const target = document.getElementById('bookingFormWrap');
+      const target = document.querySelector('.switcher');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 5000);
+    }, 4000);
   }
   function revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, name, skipFontWait){
     const alreadyShown = heroBizNameEl.classList.contains('biz-name-visible');
@@ -8752,7 +8821,15 @@
         // explicit "ביטול תור" button on it that still calls the very same
         // cancelAdminAppointment() (same confirm(), same email/waitlist flow).
         block.title = `${a.client} · ${a.service} · ${a.time} (${dur} דק') — לחיצה לצפייה בפרטי התור`;
-        block.innerHTML = `<b>${a.time.slice(0,5)} ${a.client} · ${a.service}</b>`;
+        // היא ביקשה ששם הלקוחה יופיע קודם, לפני השעה (לא אחריה) — גם ברמת
+        // הקריאה ("מי זו הלקוחה" חשוב לה יותר מהשעה בהצצה ראשונה), וגם כי
+        // בפועל זה תיקן תלונה נוספת שלה: ברוחב פלאפון העמודה כל כך צרה
+        // שרוב הטקסט נחתך (white-space:nowrap + text-overflow:ellipsis, ר'
+        // .cal-appt b למעלה) — כשהשעה הייתה ראשונה, מה שנשאר גלוי אחרי
+        // הקיצוץ היה רק ספרות השעה בלי שום שם, בדיוק מה שדיווחה
+        // ("רואים שעון בלי שם של לקוחה"). עכשיו השם הוא הדבר הראשון שנשאר
+        // גלוי, גם כשרוב השאר נחתך.
+        block.innerHTML = `<b>${a.client} · ${a.time.slice(0,5)} · ${a.service}</b>`;
         block.onclick = (e) => {
           e.stopPropagation();
           openApptDetailOverlay(a);
@@ -9124,7 +9201,10 @@
       .slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     const waitlistEntries = waitlist.slice();
     if (!pendingRequests.length && !waitlistEntries.length){
-      body.innerHTML = '<div class="cal-special-empty">אין בקשות מיוחדות כרגע</div>';
+      // היא ביקשה: לא טקסט חתוך ("אין בקשות מיוחדות" נחתך בתוך העמודה הצרה
+      // הזו, שגובהה קבוע — bodyHeight למעלה — ונחתך אנכית ב-overflow:hidden
+      // של .cal-special-body) אלא פשוט שלא יהיה רשום כלום כשאין בקשות.
+      body.innerHTML = '';
     } else {
       pendingRequests.forEach(r => {
         const isFlexible = r.mode === 'flexible';
@@ -9429,6 +9509,19 @@
   }
   renderStaffFilterRow();
   renderClients();
+  // #weekNavRow moved (round 3) to share #overviewInnerTabRow's own line
+  // instead of sitting alone inside #inner-overview-calendar — so it's no
+  // longer automatically hidden just by that whole subpanel being hidden
+  // when she switches to "דוחות". It now needs BOTH of its old independent
+  // conditions checked together, in one place, called from both spots that
+  // used to gate it separately: week-mode only (setOverviewView) AND the
+  // calendar inner-tab only, not reports (onOverviewInnerTabChange).
+  function updateWeekNavRowVisibility(){
+    const el = document.getElementById('weekNavRow');
+    if (!el) return;
+    const shouldShow = overviewViewMode === 'week' && overviewInnerTabSelectValue === 'inner-overview-calendar';
+    el.style.display = shouldShow ? 'flex' : 'none';
+  }
   let overviewViewMode = 'week';
   const ovInitDate = new Date();
   let ovCalViewYear = ovInitDate.getFullYear();
@@ -9452,8 +9545,7 @@
     const labels = { week: 'היומן השבועי', day: 'היומן היומי', month: 'היומן החודשי' };
     document.getElementById('calSectionLabel').textContent = labels[mode];
     document.getElementById('weekCalWrap').style.display = mode === 'week' ? 'block' : 'none';
-    const weekNavRowEl = document.getElementById('weekNavRow');
-    if (weekNavRowEl) weekNavRowEl.style.display = mode === 'week' ? 'flex' : 'none';
+    updateWeekNavRowVisibility();
     document.getElementById('overviewDayWrap').style.display = mode === 'day' ? 'block' : 'none';
     document.getElementById('overviewMonthWrap').style.display = mode === 'month' ? 'block' : 'none';
     if (mode === 'month') renderOverviewMonthCal();
@@ -11905,6 +11997,12 @@
       // שרק מצטרפים זה לזה, לא דורסים אחד את השני.
       const filtersWrap = document.getElementById('calWeekFiltersInline');
       if (filtersWrap) filtersWrap.style.display = (overviewInnerTabSelectValue === 'inner-overview-calendar') ? 'flex' : 'none';
+      // #weekNavRow (round 3 — see the big HTML comment above
+      // #overviewInnerTabRow) now shares this same row too, and needs the
+      // same "only while the calendar inner-tab is showing" condition
+      // ANDed with its other (week-view-only) condition — see
+      // updateWeekNavRowVisibility().
+      if (typeof updateWeekNavRowVisibility === 'function') updateWeekNavRowVisibility();
     });
   }
   let hoursEditorStaffIndex = 0;
@@ -12482,10 +12580,13 @@
       if (!doc.exists){ alert('הגיבוי הזה לא נמצא.'); return; }
       const backupData = doc.data();
       return CLOUD_DOC.set(backupData, { merge: false }).then(() => {
+        // Same ordering fix as loadCloudData()/pollForRemoteUpdates() — snapshot
+        // the pristine restored data BEFORE rerenderEverything() can mutate it
+        // in place (e.g. a flexible-request auto-match).
+        lastLoadedSnapshot = cloneJSON(backupData);
         applyCloudData(backupData);
         pruneExpiredWaitlistEntries();
         rerenderEverything();
-        lastLoadedSnapshot = cloneJSON(backupData);
         showAdminToast('✓ השחזור הושלם בהצלחה');
         loadBackupsList();
       });
@@ -12663,7 +12764,13 @@
     try { if (rawCloudData) approxKb = Math.round(JSON.stringify(rawCloudData).length / 1024); } catch (e) { /* ignore */ }
     window.__lastCloudLoadDiag = { elapsedSec: Math.round(elapsedSec * 10) / 10, approxKb };
     console.log(`Cloud data load took ${elapsedSec.toFixed(1)}s` + (approxKb !== null ? ` (~${approxKb}KB document)` : ' (no document)') + '.');
-    if (document.body.classList.contains('admin-mode') && typeof showAdminToast === 'function'){
+    // תיקון (היא דיווחה "אין לי שניות... לא רואים כלום"): התנאי הקודם דרש
+    // שהיא כבר תהיה במצב-ניהול בדיוק ברגע שהטעינה מסתיימת — אבל הטעינה הזו
+    // מתחילה מיד עם טעינת הדף (לא עם ההתחברות), אז לרוב היא כבר מסתיימת
+    // לפני שהיא בכלל פותחת את פאנל הניהול, ואז אף פעם לא הוצג שום toast.
+    // מוצג עכשיו תמיד כשהטעינה איטית מספיק כדי שיהיה משמעותי לדווח עליה
+    // (לא על כל טעינה מהירה וטריוויאלית, גם ללקוחה רגילה שרק פותחת את האתר).
+    if (elapsedSec >= 1.5 && typeof showAdminToast === 'function'){
       showAdminToast(`טעינת הנתונים: ${elapsedSec.toFixed(1)} שניות` + (approxKb !== null ? ` (~${approxKb}KB)` : ''), 6000);
     }
   }
@@ -12688,14 +12795,38 @@
         return;
       }
       const rawCloudData = doc.data();
+      // Snapshot the RAW, pristine server data as the diff baseline BEFORE
+      // applyCloudData()/rerenderEverything() run — critical bug found and
+      // fixed here (she reported: a flexible special request auto-matched a
+      // slot that just freed up, sent her a "confirmed" SMS, the request
+      // disappeared from the pending list, but the appointment never actually
+      // showed up on the calendar, and a little later a SECOND SMS went out
+      // for the same request). Root cause: applyCloudData() assigns
+      // weekAppointments/specialRequests BY REFERENCE (data.weekAppointments,
+      // not a copy) — so if lastLoadedSnapshot were captured AFTER
+      // rerenderEverything(), and rerenderEverything() had in the meantime
+      // synchronously matched a pending flexible request (pushing a new
+      // appointment + marking the request 'matched' — see
+      // recheckAllPendingFlexibleRequests()/bookFlexibleRequest() — while its
+      // own saveState() transaction is still in flight, not yet committed),
+      // that in-place mutation would ALSO corrupt rawCloudData itself (same
+      // object references), so cloneJSON(rawCloudData) would wrongly capture
+      // the new appointment/matched-status as if the server had already known
+      // about them all along. The next time saveState()'s transaction actually
+      // read the true server state and diffed/merged against that corrupted
+      // baseline, it would conclude "nothing changed" for specialRequests and
+      // treat the new appointment as "deleted elsewhere since last load" —
+      // silently dropping it from the save. The request would still look
+      // 'matched' in that one tab's memory, but the server never actually
+      // learned about it — so the very next poll would find the SAME slot
+      // still open and match (and SMS) it all over again. Capturing the
+      // snapshot from the untouched rawCloudData BEFORE any of that runs
+      // fixes it at the source: the baseline always reflects only what the
+      // server itself actually had.
+      lastLoadedSnapshot = cloneJSON(rawCloudData);
       applyCloudData(rawCloudData);
       pruneExpiredWaitlistEntries();
       rerenderEverything();
-      // Snapshot the ORIGINAL (pre-prune) server data as the diff baseline, not
-      // the just-pruned local state — otherwise the next autosave would see no
-      // difference and the pruned entries would never actually be removed from
-      // the cloud, just hidden locally until the page is reloaded.
-      lastLoadedSnapshot = cloneJSON(rawCloudData);
       cloudLoadComplete = true;
       console.log('Loaded saved data from the cloud.');
       reportCloudLoadTiming(cloudLoadStartedAt, rawCloudData);
@@ -12747,10 +12878,15 @@
     CLOUD_DOC.get().then(doc => {
       if (!doc.exists) return;
       const rawCloudData = doc.data();
+      // See the matching comment in loadCloudData() — the snapshot MUST be
+      // captured from the untouched rawCloudData before applyCloudData()/
+      // rerenderEverything() can synchronously mutate it in place (e.g. via a
+      // flexible-request auto-match), or the next save silently drops the
+      // real change while still having sent its confirmation SMS.
+      lastLoadedSnapshot = cloneJSON(rawCloudData);
       applyCloudData(rawCloudData);
       pruneExpiredWaitlistEntries();
       rerenderEverything();
-      lastLoadedSnapshot = cloneJSON(rawCloudData);
     }).catch(err => console.error('Refresh on tab return failed:', err));
   });
   // היא ביקשה: אם לקוחה קובעת/מבטלת תור בזמן שהיומן של המנהלת פתוח אצלה
@@ -12773,10 +12909,15 @@
       if (!doc.exists) return;
       const rawCloudData = doc.data();
       if (rawCloudData.savedAt === lastLoadedSnapshot.savedAt) return; // שום דבר לא השתנה בענן מאז הבדיקה הקודמת
+      // See the matching comment in loadCloudData() — the snapshot MUST be
+      // captured from the untouched rawCloudData before applyCloudData()/
+      // rerenderEverything() can synchronously mutate it in place (e.g. via a
+      // flexible-request auto-match), or the next save silently drops the
+      // real change while still having sent its confirmation SMS.
+      lastLoadedSnapshot = cloneJSON(rawCloudData);
       applyCloudData(rawCloudData);
       pruneExpiredWaitlistEntries();
       rerenderEverything();
-      lastLoadedSnapshot = cloneJSON(rawCloudData);
     }).catch(err => console.error('Background live-sync check failed:', err));
   }
   setInterval(pollForRemoteUpdates, 6000);
@@ -12866,6 +13007,14 @@
     const password = document.getElementById('loginPassword').value;
     const errorEl = document.getElementById('loginError');
     errorEl.style.display = 'none';
+    // היא דיווחה: "אין לי שניות של כמה זמן לוקח להתחבר... לא רואים כלום" —
+    // ה-toast הקודם (ר' reportCloudLoadTiming למטה) מדד רק את זמן הורדת
+    // מסמך הענן, לא את זמן ה-signInWithEmailAndPassword עצמו — ואם האיטיות
+    // האמיתית שהיא חווה היא בקריאת ה-AUTH עצמה (לא בהורדת הנתונים), אז
+    // לא היה שום מספר להראות באותו toast בכלל. מדידה נפרדת כאן, סביב
+    // ההתחברות עצמה, ומוצגת תמיד (לא מותנית ב-admin-mode — #adminToast
+    // עובד בכל מצב) ברגע שהיא מסתיימת, כדי שהפעם באמת יהיה מספר על המסך.
+    const loginStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
     // משוב מיידי על המסך שהיא לא תקועה — היא דיווחה שההתחברות "לוקחת דקה"
     // בלי שום סימן שמשהו קורה, מה שגרם לה להרגיש שהאתר קפא. הכפתור עצמו לא
     // יכול לתקן עיכוב רשת אמיתי (אם יש), אבל לפחות עכשיו רואים בבירור
@@ -12880,6 +13029,10 @@
     };
     auth.signInWithEmailAndPassword(email, password)
       .then(() => {
+        const loginElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - loginStartedAt) / 1000;
+        window.__lastLoginDiag = { elapsedSec: Math.round(loginElapsedSec * 10) / 10 };
+        console.log(`Login (signInWithEmailAndPassword) took ${loginElapsedSec.toFixed(1)}s.`);
+        if (typeof showAdminToast === 'function') showAdminToast(`ההתחברות עצמה לקחה: ${loginElapsedSec.toFixed(1)} שניות`, 6000);
         restoreBtn();
         closeLoginOverlay();
         document.getElementById('loginEmail').value = '';
@@ -13154,6 +13307,43 @@
     }).observe(el, { attributes: true, attributeFilter: ['class'] });
   });
 
+  // ===== Same idea, one level deeper still: the category-grid <-> service-list
+  // sub-view WITHIN booking step 1 itself =====
+  // She reported the real bug: enters as a customer, picks a category (which
+  // shows that category's service list, #catServicesView, still within
+  // bstep-1 the whole time — currentBookingStepNum() alone can't see this,
+  // it only tracks bstep-1/2/3 as whole steps), presses the phone's back
+  // button once — and it exits the app entirely instead of returning her to
+  // the category grid. Root cause: showCategoryGrid()/showCategoryServices()
+  // toggle plain inline style.display, not a step/class change, so NOTHING
+  // above ever pushed a history entry for this specific sub-transition —
+  // the very first back-press had nothing of ours to step through, so the
+  // browser fell through to whatever real history entry came before this
+  // page ever loaded. Same push/pop pattern as everywhere else on this page,
+  // just watching #catServicesView's own style attribute (both
+  // showCategoryGrid() and showCategoryServices() mutate it directly,
+  // whichever call site triggers it) instead of a class.
+  function catServicesViewShowing(){
+    var el = document.getElementById('catServicesView');
+    return !!(el && el.style.display !== 'none' && currentBookingStepNum() === 1);
+  }
+  var appCatServicesShowingWas = catServicesViewShowing();
+  (function(){
+    var watchEl = document.getElementById('catServicesView');
+    if (!watchEl) return;
+    new MutationObserver(function(){
+      var nowShowing = catServicesViewShowing();
+      if (nowShowing === appCatServicesShowingWas) return;
+      appCatServicesShowingWas = nowShowing;
+      if (nowShowing){
+        history.pushState({ __appCatServicesView: true }, '', location.href);
+      } else if (history.state && history.state.__appCatServicesView){
+        appBackNavSuppressPop = true;
+        history.back();
+      }
+    }).observe(watchEl, { attributes: true, attributeFilter: ['style'] });
+  })();
+
   // ===== Same idea, one level deeper still: back from a non-overview admin tab =====
   // She reported that pressing back while sitting in a tab like "לקוחות" threw
   // her all the way out of admin mode to the customer-facing view in one press
@@ -13204,6 +13394,10 @@
     if (document.body.classList.contains('admin-mode') && curAdminTab && curAdminTab !== 'overview'){
       var overviewBtn = document.querySelector('#bizSubNavRow button[onclick*="showSub(\'overview\'"]');
       if (overviewBtn){ showSub('overview', overviewBtn); return; }
+    }
+    if (catServicesViewShowing()){
+      showCategoryGrid();
+      return;
     }
     var curStep = currentBookingStepNum();
     if (curStep && curStep > 1){
