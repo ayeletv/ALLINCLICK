@@ -109,25 +109,30 @@
     // "לתקן" תשתית שממילא לא הכרחית. אם זו אכן הייתה הסיבה, ההתחברות בטלפון
     // אמורה להרגיש עכשיו בדיוק כמו במחשב.
     auth = firebase.auth();
-    // תיקון נוסף (סבב שני), אחרי שדיווחה שהכניסה "עדיין איטית מאוד" גם אחרי
-    // הסרת enablePersistence למעלה: ל-Firebase Auth עצמו (לא ל-Firestore) יש
-    // שכבת "persistence" נפרדת משלו — המנגנון שזוכר את המשתמש המחובר בין
-    // רענוני-דף — וברירת המחדל (LOCAL) כותבת אותה גם היא ל-IndexedDB. זו
-    // בדיוק אותה תשתית שכבר זיהינו כבעייתית/איטית ב-Safari-אייפון, אבל הפעם
-    // בציר ה-AUTH: כל קריאה ל-signInWithEmailAndPassword()/signInAnonymously()
-    // צריכה "לחכות" לכתיבה הזו לפני שהיא בכלל נחשבת גמורה — כלומר גם ההתחברות
-    // הגלויה (כפתור "התחברות") וגם ההתחברות האנונימית השקטה שרצה עם כל טעינת
-    // עמוד (למטה) עוברות דרך אותה שכבה. עוברים ל-SESSION persistence
-    // (sessionStorage — סינכרוני, בלי IndexedDB בכלל) לפני כל קריאת auth
-    // אחרת: המחיר היחיד הוא שסגירת הטאב/הדפדפן לגמרי תדרוש התחברות מחדש
-    // (בניגוד ל-LOCAL שנשאר מחובר גם אחרי סגירה מלאה) — מחיר סביר מול כניסה
-    // מהירה בפועל, אם זו אכן הסיבה. בלי setPersistence כלל אם ה-API לא זמין
-    // מסיבה כלשהי (safety net, לא אמור לקרות בגרסת ה-SDK הנוכחית).
-    const authReady = (auth.setPersistence && firebase.auth && firebase.auth.Auth)
-      ? auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(err => {
-          console.error('auth.setPersistence(SESSION) failed — continuing with the SDK default persistence:', err);
-        })
-      : Promise.resolve();
+    // הוסר שוב (היה כאן auth.setPersistence(SESSION), סבב תיקון קודם): הניסיון
+    // הזה יצא משתי הנחות — (א) שהאיטיות שלה מגיעה משכבת ה-persistence של
+    // Auth עצמו, ו-(ב) שהמחיר (חוסר-התחברות אחרי סגירת טאב מלאה, לעומת
+    // LOCAL שנשאר מחובר) משתלם מול כניסה מהירה יותר. שני ההנחות האלה
+    // התבררו כלא-נכונות בפועל: היא דיווחה גם שהכניסה עדיין איטית (~20
+    // שניות) אחרי השינוי הזה, וגם על תקלה חדשה וממשית שלא הייתה קודם —
+    // רענון דף בזמן שהיא בתוך היומן זרק אותה החוצה מהמערכת במקום לשחזר את
+    // המקום שהייתה בו (ר' attemptRestoreAdminView() למטה, שסומך על כך
+    // ש-Firebase Auth כבר שומר את ההתחברות שלה בין רענונים לבד). כלומר:
+    // השינוי לא פתר את מה שהוא נועד לפתור, ותוך כדי יצר בעיה אמיתית חדשה —
+    // ההחלטה הנכונה היא לחזור לברירת המחדל (LOCAL) ולא להמשיך "לשלם" מחיר
+    // בלי שום תועלת מוכחת מולו.
+    //
+    // המסקנה החשובה יותר: שני סבבי הניחוש (הסרת db.enablePersistence, ואז
+    // setPersistence כאן) התמקדו בשכבת ה-persistence/auth, אבל ההשערה
+    // הסבירה יותר בהתחשב בכך שכל האפליקציה נשענת על מסמך Firestore יחיד
+    // וגדול (CLOUD_DOC, כולל תמונות מוטמעות כ-base64 — לוגו/צוות/שירותים/
+    // מה-חדש) שנטען בקריאת .get() אחת ב-loadCloudData() — היא שהאיטיות היא
+    // פשוט זמן ההורדה עצמו של המסמך הזה על חיבור סלולרי/wifi חלש יותר
+    // מהטלפון לעומת המחשב, לא באג בשכבת ה-auth/persistence בכלל. הוספתי
+    // עכשיו מדידת-זמן אמיתית סביב הקריאה הזו (ר' cloudLoadStartedAt/
+    // ה-toast ב-loadCloudData() למטה) כדי שבפעם הבאה שהיא מדווחת על איטיות
+    // יהיה מספר אמיתי (שניות + גודל מסמך משוער) לדווח עליו — במקום ניחוש
+    // רביעי.
     // Sign every visitor in anonymously (invisible — no login screen, no prompt).
     // This is NOT the business-owner login (that's still email/password below).
     // The only reason this exists: Firestore security rules can then require
@@ -138,7 +143,7 @@
     // be rejected. If this fails (e.g. Anonymous sign-in isn't enabled yet in
     // the Firebase console), we deliberately do nothing else here — the rest of
     // the app keeps working exactly as before under the current rules.
-    anonAuthPromise = authReady.then(() => auth.signInAnonymously()).catch(err => {
+    anonAuthPromise = auth.signInAnonymously().catch(err => {
       console.error('Anonymous sign-in failed (only matters once Firestore rules require auth):', err);
     });
   } catch (e) {
@@ -343,7 +348,11 @@
        (1080deg=3 סיבובים שלמים) שנראה זהה חזותית ל-0deg. הכיתה .tapped
        (שנוספת ב-onHeroIconTap()) גוברת עליה כרגיל — ר' למטה — כך שלחיצה
        תוך כדי הסיבוב "עוצרת" אותו מיד ועוברת לאנימציית הטאפ במקום. */
-    animation:heroIconIntroSpin 1.5s cubic-bezier(0.25,0.85,0.35,1) 1 both;
+    /* היא ביקשה עוד כ-2 שניות ("זה נעלם מידי מהר אבל מאוד יפה") — הוארך מ-
+       1.5s ל-3.5s, אותם 3 סיבובים בדיוק (1080deg) רק נמתחים על פני זמן ארוך
+       יותר במקום להוסיף עוד סיבובים, כדי שהתחושה תישאר "מסתובב בנחת" ולא
+       "מסתובב מהר יותר סיבובים". */
+    animation:heroIconIntroSpin 3.5s cubic-bezier(0.25,0.85,0.35,1) 1 both;
   }
   .hero-name-icon:hover .hero-name-icon-badge{ filter:drop-shadow(0 0 0.16em rgba(232,206,122,0.8)); }
   .hero-icon-ring-svg{ width:100%; height:100%; display:block; }
@@ -1251,9 +1260,10 @@
        הפס לראש הכפתורים — הוספתי margin-top כדי שיהיה מרווח נוח וברור מתחת
        לקו המפריד הדק שכבר קיים על .biz-topbar עצמו (border-bottom שם).
        סבב נוסף: היא המשיכה לדווח שזה "ממש דבוק" גם אחרי 14px — הגדלתי
-       ל-20px כדי לתת עוד קצת אוויר בכוונה, ליתר ביטחון (חל אחיד על כל טאב
-       שמשתמש ב-.inner-switcher: לקוחות, צוות, שירותים). */
-    margin-top:20px;
+       ל-20px. סבב שלישי: שוב דיווחה "שוב לא הוזזת... קצת דבוק" — הגדלתי
+       עכשיו משמעותית יותר, ל-30px, כדי שההבדל יהיה בלתי-ניתן-לפספוס בפועל
+       (חל אחיד על כל טאב שמשתמש ב-.inner-switcher: לקוחות, צוות, שירותים). */
+    margin-top:30px;
     display:flex; gap:8px; margin-bottom:1.5rem; flex-wrap:wrap;
   }
   .inner-switcher button{
@@ -2473,12 +2483,14 @@
      visible reads any more — see the HTML comment there) — this rule stays
      only as documentation, nothing currently depends on it being visible. */
   .cal-topbar{display:none;}
-  /* Date-nav + the יומן/דוחות select share ONE line — #weekNavRow grows to
-     fill the available width (flex:1 1 auto below), the select just takes
-     its own natural width at the end. See the big HTML comment above
-     #inner-overview-calendar for why these two specifically ended up
-     sharing a row (round 2 of this redesign — the first pass split them
-     apart and lost the space savings entirely). */
+  /* #weekNavRow now lives alone in #calChromeRow (the שבועי/כולם selects and
+     the יומן/דוחות select all moved up a row, into #overviewInnerTabRow —
+     see the big HTML comment above #inner-overview-calendar for the full
+     history of this row's several redesign rounds). She asked specifically
+     for the date+arrows to sit CENTERED in the middle of this now much
+     emptier row instead of pinned to one side — see justify-content:center
+     on the #weekNavRow rule below, which centers its own "‹ / label / ›"
+     group within the row it still fills edge-to-edge (flex:1 1 auto). */
   .cal-chrome-row{
     display:flex; align-items:center;
     gap:10px; margin-bottom:8px;
@@ -2495,8 +2507,10 @@
        empty stretch looking like a gap before the prev arrow. Clustering
        here instead: the label no longer grows (see the span rule below), so
        the whole "‹ / date range / ›" group just sits together at its own
-       natural width, with a small deliberate gap between all three pieces. */
-    justify-content:flex-start; gap:6px;
+       natural width — now CENTERED in the row (she asked for this once the
+       selects that used to share the row moved out — see the comment above
+       this whole rule), rather than flex-start/pinned to one side. */
+    justify-content:center; gap:6px;
   }
   /* min-width:0 here is the actual fix for the wrap bug she hit on her real
      phone: a flex item's default min-width is "auto" (= its content size),
@@ -2594,6 +2608,19 @@
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A5E0C' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
   #calStaffFilterSelect.cal-mini-btn:focus{border-color:var(--panel-gold);}
+  /* She asked for the יומן/דוחות select itself to get "צבע נחמד תואם אתר"
+     once שבועי/כולם moved up to share its row (see the big HTML comment
+     above #inner-overview-calendar) — a solid wine fill instead of the same
+     light tint as the two lighter accent selects now beside it, so it still
+     reads as the one "which whole view am I in" control at a glance rather
+     than a third identical-looking pill. */
+  .cal-mini-btn-primary{
+    background-color:var(--wine);
+    border-color:var(--wine-deep);
+    color:#FCF3E2;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23FCF3E2' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+  .cal-mini-btn-primary:focus{border-color:var(--gold-soft);}
   /* =====================================================================
      MOBILE WEEK CALENDAR COMPACTION (phone widths, <=480px — covers the
      375/390/412px devices she actually uses).
@@ -2642,8 +2669,17 @@
        see the MOBILE WEEK CALENDAR COMPACTION comment above) — this is
        purely reclaiming spacing between rows, not making anything smaller
        to tap. */
-    .biz-topbar-inner{padding:8px 3vw;}
-    body.admin-mode .stage{padding:calc(0.5vh + 58px) 3vw 1.5vh;}
+    /* She asked again for the burgundy .biz-topbar itself to be a bit
+       thinner ("תופס מקום אבל קצת מיותר... נצמצם אותו קצת שיהיה יותר דק") —
+       tightened the bar's own top/bottom padding (8px -> 5px each side, 6px
+       total), NOT the icon buttons themselves (.cal-icon-btn/
+       .biz-subnav-toggle stay their full 38-42px — shrinking THOSE is
+       exactly the tap-target regression the comment above already reverted
+       once). #panel-business .stage's own top-padding compensation below is
+       trimmed by the same 6px so nothing ends up hidden underneath the now-
+       shorter bar. */
+    .biz-topbar-inner{padding:5px 3vw;}
+    body.admin-mode .stage{padding:calc(0.5vh + 52px) 3vw 1.5vh;}
     #panel-business .inner-switcher{margin-bottom:6px; gap:6px;}
     #panel-business .inner-switcher button{padding:5px 12px; font-size:12px;}
     .cal-chrome-row{margin-bottom:5px; gap:6px;}
@@ -3234,6 +3270,10 @@
     <div id="cloudLoadingOverlay" class="cloud-loading-overlay">
       <div class="cloud-spinner"></div>
       <div>טוענת את הנתונים…</div>
+      <!-- מונה חי (ר' updateCloudLoadingOverlay() בסקריפט) — כדי שבזמן המתנה
+           אמיתי היא רואה מספר עולה, לא רק ספינר סטטי, ולדעת בבירור שזה לא
+           תקוע. גם עוזר לה לדווח בדיוק כמה זמן זה לקח בפועל. -->
+      <div id="cloudLoadingElapsed" style="margin-top:6px; font-size:12.5px; opacity:0.75;"></div>
     </div>
     <div id="sub-overview" class="subpanel active">
       <!-- REDESIGNED (round 3) — round 2's version (see the git history of this
@@ -3254,11 +3294,29 @@
            functions, still respects the reports tab's PIN gate
            (gatedTabsConfig.reports), and reverts the select back to its
            previous value if she cancels/fails the PIN prompt. -->
+      <!-- ROUND 2 of the same space-reclaiming request: she asked again for
+           שבועי/כולם to move up ONE MORE row, onto the very same line as this
+           יומן/דוחות select itself — not just onto the date-nav's line like
+           round 1 did (see the calChromeRow comment below, kept for history).
+           #calWeekFiltersInline wraps both so they can be shown/hidden as one
+           unit depending on which inner view is active (onOverviewInnerTabChange
+           below) WITHOUT fighting renderStaffFilterRow()'s own per-select
+           display logic (staff-count-based) — two independent visibility
+           switches that just compose normally via nested elements, instead of
+           one function's inline style silently overwriting the other's. -->
       <div class="cal-chrome-row" id="overviewInnerTabRow" style="margin-bottom:8px;">
-        <select id="overviewInnerTabSelect" class="mini-select" onchange="onOverviewInnerTabChange(this)">
+        <select id="overviewInnerTabSelect" class="mini-select cal-mini-btn cal-mini-btn-primary" onchange="onOverviewInnerTabChange(this)">
           <option value="inner-overview-calendar" selected>יומן</option>
           <option value="inner-overview-reports">דוחות</option>
         </select>
+        <span id="calWeekFiltersInline" style="display:flex; gap:8px;">
+          <select id="calViewModeSelect" class="mini-select cal-mini-btn" onchange="setOverviewView(this.value)">
+            <option value="week" selected>שבועי</option>
+            <option value="day">יומי</option>
+            <option value="month">חודשי</option>
+          </select>
+          <select id="calStaffFilterSelect" class="mini-select cal-mini-btn" onchange="onCalStaffFilterSelectChange(this)"></select>
+        </span>
       </div>
       <div id="inner-overview-calendar" class="inner-subpanel active">
       <!-- #statApptsToday/#statOpenSlots/#calSectionLabel stay in the markup,
@@ -3274,36 +3332,16 @@
         </div>
         <span class="cal-topbar-label" id="calSectionLabel">היומן השבועי</span>
       </div>
-      <!-- היא ביקשה: "שכפתורי שבועי וכולם יהיו בשורה של התאריך עם החצים" —
-           כדי לחסוך שורה שלמה (+המרווח שלה) ולתת ליומן עצמו עוד גובה (עדיין
-           נחתך סביב 13:00 בפון במקום 14:00 לדבריה). איחדתי את מה שהיה קודם
-           שתי שורות נפרדות (.cal-chrome-row עם הניווט בין שבועות, ומתחתיו
-           .cal-filter-row עם שני ה-select הקטנים) לשורה אחת: שני ה-select
-           קודם ב-DOM (נשארים "צמודים לימין" כמו שביקשה במקור — ר' ההערה
-           למטה — ב-flex-start של RTL זה הקצה הימני), וניווט התאריך אחריהם,
-           תופס את שאר הרוחב (flex:1 1 auto כבר קיים על #weekNavRow, כולל
-           ה-ellipsis על התווית הארוכה — ר' ההערה שם). #calFilterRow (המזהה)
-           לא היה בשימוש בשום JS/CSS מלבד עצמו, בטוח להסיר את המעטפת. -->
+      <!-- היא ביקשה (סבב 1): "שכפתורי שבועי וכולם יהיו בשורה של התאריך עם
+           החצים" — כדי לחסוך שורה שלמה (+המרווח שלה) ולתת ליומן עצמו עוד
+           גובה (עדיין נחתך סביב 13:00 בפון במקום 14:00 לדבריה). איחדתי אז את
+           מה שהיה קודם שתי שורות נפרדות (.cal-chrome-row עם הניווט בין
+           שבועות, ומתחתיו .cal-filter-row עם שני ה-select הקטנים) לשורה
+           אחת. סבב 2 (למעלה, ר' #overviewInnerTabRow): שני ה-select עצמם
+           עברו עוד שורה למעלה, לשורה של יומן/דוחות — ולכן #weekNavRow הוא
+           עכשיו התוכן היחיד כאן, וממורכז (justify-content:center למטה) כמו
+           שביקשה, במקום צמוד לימין כשהיו לו שכנים לשתף איתם את הרוחב. -->
       <div class="cal-chrome-row" id="calChromeRow">
-        <!-- Walked back from the earlier connected-4-segment button group (a
-             previous round tried matching a reference screenshot's stretched
-             segmented switch) — she asked for something much smaller instead:
-             two independent, compact, nicely-colored "buttons" tucked into a
-             corner rather than stretched across the row, each just showing its
-             current value with a small dropdown arrow at the end (a native
-             <select> IS exactly that — no separate label/overlay layer needed,
-             the browser already shows the selected option's own text). See the
-             .cal-mini-btn CSS comment for the styling. renderStaffFilterRow()
-             still fills/hides #calStaffFilterSelect exactly as before (hidden
-             entirely when there's only one real staff member to filter to);
-             its default option now reads "כולם" instead of the old "כל הצוות"
-             per her explicit wording. -->
-        <select id="calViewModeSelect" class="mini-select cal-mini-btn" onchange="setOverviewView(this.value)">
-          <option value="week" selected>שבועי</option>
-          <option value="day">יומי</option>
-          <option value="month">חודשי</option>
-        </select>
-        <select id="calStaffFilterSelect" class="mini-select cal-mini-btn" onchange="onCalStaffFilterSelectChange(this)"></select>
         <div class="day-nav-header" id="weekNavRow">
           <button type="button" onclick="shiftWeek(-1)" aria-label="שבוע קודם">‹</button>
           <span id="weekNavLabel"></span>
@@ -3691,7 +3729,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-זרימת-הזמנה-ואישור-יציאה-v14</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-יומן-מאוחד-וגלילה-אוטומטית-v15</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -6809,6 +6847,35 @@
       }, 900);
     }
   }
+  // ===== גלילה אוטומטית לקביעת תור, 5 שניות אחרי שהשם נחשף =====
+  // "5 שניות אחרי שהכל נטען וראים את השם רותי זולברג... שאוטומטית יגלול
+  // למטה בשביל הלקוחה למקום של קביעת תור" — נקרא פעם אחת בדיוק מתוך
+  // doReveal() בתוך revealBizNameAsHero() למעלה, ברגע שהשם באמת מופיע
+  // בפעם הראשונה (לא בכל עדכון-טקסט חוזר). היא הבהירה אחר-כך: "אם הלקוחה
+  // לא גללה אז זה יקרה כמובן אבל אם הלקוחה מתחילה לגלול אז לא יקרה כלום" —
+  // כלומר לא מספיק לבדוק את מיקום הגלילה ברגע שהטיימר יורה (היא יכולה
+  // לגלול ואז לחזור למעלה בטעות/כוונה לפני שה-5 שניות חלפו); צריך לזכור
+  // שהיא בכלל התחילה לגלול, בכל שלב בחלון הזמן, ולוותר על הגלילה
+  // האוטומטית לגמרי אם כן — מאזין 'scroll' חד-פעמי שמסמן דגל, לא רק בדיקת
+  // window.scrollY נקודתית. תנאי-בטיחות נוסף: לא במצב-ניהול — הפאנל
+  // הציבורי הזה בכלל לא מוצג שם.
+  function scheduleAutoScrollToBooking(){
+    if (window.__autoScrollToBookingTimer) clearTimeout(window.__autoScrollToBookingTimer);
+    if (window.__autoScrollUserScrolledHandler) window.removeEventListener('scroll', window.__autoScrollUserScrolledHandler);
+    let userScrolled = false;
+    const onUserScroll = function(){ userScrolled = true; };
+    window.__autoScrollUserScrolledHandler = onUserScroll;
+    window.addEventListener('scroll', onUserScroll, { passive: true });
+    window.__autoScrollToBookingTimer = setTimeout(function(){
+      window.__autoScrollToBookingTimer = null;
+      window.removeEventListener('scroll', onUserScroll);
+      window.__autoScrollUserScrolledHandler = null;
+      if (userScrolled) return;
+      if (document.body.classList.contains('admin-mode')) return;
+      const target = document.getElementById('bookingFormWrap');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 5000);
+  }
   function revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, name, skipFontWait){
     const alreadyShown = heroBizNameEl.classList.contains('biz-name-visible');
     // Set this SYNCHRONOUSLY, right now — see the fallback check further up
@@ -6845,6 +6912,14 @@
       requestAnimationFrame(function(){
         requestAnimationFrame(function(){ heroBizNameEl.classList.add('name-settled'); });
       });
+      // היא ביקשה: 5 שניות אחרי שרואים את השם (רותי זולברג) — לא מרגע טעינת
+      // הדף הגולמי — לגלול אוטומטית למטה למקום קביעת התור, כדי לעזור ללקוחה
+      // למצוא אותו. ר' scheduleAutoScrollToBooking() למטה: בודקת ברגע
+      // שהטיימר יורה שהיא עדיין לא גללה משמעותית בעצמה (לא לחטוף אותה
+      // ממשהו שהיא כבר קוראת) ושהיא לא במצב-ניהול (הפאנל הזה בכלל לא מוצג
+      // שם). רק כשהשם באמת נחשף בפעם הראשונה (לא ב-alreadyShown, ר' למעלה)
+      // — עדכון טקסט חוזר (עריכה חיה בהגדרות) לא אמור להפעיל עוד גלילה.
+      if (typeof scheduleAutoScrollToBooking === 'function') scheduleAutoScrollToBooking();
     };
     if (alreadyShown || skipFontWait){
       // skipFontWait=true (מגיע רק מ-onHeroIconTap() למעלה): לחיצה יזומה
@@ -11822,6 +11897,14 @@
     result.then(shown => {
       if (shown) overviewInnerTabSelectValue = target;
       else selectEl.value = prev;
+      // שבועי/כולם עברו לשבת על אותה שורה ממש (ר' ההערה הגדולה ב-HTML
+      // מעל #inner-overview-calendar) — הם רלוונטיים רק כשהיא בפועל מסתכלת
+      // על היומן, אז מוסתרים כיחידה אחת (העטיפה) כל עוד "דוחות" מוצג, בלי
+      // לגעת בלוגיקה הנפרדת של renderStaffFilterRow() שמחליטה a-select
+      // הבודד עצמו אם יש רק עובדת אחת (או אפס) — שני מתגי-נראות עצמאיים
+      // שרק מצטרפים זה לזה, לא דורסים אחד את השני.
+      const filtersWrap = document.getElementById('calWeekFiltersInline');
+      if (filtersWrap) filtersWrap.style.display = (overviewInnerTabSelectValue === 'inner-overview-calendar') ? 'flex' : 'none';
     });
   }
   let hoursEditorStaffIndex = 0;
@@ -12464,11 +12547,28 @@
   // משהו קורה" בזמן שממתינים לטעינת הנתונים הראשונה מהענן, ולא מרגיש כאילו
   // הפאנל תקוע. נקרא גם מ-showPanel() (בכל פתיחה/סגירה של פאנל הניהול) וגם
   // משני המקומות ב-loadCloudData() בהם cloudLoadComplete הופך ל-true.
+  let cloudLoadingElapsedTimer = null;
   function updateCloudLoadingOverlay(){
     var overlay = document.getElementById('cloudLoadingOverlay');
     if (!overlay) return;
     var isAdminNow = document.body.classList.contains('admin-mode');
-    overlay.classList.toggle('show', isAdminNow && !cloudLoadComplete);
+    var shouldShow = isAdminNow && !cloudLoadComplete;
+    overlay.classList.toggle('show', shouldShow);
+    // Live-ticking "X שניות" counter while she's actually waiting — see the
+    // big comment by reportCloudLoadTiming() further down for why this
+    // exists (turning an invisible wait into visible, reportable seconds).
+    if (shouldShow && !cloudLoadingElapsedTimer){
+      var startedAt = Date.now();
+      var elapsedEl = document.getElementById('cloudLoadingElapsed');
+      var tick = function(){
+        if (elapsedEl) elapsedEl.textContent = Math.round((Date.now() - startedAt) / 1000) + ' שניות...';
+      };
+      tick();
+      cloudLoadingElapsedTimer = setInterval(tick, 1000);
+    } else if (!shouldShow && cloudLoadingElapsedTimer){
+      clearInterval(cloudLoadingElapsedTimer);
+      cloudLoadingElapsedTimer = null;
+    }
   }
   let cloudLoadRetryCount = 0;
   function showCloudErrorBanner(){
@@ -12549,7 +12649,26 @@
       console.log(`Removed ${before - waitlist.length} expired waitlist request(s).`);
     }
   }
+  // ר' ההערה ליד auth.setPersistence(SESSION) שהוסרה למעלה: אחרי שני סבבי
+  // ניחוש (persistence של Firestore, ואז של Auth) שאף אחד מהם לא באמת פתר
+  // את האיטיות שהיא ממשיכה לדווח עליה, זו מדידת-זמן אמיתית סביב הקריאה
+  // החשודה ביותר בפועל — הורדת מסמך ה-CLOUD_DOC היחיד והגדול (עם כל
+  // התמונות המוטמעות) שכל הפעלת פאנל הניהול ממתינה לו. תוצאה נשמרת ב-
+  // window.__lastCloudLoadDiag (לבדיקה ידנית/עתידית), ומוצגת גם כ-toast
+  // גלוי בזמן שהיא בפועל בפאנל הניהול, כדי שבפעם הבאה שהיא מדווחת "איטי"
+  // יהיה מספר אמיתי (שניות + גודל משוער) לצטט, לא עוד ניחוש.
+  function reportCloudLoadTiming(startedAt, rawCloudData){
+    const elapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt) / 1000;
+    let approxKb = null;
+    try { if (rawCloudData) approxKb = Math.round(JSON.stringify(rawCloudData).length / 1024); } catch (e) { /* ignore */ }
+    window.__lastCloudLoadDiag = { elapsedSec: Math.round(elapsedSec * 10) / 10, approxKb };
+    console.log(`Cloud data load took ${elapsedSec.toFixed(1)}s` + (approxKb !== null ? ` (~${approxKb}KB document)` : ' (no document)') + '.');
+    if (document.body.classList.contains('admin-mode') && typeof showAdminToast === 'function'){
+      showAdminToast(`טעינת הנתונים: ${elapsedSec.toFixed(1)} שניות` + (approxKb !== null ? ` (~${approxKb}KB)` : ''), 6000);
+    }
+  }
   function loadCloudData(){
+    const cloudLoadStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
     CLOUD_DOC.get().then(doc => {
       hideCloudErrorBanner();
       cloudLoadRetryCount = 0;
@@ -12557,6 +12676,7 @@
         console.log('No saved data yet in the cloud — using demo starter data.');
         lastLoadedSnapshot = {};
         cloudLoadComplete = true;
+        reportCloudLoadTiming(cloudLoadStartedAt, null);
         if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
         if (typeof attemptRestoreAdminView === 'function') attemptRestoreAdminView();
         handleAppointmentLookupFromUrl();
@@ -12578,6 +12698,7 @@
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       cloudLoadComplete = true;
       console.log('Loaded saved data from the cloud.');
+      reportCloudLoadTiming(cloudLoadStartedAt, rawCloudData);
       if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
       if (typeof attemptRestoreAdminView === 'function') attemptRestoreAdminView();
       handleAppointmentLookupFromUrl();
