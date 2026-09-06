@@ -2746,6 +2746,25 @@
     .cal-hours-col{width:34px;}
     .cal-hour-lbl{font-size:10px; padding-top:2px;}
     .cal-day-col{min-width:0;}
+    /* היא דיווחה: "בבקשות מיוחדות עדיין לא רואים את השם של הלקוחה רק שעון" —
+       שתי סיבות מצטברות: (1) .cal-special-col השתמש באותו flex:1 כמו כל
+       עמודת-יום רגילה (ר' ההערה למעלה ליד .cal-special-col עצמו), כך
+       שבמובייל, כששבע העמודות (6 ימים + העמודה הזו) מתחלקות בשווה ברוחב
+       המסך, לכל אחת יוצא רק כ-40-45px. (2) גם אחרי שהעמודה הזו קיבלה
+       flex-grow גדול יותר (עכשיו 2.2, כמעט פי 2 מעמודת-יום רגילה — תואם את
+       התמונה הישנה שהיא שלחה, ששם העמודה הזו נראתה בעליל רחבה יותר), כמעט
+       כל הרווח הנוסף עדיין נבלע ע"י padding/gap קבועים (.sr-block/
+       .cal-special-body, שנועדו במקור לעמודה שיכולה להיות רחבה כרצונה
+       בדסקטופ) ואייקון שישב כ-span נפרד עם gap ורוחב משלו — לא נשאר כמעט
+       כלום בפועל ל-.sr-block-name (עם white-space:nowrap;overflow:hidden
+       נחתך כמעט לגמרי, ובפועל נראה כאילו יש רק שעון). מכווץ את ה-padding/gap
+       כאן, וגם — התיקון המשמעותי יותר — האייקון עצמו הפך לתו-קידומת בתוך
+       שורת השם עצמה (ר' renderSpecialRequestsColumn() בסקריפט) במקום
+       span-אח נפרד, כך שכל הרוחב שהיה שמור בשבילו חוזר לטקסט השם. */
+    .cal-special-col{flex:2.2;}
+    .cal-special-body{padding:5px;}
+    .sr-block{padding:5px 6px; gap:4px;}
+    .sr-block-name{font-size:12.5px;}
     /* Legibility fix (her actual complaint): the PREVIOUS numbers here
        (height:44px/font-size:10px, .cal-appt at font-size:8px) were tuned to
        shrink the header down to whatever computeHourBandHeight()'s old
@@ -2819,10 +2838,19 @@
     transition:background 0.15s ease;
   }
   .sr-block:hover{background:rgba(201,162,39,0.10);}
-  .sr-block-icon{font-size:13px; flex-shrink:0; line-height:1;}
+  /* אין יותר span נפרד לאייקון (.sr-block-icon) — הוא הפך לתו-קידומת בתוך
+     .sr-block-name עצמו (ר' renderSpecialRequestsColumn() בסקריפט), כדי
+     שלא "יגזול" gap+רוחב עצמאיים מהטקסט במובייל — ר' ההערה הגדולה ליד
+     .cal-special-col במדיה-קוורי המובייל. */
   .sr-block-main{min-width:0; flex:1; display:flex; flex-direction:column; gap:2px;}
-  .sr-block-name{font-weight:600; font-size:12px; color:var(--panel-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .sr-block-meta{font-size:10.5px; color:var(--panel-text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  /* display:block + width:100% על שני אלה (ולא רק על ההורה .sr-block-main)
+     הוא חלק מהתיקון לבאג שהיא דיווחה עליו ("רק שעון, לא רואים שם") —
+     span עם white-space:nowrap+overflow:hidden בתוך flex column, בלי width
+     מפורש משלו, לא באמת "נמתח" (stretch) לרוחב האב אלא מתכווץ לרוחב
+     התוכן/כמעט-0 בפועל (fit-content), אז ה-ellipsis לא היה לו על מה
+     לעבוד. עכשיו יש להם רוחב אמיתי וברור לגזור לפיו. */
+  .sr-block-name{display:block; width:100%; font-weight:600; font-size:12px; color:var(--panel-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .sr-block-meta{display:block; width:100%; font-size:10.5px; color:var(--panel-text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .sr-block-flexible{border-inline-start:3px solid var(--panel-gold);}
   .sr-block-manual{border-inline-start:3px solid rgba(var(--panel-line-rgb),0.4);}
   .sr-block-waitlist{border-inline-start:3px solid var(--wine);}
@@ -3394,6 +3422,12 @@
       <div class="week-cal-wrap" id="weekCalWrap">
         <div class="week-cal" id="weekCal"></div>
       </div>
+      <!-- כפתור אבחון זמני (ר' showCalHeightDiagnostic() בסקריפט) — אחרי שהתיקון
+           הקודם (סנכרון computeMobileHourBandHeight מול visualViewport) לא
+           פתר את זה אצלה בפועל, אין טעם לנחש שוב: כפתור קטן ולא פולשני
+           שמציג לה alert עם המספרים האמיתיים מהטלפון שלה, כדי שתוכל לצלם
+           מסך ולשלוח בלי צורך בשום ידע טכני. להסרה ברגע שהבעיה נפתרת סופית. -->
+      <button type="button" onclick="showCalHeightDiagnostic()" style="display:block; margin:4px auto 0; font-size:11px; padding:4px 10px; border-radius:999px; border:1px dashed rgba(var(--panel-line-rgb),0.3); background:transparent; color:var(--panel-text-dim); opacity:0.7;">🔧 בדיקת גובה יומן (זמני)</button>
       <div id="overviewDayWrap" style="display:none;">
         <div class="day-nav-header">
           <button type="button" onclick="ovDayShift(-1)">‹ יום קודם</button>
@@ -3772,7 +3806,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-שחזור-יומן-ותיקון-שעות-אמיתי-v17</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-חיזוק-ריבוי-מכשירים-וחלון-זמן-v21</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -4250,6 +4284,16 @@
   // at render time rather than snapshotted, same spirit as every other place in
   // this file that stores a service by reference/index rather than copying it.
   let mbSelectedServices = [];
+  // תיקון (היא דיווחה: "אם אני לוחצת על בקשות מיוחדות ורואה תור ועושה משם
+  // קביעת תור, הבקשה המיוחדת לא נמחקה אפילו שכבר קבעתי ממנה תור") — כשהמודל
+  // הזה נפתח מתוך כפתור "📅 קביעת תור" בכרטיס בקשה מיוחדת (ר'
+  // renderSpecialRequestDetailOverlay() למטה), הבקשה המקורית לא הייתה
+  // נמחקת/מסומנת בשום שלב אחרי שהתור באמת נקבע — נשארת לנצח כפילות מיותרת
+  // בעמודת "בקשות מיוחדות". מזהה הבקשה המקורית (אם יש) נשמר כאן ברגע
+  // שהמודל נפתח (openManualBookingModal), ונצרך פעם אחת ב-submitManualBooking()
+  // ברגע שהתור באמת נשמר — לא לפני, כדי לא למחוק את הבקשה אם ההזמנה עצמה
+  // נכשלת/מבוטלת באמצע.
+  let mbFromSpecialRequestId = null;
   // She reported that hand-overriding #mbDuration for a special case (e.g. two
   // 5-minute services she wants to give 15 minutes for this one client) would
   // silently get wiped back to the auto-summed value if she then added/removed
@@ -4839,24 +4883,32 @@
     }
     if (typeof renderClients === 'function') renderClients();
     if (typeof saveState === 'function') saveState();
-    const matched = attemptMatchFlexibleRequest(req);
-    document.getElementById('frFormWrap').style.display = 'none';
+    // attemptMatchFlexibleRequest() now runs its own Firestore transaction
+    // (re-verifying against the fresh server data before committing — see
+    // bookFlexibleRequest()) rather than matching purely optimistically, so
+    // this has to wait for the real result instead of reading it synchronously.
+    // Show an in-between state on the result screen while that's in flight,
+    // same spirit as every other "...טוענת" state elsewhere in the app.
     const resultEl = document.getElementById('frResultWrap');
-    if (matched){
-      const emp = staff[req.matchedStaff];
-      resultEl.innerHTML = `
-        <div class="status-dot">✓ נמצא ונקבע תור מתאים!</div>
-        <div class="appt-meta">${formatDateDMY(req.matchedDate)}, ${req.matchedTime}${emp ? ' · אצל ' + emp.name : ''}</div>
-        <p style="font-size:12.5px; color:#8A8178; margin-top:8px;">אישור נשלח גם למייל שלך.</p>
-        <button class="template-btn" style="width:100%; margin-top:10px;" onclick="closeFlexibleRequestOverlay()">סגירה</button>`;
-    } else {
-      resultEl.innerHTML = `
-        <div class="status-dot">✓ הבקשה התקבלה</div>
-        <p style="font-size:13px; margin-top:6px;">לא נמצא כרגע תור פנוי שמתאים בדיוק לבקשה שלך — נמשיך לבדוק אוטומטית, ונעדכן אותך במייל ברגע שיתפנה מקום מתאים.</p>
-        <button class="template-btn" style="width:100%; margin-top:10px;" onclick="closeFlexibleRequestOverlay()">סגירה</button>`;
-    }
+    document.getElementById('frFormWrap').style.display = 'none';
+    resultEl.innerHTML = '<div class="status-dot">בודקת אם יש תור מתאים כרגע…</div>';
     resultEl.style.display = 'block';
-    if (typeof renderWeekCal === 'function') renderWeekCal();
+    attemptMatchFlexibleRequest(req).then(matched => {
+      if (matched){
+        const emp = staff[req.matchedStaff];
+        resultEl.innerHTML = `
+          <div class="status-dot">✓ נמצא ונקבע תור מתאים!</div>
+          <div class="appt-meta">${formatDateDMY(req.matchedDate)}, ${req.matchedTime}${emp ? ' · אצל ' + emp.name : ''}</div>
+          <p style="font-size:12.5px; color:#8A8178; margin-top:8px;">אישור נשלח גם למייל שלך.</p>
+          <button class="template-btn" style="width:100%; margin-top:10px;" onclick="closeFlexibleRequestOverlay()">סגירה</button>`;
+      } else {
+        resultEl.innerHTML = `
+          <div class="status-dot">✓ הבקשה התקבלה</div>
+          <p style="font-size:13px; margin-top:6px;">לא נמצא כרגע תור פנוי שמתאים בדיוק לבקשה שלך — נמשיך לבדוק אוטומטית, ונעדכן אותך במייל ברגע שיתפנה מקום מתאים.</p>
+          <button class="template-btn" style="width:100%; margin-top:10px;" onclick="closeFlexibleRequestOverlay()">סגירה</button>`;
+      }
+      if (typeof renderWeekCal === 'function') renderWeekCal();
+    });
   }
   function mostFrequentServiceIndexFor(clientName){
     if (!clientName) return null;
@@ -4874,6 +4926,10 @@
   }
   function openManualBookingModal(opts){
     opts = opts || {};
+    // ר' ההערה הגדולה ליד ההגדרה של mbFromSpecialRequestId למעלה — מאופס
+    // בכל פתיחה, כדי שרק פתיחה שבאמת הגיעה מ"📅 קביעת תור" בבקשה מיוחדת
+    // (עם opts.fromSpecialRequestId) תגרום למחיקת הבקשה בסיום.
+    mbFromSpecialRequestId = opts.fromSpecialRequestId || null;
     const suggestedSvcIdx = opts.serviceIndex !== undefined
       ? opts.serviceIndex
       : mostFrequentServiceIndexFor(opts.clientName);
@@ -6085,6 +6141,15 @@
       reminderChannels: Array.from(document.querySelectorAll('input[name="mbReminderChannel"]:checked')).map(cb => cb.value)
     };
     weekAppointments.push(manualAppointment);
+    // התור נקבע בפועל — אם ההזמנה הזו נפתחה מתוך "📅 קביעת תור" על בקשה
+    // מיוחדת (ר' ההערה הגדולה ליד mbFromSpecialRequestId), הבקשה המקורית
+    // עכשיו נפתרה במלואה: מסירים אותה בשקט (לא deleteSpecialRequest, שדורש
+    // אישור מפורש — היא כבר אישרה את זה בעצם קביעת התור) כדי שלא תישאר
+    // כפילות מיותרת בעמודת "בקשות מיוחדות".
+    if (mbFromSpecialRequestId){
+      removeSpecialRequestSilently(mbFromSpecialRequestId);
+      mbFromSpecialRequestId = null;
+    }
     // Prefer matching by תז (the real identity key) when the admin entered one;
     // fall back to phone for older clients who don't have a תז on file yet. If a
     // known-by-phone client is found and now has a תז typed in that she didn't
@@ -6934,7 +6999,7 @@
       if (document.body.classList.contains('admin-mode')) return;
       const target = document.querySelector('.switcher');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 4000);
+    }, 2500);
   }
   function revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, name, skipFontWait){
     const alreadyShown = heroBizNameEl.classList.contains('biz-name-visible');
@@ -6972,9 +7037,10 @@
       requestAnimationFrame(function(){
         requestAnimationFrame(function(){ heroBizNameEl.classList.add('name-settled'); });
       });
-      // היא ביקשה: 5 שניות אחרי שרואים את השם (רותי זולברג) — לא מרגע טעינת
-      // הדף הגולמי — לגלול אוטומטית למטה למקום קביעת התור, כדי לעזור ללקוחה
-      // למצוא אותו. ר' scheduleAutoScrollToBooking() למטה: בודקת ברגע
+      // היא ביקשה: 2.5 שניות אחרי שרואים את השם (רותי זולברג, כוונן בסבבים
+      // קודמים מ-5 ל-4 ואז ל-2.5 לפי בקשתה) — לא מרגע טעינת הדף הגולמי —
+      // לגלול אוטומטית למטה למקום קביעת התור, כדי לעזור ללקוחה למצוא אותו.
+      // ר' scheduleAutoScrollToBooking() למטה: בודקת ברגע
       // שהטיימר יורה שהיא עדיין לא גללה משמעותית בעצמה (לא לחטוף אותה
       // ממשהו שהיא כבר קוראת) ושהיא לא במצב-ניהול (הפאנל הזה בכלל לא מוצג
       // שם). רק כשהשם באמת נחשף בפעם הראשונה (לא ב-alreadyShown, ר' למעלה)
@@ -8281,6 +8347,37 @@
     }
     return MOBILE_HOUR_BAND_HEIGHT;
   }
+  // כפתור אבחון זמני (ר' ה-HTML ליד #weekCalWrap): מציג alert אחד עם כל
+  // המספרים האמיתיים שמשתתפים בחישוב הזה על הטלפון שלה בפועל, כדי לצלם
+  // ולשלוח — במקום להמשיך לנחש מרחוק אחרי שהתיקון הקודם (סנכרון מול
+  // visualViewport) התברר כלא-מספיק בפועל אצלה.
+  function showCalHeightDiagnostic(){
+    const wrap = document.getElementById('weekCalWrap');
+    if (!wrap){ alert('לא נמצא היומן על המסך — פתחי את טאב "יומן" בסקירה קודם.'); return; }
+    const rect = wrap.getBoundingClientRect();
+    const vv = window.visualViewport;
+    const dayHead = currentDayHeadHeight();
+    const isMobileWidth = window.innerWidth <= MOBILE_CAL_BREAKPOINT;
+    const hourBand = computeHourBandHeight();
+    const lbls = Array.from(document.querySelectorAll('.cal-hour-lbl'));
+    const lbl14 = lbls.find(l => l.textContent.trim() === '14:00');
+    const wrapMaxHeight = parseFloat(wrap.style.maxHeight) || 0;
+    const line14TopFromWrapTop = lbl14 ? Math.round(lbl14.getBoundingClientRect().top - rect.top) : null;
+    const reaches14 = line14TopFromWrapTop !== null ? (line14TopFromWrapTop <= wrapMaxHeight + 2) : null;
+    const msg =
+      'אבחון גובה יומן:\n' +
+      'רוחב מסך: ' + window.innerWidth + 'px (מובייל: ' + (isMobileWidth ? 'כן' : 'לא') + ')\n' +
+      'גובה innerHeight: ' + window.innerHeight + 'px\n' +
+      'גובה visualViewport: ' + (vv ? Math.round(vv.height) + 'px (offsetTop ' + Math.round(vv.offsetTop) + ')' : 'לא זמין') + '\n' +
+      'תחילת היומן מלמעלה (rect.top): ' + Math.round(rect.top) + 'px\n' +
+      'גובה כותרת הימים: ' + dayHead + 'px\n' +
+      'גובה כל שעה בפועל: ' + Math.round(hourBand) + 'px (מינימום קבוע: ' + MOBILE_HOUR_BAND_HEIGHT + 'px)\n' +
+      'שטח מקסימלי לגלילה (wrap max-height): ' + Math.round(wrapMaxHeight) + 'px\n' +
+      'מיקום קו 14:00 מתחילת היומן: ' + (line14TopFromWrapTop === null ? 'לא נמצא' : line14TopFromWrapTop + 'px') + '\n' +
+      'מגיע ל-14:00 בלי גלילה: ' + (reaches14 === null ? 'לא ידוע' : (reaches14 ? 'כן' : 'לא — חסר ' + (line14TopFromWrapTop - wrapMaxHeight) + 'px'));
+    console.log(msg);
+    alert(msg);
+  }
   // What hourBandHeight renderWeekCal() actually built the currently-rendered
   // grid with — read back by fitWeekCalToViewport() (and re-checked on every
   // window resize) to notice when the ideal value has changed enough that the
@@ -8960,6 +9057,13 @@
     if (typeof saveState === 'function') saveState();
     if (typeof showAdminToast === 'function') showAdminToast('✓ הבקשה נמחקה בהצלחה');
   }
+  // גרסה שקטה (בלי confirm()) של deleteSpecialRequest — לשימוש רק כשאנחנו
+  // כבר בטוחים שהבקשה נפתרה בפועל (למשל: תור נקבע ידנית ממנה דרך "📅 קביעת
+  // תור" — ר' mbFromSpecialRequestId/submitManualBooking()), לא כתגובה
+  // ללחיצה ישירה שלה על "מחיקה" שדורשת אישור מפורש.
+  function removeSpecialRequestSilently(id){
+    specialRequests = specialRequests.filter(r => r.id !== id);
+  }
   // ===== "בקשה כללית / זמן גמיש" (flexible special requests) =====
   // A flexible request (specialRequests entry with mode:'flexible') carries a
   // STRUCTURED preference — services wanted, which days/time-of-day/date-range
@@ -9051,16 +9155,28 @@
         const dayInfo = emp && emp.hours ? emp.hours[dow] : null;
         if (!emp || !dayInfo || !dayInfo.open) continue;
         if (isDateClosedForStaff(staffIdx, d)) continue;
+        // She asked for "בין X ל-Y" (and morning/afternoon/evening the same
+        // way) to mean the appointment must START inside that window — not
+        // that the ENTIRE appointment has to finish before the window's end
+        // too. A 15-minute service with a "9:15 עד 9:25" preference should
+        // still match a 9:15 slot even though the appointment itself runs
+        // until 9:30 (past the 9:25 end of the preferred window) — she only
+        // meant "not before 9:15", not "the whole visit must be over by
+        // 9:25". So only the START of a candidate window is raised to
+        // winStart; the real business-hours closing time (e) still bounds
+        // where the appointment can actually END, and winEnd only caps how
+        // late the appointment is allowed to START (see the "t <= winEnd"
+        // check in the inner loop below) — it no longer caps the window
+        // itself.
         const windows = getEffectiveDayWindows(dayInfo, d)
-          .map(([s, e]) => [Math.max(s, winStart), Math.min(e, winEnd)])
-          .filter(([s, e]) => e - s >= duration);
+          .map(([s, e]) => [Math.max(s, winStart), e]);
         if (!windows.length) continue;
         const busy = weekAppointments
           .filter(a => a.date === formatDateKey(d) && a.staff === staffIdx)
           .map(a => { const s = timeToMinutes(a.time); return [s, s + (a.dur || 30)]; })
           .concat(getBlockedRangesForStaff(d, staffIdx));
         for (const [openMin, closeMin] of windows){
-          for (let t = openMin; t + duration <= closeMin; t += fineStepMinutes){
+          for (let t = openMin; t + duration <= closeMin && t <= winEnd; t += fineStepMinutes){
             const end = t + duration;
             if (busy.every(([bs, be]) => end <= bs || t >= be)){
               return { date: formatDateKey(d), time: minutesToTimeGlobal(t), staffIdx, dateObj: new Date(d) };
@@ -9075,33 +9191,102 @@
   // same appointment shape, same client match/create-by-תז/phone logic, same
   // confirmation email — then marks the request 'matched' with the resolved
   // date/time/staff recorded on it.
-  function bookFlexibleRequest(req, match){
+  //
+  // Runs its own dedicated Firestore transaction FIRST, re-checking the FRESH
+  // server data (not just whatever this tab/device happened to have loaded)
+  // before actually committing anything — closes a real multi-device race:
+  // two tabs/devices open at once (her phone and her computer, say) can each
+  // independently decide, from their own possibly-stale local copy, that the
+  // exact same freed slot matches the exact same pending request — or even
+  // that it matches two DIFFERENT pending requests that both happen to want
+  // that slot. Without this check, both devices would create a real
+  // appointment and both would fire a confirmation SMS — an actual double
+  // booking, not just a visual glitch. With it, whichever device's
+  // transaction commits FIRST wins the slot; every other device's own
+  // transaction sees the server already reflects that (either the request is
+  // already 'matched', or the slot is already occupied by some appointment)
+  // and safely backs out — no appointment created, no SMS/email fired at all
+  // on the losing side. Returns a Promise resolving to the booked appt on
+  // success, or null if this device lost the race (or the save failed).
+  async function bookFlexibleRequest(req, match){
     const dateObj = match.dateObj;
-    const dayKey = weekdayKeys[dateObj.getDay()];
-    const svcList = (req.services || []).map(s => ({ name: s.name, duration: s.duration || 0, price: s.price || 0 }));
-    const combinedServiceName = svcList.map(s => s.name).join(' + ') || 'שירות';
-    const totalPrice = svcList.reduce((sum, s) => sum + (s.price || 0), 0);
-    const appt = {
-      id: 'appt_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
-      day: dayKey,
-      date: match.date,
-      time: match.time,
-      dur: flexReqDuration(req),
-      client: req.name || 'לקוחה',
-      service: combinedServiceName,
-      services: svcList,
-      price: totalPrice,
-      staff: match.staffIdx,
-      status: 'pending',
-      note: req.note || '',
-      // "בקשה גמישה" (טווח זמן מותאם אישית) אין בה תיבת בחירת ערוץ תזכורת
-      // כמו בטופס הקביעה הרגיל — היא ביקשה שההתנהגות תהיה זהה לחלוטין
-      // לתור שנקבע דרך הטופס הרגיל, כולל אישור SMS מיידי כשהבקשה מוצאת
-      // ומקבעת תור באופן אוטומטי. ברירת המחדל SMS, בדיוק כמו קביעת תור
-      // ידנית ע"י המנהלת (ראה submitManualBooking) שגם בה אין בורר כזה.
-      reminderChannels: ['sms']
-    };
-    weekAppointments.push(appt);
+    const duration = flexReqDuration(req);
+    const startMin = timeToMinutes(match.time);
+    let committed = null;
+    if (!cloudLoadComplete || !lastLoadedSnapshot){
+      // Cloud sync isn't ready yet — shouldn't happen in real use (matching
+      // only ever runs once data has loaded), but there is nothing to
+      // transact against yet, so just skip rather than throwing.
+      return null;
+    }
+    pendingSaveCount++;
+    try {
+      committed = await db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
+        const server = doc.exists ? doc.data() : {};
+        const serverRequests = server.specialRequests || lastLoadedSnapshot.specialRequests || [];
+        const serverReq = serverRequests.find(r => r && r.id === req.id);
+        // Another tab/device already matched (or removed) this exact request
+        // on the server — don't book it a second time.
+        if (serverReq && serverReq.status === 'matched') return null;
+        const serverAppts = server.weekAppointments || lastLoadedSnapshot.weekAppointments || [];
+        const conflict = serverAppts.some(a => {
+          if (!a || a.date !== match.date || a.staff !== match.staffIdx) return false;
+          const s = timeToMinutes(a.time), e = s + (a.dur || 30);
+          return startMin < e && (startMin + duration) > s;
+        });
+        if (conflict) return null; // another device already booked something into this exact slot
+        const dayKey = weekdayKeys[dateObj.getDay()];
+        const svcList = (req.services || []).map(s => ({ name: s.name, duration: s.duration || 0, price: s.price || 0 }));
+        const combinedServiceName = svcList.map(s => s.name).join(' + ') || 'שירות';
+        const totalPrice = svcList.reduce((sum, s) => sum + (s.price || 0), 0);
+        const appt = {
+          id: 'appt_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+          day: dayKey,
+          date: match.date,
+          time: match.time,
+          dur: duration,
+          client: req.name || 'לקוחה',
+          service: combinedServiceName,
+          services: svcList,
+          price: totalPrice,
+          staff: match.staffIdx,
+          status: 'pending',
+          note: req.note || '',
+          // "בקשה גמישה" (טווח זמן מותאם אישית) אין בה תיבת בחירת ערוץ תזכורת
+          // כמו בטופס הקביעה הרגיל — היא ביקשה שההתנהגות תהיה זהה לחלוטין
+          // לתור שנקבע דרך הטופס הרגיל, כולל אישור SMS מיידי כשהבקשה מוצאת
+          // ומקבעת תור באופן אוטומטי. ברירת המחדל SMS, בדיוק כמו קביעת תור
+          // ידנית ע"י המנהלת (ראה submitManualBooking) שגם בה אין בורר כזה.
+          reminderChannels: ['sms']
+        };
+        const mergedAppts = mergeListField(server.weekAppointments, lastLoadedSnapshot.weekAppointments, weekAppointments.concat([appt]), a => a && a.id);
+        const updatedReq = Object.assign({}, req, { status: 'matched', matchedDate: match.date, matchedTime: match.time, matchedStaff: match.staffIdx });
+        const localRequestsWithMatch = specialRequests.map(r => r.id === req.id ? updatedReq : r);
+        const mergedRequests = mergeListField(server.specialRequests, lastLoadedSnapshot.specialRequests, localRequestsWithMatch, r => r && r.id);
+        const payload = { savedAt: new Date().toISOString(), weekAppointments: mergedAppts, specialRequests: mergedRequests };
+        tx.set(CLOUD_DOC, payload, { merge: true });
+        return { appt, payload };
+      }));
+    } catch (e) {
+      console.error('bookFlexibleRequest: transaction failed — treating as no match this time (will retry on the next check):', e);
+      committed = null;
+    }
+    pendingSaveCount--;
+    if (!committed) return null; // lost the race, or a save error — no appt, no SMS, nothing duplicated
+    const { appt, payload } = committed;
+    weekAppointments = payload.weekAppointments;
+    specialRequests = payload.specialRequests;
+    lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(payload));
+    // Mutate the ORIGINAL req object in place too (not just the merged copy
+    // now living inside specialRequests) — callers of attemptMatchFlexibleRequest/
+    // bookFlexibleRequest may still be holding a reference to this exact req
+    // object (submitFlexibleRequest's local `req`, the "🔄 בדוק שוב" button's
+    // closure over `r`) and read req.matchedDate/matchedTime/matchedStaff off
+    // of it directly right after awaiting — keep that working exactly as it
+    // did before this became transactional, only now it's ONLY ever set once
+    // this device has actually confirmed it won the race.
+    Object.assign(req, { status: 'matched', matchedDate: match.date, matchedTime: match.time, matchedStaff: match.staffIdx });
+    specialRequests = specialRequests.map(r => r.id === req.id ? req : r);
     const idDigits = (req.teudatZehut || '').replace(/[^0-9]/g, '');
     const phone = req.phone || '';
     const existing = idDigits
@@ -9116,14 +9301,9 @@
     } else if (req.name){
       clients.push({ name: req.name, phone, teudatZehut: idDigits || null, email: req.email || '', photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
     }
-    req.status = 'matched';
-    req.matchedDate = match.date;
-    req.matchedTime = match.time;
-    req.matchedStaff = match.staffIdx;
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderClients === 'function') renderClients();
     if (typeof renderMiniCal === 'function') renderMiniCal();
-    if (typeof saveState === 'function') saveState();
     try {
       if (customerEmail){
         const emp = staff[match.staffIdx];
@@ -9131,16 +9311,17 @@
         sendEmail(
           customerEmail,
           'התור שלך אושר',
-          getAppointmentEmailText(req.name || '', combinedServiceName, dateLabel, match.time, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:', idDigits, phone)
+          getAppointmentEmailText(req.name || '', appt.service, dateLabel, match.time, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:', idDigits, phone)
         );
       }
       // אישור מיידי גם ב-SMS, אותו דבר בדיוק כמו קביעת תור רגילה (confirmBooking)
       // ומו-הזמנה ידנית ע"י המנהלת (submitManualBooking) — queueApptSms כבר
-      // בודקת בעצמה שיש ללקוחה טלפון שמור ושם שולח מוגדר.
+      // בודקת בעצמה שיש ללקוחה טלפון שמור ושם שולח מוגדר. נשלח רק אחרי
+      // שהעסקה למעלה באמת הצליחה — לא אם המכשיר הזה הפסיד במרוץ.
       const smsDateLabel = dateObj.getDate() + '/' + (dateObj.getMonth() + 1);
       queueApptSms(
         appt,
-        getShortApptSmsText('confirmed', combinedServiceName, smsDateLabel, match.time)
+        getShortApptSmsText('confirmed', appt.service, smsDateLabel, match.time)
       );
     } catch (e) {
       console.error('bookFlexibleRequest: confirmation email/SMS failed (booking itself was saved fine):', e);
@@ -9148,13 +9329,16 @@
     return appt;
   }
   // Combines the two above: finds a slot for ONE pending flexible request and
-  // books it immediately if found. Returns true iff it matched (and booked).
-  function attemptMatchFlexibleRequest(req){
+  // books it immediately if found. Returns a Promise<boolean>, true iff it
+  // actually matched AND booked (see bookFlexibleRequest's own transactional
+  // re-check — a candidate match found here from local data can still lose
+  // the race to another device and resolve to false).
+  async function attemptMatchFlexibleRequest(req){
     if (!req || req.mode !== 'flexible' || req.status === 'matched') return false;
     const match = tryFindFlexibleSlot(req);
     if (!match) return false;
-    bookFlexibleRequest(req, match);
-    return true;
+    const appt = await bookFlexibleRequest(req, match);
+    return !!appt;
   }
   // Re-checks every still-pending flexible request — called whenever a slot
   // could plausibly have just freed up: an appointment cancellation, a
@@ -9162,11 +9346,23 @@
   // opened or refreshed (a cancellation/removal on another device only reaches
   // THIS tab via one of those). Purely client-side, as intended — this only
   // ever runs while someone actually has the page open.
-  function recheckAllPendingFlexibleRequests(){
+  //
+  // Deliberately sequential (awaits each request's own transactional match
+  // before moving to the next) rather than firing them all in parallel — two
+  // DIFFERENT pending requests could otherwise both look at the same
+  // not-yet-updated local weekAppointments and both think the same single
+  // slot is free, even on this one device/tab. Going one at a time means each
+  // request's bookFlexibleRequest() call sees the previous one's committed
+  // result before deciding. Returns a Promise<boolean> (true iff at least one
+  // request actually got matched — see bookFlexibleRequest()'s own
+  // transactional re-check for why a "found" candidate can still not book).
+  async function recheckAllPendingFlexibleRequests(){
     let matchedAny = false;
-    specialRequests.filter(r => r.mode === 'flexible' && r.status !== 'matched').forEach(r => {
-      if (attemptMatchFlexibleRequest(r)) matchedAny = true;
-    });
+    const pending = specialRequests.filter(r => r.mode === 'flexible' && r.status !== 'matched');
+    for (const r of pending){
+      const matched = await attemptMatchFlexibleRequest(r);
+      if (matched) matchedAny = true;
+    }
     if (matchedAny && typeof renderWeekCal === 'function') renderWeekCal();
     return matchedAny;
   }
@@ -9222,10 +9418,14 @@
         const isFlexible = r.mode === 'flexible';
         const block = document.createElement('div');
         block.className = 'sr-block ' + (isFlexible ? 'sr-block-flexible' : 'sr-block-manual');
+        // האייקון עבר להיות תו-קידומת בתוך שורת השם עצמה, לא span-אח נפרד עם
+        // gap/רוחב משלו — ר' ההערה הגדולה ליד .sr-block-icon ב-CSS: היא
+        // דיווחה "רק שעון, לא רואים שם" כי בעמודה הצרה של מובייל כל px שהאייקון
+        // ה"עצמאי" תפס (כ-15-17px, אייקון+gap) היה px שלא נשאר לשם עצמו. עכשיו
+        // כל הרוחב של .sr-block-name הולך לטקסט, כשהאייקון פשוט התו הראשון בו.
         block.innerHTML = `
-          <span class="sr-block-icon">${isFlexible ? '🕓' : '✎'}</span>
           <span class="sr-block-main">
-            <span class="sr-block-name">${r.name || 'ללא שם'}</span>
+            <span class="sr-block-name">${isFlexible ? '🕓' : '✎'} ${r.name || 'ללא שם'}</span>
             <span class="sr-block-meta">${isFlexible ? 'בקשה גמישה — ⏳ ממתין' : 'בקשה כללית'}</span>
           </span>`;
         block.onclick = () => openSpecialRequestDetailOverlay('request', r.id);
@@ -9235,9 +9435,8 @@
         const block = document.createElement('div');
         block.className = 'sr-block sr-block-waitlist';
         block.innerHTML = `
-          <span class="sr-block-icon">⏰</span>
           <span class="sr-block-main">
-            <span class="sr-block-name">${w.name || 'ללא שם'}</span>
+            <span class="sr-block-name">⏰ ${w.name || 'ללא שם'}</span>
             <span class="sr-block-meta">ממתינה לשעה קבועה · ${w.requestedTime || ''}</span>
           </span>`;
         block.onclick = () => openSpecialRequestDetailOverlay('waitlist', w.id);
@@ -9335,13 +9534,20 @@
       recheckBtn.className = 'cta ghost';
       recheckBtn.textContent = '🔄 בדוק שוב';
       recheckBtn.onclick = () => {
-        const found = attemptMatchFlexibleRequest(r);
-        if (typeof showAdminToast === 'function'){
-          showAdminToast(found ? `✓ נמצא תור ל-${r.name || 'הבקשה'} ונקבע אוטומטית` : 'עדיין לא נמצאה שעה מתאימה — ננסה שוב מאוחר יותר.');
-        }
-        if (found) closeSpecialRequestDetailOverlay();
-        else renderSpecialRequestDetailOverlay();
-        if (typeof renderWeekCal === 'function') renderWeekCal();
+        // attemptMatchFlexibleRequest() now runs its own Firestore transaction
+        // (re-verifying against fresh server data before committing — see
+        // bookFlexibleRequest()), so the result only comes back once that
+        // settles — no longer synchronous.
+        recheckBtn.disabled = true;
+        recheckBtn.textContent = 'בודקת…';
+        attemptMatchFlexibleRequest(r).then(found => {
+          if (typeof showAdminToast === 'function'){
+            showAdminToast(found ? `✓ נמצא תור ל-${r.name || 'הבקשה'} ונקבע אוטומטית` : 'עדיין לא נמצאה שעה מתאימה — ננסה שוב מאוחר יותר.');
+          }
+          if (found) closeSpecialRequestDetailOverlay();
+          else renderSpecialRequestDetailOverlay();
+          if (typeof renderWeekCal === 'function') renderWeekCal();
+        });
       };
       actionsEl.appendChild(recheckBtn);
       const bookBtn = document.createElement('button');
@@ -9356,7 +9562,8 @@
           clientPhone: r.phone,
           clientId: r.teudatZehut,
           duration: flexReqDuration(r),
-          serviceIndex: svcIdx !== undefined && svcIdx !== -1 ? svcIdx : undefined
+          serviceIndex: svcIdx !== undefined && svcIdx !== -1 ? svcIdx : undefined,
+          fromSpecialRequestId: r.id
         });
       };
       actionsEl.appendChild(bookBtn);
@@ -12379,6 +12586,27 @@
   //    edited or removed are applied, and anything another tab/device added in the
   //    meantime is preserved instead of being wiped out.
   let lastLoadedSnapshot = null;
+  // Counts saveState() transactions currently in flight (incremented the moment
+  // one starts, decremented once it settles — success or failure). Exists to
+  // close a real race she hit in testing: cancelling an appointment that also
+  // frees a slot for a pending flexible request kicks off TWO saveState() calls
+  // back-to-back (one for the cancellation, one from the auto-match that
+  // follows it — see cancelAdminAppointment()/recheckAllPendingFlexibleRequests()).
+  // Each one's own Firestore round-trip can take several seconds on a slow
+  // connection (she's seen 16-18s for a single call on her phone). If
+  // pollForRemoteUpdates() or the visibilitychange handler below happens to read
+  // the cloud document while those saves are still pending — before either has
+  // committed — it would overwrite the local weekAppointments/specialRequests
+  // arrays with the OLD, pre-cancellation data (applyCloudData() replaces the
+  // arrays outright). That silently resurrects the appointment she just
+  // cancelled and resets the flexible request back to "pending" in memory; the
+  // in-flight saveState() calls then go on to commit THAT corrupted state back
+  // to the server, and rerenderEverything() re-triggers the auto-match again on
+  // top of it — which is exactly what she described: the cancelled appointment
+  // came back, and a duplicate confirmation SMS went out again. The fix: skip
+  // applying any background cloud read while a save is still unresolved: the
+  // periodic poll runs again in a few seconds anyway, once things have settled.
+  let pendingSaveCount = 0;
   function cloneJSON(v){ return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
   // Merges a list field that other sessions can also add to concurrently. keyFn must
   // return a stable, unique string per item; if any item anywhere lacks one, item-level
@@ -12442,6 +12670,10 @@
       categories, services, whatsNewItems, invAlertEmail, inventory, cancellationLog,
       ownerAccessCode, gatedTabsConfig, personalBlocks, specialRequests
     };
+    // See pendingSaveCount's declaration above — background cloud reads
+    // (pollForRemoteUpdates/visibilitychange) skip applying data while this is
+    // above 0, so they never clobber local state with pre-save data mid-flight.
+    pendingSaveCount++;
     db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
       const server = doc.exists ? doc.data() : {};
       const payload = { savedAt: nowIso };
@@ -12512,7 +12744,7 @@
       showSaveErrorBanner(sizeIssue
         ? '⚠ השינוי האחרון לא נשמר בעננן — כנראה שהתמונה שהועלתה גדולה מדי. נא לנסות תמונה אחרת ולא לרענן את הדף בינתיים.'
         : '⚠ השינוי האחרון לא נשמר בעננן. נא לבדוק את החיבור לאינטרנט ולנסות שוב — לא לרענן את הדף בינתיים, אחרת השינוי יאבד.');
-    });
+    }).finally(() => { pendingSaveCount--; });
   }
   function showSaveErrorBanner(message){
     const existing = document.getElementById('saveErrorBanner');
@@ -12783,6 +13015,25 @@
       showAdminToast(`טעינת הנתונים: ${elapsedSec.toFixed(1)} שניות` + (approxKb !== null ? ` (~${approxKb}KB)` : ''), 6000);
     }
   }
+  // תיקון (היא דיווחה שוב: "אין לי הודעה, פשוט ספרתי" — ה-toast חולף מדי,
+  // נבלע בתוך כל השינוי החזותי של סגירת מסך ההתחברות ופתיחת פאנל הניהול,
+  // ולא הצליחה לקרוא אותו). alert() אמיתי, חוסם, שחייבים ללחוץ "אישור" כדי
+  // לסגור — מוצג פעם אחת בלבד לכל טעינת דף, מיד כשההתחברות עצמה מסתיימת,
+  // עם שני המספרים יחד: גם ההתחברות עצמה (window.__lastLoginDiag, נקבע
+  // ממש לפני הקריאה הזו) וגם טעינת הנתונים מהענן (window.__lastCloudLoadDiag
+  // — כמעט תמיד כבר קיים באותו רגע, כי הטעינה הזו מתחילה מיד עם טעינת הדף,
+  // הרבה לפני שהיא מספיקה להקליד ולהתחבר).
+  let loginTimingDiagShown = false;
+  function showLoginTimingDiagOnce(){
+    if (loginTimingDiagShown) return;
+    loginTimingDiagShown = true;
+    const login = window.__lastLoginDiag;
+    const cloud = window.__lastCloudLoadDiag;
+    const lines = ['אבחון זמני טעינה:'];
+    lines.push('ההתחברות עצמה: ' + (login ? login.elapsedSec.toFixed(1) + ' שניות' : 'לא נמדד'));
+    lines.push('טעינת נתוני היומן מהענן: ' + (cloud ? cloud.elapsedSec.toFixed(1) + ' שניות' + (cloud.approxKb !== null ? ` (~${cloud.approxKb}KB)` : '') : 'עדיין לא הסתיימה / לא נמדדה (כנראה שכבר הסתיימה בשקט לפני שהתחברת)'));
+    alert(lines.join('\n'));
+  }
   function loadCloudData(){
     const cloudLoadStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
     CLOUD_DOC.get().then(doc => {
@@ -12884,6 +13135,10 @@
   // immediately overwriting it with whatever it had loaded before it was hidden.
   document.addEventListener('visibilitychange', () => {
     if (document.hidden || !cloudLoadComplete) return;
+    // Skip while a local save is still in flight — see pendingSaveCount's
+    // declaration above. pollForRemoteUpdates() below runs again within a few
+    // seconds anyway once the save settles, so nothing is lost by skipping here.
+    if (pendingSaveCount > 0) return;
     CLOUD_DOC.get().then(doc => {
       if (!doc.exists) return;
       const rawCloudData = doc.data();
@@ -12914,6 +13169,10 @@
     const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
     const overlayOpen = document.querySelector('[id$="Overlay"].show');
     if (isTyping || overlayOpen) return;
+    // Skip while a local save is still in flight — see pendingSaveCount's
+    // declaration above. The next poll (6s later) will pick up the real cloud
+    // state once the save(s) have settled, so nothing is lost by skipping here.
+    if (pendingSaveCount > 0) return;
     CLOUD_DOC.get().then(doc => {
       if (!doc.exists) return;
       const rawCloudData = doc.data();
@@ -13041,7 +13300,16 @@
         const loginElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - loginStartedAt) / 1000;
         window.__lastLoginDiag = { elapsedSec: Math.round(loginElapsedSec * 10) / 10 };
         console.log(`Login (signInWithEmailAndPassword) took ${loginElapsedSec.toFixed(1)}s.`);
-        if (typeof showAdminToast === 'function') showAdminToast(`ההתחברות עצמה לקחה: ${loginElapsedSec.toFixed(1)} שניות`, 6000);
+        // תיקון (היא דיווחה שוב: "אין לי הודעה, פשוט ספרתי" — ה-toast הקודם
+        // כנראה נעלם מהר מדי/נבלע בתוך כל השינוי החזותי של סגירת מסך
+        // ההתחברות ופתיחת פאנל הניהול, ולא הצליחה בכלל לקרוא אותו). כדי
+        // שהפעם היא באמת תראה ותוכל לצטט מספר מדויק — alert() אמיתי, חוסם,
+        // שחייבים ללחוץ "אישור" כדי לסגור, במקום toast חולף. מוצג פעם אחת
+        // בלבד לכל טעינת דף (guardedShowLoginTimingDiag), עם שני המספרים
+        // יחד: גם ההתחברות עצמה (מה שנמדד כרגע) וגם טעינת הנתונים מהענן (אם
+        // כבר הסתיימה — ובדרך כלל היא כבר הסתיימה, כי היא מתחילה מיד עם
+        // טעינת הדף, הרבה לפני שהיא בכלל מספיקה להקליד ולהתחבר).
+        if (typeof showLoginTimingDiagOnce === 'function') showLoginTimingDiagOnce();
         restoreBtn();
         closeLoginOverlay();
         document.getElementById('loginEmail').value = '';
