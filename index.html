@@ -1888,7 +1888,10 @@
      phone I only see three days and have to drag" complaint. */
   .week-cal-wrap{border:1px solid rgba(var(--panel-line-rgb),0.12); border-radius:16px; overflow-x:auto; scroll-behavior:smooth; overflow-anchor:none;}
   .week-cal{display:flex; min-width:820px; scroll-snap-type:x proximity;}
-  .cal-hours-col{width:52px; flex-shrink:0;}
+  /* צומצם מ-52px ל-34px: התווית עכשיו מספר שעה עגול בלבד ("8" ולא "08:00",
+     ר' renderWeekCal()) אז אין צורך ברוחב שנועד להכיל 5 תווים — הרוחב שנחסך
+     כאן זמין לעמודות הימים עצמן (flex:1). */
+  .cal-hours-col{width:34px; flex-shrink:0;}
   /* Sticky spacer standing in for the blank space that used to be a plain
      padding-top on .cal-hours-col itself: plain padding can't stay pinned
      while its column scrolls, and once .cal-day-head (below) started
@@ -2316,6 +2319,26 @@
      ישר לשורת ההוספה הקיימת ומדגישה אותה רגע, ואז שמה פוקוס בשדה השם. */
   .search-with-add-row{display:flex; gap:8px; align-items:center; margin:4px 2px 14px;}
   .search-with-add-row .search-input{margin-bottom:0;}
+  /* She reported: "בטאב של מלאי ומה חדש הפלוס האיקום ממש צמוד למסגרת... שיהיה
+     מרווח בין הלמעלה לשמאל שלו" — in "מלאי"/"מה חדש" the "+" button sits flush
+     against the top-left corner of the panel. Root cause: in "לקוחות"/"צוות"
+     this same .search-with-add-row row isn't actually the first thing in the
+     tab (a birthday-alert box / the inner-switcher tab-row sits above it),
+     which creates real visual breathing room before it even without extra
+     margin of its own — but in "מלאי"/"מה חדש" this row (holding ONLY the
+     "+" button, right/physically-left-aligned via justify-content:flex-end)
+     IS the very first element in the tab, so the base 4px/2px margin above
+     reads as genuinely flush to the frame.
+     TOP spacing here is padding-top, not margin-top — same reasoning as the
+     big .inner-switcher CSS comment (round 4): #panel-business (an ancestor)
+     has no padding-top/border-top of its own, so a first-child's margin-top
+     CSS-collapses straight through it, just pushing the whole light panel
+     down (more dark background exposed above it) instead of creating real
+     space between this row and the panel's own top edge. padding-top stays
+     inside this row's own box, so it actually reaches the button.
+     LEFT spacing stays a plain margin-left — horizontal margins never
+     collapse the way top margins do, so there's no equivalent trap there. */
+  .search-with-add-row.quick-add-row-standalone{padding-top:16px; margin:2px 2px 16px 16px;}
   .quick-add-fab{
     flex-shrink:0; width:40px; height:40px; border-radius:50%;
     background:linear-gradient(135deg, var(--panel-gold), #A9800F);
@@ -2754,8 +2777,12 @@
        (.cal-hours-spacer, inserted by renderWeekCal()) sized directly from
        the same DAY_HEAD_HEIGHT_MOBILE/DESKTOP constant the JS uses elsewhere
        — one source of truth instead of two numbers that could drift apart. */
-    .cal-hours-col{width:34px;}
-    .cal-hour-lbl{font-size:10px; padding-top:2px;}
+    /* אותו היגיון כמו הדסקטופ (ר' ההערה ליד .cal-hours-col הראשית) — כאן
+       זה קריטי אפילו יותר כי זה בדיוק הבקשה שלה: לצמצם את עמודת השעות
+       במובייל כדי ש-6 עמודות הימים + עמודת "בקשה מיוחדת" יקבלו יותר רוחב
+       כל אחת. 34px -> 22px: מספיק לשני תווים ("18") בגופן המונוספייס. */
+    .cal-hours-col{width:22px;}
+    .cal-hour-lbl{font-size:10px; padding-top:2px; padding-inline:0;}
     .cal-day-col{min-width:0;}
     /* היא דיווחה: "בבקשות מיוחדות עדיין לא רואים את השם של הלקוחה רק שעון" —
        שתי סיבות מצטברות: (1) .cal-special-col השתמש באותו flex:1 כמו כל
@@ -2780,8 +2807,9 @@
        לגזול משמעותית מרוחב עמודות היום כמו 2.2 עשה. */
     .cal-special-col{flex:1.5;}
     .cal-special-body{padding:5px;}
-    .sr-block{padding:5px 6px; gap:4px;}
-    .sr-block-name{font-size:12.5px;}
+    .sr-block{padding:5px 6px;}
+    .sr-block-name{font-size:11.5px;}
+    .sr-block-meta{font-size:9px;}
     /* Legibility fix (her actual complaint): the PREVIOUS numbers here
        (height:44px/font-size:10px, .cal-appt at font-size:8px) were tuned to
        shrink the header down to whatever computeHourBandHeight()'s old
@@ -2846,33 +2874,52 @@
   .cal-special-add-btn:hover{background:rgba(201,162,39,0.14);}
   .cal-special-body{overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px;}
   .cal-special-empty{font-size:11.5px; color:var(--panel-text-dim); text-align:center; padding:24px 8px;}
-  /* A single compact request/waitlist block — visually similar in feel to a
-     .cal-appt block (small, rounded, one-glance) rather than the old full
-     inline detail card. The inline-start color stripe is the "at a glance"
-     visual distinction between the three kinds. */
+  /* REDESIGNED — she asked: "בקשות מיוחדות אני רוצה לראות כמו שרואים בקבית
+     תור ריבוע עם צבע ושם של לקוחה זה אמור להראות כמו תור" (the special-
+     requests blocks should look like a real colored appointment square with
+     the client's name, like a real appointment) "ושלחוצים שישאר כמו היום כל
+     הפרטים" (but clicking must still open the exact same detail view as
+     today — only the VISUAL style changes, onclick/openSpecialRequestDetailOverlay()
+     below is untouched). So .sr-block now mirrors .cal-appt's own look
+     directly: a solid colored fill (per kind — see .sr-block-flexible/
+     manual/waitlist below) instead of a neutral white card with a thin
+     left-border stripe, the same subtle 1px box-shadow ring instead of a
+     full border, and the same rounded corners. It stays a normal block in
+     this column's own vertical list (not position:absolute like .cal-appt,
+     which is positioned against a specific hour in the grid) — only the
+     paint job needs to match, not the layout mechanics. */
   .sr-block{
-    display:flex; align-items:center; gap:8px;
-    background:var(--panel-card-bg); border:1px solid rgba(var(--panel-line-rgb),0.15);
-    border-radius:8px; padding:7px 10px; font-size:11.5px; cursor:pointer;
-    transition:background 0.15s ease;
+    display:block;
+    border-radius:7px; padding:6px 9px; font-size:11.5px; cursor:pointer;
+    color:#1C1719;
+    box-shadow:0 0 0 1px rgba(28,23,25,0.12);
+    transition:filter 0.15s ease;
   }
-  .sr-block:hover{background:rgba(201,162,39,0.10);}
+  .sr-block:hover{filter:brightness(0.96);}
   /* אין יותר span נפרד לאייקון (.sr-block-icon) — הוא הפך לתו-קידומת בתוך
      .sr-block-name עצמו (ר' renderSpecialRequestsColumn() בסקריפט), כדי
      שלא "יגזול" gap+רוחב עצמאיים מהטקסט במובייל — ר' ההערה הגדולה ליד
-     .cal-special-col במדיה-קוורי המובייל. */
-  .sr-block-main{min-width:0; flex:1; display:flex; flex-direction:column; gap:2px;}
+     .cal-special-col במדיה-קוורי המובייל. UPDATE (round 2): האייקון עצמו
+     עבר עכשיו לשורת ה-meta (לא לשורת השם) כדי ששורת השם תיראה בדיוק כמו
+     .cal-appt-name של תור אמיתי — שם נקי בלי תווי-קידומת. */
+  .sr-block-main{min-width:0; display:flex; flex-direction:column; gap:1px;}
   /* display:block + width:100% על שני אלה (ולא רק על ההורה .sr-block-main)
      הוא חלק מהתיקון לבאג שהיא דיווחה עליו ("רק שעון, לא רואים שם") —
      span עם white-space:nowrap+overflow:hidden בתוך flex column, בלי width
      מפורש משלו, לא באמת "נמתח" (stretch) לרוחב האב אלא מתכווץ לרוחב
      התוכן/כמעט-0 בפועל (fit-content), אז ה-ellipsis לא היה לו על מה
-     לעבוד. עכשיו יש להם רוחב אמיתי וברור לגזור לפיו. */
-  .sr-block-name{display:block; width:100%; font-weight:600; font-size:12px; color:var(--panel-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .sr-block-meta{display:block; width:100%; font-size:10.5px; color:var(--panel-text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .sr-block-flexible{border-inline-start:3px solid var(--panel-gold);}
-  .sr-block-manual{border-inline-start:3px solid rgba(var(--panel-line-rgb),0.4);}
-  .sr-block-waitlist{border-inline-start:3px solid var(--wine);}
+     לעבוד. עכשיו יש להם רוחב אמיתי וברור לגזור לפיו.
+     גופן/גודל תואמים עכשיו בדיוק ל-.cal-appt-name/.cal-appt-meta של תור
+     אמיתי (700/12px לשם, 400/9.5px עמום ל-meta) — זה בדיוק "להיראות כמו
+     תור" שהיא ביקשה. */
+  .sr-block-name{display:block; width:100%; font-weight:700; font-size:12px; line-height:1.2; color:#1C1719; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .sr-block-meta{display:block; width:100%; font-weight:400; font-size:9.5px; line-height:1.15; opacity:0.72; color:#1C1719; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  /* צבע מלא לכל בלוק (במקום פס-צבע דק בצד) — משפחת הצבעים הפסטליים של המותג,
+     כל סוג בקשה מקבל גוון משלו כדי שעדיין אפשר להבחין בין השלושה במבט חטוף,
+     בדיוק כמו שכל עובדת מקבלת צבע משלה ב-staffColors לתורים אמיתיים. */
+  .sr-block-flexible{background:#E8CE7A;}
+  .sr-block-manual{background:#D7CDBC;}
+  .sr-block-waitlist{background:#E2A8B9;}
   /* ===== Full-page "זמן אישי" overlay — same convention as .appt-detail-overlay
      (light full-screen page, back arrow top bar) rather than a modal tab. ===== */
   .detail-field-label{display:block; font-size:12px; color:var(--panel-text-dim); margin-bottom:4px;}
@@ -3435,7 +3482,18 @@
            round 2: just the יומן/דוחות select and the שבועי/כולם selects share
            this line; #weekNavRow is back in its own #calChromeRow row below,
            inside #inner-overview-calendar (see the comment there). -->
-      <div class="cal-chrome-row" id="overviewInnerTabRow" style="margin-bottom:8px;">
+      <!-- She reported: "בקירה הכפתורים צמודים מאוד למסגרת... תוריד למטה" —
+           this row is the very first element in the whole "סקירה" tab, so
+           with no top spacing of its own the יומן/דוחות + שבועי/כולם select-
+           buttons sit flush against the top of the panel. PADDING-top, not
+           margin-top — see the big .inner-switcher CSS comment (round 4) for
+           exactly why: #panel-business (an ancestor) has no padding-top/
+           border-top of its own, so a first-child's margin-top CSS-collapses
+           straight through it, just exposing more dark background above the
+           whole light panel instead of creating real space between this row
+           and the button. padding-top stays inside the row's own box, same
+           fix, same reasoning, different tab. -->
+      <div class="cal-chrome-row" id="overviewInnerTabRow" style="padding-top:14px; margin-bottom:8px;">
         <select id="overviewInnerTabSelect" class="mini-select cal-mini-btn cal-mini-btn-primary" onchange="onOverviewInnerTabChange(this)">
           <option value="inner-overview-calendar" selected>יומן</option>
           <option value="inner-overview-reports">דוחות</option>
@@ -3814,8 +3872,13 @@
       <!-- אותו קיצור "+" כמו בלקוחות/צוות — קופצת ישר לטופס ההוספה שכבר קיים
            למטה (ר' scrollToQuickAdd() ב-JS, שהורחב לזהות גם .custom-tpl-form
            לא רק .client-add-row). justify-content:flex-end כדי שהאייקון יישב
-           באותו צד (שמאל, פיזית ב-RTL) כמו בלקוחות/צוות, לעקביות חזותית. -->
-      <div class="search-with-add-row" style="justify-content:flex-end;">
+           באותו צד (שמאל, פיזית ב-RTL) כמו בלקוחות/צוות, לעקביות חזותית.
+           quick-add-row-standalone: בלקוחות/צוות יש תוכן נוסף מעל השורה הזו
+           (התראת יום הולדת / .inner-switcher) שיוצר מרווח טבעי מלמעלה —
+           כאן השורה הזו היא הילד הראשון של הטאב, אז בלי מרווח משלה היא נשארת
+           צמודה ממש לפינה השמאלית-עליונה של המסגרת. היא ביקשה במפורש להרחיק
+           אותה — ר' ה-CSS ליד .quick-add-row-standalone. -->
+      <div class="search-with-add-row quick-add-row-standalone" style="justify-content:flex-end;">
         <button type="button" class="quick-add-fab" onclick="scrollToQuickAdd('sub-whatsnewadmin', 'newWnTitle')" title="הוספת עדכון" aria-label="הוספת עדכון">+</button>
       </div>
       <div class="client-list" id="whatsNewAdminList"></div>
@@ -3836,8 +3899,11 @@
     </div>
     <div id="sub-inventory" class="subpanel">
       <!-- אותו קיצור "+" כמו בלקוחות/צוות/מה חדש — קופץ ישר לטופס ההוספה
-           שכבר קיים למטה (.svc-add-row, ר' scrollToQuickAdd() ב-JS). -->
-      <div class="search-with-add-row" style="justify-content:flex-end;">
+           שכבר קיים למטה (.svc-add-row, ר' scrollToQuickAdd() ב-JS).
+           quick-add-row-standalone: ר' ההערה הזהה ליד אותה מחלקה בטאב "מה חדש"
+           — כאן זה הילד הראשון של הטאב, אז בלי מרווח משלו הוא נשאר צמוד
+           לפינה השמאלית-עליונה של המסגרת. -->
+      <div class="search-with-add-row quick-add-row-standalone" style="justify-content:flex-end;">
         <button type="button" class="quick-add-fab" onclick="scrollToQuickAdd('sub-inventory', 'newInvName')" title="הוספת מוצר" aria-label="הוספת מוצר">+</button>
       </div>
       <div style="font-size:12px; color:var(--panel-text-dim); margin-bottom:14px;">מייל ההתראות (למלאי נמוך, ולברירת המחדל בשליחת דוחות) מוגדר כעת בטאב <b>הגדרות</b> → מיתוג, לצד פרטי העסק.</div>
@@ -3863,7 +3929,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 07.09-יומן-חדש-והזמנה-בשלבים-v23</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 07.09-שעות-דו-ספרתיות-v25</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -8918,7 +8984,15 @@
       const lbl = document.createElement('div');
       lbl.className = 'cal-hour-lbl';
       lbl.style.height = hourBandHeight + 'px';
-      lbl.textContent = String(h).padStart(2,'0') + ':00';
+      // היא ביקשה קודם: "לא לרשום 08:00 ככה אלא לרשום רק 8 כמו שאצלה רשום
+      // ביומן ואז אפשר לצמצם וכל השאר יהיה רחב יותר" — הבנתי בהתחלה שהכוונה
+      // להסיר גם את האפס המוביל, אבל היא תיקנה: "תוסיף 08 כי אצלה רשום ככה
+      // אני רואה" — כלומר ביומן הרפרנס שלה השעות כן מופיעות עם אפס מוביל
+      // לשתי ספרות ("08", "09"...), רק בלי ה-":00" המיותר. אז: שתי ספרות
+      // תמיד (padStart), בלי ":00". זה עדיין בדיוק מה שמאפשר לצמצם את
+      // .cal-hours-col עצמה (ר' ה-CSS) ולתת לעמודות הימים עוד רוחב — "08"
+      // ו-"18" תופסים בדיוק אותו רוחב בגופן המונוספייס.
+      lbl.textContent = String(h).padStart(2, '0');
       hoursCol.appendChild(lbl);
     }
     calEl.appendChild(hoursCol);
@@ -9823,15 +9897,15 @@
         const isFlexible = r.mode === 'flexible';
         const block = document.createElement('div');
         block.className = 'sr-block ' + (isFlexible ? 'sr-block-flexible' : 'sr-block-manual');
-        // האייקון עבר להיות תו-קידומת בתוך שורת השם עצמה, לא span-אח נפרד עם
-        // gap/רוחב משלו — ר' ההערה הגדולה ליד .sr-block-icon ב-CSS: היא
-        // דיווחה "רק שעון, לא רואים שם" כי בעמודה הצרה של מובייל כל px שהאייקון
-        // ה"עצמאי" תפס (כ-15-17px, אייקון+gap) היה px שלא נשאר לשם עצמו. עכשיו
-        // כל הרוחב של .sr-block-name הולך לטקסט, כשהאייקון פשוט התו הראשון בו.
+        // REDESIGNED — עכשיו שכל בלוק צבוע במלואו לפי הסוג (ר' ה-CSS), האייקון
+        // עבר משורת השם לשורת ה-meta: שורת השם עצמה נשארת נקייה (בלי תו-קידומת)
+        // כדי שתיראה בדיוק כמו שם לקוחה בתור אמיתי (.cal-appt-name) — "זה אמור
+        // להראות כמו תור" שהיא ביקשה. הקליק (openSpecialRequestDetailOverlay)
+        // נשאר בדיוק אותו דבר — רק העיצוב הוויזואלי השתנה.
         block.innerHTML = `
           <span class="sr-block-main">
-            <span class="sr-block-name">${isFlexible ? '🕓' : '✎'} ${r.name || 'ללא שם'}</span>
-            <span class="sr-block-meta">${isFlexible ? 'בקשה גמישה — ⏳ ממתין' : 'בקשה כללית'}</span>
+            <span class="sr-block-name">${r.name || 'ללא שם'}</span>
+            <span class="sr-block-meta">${isFlexible ? '🕓 בקשה גמישה — ⏳ ממתין' : '✎ בקשה כללית'}</span>
           </span>`;
         block.onclick = () => openSpecialRequestDetailOverlay('request', r.id);
         body.appendChild(block);
@@ -9841,8 +9915,8 @@
         block.className = 'sr-block sr-block-waitlist';
         block.innerHTML = `
           <span class="sr-block-main">
-            <span class="sr-block-name">⏰ ${w.name || 'ללא שם'}</span>
-            <span class="sr-block-meta">ממתינה לשעה קבועה · ${w.requestedTime || ''}</span>
+            <span class="sr-block-name">${w.name || 'ללא שם'}</span>
+            <span class="sr-block-meta">⏰ ממתינה לשעה קבועה · ${w.requestedTime || ''}</span>
           </span>`;
         block.onclick = () => openSpecialRequestDetailOverlay('waitlist', w.id);
         body.appendChild(block);
