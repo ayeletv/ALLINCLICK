@@ -2011,18 +2011,29 @@
   .cal-appt{
     position:absolute;
     inset-inline:3px;
-    border-radius:5px;
-    padding:2px 6px;
+    border-radius:7px;
+    padding:3px 7px;
     font-size:10.5px;
     line-height:1;
     display:flex;
-    align-items:center;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:center;
+    gap:1px;
     overflow:hidden;
     color:#1C1719;
     cursor:pointer;
-    box-shadow:0 0 0 1px rgba(28,23,25,0.1);
+    box-shadow:0 0 0 1px rgba(28,23,25,0.12);
   }
   .cal-appt b{font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  /* היא ביקשה: "אצלה ממש רואים את השם מופיע הכל נורא ברור ואצלי הכל ככ קטן" —
+     בהשוואה ליומן-הייחוס שהראתה. שם הלקוחה עכשיו הדבר הכי בולט בכל בלוק תור
+     (גדול ומודגש, שורה משלו), עם שעה+שירות כשורה שנייה קטנה ומעומעמת מתחתיו —
+     במקום הכל צפוף לשורה אחת בגודל אחיד כמו קודם. renderWeekCal() עוברת
+     ל"שורה אחת" (שם בלבד, עדיין באותו גודל בולט) רק כשגובה הבלוק בפועל קטן
+     מדי משורתיים (תור קצר של 15 דק'), כדי שלא ייחתך טקסט בלי טעם. */
+  .cal-appt-name{font-weight:700; font-size:12px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;}
+  .cal-appt-meta{font-weight:400; font-size:9.5px; line-height:1.15; opacity:0.72; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;}
   /* A personal-time block ("חסימת זמן אישי") — deliberately NOT a flat color like a
      real client appointment (staffColors[...]) so the two can never be mistaken for
      each other at a glance: a muted diagonal hatch instead of a solid pastel fill.
@@ -2782,8 +2793,10 @@
     .cal-day-head .cal-day-name{font-size:9.5px;}
     .cal-day-head .cal-day-num{font-size:14.5px; width:22px; height:22px;}
     .cal-day-head .heb-date{font-size:8px;}
-    .cal-appt{padding:2px 4px; font-size:10.5px;}
+    .cal-appt{padding:3px 5px;}
     .cal-appt b{font-size:10.5px;}
+    .cal-appt-name{font-size:11.5px;}
+    .cal-appt-meta{font-size:9px;}
     /* The "בקשות מיוחדות" special-requests column reuses .cal-day-col for its
        width, but its OWN header (.cal-special-head — the label + a round "+"
        add-button, side by side) doesn't fit that text next to a flex-shrink:0
@@ -3226,10 +3239,16 @@
           <a href="#" onclick="openApptLookup(); return false;" style="font-size:12px; color:#8A8178; text-decoration:underline;">יש לך תור קיים? לחיצה לבדיקה</a>
         </div>
         <div id="bookingFormWrap">
+          <!-- היא ביקשה: "ביומן יהיה בחירת עובדת עם ההודעה שיחויב הטיפול ואז
+               כפתור המשך ואז יהיה את הקטע של היומן עם השעות, נחלק פשוט לעוד
+               שלב כי זה הרבה לגלול ולא מוצאת שעה מתאימה" — שלב 2 הקודם (עובדת
+               + יום + שעות, הכל ביחד) התארך מדי לגלילה. עכשיו 4 שלבים במקום 3:
+               1) טיפול, 2) עובדת (+ הודעת חיוב), 3) יום ושעה, 4) פרטי קשר. -->
           <div class="step-dots" id="stepDots">
             <span class="step-dot active" data-step="1"></span>
             <span class="step-dot" data-step="2"></span>
             <span class="step-dot" data-step="3"></span>
+            <span class="step-dot" data-step="4"></span>
           </div>
           <div class="booking-step active" id="bstep-1">
             <div class="label">בחירת טיפול</div>
@@ -3267,11 +3286,20 @@
               <button type="button" class="cat-back-btn bk-continue-bottom-btn" onclick="goToBookingStep2()">המשך ›</button>
             </div>
           </div>
+          <!-- שלב 2 (הקודם) — עובדת + יום + שעות ביחד — פוצל לשניים לפי
+               בקשתה: כאן רק בחירת עובדת + הודעת החיוב, עם כפתור "המשך"
+               משלה; היומן והשעות עברו לשלב 3 הנפרד למטה. -->
           <div class="booking-step" id="bstep-2">
             <div class="label">בחירת עובדת</div>
             <div class="staff-picker" id="staffPicker"></div>
             <div id="svcBillingNotice" class="billing-notice"></div>
-            <div class="label" style="margin-top:18px;">בחירת יום</div>
+            <div class="step-nav">
+              <button class="step-back" onclick="goToStep(1)">חזרה</button>
+              <button class="cta" style="flex:1;" onclick="goToStep(3)">המשך</button>
+            </div>
+          </div>
+          <div class="booking-step" id="bstep-3">
+            <div class="label">בחירת יום</div>
             <div class="mini-cal" id="miniCal">
               <div class="mini-cal-header">
                 <button type="button" onclick="calShiftMonth(-1)" id="calPrevBtn">‹</button>
@@ -3286,15 +3314,21 @@
             <div class="label" id="slotsLabel">שעות פנויות</div>
             <div class="slot-grid" id="slots"></div>
             <div class="waitlist-box" id="waitlistBox"></div>
-            <div style="text-align:center; margin-top:10px;">
-              <a href="#" onclick="openFlexibleRequestOverlay(); return false;" style="font-size:12px; color:#8A8178; text-decoration:underline;">🕒 לא מוצאת שעה שמתאימה? בקשה כללית / זמן גמיש</a>
+            <!-- היא ביקשה במפורש להדגיש את הקישור הזה — "המילים האלו הייתי
+                 מדגישה כי הם כמעט ולא נראים" — הוא היה טקסט קטן (12px) בגוון
+                 אפור-חום עמום עם קו תחתי בלבד, בדיוק מהסוג שקל לפספס. עכשיו
+                 "כפתור" רך עם רקע וגבול בצבע האתר (--wine), משקל מודגש
+                 וגודל גופן גדול יותר — עדיין לא צועק כמו CTA ראשי, אבל אי
+                 אפשר לפספס אותו. -->
+            <div style="text-align:center; margin-top:14px;">
+              <a href="#" onclick="openFlexibleRequestOverlay(); return false;" style="display:inline-block; font-size:14.5px; font-weight:700; color:var(--wine-deep); background:rgba(155,44,66,0.09); border:1px solid rgba(155,44,66,0.4); padding:10px 18px; border-radius:12px; text-decoration:none;">🕒 לא מוצאת שעה שמתאימה? בקשה כללית / זמן גמיש</a>
             </div>
             <div class="step-nav">
-              <button class="step-back" onclick="goToStep(1)">חזרה</button>
-              <button class="cta" style="flex:1;" onclick="goToStep(3)">המשך</button>
+              <button class="step-back" onclick="goToStep(2)">חזרה</button>
+              <button class="cta" style="flex:1;" onclick="goToStep(4)">המשך</button>
             </div>
           </div>
-          <div class="booking-step" id="bstep-3">
+          <div class="booking-step" id="bstep-4">
             <div class="label">פרטי קשר</div>
             <input class="field" id="bookingIdInput" type="tel" inputmode="numeric" maxlength="9" placeholder="תעודת זהות">
             <div id="bookingIdError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין תעודת זהות תקנית (9 ספרות)</div>
@@ -3326,7 +3360,7 @@
             <div id="reminderEmailError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין כתובת אימייל כדי שנוכל לשלוח לך עדכונים על התור</div>
             <p style="font-size:11.5px; color:#8A8178; margin:6px 0 4px; line-height:1.5;">שימי לב: ביטול או שינוי מועד בפחות מ-24 שעות לפני התור עלול לחייב בתשלום.</p>
             <div class="step-nav">
-              <button class="step-back" onclick="goToStep(2)">חזרה</button>
+              <button class="step-back" onclick="goToStep(3)">חזרה</button>
               <button class="cta" style="flex:1;" onclick="confirmBooking()">אישור תור</button>
             </div>
           </div>
@@ -3829,7 +3863,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 06.09-מניעת-כפילות-לקוחה-ותמונה-מוגדלת-v22</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 07.09-יומן-חדש-והזמנה-בשלבים-v23</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -3900,6 +3934,7 @@
     <div id="frFormWrap" style="display:flex; flex-direction:column; gap:10px;">
       <div class="label" style="margin:0;">אילו טיפולים מעניינים אותך?</div>
       <div id="frSelectedServicesList" class="mb-svc-chip-row"></div>
+      <button type="button" id="frAddMoreLink" class="cat-back-btn fr-add-more-btn" style="display:none;" onclick="showFrCategoryGrid(); this.style.display='none';">+ הוספת טיפול נוסף / שינוי בחירה</button>
       <div id="frCatGridView">
         <div class="cat-grid" id="frCatGrid"></div>
       </div>
@@ -3947,6 +3982,16 @@
       <input type="text" id="frName" class="field" placeholder="שם מלא">
       <input type="tel" id="frPhone" class="field" placeholder="050-0000000">
       <input type="email" id="frEmail" class="field" placeholder="אימייל">
+      <!-- היא דיווחה: "אם היא לקוחה חדשה זה חייב להיות גם כמו שפותחים לקוח
+           חדש במערכת כל הפרטים... איך לקבל הודעה אין שם, ואם היא חדשה היא לא
+           תקבל הודעה לSMS כי לא היה לה איך לבחור" — לטופס הבקשה הגמישה לא
+           היה בכלל שדה בחירת ערוץ תזכורת, בניגוד לטופס הקביעה הרגיל (שלב 3,
+           #reminderChoice). אותו מבנה בדיוק, רק עם קידומת "fr". -->
+      <div class="label" style="margin-top:6px;">איך תרצי לקבל תזכורת? (אפשר לבחור יותר מאחת)</div>
+      <div class="reminder-choice" id="frReminderChoice">
+        <label><input type="checkbox" name="frReminderChannel" value="sms" checked> SMS</label>
+        <label><input type="checkbox" name="frReminderChannel" value="call"> שיחת טלפון</label>
+      </div>
       <div id="frError" style="display:none; color:var(--wine); font-size:13px;"></div>
       <button class="cta" onclick="submitFlexibleRequest()">שליחת בקשה</button>
     </div>
@@ -4683,6 +4728,13 @@
   // she'd already picked in the main flow underneath it.
   let frSelectedServices = [];
   let frCurrentCategory = null;
+  // עובדת שנבחרה כבר בזרימה הרגילה (selectedStaffIndex, לא 'any') לפני
+  // שנלחצה "בקשה כללית / זמן גמיש" — ר' openFlexibleRequestOverlay(): היא
+  // ביקשה שהבחירה הזו "תישמר... רק הטווח משתנה", כלומר הבקשה הגמישה תחפש
+  // התאמה אצל אותה עובדת בלבד, לא אצל כל מי שמסוגלת, בדיוק כמו שקורה עם
+  // השירות שכבר עבר carryover. null כשהגיעה לכאן בלי בחירת עובדת ספציפית
+  // (או ישירות ממקום אחר לגמרי, בלי זרימה קודמת).
+  let frPreferredStaffIdx = null;
   function frSelectedServiceObjs(){
     return frSelectedServices.map(sel => services[sel.svcIndex]).filter(Boolean);
   }
@@ -4811,8 +4863,29 @@
     frSelectedServices = (typeof bkSelectedServices !== 'undefined' && bkSelectedServices.length)
       ? bkSelectedServices.map(sel => ({ svcIndex: sel.svcIndex }))
       : [];
+    // אותה שמירה על הבחירה הקודמת לגבי עובדת: אם היא כבר בחרה עובדת ספציפית
+    // (לא "לא משנה לי מי") בזרימה הרגילה, הבקשה הגמישה תחפש התאמה רק אצלה —
+    // ר' ההערה ליד ההצהרה של frPreferredStaffIdx למעלה.
+    frPreferredStaffIdx = (typeof selectedStaffIndex !== 'undefined' && selectedStaffIndex !== 'any' && staff[selectedStaffIndex]) ? selectedStaffIndex : null;
     frCurrentCategory = null;
-    showFrCategoryGrid();
+    // היא ביקשה: אם כבר הגיעה לכאן עם טיפול/ים כבר נבחרים מהזרימה הרגילה,
+    // אין סיבה שתגיע שוב למסך בחירת הקטגוריות — ישר לשדות הימים/שעות/טווח.
+    // גריד הקטגוריות עדיין קיים, פשוט מוסתר עד שהיא בעצמה תבקש "הוספת טיפול
+    // נוסף" (ר' ה-HTML של frAddMoreLink למטה). הגעה בלי שום בחירה קודמת (או
+    // ממקום אחר לגמרי) ממשיכה להתנהג בדיוק כמו קודם — גריד הקטגוריות מוצג
+    // ישר, כי אין לה עדיין שום דבר לדלג עליו.
+    const cameWithServices = frSelectedServices.length > 0;
+    const frAddMoreLinkEl = document.getElementById('frAddMoreLink');
+    if (cameWithServices){
+      const gridView = document.getElementById('frCatGridView');
+      const svcView = document.getElementById('frCatServicesView');
+      if (gridView) gridView.style.display = 'none';
+      if (svcView) svcView.style.display = 'none';
+      if (frAddMoreLinkEl) frAddMoreLinkEl.style.display = 'block';
+    } else {
+      if (frAddMoreLinkEl) frAddMoreLinkEl.style.display = 'none';
+      showFrCategoryGrid();
+    }
     renderFrSelectedServicesUI();
     document.getElementById('frAnyDay').checked = true;
     document.getElementById('frDayCheckboxes').style.display = 'none';
@@ -4829,6 +4902,7 @@
     document.getElementById('frName').value = '';
     document.getElementById('frPhone').value = '';
     document.getElementById('frEmail').value = '';
+    document.querySelectorAll('input[name="frReminderChannel"]').forEach(cb => { cb.checked = (cb.value === 'sms'); });
     document.getElementById('frError').style.display = 'none';
     document.getElementById('frFormWrap').style.display = 'flex';
     document.getElementById('frResultWrap').style.display = 'none';
@@ -4872,6 +4946,12 @@
       errorEl.style.display = 'block';
       return;
     }
+    const reminderChannels = Array.from(document.querySelectorAll('input[name="frReminderChannel"]:checked')).map(cb => cb.value);
+    if (!reminderChannels.length){
+      errorEl.textContent = 'יש לבחור לפחות ערוץ תזכורת אחד.';
+      errorEl.style.display = 'block';
+      return;
+    }
     errorEl.style.display = 'none';
     const anyDay = document.getElementById('frAnyDay').checked;
     const checkedDays = Array.from(document.querySelectorAll('.frDayCb:checked')).map(cb => parseInt(cb.value));
@@ -4899,6 +4979,13 @@
       note: document.getElementById('frNote').value.trim(),
       services: svcObjs.map(s => ({ name: s.name, duration: s.duration || 0, price: s.price || 0, category: s.category })),
       preference,
+      // הועברה מזרימת הקביעה הרגילה (ר' openFlexibleRequestOverlay) — אם היא
+      // כבר בחרה שם עובדת ספציפית, הבקשה הגמישה מחפשת התאמה רק אצלה, לא אצל
+      // כל מי שמסוגלת (ר' tryFindFlexibleSlot). null = בלי העדפת עובדת.
+      preferredStaffIdx: frPreferredStaffIdx,
+      // ר' ההערה ליד #frReminderChoice ב-HTML — עכשיו יש לה איך לבחור, בדיוק
+      // כמו בטופס הקביעה הרגיל, במקום שזה ייקבע בשבילה אוטומטית ל-SMS בלבד.
+      reminderChannels,
       status: 'pending',
       createdAt: new Date().toISOString()
     };
@@ -8301,7 +8388,12 @@
     if (typeof showAdminToast === 'function') showAdminToast('✓ העובדת נוספה בהצלחה');
   }
   renderStaff();
-  const staffColors = ['#E8CE7A', '#9FBF93', '#E29AA8', '#9DBFE8', '#D9B27C'];
+  // היא ביקשה שהיומן "יידמה" ליומן שהיא הראתה בצילום, "כמובן עם הצבעים של
+  // האתר" — הפלטה הישנה כללה כחול (#9DBFE8) שלא קשור בכלל לצבעי המותג
+  // (var(--wine)/--gold/--sage/--rose ב-:root למעלה); הוחלף בגוון יין בהיר,
+  // כך שכל 5 הצבעים נגזרים ישירות מארבעת גווני היסוד של האתר עצמו (זהב,
+  // מרווה, ורוד-יין, יין), עדיין בהירים מספיק לטקסט כהה מעליהם.
+  const staffColors = ['#E8CE7A', '#A6C29B', '#E2A8B9', '#D9AAB8', '#D9B27C'];
   const calStartHour = 8, calEndHour = 18;
   // ===== hourBandHeight: 96 on desktop, a fixed comfortable constant on phone
   // widths (NOT "shrink until the whole day fits with zero scroll") =====
@@ -9051,7 +9143,17 @@
         // הקיצוץ היה רק ספרות השעה בלי שום שם, בדיוק מה שדיווחה
         // ("רואים שעון בלי שם של לקוחה"). עכשיו השם הוא הדבר הראשון שנשאר
         // גלוי, גם כשרוב השאר נחתך.
-        block.innerHTML = `<b>${a.client} · ${a.time.slice(0,5)} · ${a.service}</b>`;
+        //
+        // המשך לתלונה שלה על היומן ("הכל ככ קטן... לא מספיק ברור של מי
+        // התור"): השם עצמו עכשיו בשורה נפרדת ומודגשת (.cal-appt-name), עם
+        // שעה+שירות כשורה שנייה קטנה מתחתיו (.cal-appt-meta) — במקום הכל
+        // בשורה אחת בגודל אחיד. בלוק קצר מדי (תור של 15 דק' בערך) לא מכיל
+        // בנוחות שתי שורות, אז שם בלבד מוצג, עדיין באותו גודל בולט, כדי לא
+        // לחתוך טקסט חסר טעם.
+        const blockHeightPx = durationQuarters * quarterHeight - 3;
+        block.innerHTML = (blockHeightPx >= 34)
+          ? `<span class="cal-appt-name">${a.client}</span><span class="cal-appt-meta">${a.time.slice(0,5)} · ${a.service}</span>`
+          : `<span class="cal-appt-name">${a.client}</span>`;
         block.onclick = (e) => {
           e.stopPropagation();
           openApptDetailOverlay(a);
@@ -9247,7 +9349,16 @@
   function tryFindFlexibleSlot(req){
     const duration = flexReqDuration(req);
     const cats = flexReqCategories(req);
-    const capableIndices = getCapableStaffIndicesForCats(cats);
+    let capableIndices = getCapableStaffIndicesForCats(cats);
+    // אם היא ביקשה עובדת ספציפית (הועבר מהזרימה הרגילה — ר' openFlexibleRequestOverlay
+    // ו-submitFlexibleRequest), נחפש התאמה רק אצלה, לא אצל כל מי שמסוגלת —
+    // בדיוק כמו שהיא ביקשה: "אם היא בחרה עובדת מסוימת זה אמור לשמור על אותו
+    // עובדת... רק הטווח משתנה". אם מסיבה כלשהי היא כבר לא מסוגלת/קיימת (למשל
+    // נמחקה בינתיים), נופלים בחזרה לחיפוש הרגיל בין כל מי שמסוגלת, כדי לא
+    // לתקוע בקשה על עובדת שכבר לא רלוונטית.
+    if (req && req.preferredStaffIdx != null && capableIndices.includes(req.preferredStaffIdx)){
+      capableIndices = [req.preferredStaffIdx];
+    }
     if (!capableIndices.length) return null;
     const pref = (req && req.preference) || {};
     const days = (Array.isArray(pref.days) && pref.days.length) ? pref.days : [0, 1, 2, 3, 4, 5, 6];
@@ -9375,12 +9486,11 @@
           staff: match.staffIdx,
           status: 'pending',
           note: req.note || '',
-          // "בקשה גמישה" (טווח זמן מותאם אישית) אין בה תיבת בחירת ערוץ תזכורת
-          // כמו בטופס הקביעה הרגיל — היא ביקשה שההתנהגות תהיה זהה לחלוטין
-          // לתור שנקבע דרך הטופס הרגיל, כולל אישור SMS מיידי כשהבקשה מוצאת
-          // ומקבעת תור באופן אוטומטי. ברירת המחדל SMS, בדיוק כמו קביעת תור
-          // ידנית ע"י המנהלת (ראה submitManualBooking) שגם בה אין בורר כזה.
-          reminderChannels: ['sms']
+          // טופס הבקשה הגמישה כולל עכשיו את אותה תיבת בחירת ערוץ תזכורת כמו
+          // טופס הקביעה הרגיל (ר' #frReminderChoice, submitFlexibleRequest) —
+          // משתמשים בבחירה שלה בפועל. נופלים בחזרה ל-SMS רק עבור בקשות ישנות
+          // שנשמרו לפני התיקון הזה ולכן אין עליהן בכלל את השדה.
+          reminderChannels: (Array.isArray(req.reminderChannels) && req.reminderChannels.length) ? req.reminderChannels : ['sms']
         };
         const mergedAppts = mergeListField(server.weekAppointments, lastLoadedSnapshot.weekAppointments, weekAppointments.concat([appt]), a => a && a.id);
         const updatedReq = Object.assign({}, req, { status: 'matched', matchedDate: match.date, matchedTime: match.time, matchedStaff: match.staffIdx });
@@ -9486,7 +9596,175 @@
       const matched = await attemptMatchFlexibleRequest(r);
       if (matched) matchedAny = true;
     }
+    // היא דיווחה: "רשימת המתנה לא עושה כלום חוץ מלהוסיף את זה לבקשות מיוחדות
+    // אבל שתור מתפנה היא לא מתעדכנת" — עד עכשיו רשימת ההמתנה נבדקה רק כשה-
+    // תור המדויק שחיכתה לו מבוטל (getWaitlistMatchesForAppointment, מציג
+    // alert למנהלת לבחור אם לקבוע). זה החמיץ כל מקרה אחר שבו השעה שהיא
+    // מבקשת התפנתה מסיבה אחרת — הסרת חסימה, תור אחר שבוטל אצל אותה עובדת,
+    // וכו'. עכשיו רשימת ההמתנה גם נבדקת אוטומטית בדיוק באותן נקודות שבהן
+    // בקשות גמישות נבדקות (ביטול תור, הסרת חסימה, פתיחת/רענון הפאנל) — ר'
+    // recheckAllPendingWaitlist() למטה.
+    const waitlistMatchedAny = (typeof recheckAllPendingWaitlist === 'function') ? await recheckAllPendingWaitlist() : false;
+    if (waitlistMatchedAny) matchedAny = true;
     if (matchedAny && typeof renderWeekCal === 'function') renderWeekCal();
+    return matchedAny;
+  }
+  // ===== רשימת המתנה (waitlist) — התאמה אוטומטית, באותו רוח כמו בקשה גמישה =====
+  // בניגוד לבקשה גמישה (שסורקת טווח תאריכים/שעות רחב), רשומת המתנה מחכה
+  // לתאריך+שעה+שירות מדויקים (ואופציונלית עובדת ספציפית) — בדיוק השעה
+  // שהלקוחה ניסתה לקבוע במקור ולא הצליחה. הבדיקה כאן פשוט שואלת: "האם
+  // בדיוק השעה הזו פנויה עכשיו?" — לא סורקת שעות חלופיות אחרות.
+  function recheckWaitlistEntry(w){
+    if (!w || w.status === 'matched') return null;
+    const parts = (w.date || '').split('-').map(Number);
+    if (parts.length !== 3 || parts.some(n => isNaN(n))) return null;
+    const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+    const dow = dateObj.getDay();
+    const svc = services.find(s => s.name === w.service);
+    const duration = svc ? (svc.duration || 30) : 30;
+    const startMin = timeToMinutes(w.requestedTime || '00:00');
+    const endMin = startMin + duration;
+    let candidateStaffIndices;
+    if (w.staffName){
+      // ביקשה עובדת ספציפית — רק היא נבדקת, לא "כל מי שפנויה".
+      const idx = staff.findIndex(s => s.name === w.staffName && !s.deleted);
+      candidateStaffIndices = idx !== -1 ? [idx] : [];
+    } else {
+      const cats = svc && svc.category ? [svc.category] : [];
+      candidateStaffIndices = cats.length ? getCapableStaffIndicesForCats(cats) : staff.map((_, i) => i);
+    }
+    for (const staffIdx of candidateStaffIndices){
+      const emp = staff[staffIdx];
+      const dayInfo = emp && emp.hours ? emp.hours[dow] : null;
+      if (!emp || !dayInfo || !dayInfo.open) continue;
+      if (isDateClosedForStaff(staffIdx, dateObj)) continue;
+      const windows = getEffectiveDayWindows(dayInfo, dateObj);
+      if (!windows.some(([s, e]) => startMin >= s && endMin <= e)) continue;
+      const busy = weekAppointments
+        .filter(a => a.date === w.date && a.staff === staffIdx)
+        .map(a => { const s = timeToMinutes(a.time); return [s, s + (a.dur || 30)]; })
+        .concat(getBlockedRangesForStaff(dateObj, staffIdx));
+      const conflict = busy.some(([bs, be]) => !(endMin <= bs || startMin >= be));
+      if (conflict) continue;
+      // אותו קו-הגנה אחרון כמו בכל נתיב קביעת-תור אחר באתר — לא ליצור כפילות
+      // ללקוחה הזו גם אם השעה המבוקשת פנויה מבחינת העובדת עצמה.
+      if (typeof clientHasOverlappingAppointment === 'function' && clientHasOverlappingAppointment(w.name, w.date, startMin, endMin, null)) continue;
+      return { date: w.date, time: w.requestedTime, staffIdx, dateObj };
+    }
+    return null;
+  }
+  // תואם ל-bookFlexibleRequest() כמעט בשלמותו — אותה עסקת Firestore
+  // משוחזרת-מול-שרת, אותה הגנה נגד ריבוי מכשירים/חלונות שמנסים לתפוס בדיוק
+  // אותה שעה בו-זמנית — רק מה שממוזג הוא מערך `waitlist` במקום
+  // `specialRequests`, וההתאמה היא לשעה מדויקת אחת ולא סריקת טווח.
+  async function bookWaitlistAutoMatch(w, match){
+    const dateObj = match.dateObj;
+    const svc = services.find(s => s.name === w.service);
+    const duration = svc ? (svc.duration || 30) : 30;
+    const startMin = timeToMinutes(match.time);
+    let committed = null;
+    if (!cloudLoadComplete || !lastLoadedSnapshot) return null;
+    pendingSaveCount++;
+    try {
+      committed = await db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
+        const server = doc.exists ? doc.data() : {};
+        const serverWaitlist = server.waitlist || lastLoadedSnapshot.waitlist || [];
+        const serverEntry = serverWaitlist.find(x => x && x.id === w.id);
+        // כבר טופלה (נמצא לה תור, או שהוסרה) במכשיר/עסקה אחרת בינתיים.
+        if (!serverEntry || serverEntry.status === 'matched') return null;
+        const serverAppts = server.weekAppointments || lastLoadedSnapshot.weekAppointments || [];
+        const conflict = serverAppts.some(a => {
+          if (!a || a.date !== match.date || a.staff !== match.staffIdx) return false;
+          const s = timeToMinutes(a.time), e = s + (a.dur || 30);
+          return startMin < e && (startMin + duration) > s;
+        });
+        if (conflict) return null;
+        const clientConflict = w.name && serverAppts.some(a => {
+          if (!a || a.client !== w.name || a.date !== match.date) return false;
+          const s = timeToMinutes(a.time), e = s + (a.dur || 30);
+          return startMin < e && (startMin + duration) > s;
+        });
+        if (clientConflict) return null;
+        const dayKey = weekdayKeys[dateObj.getDay()];
+        const appt = {
+          id: 'appt_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+          day: dayKey, date: match.date, time: match.time, dur: duration,
+          client: w.name || 'לקוחה', service: (svc && svc.name) || w.service || 'שירות',
+          services: svc ? [{ name: svc.name, duration: svc.duration || 0, price: svc.price || 0 }] : [],
+          price: svc ? (svc.price || 0) : 0, staff: match.staffIdx, status: 'pending', note: '',
+          reminderChannels: ['sms']
+        };
+        const mergedAppts = mergeListField(server.weekAppointments, lastLoadedSnapshot.weekAppointments, weekAppointments.concat([appt]), a => a && a.id);
+        const updatedEntry = Object.assign({}, w, { status: 'matched', matchedDate: match.date, matchedTime: match.time, matchedStaff: match.staffIdx });
+        const localWaitlistWithMatch = waitlist.map(x => x.id === w.id ? updatedEntry : x);
+        const mergedWaitlist = mergeListField(server.waitlist, lastLoadedSnapshot.waitlist, localWaitlistWithMatch, x => x && x.id);
+        const payload = { savedAt: new Date().toISOString(), weekAppointments: mergedAppts, waitlist: mergedWaitlist };
+        tx.set(CLOUD_DOC, payload, { merge: true });
+        return { appt, payload };
+      }));
+    } catch (e) {
+      console.error('bookWaitlistAutoMatch: transaction failed — treating as no match this time (will retry on the next check):', e);
+      committed = null;
+    }
+    pendingSaveCount--;
+    if (!committed) return null;
+    const { appt, payload } = committed;
+    weekAppointments = payload.weekAppointments;
+    waitlist = payload.waitlist;
+    lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(payload));
+    Object.assign(w, { status: 'matched', matchedDate: match.date, matchedTime: match.time, matchedStaff: match.staffIdx });
+    waitlist = waitlist.map(x => x.id === w.id ? w : x);
+    const idDigits = (w.teudatZehut || '').replace(/[^0-9]/g, '');
+    const phone = w.phone || '';
+    const existing = idDigits
+      ? clients.find(c => c.teudatZehut === idDigits) || (phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, '')) : null)
+      : (phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, '')) : null);
+    let customerEmail = w.email || '';
+    if (existing){
+      if (idDigits && !existing.teudatZehut) existing.teudatZehut = idDigits;
+      if (!existing.email && w.email) existing.email = w.email;
+      customerEmail = existing.email || customerEmail;
+      if (typeof getTodayDateOnly === 'function' && dateObj <= getTodayDateOnly()){ existing.visits = (existing.visits || 0) + 1; existing.daysSinceVisit = 0; }
+    } else if (w.name){
+      clients.push({ name: w.name, phone, teudatZehut: idDigits || null, email: w.email || '', photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
+    }
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof renderClients === 'function') renderClients();
+    if (typeof renderMiniCal === 'function') renderMiniCal();
+    try {
+      if (customerEmail){
+        const emp = staff[match.staffIdx];
+        const dateLabel = dateObj.getDate() + ' ב' + hebrewMonths[dateObj.getMonth()];
+        sendEmail(
+          customerEmail,
+          'התפנה תור אצלנו!',
+          getAppointmentEmailText(w.name || '', appt.service, dateLabel, match.time, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:', idDigits, phone)
+        );
+      }
+      const smsDateLabel = dateObj.getDate() + '/' + (dateObj.getMonth() + 1);
+      queueApptSms(appt, getShortApptSmsText('confirmed', appt.service, smsDateLabel, match.time));
+    } catch (e) {
+      console.error('bookWaitlistAutoMatch: confirmation email/SMS failed (booking itself was saved fine):', e);
+    }
+    return appt;
+  }
+  async function attemptMatchWaitlistEntry(w){
+    if (!w || w.status === 'matched') return false;
+    const match = recheckWaitlistEntry(w);
+    if (!match) return false;
+    const appt = await bookWaitlistAutoMatch(w, match);
+    return !!appt;
+  }
+  // אותה סריקה עקבית-לא-מקבילית כמו recheckAllPendingFlexibleRequests, ומאותה
+  // סיבה בדיוק — כדי ששתי רשומות המתנה שונות לא יראו את אותה שעה כפנויה
+  // בו-זמנית לפני שהראשונה מהן באמת מתחייבת.
+  async function recheckAllPendingWaitlist(){
+    let matchedAny = false;
+    const pending = waitlist.filter(w => w.status !== 'matched');
+    for (const w of pending){
+      const matched = await attemptMatchWaitlistEntry(w);
+      if (matched) matchedAny = true;
+    }
     return matchedAny;
   }
   // Compact-block rendering for the "בקשות מיוחדות" column — she found the old
@@ -9515,7 +9793,7 @@
     col.id = 'weekcol-special';
     const head = document.createElement('div');
     head.className = 'cal-special-head';
-    head.innerHTML = '<b>בקשות מיוחדות</b>';
+    head.innerHTML = '<b>בקשה מיוחדת</b>';
     const addBtn = document.createElement('button');
     addBtn.type = 'button';
     addBtn.className = 'cal-special-add-btn';
@@ -9530,7 +9808,11 @@
     body.style.height = bodyHeight + 'px';
     const pendingRequests = specialColumnPendingRequests()
       .slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const waitlistEntries = waitlist.slice();
+    // רשומת המתנה שכבר נמצא לה תור אמיתי (status:'matched', ר'
+    // recheckAllPendingWaitlist()) היא בדיוק אותו רעש מיותר שכבר נמנע
+    // מבקשות גמישות שנקבעו — היא עכשיו תור רגיל ביומן עצמו, לא צריכה גם
+    // להישאר רשומה כאן.
+    const waitlistEntries = waitlist.filter(w => w.status !== 'matched');
     if (!pendingRequests.length && !waitlistEntries.length){
       // היא ביקשה: לא טקסט חתוך ("אין בקשות מיוחדות" נחתך בתוך העמודה הצרה
       // הזו, שגובהה קבוע — bodyHeight למעלה — ונחתך אנכית ב-overflow:hidden
@@ -9611,6 +9893,10 @@
       const dateLabel = (parts.length === 3 && parts.every(n => !isNaN(n)))
         ? new Date(parts[0], parts[1] - 1, parts[2]).getDate() + ' ב' + hebrewMonths[new Date(parts[0], parts[1] - 1, parts[2]).getMonth()]
         : (w.date || '—');
+      // סטטוס ⏳/✓ — אותו פורמט תצוגה בדיוק כמו בקשה גמישה (ר' למטה), כדי
+      // שיהיה עקבי בין שני סוגי "מחכה לתור" באותה עמודה — היא ביקשה שרשימת
+      // ההמתנה "תראה כמו בקשות מיוחדות שנכנסות באותו פורמט תצוגה".
+      const isMatchedW = w.status === 'matched';
       cardEl.innerHTML =
         srDetailRow('לקוחה', w.name || 'ללא שם') +
         (w.phone ? srDetailRow('טלפון', `<a href="tel:${w.phone.replace(/[^0-9+]/g,'')}">${w.phone}</a>`) : '') +
@@ -9618,7 +9904,49 @@
         srDetailRow('שירות', w.service || '—') +
         (w.staffName ? srDetailRow('עובדת', w.staffName) : '') +
         srDetailRow('תאריך מבוקש', dateLabel) +
-        srDetailRow('שעה מבוקשת', w.requestedTime || '—');
+        srDetailRow('שעה מבוקשת', w.requestedTime || '—') +
+        srDetailRow('סטטוס', isMatchedW ? '✓ נמצא תור' : '⏳ ממתין') +
+        (isMatchedW ? srDetailRow('נקבע ל', `${formatDateDMY(w.matchedDate)}, ${w.matchedTime}${(staff[w.matchedStaff] && staff[w.matchedStaff].name) ? ' · ' + staff[w.matchedStaff].name : ''}`) : '');
+      if (!isMatchedW){
+        const recheckBtn = document.createElement('button');
+        recheckBtn.type = 'button';
+        recheckBtn.className = 'cta ghost';
+        recheckBtn.textContent = '🔄 בדוק שוב';
+        recheckBtn.onclick = () => {
+          recheckBtn.disabled = true;
+          recheckBtn.textContent = 'בודקת…';
+          attemptMatchWaitlistEntry(w).then(found => {
+            if (typeof showAdminToast === 'function'){
+              showAdminToast(found ? `✓ נמצא תור ל-${w.name || 'הממתינה'} ונקבע אוטומטית` : 'השעה המבוקשת עדיין לא פנויה — ננסה שוב מאוחר יותר.');
+            }
+            if (found) closeSpecialRequestDetailOverlay();
+            else renderSpecialRequestDetailOverlay();
+            if (typeof renderWeekCal === 'function') renderWeekCal();
+          });
+        };
+        actionsEl.appendChild(recheckBtn);
+        const bookBtn = document.createElement('button');
+        bookBtn.type = 'button';
+        bookBtn.className = 'cta';
+        bookBtn.textContent = '📅 קביעת תור';
+        bookBtn.onclick = () => {
+          const svcIdxW = services.findIndex(s => s.name === w.service);
+          const staffIdxW = w.staffName ? staff.findIndex(s => s.name === w.staffName) : -1;
+          const wDateParts = (w.date || '').split('-').map(Number);
+          const wDateObj = (wDateParts.length === 3 && wDateParts.every(n => !isNaN(n))) ? new Date(wDateParts[0], wDateParts[1] - 1, wDateParts[2]) : undefined;
+          closeSpecialRequestDetailOverlay();
+          openManualBookingModal({
+            clientName: w.name,
+            clientPhone: w.phone,
+            clientId: w.teudatZehut,
+            serviceIndex: svcIdxW !== -1 ? svcIdxW : undefined,
+            date: wDateObj,
+            time: w.requestedTime || undefined,
+            staff: staffIdxW !== -1 ? staffIdxW : undefined
+          });
+        };
+        actionsEl.appendChild(bookBtn);
+      }
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
       delBtn.className = 'cta';
@@ -11153,7 +11481,12 @@
       service: svc ? svc.name : '',
       staffName: selectedStaffIndex === 'any' ? '' : (emp ? emp.name : ''),
       date: dateStr,
-      requestedTime: time
+      requestedTime: time,
+      // status מתחיל 'pending' — נבדק אוטומטית מעכשיו בכל נקודה שגם בקשות
+      // גמישות נבדקות בה (ביטול תור, הסרת חסימה, פתיחת פאנל), ר'
+      // recheckAllPendingWaitlist() למעלה. עובר ל-'matched' + matchedDate/
+      // matchedTime/matchedStaff ברגע שנמצא ונקבע לה תור אמיתי בפועל.
+      status: 'pending'
     });
     if (typeof renderClients === 'function') renderClients();
     if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
@@ -13138,15 +13471,10 @@
     try { if (rawCloudData) approxKb = Math.round(JSON.stringify(rawCloudData).length / 1024); } catch (e) { /* ignore */ }
     window.__lastCloudLoadDiag = { elapsedSec: Math.round(elapsedSec * 10) / 10, approxKb };
     console.log(`Cloud data load took ${elapsedSec.toFixed(1)}s` + (approxKb !== null ? ` (~${approxKb}KB document)` : ' (no document)') + '.');
-    // תיקון (היא דיווחה "אין לי שניות... לא רואים כלום"): התנאי הקודם דרש
-    // שהיא כבר תהיה במצב-ניהול בדיוק ברגע שהטעינה מסתיימת — אבל הטעינה הזו
-    // מתחילה מיד עם טעינת הדף (לא עם ההתחברות), אז לרוב היא כבר מסתיימת
-    // לפני שהיא בכלל פותחת את פאנל הניהול, ואז אף פעם לא הוצג שום toast.
-    // מוצג עכשיו תמיד כשהטעינה איטית מספיק כדי שיהיה משמעותי לדווח עליה
-    // (לא על כל טעינה מהירה וטריוויאלית, גם ללקוחה רגילה שרק פותחת את האתר).
-    if (elapsedSec >= 1.5 && typeof showAdminToast === 'function'){
-      showAdminToast(`טעינת הנתונים: ${elapsedSec.toFixed(1)} שניות` + (approxKb !== null ? ` (~${approxKb}KB)` : ''), 6000);
-    }
+    // היא דיווחה שההתחברות/טעינה כבר מהירה בפועל, אז ה-toast "כמה זמן לקח"
+    // שקפץ בכל טעינה איטית מספיק כבר מיותר ומטריד — הוסר. המדידה עצמה
+    // (window.__lastCloudLoadDiag) עדיין נשמרת בשקט בקונסול למקרה שיהיה
+    // צורך לאבחן שוב בעתיד.
   }
   // תיקון (היא דיווחה שוב: "אין לי הודעה, פשוט ספרתי" — ה-toast חולף מדי,
   // נבלע בתוך כל השינוי החזותי של סגירת מסך ההתחברות ופתיחת פאנל הניהול,
@@ -13484,16 +13812,11 @@
         const loginElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - loginStartedAt) / 1000;
         window.__lastLoginDiag = { elapsedSec: Math.round(loginElapsedSec * 10) / 10, networkBreakdown: (typeof getNetworkTimingBreakdown === 'function' ? getNetworkTimingBreakdown(loginStartedAt) : null) };
         console.log(`Login (signInWithEmailAndPassword) took ${loginElapsedSec.toFixed(1)}s.`);
-        // תיקון (היא דיווחה שוב: "אין לי הודעה, פשוט ספרתי" — ה-toast הקודם
-        // כנראה נעלם מהר מדי/נבלע בתוך כל השינוי החזותי של סגירת מסך
-        // ההתחברות ופתיחת פאנל הניהול, ולא הצליחה בכלל לקרוא אותו). כדי
-        // שהפעם היא באמת תראה ותוכל לצטט מספר מדויק — alert() אמיתי, חוסם,
-        // שחייבים ללחוץ "אישור" כדי לסגור, במקום toast חולף. מוצג פעם אחת
-        // בלבד לכל טעינת דף (guardedShowLoginTimingDiag), עם שני המספרים
-        // יחד: גם ההתחברות עצמה (מה שנמדד כרגע) וגם טעינת הנתונים מהענן (אם
-        // כבר הסתיימה — ובדרך כלל היא כבר הסתיימה, כי היא מתחילה מיד עם
-        // טעינת הדף, הרבה לפני שהיא בכלל מספיקה להקליד ולהתחבר).
-        if (typeof showLoginTimingDiagOnce === 'function') showLoginTimingDiagOnce();
+        // היא דיווחה (אחרי כמה סבבים של מדידה) שההתחברות עכשיו מהירה בפועל,
+        // אז ה-alert החוסם שדרש "אישור" בכל התחברות כבר לא נחוץ ומיותר —
+        // המדידה עצמה (window.__lastLoginDiag, כולל פירוט הרשת דרך
+        // getNetworkTimingBreakdown) עדיין נשמרת בשקט בקונסול למקרה שיהיה
+        // צורך לאבחן שוב בעתיד, פשוט בלי לקפוץ למשתמשת בכל כניסה.
         restoreBtn();
         closeLoginOverlay();
         document.getElementById('loginEmail').value = '';
@@ -13736,14 +14059,16 @@
   // whatever entries that represents so a later phone-back press doesn't
   // waste a press on a now-stale entry.
   function currentBookingStepNum(){
-    for (var n = 1; n <= 3; n++){
+    // עודכן מ-3 ל-4 שלבים (ר' ההערה ליד #stepDots ב-HTML — שלב "עובדת+יום+שעות"
+    // הקודם פוצל לשני שלבים נפרדים: עובדת, ואז יום+שעות).
+    for (var n = 1; n <= 4; n++){
       var el = document.getElementById('bstep-' + n);
       if (el && el.classList.contains('active')) return n;
     }
     return null;
   }
   var appBookingStepWas = currentBookingStepNum() || 1;
-  ['bstep-1', 'bstep-2', 'bstep-3'].forEach(function(id){
+  ['bstep-1', 'bstep-2', 'bstep-3', 'bstep-4'].forEach(function(id){
     var el = document.getElementById(id);
     if (!el) return;
     new MutationObserver(function(){
