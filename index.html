@@ -3929,7 +3929,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 07.09-שעות-דו-ספרתיות-v25</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 07.09-תיקון-מירוץ-ביטול-בקשה-v26</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -5773,7 +5773,12 @@
     });
     host.prepend(box);
   }
-  function cancelAdminAppointment(appt){
+  // הפכה ל-async (הייתה function רגילה) — ר' ההערה הגדולה למטה ליד ה-await
+  // saveState() לסיבה: היא דיווחה בעצמה על התופעה — "הרגע ביטלתי תור והוא
+  // [בקשה מיוחדת שממתינה בדיוק לשעה הזו] לא נקבע אוטומטית, אלא רק אחרי
+  // שיצאתי ונכנסתי שוב זה נקבע". הסיבה: מירוץ (race condition) בין השמירה
+  // בענן של הביטול לבין הבדיקה האוטומטית שרצה מיד אחריה.
+  async function cancelAdminAppointment(appt){
     if (!appt) return;
     const confirmed = confirm(`לבטל את התור של ${appt.client} ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time}?`);
     if (!confirmed) return;
@@ -5785,12 +5790,23 @@
     if (typeof renderClients==='function') renderClients();
     if (typeof renderOverviewDayView==='function') renderOverviewDayView();
     if (typeof renderOverviewMonthCal==='function') renderOverviewMonthCal();
-    if (typeof saveState==='function') saveState();
+    // באג אמיתי שהיא תפסה בשימוש חי: saveState() נקראה כאן בלי await, ומיד
+    // אחריה recheckAllPendingFlexibleRequests() — שתי הפעולות רצות במקביל.
+    // recheckAllPendingFlexibleRequests()/bookFlexibleRequest() בודקת התנגשות
+    // מול הנתונים שקוראת עכשיו ישירות מהשרת (tx.get(CLOUD_DOC)), לא מול
+    // המערך המקומי שכבר עודכן למעלה — אז אם הכתיבה של הביטול הזה עוד לא
+    // הגיעה בפועל לשרת ברגע שהבדיקה האוטומטית מריצה את הטרנזקציה שלה, היא
+    // עדיין רואה שם את התור "המבוטל" ומחליטה (מנקודת המבט שלה, נכון) שאין
+    // מקום פנוי — מפספסת התאמה שהייתה אמורה להימצא. לחיצה מאוחרת יותר על
+    // "בדוק שוב"/פתיחת הפאנל מחדש עובדת כי עד אז השמירה כבר הספיקה להגיע.
+    // התיקון: await על saveState() (שעכשיו מחזירה Promise אמיתי — ר' שם)
+    // לפני שמריצים את הבדיקה, כך שהבדיקה תמיד רואה שרת שכבר מעודכן.
+    if (typeof saveState==='function') await saveState();
     // A cancellation just freed up a real slot — re-check every still-pending
     // flexible special request (see "בקשה כללית / זמן גמיש" further down) in
     // case this newly-freed slot happens to match one of them, and book it
     // automatically right here if so.
-    if (typeof recheckAllPendingFlexibleRequests === 'function') recheckAllPendingFlexibleRequests();
+    if (typeof recheckAllPendingFlexibleRequests === 'function') await recheckAllPendingFlexibleRequests();
     // Until now, only a CUSTOMER cancelling her own appointment (via the
     // self-service "my appointment" page, see cancelAppointment() above) sent a
     // notification email — a cancellation initiated by an employee/manager from
@@ -9276,17 +9292,20 @@
         const staffLabel = b.staff === 'all' ? 'כל הצוות' : ((staff[b.staff] && staff[b.staff].name) || '');
         block.title = `חסום${b.reason ? ' — ' + b.reason : ''} · ${staffLabel} · ${b.time} (${b.duration} דק') — לחיצה מסירה את החסימה`;
         block.innerHTML = `<b>🚫 ${b.time.slice(0,5)} חסום${b.reason ? ' · ' + b.reason : ''}</b>`;
-        block.onclick = (e) => {
+        block.onclick = async (e) => {
           e.stopPropagation();
           if (!confirm(`להסיר את חסימת הזמן בשעה ${b.time} בתאריך ${formatDateDMY(b.date)}?`)) return;
           const idx = personalBlocks.indexOf(b);
           if (idx !== -1) personalBlocks.splice(idx, 1);
           renderWeekCal();
-          if (typeof saveState === 'function') saveState();
+          // await (לא fire-and-forget) — אותה סיבה בדיוק כמו ב-cancelAdminAppointment()
+          // (ר' ההערה הגדולה שם): לתת לשמירה בענן להשלים לפני שמריצים בדיקה
+          // אוטומטית שקוראת מהשרת, כדי שהיא תמיד תראה מצב מעודכן.
+          if (typeof saveState === 'function') await saveState();
           if (typeof showAdminToast === 'function') showAdminToast('✓ חסימת הזמן הוסרה בהצלחה');
           // Removing a personal-time block just freed up a real slot too — same
           // auto-rematch as a cancellation (see recheckAllPendingFlexibleRequests()).
-          if (typeof recheckAllPendingFlexibleRequests === 'function') recheckAllPendingFlexibleRequests();
+          if (typeof recheckAllPendingFlexibleRequests === 'function') await recheckAllPendingFlexibleRequests();
         };
         body.appendChild(block);
       });
@@ -13201,9 +13220,17 @@
   // only quiets the ambient catch-up save specifically. A real failure still
   // always shows the red error banner, silent or not — that's the part that
   // actually matters for not losing data.
+  // מחזירה עכשיו את ה-Promise של הכתיבה עצמה (במקום undefined) — ר' ההערה
+  // הגדולה ליד cancelAdminAppointment() למטה לסיבה: קריאה שממתינה בפועל
+  // לסיום השמירה (await saveState()) לפני שהיא ממשיכה הלאה יכולה עכשיו
+  // לעשות את זה נכון. כל הקריאות הקיימות שלא ממתינות (fire-and-forget,
+  // "saveState();" סתם) ממשיכות לעבוד בדיוק כמו קודם — הן פשוט מתעלמות
+  // מה-Promise המוחזר. ה-.catch() הפנימי כבר תמיד "בולע" שגיאה (מציג באנר,
+  // לא זורק הלאה), אז ה-Promise הזה תמיד RESOLVE (אף פעם לא REJECT) — בטוח
+  // ל-await בלי try/catch נוסף.
   function saveState(opts){
     const silent = !!(opts && opts.silent);
-    if (!cloudLoadComplete || !lastLoadedSnapshot) return;
+    if (!cloudLoadComplete || !lastLoadedSnapshot) return Promise.resolve();
     const nowIso = new Date().toISOString();
     const simpleFields = {
       branding, customTemplates, staff,
@@ -13214,7 +13241,7 @@
     // (pollForRemoteUpdates/visibilitychange) skip applying data while this is
     // above 0, so they never clobber local state with pre-save data mid-flight.
     pendingSaveCount++;
-    db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
+    return db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
       const server = doc.exists ? doc.data() : {};
       const payload = { savedAt: nowIso };
       let hasChange = false;
