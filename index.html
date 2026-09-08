@@ -2261,6 +2261,13 @@
     100%{ box-shadow:0 0 0 3px transparent; }
   }
   .cal-appt.cal-appt-highlight{ animation:calApptHighlightFade 2s ease forwards; }
+  /* היא ביקשה: כשלקוחה מאשרת שהיא מגיעה (confirmListedAppointment — הכפתור
+     "✓ אשרי שאת מגיעה" ב"יש לך תור קיים"), שהיא תדע את זה ישר מהיומן עצמו —
+     בלי לפתוח את פרטי התור (שם כבר יש תג "✓ אושר" — apptDetailConfirmedBadge).
+     מסגרת ירוקה בולטת סביב הבלוק עצמו, בדיוק כמו box-shadow הבסיסי של
+     .cal-appt (מסגרת דקה) רק ירוקה ועבה יותר — כדי שזה יבלוט במבט חטוף על
+     כל היומן, לא רק בפתיחת התור הבודד. */
+  .cal-appt.cal-appt-confirmed{ box-shadow:0 0 0 2px #2E8B57; }
   .myday-filter{display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:13px; color:#8A8178;}
   .myday-filter select{
     background:#F3ECE0; border:none; border-radius:8px;
@@ -3537,12 +3544,6 @@
       <div class="week-cal-wrap" id="weekCalWrap">
         <div class="week-cal" id="weekCal"></div>
       </div>
-      <!-- כפתור אבחון זמני (ר' showCalHeightDiagnostic() בסקריפט) — אחרי שהתיקון
-           הקודם (סנכרון computeMobileHourBandHeight מול visualViewport) לא
-           פתר את זה אצלה בפועל, אין טעם לנחש שוב: כפתור קטן ולא פולשני
-           שמציג לה alert עם המספרים האמיתיים מהטלפון שלה, כדי שתוכל לצלם
-           מסך ולשלוח בלי צורך בשום ידע טכני. להסרה ברגע שהבעיה נפתרת סופית. -->
-      <button type="button" onclick="showCalHeightDiagnostic()" style="display:block; margin:4px auto 0; font-size:11px; padding:4px 10px; border-radius:999px; border:1px dashed rgba(var(--panel-line-rgb),0.3); background:transparent; color:var(--panel-text-dim); opacity:0.7;">🔧 בדיקת גובה יומן (זמני)</button>
       <div id="overviewDayWrap" style="display:none;">
         <div class="day-nav-header">
           <button type="button" onclick="ovDayShift(-1)">‹ יום קודם</button>
@@ -3929,7 +3930,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 07.09-תיקון-מירוץ-ביטול-בקשה-v26</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 07.09-תיקון-גובה-יומן-מובייל-v27</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -5633,6 +5634,16 @@
     const apptStart = timeToMinutes(appt.time || '00:00');
     const apptEnd = apptStart + (appt.dur || 30);
     return waitlist.filter(w => {
+      // תיקון: רשומת המתנה שכבר נמצא לה תור (status:'matched', ר'
+      // bookWaitlistAutoMatch) לא אמורה "להתאים" שוב — היא כבר טופלה. בלי
+      // הבדיקה הזו, אם ההתאמה האוטומטית (recheckAllPendingWaitlist, שרצה
+      // בדיוק לפני שהמקום הזה נבדק — ר' ההערה הגדולה ליד ה-await
+      // recheckAllPendingFlexibleRequests() ב-cancelAdminAppointment) כבר
+      // קבעה תור עבורה, הפונקציה הזו עדיין הייתה "מוצאת" אותה ומציגה את
+      // ההתראה הישנה "🔔 התפנה מקום! ... קביעת התור עבורה" — כפילות מיותרת
+      // ומבלבלת (ולחיצה על הכפתור שם הייתה קובעת תור כפול ממש, כי
+      // bookWaitlistMatch לא בודק status בעצמו).
+      if (w.status === 'matched') return false;
       if (w.date !== appt.date) return false;
       if (w.service && w.service !== appt.service) return false;
       if (w.staffName && staff[appt.staff] && w.staffName !== staff[appt.staff].name) return false;
@@ -5829,7 +5840,23 @@
     // קצר (בלי קישור) — ראה getShortApptSmsText.
     queueApptSms(appt, getShortApptSmsText('cancelled', appt.service, formatDateDMY(appt.date), appt.time));
     showAdminToast('✓ התור בוטל בהצלחה' + (cancelledClient && cancelledClient.email ? ' — נשלח מייל לעדכון הלקוחה' : ''));
-    if (matches.length) renderWaitlistMatchAlert(matches, appt);
+    // `matches` נלקח בראש הפונקציה, לפני ה-await recheckAllPendingFlexibleRequests()
+    // למעלה — וזה בדיוק מה שהיה גורם לבאג שהיא דיווחה עליו: "המקום מתפנה,
+    // הבקשה לא נכנסת אוטומטית, אלא רק מראה סימן שהתפנה מקום בלי לתפוס אותו
+    // אוטומטית". ה-recheck האוטומטי (recheckAllPendingFlexibleRequests →
+    // recheckAllPendingWaitlist → bookWaitlistAutoMatch) שרץ ממש לפני השורה
+    // הזו כבר יכול היה לקבוע תור בפועל לאותה רשומת המתנה בדיוק — אבל ה-
+    // התראה הישנה כאן ("🔔 התפנה מקום! ... קביעת התור עבורה") הייתה מוצגת
+    // בכל מקרה, כי `matches` הוא צילום-מסך ישן מלפני שהביטול בכלל קרה, ולא
+    // נבדק שוב. bookWaitlistAutoMatch מעדכן את האובייקט המקורי במקום
+    // (Object.assign(w,...)) אז אותם אובייקטים שב-`matches` באמת מתעדכנים
+    // ל-status:'matched' אם ההתאמה האוטומטית הצליחה — פשוט אף אחד לא היה
+    // בודק את זה. הסינון כאן (וגם בתוך getWaitlistMatchesForAppointment עצמה,
+    // להגנה כפולה) סוגר את זה: אם ההתאמה האוטומטית כבר טיפלה ברשומה, ההתראה
+    // הידנית הזו כבר לא מוצגת בכלל — בדיוק כמו שקורה היום לבקשה גמישה שנקבעה
+    // אוטומטית (recheckAllPendingFlexibleRequests) בלי שום פעולה ידנית נוספת.
+    const freshMatches = matches.filter(w => w.status !== 'matched');
+    if (freshMatches.length) renderWaitlistMatchAlert(freshMatches, appt);
   }
   // ===== Full-page appointment detail overlay =====
   // Replaces the old "click a calendar block → instant cancel" behavior: clicking
@@ -7407,6 +7434,18 @@
       document.title = bizNameTrimmed + ' — קביעת תורים אונליין | הכל בקליק';
       const metaDescEl = document.querySelector('meta[name="description"]');
       if (metaDescEl) metaDescEl.setAttribute('content', bizNameTrimmed + ' — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.');
+      // אותו תיקון בדיוק כמו document.title/meta-description כמה שורות למעלה,
+      // רק שהיא (og:title/og:description) נשארה בלי עדכון — היא ביקשה: "למה
+      // שאני רושמת בגוגל רותי זולברג הוא לא מביא את האתר, רק כשאני רושמת
+      // רותי...קביעת תורים אונליין". תגי ה-og: הם מה שאתרים חברתיים/תצוגות-
+      // קישור (WhatsApp, פייסבוק וכו') קוראים, ולפעמים גם כלי חיפוש/אינדוקס
+      // שלא מריצים את כל ה-JS של הדף — כשהם עדיין קבועים ל"הכל בקליק" הגנרי
+      // בלי שם העסק בכלל, זה בדיוק ההסבר לתופעה שהיא תיארה: שום דבר בדף לא
+      // מקשר בין "רותי זולברג" לאתר הזה, אז חיפוש עם השם בלבד לא מוצא אותו.
+      const ogTitleEl = document.querySelector('meta[property="og:title"]');
+      if (ogTitleEl) ogTitleEl.setAttribute('content', bizNameTrimmed + ' — קביעת תורים אונליין');
+      const ogDescEl = document.querySelector('meta[property="og:description"]');
+      if (ogDescEl) ogDescEl.setAttribute('content', bizNameTrimmed + ' — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.');
     }
   }
   renderBranding();
@@ -8541,6 +8580,28 @@
   // (hourBandHeight/2, /4 — see quarterHeight below) stays comfortably
   // tappable with a fingertip, not just a mouse pointer.
   const MOBILE_HOUR_BAND_HEIGHT = 60;
+  // תיקון הסבב הזה (אחרי שאישרה מפורשות שהיומן עדיין נחתך בערך ב-13:00
+  // במכשיר האמיתי שלה, לא רק בכפתור האבחון שהוסר): המקור האמיתי לבאג לא
+  // היה חוסר-סנכרון בין visualViewport ל-window.innerHeight (זה כבר תוקן
+  // בסבב קודם, ר' ההערה הגדולה בתוך computeMobileHourBandHeight למטה) —
+  // אלא סתירה מובנית בין שתי מטרות ששתיהן ביקשה בעבר: (א) שהריבועים יהיו
+  // בגובה נוח קבוע ללחיצה (MOBILE_HOUR_BAND_HEIGHT, 60px), וגם (ב) שהיומן
+  // תמיד יגיע עד 14:00 בלי גלילה. computeMobileHourBandHeight() חישב נכון
+  // כמה גובה כל שעה *צריכה* כדי ש-6 השעות (08:00-14:00) בדיוק ימלאו את
+  // השטח הפנוי האמיתי — אבל אז Math.max(MOBILE_HOUR_BAND_HEIGHT, ...) כפה
+  // רצפה של 60px גם כשהחישוב האמיתי יצא נמוך יותר (מסך טלפון נמוך/הרבה
+  // צ'רום מעליו), מה שגרם ל-6 השורות ביחד לעלות בפועל על גובה ה-wrap
+  // (fitWeekCalToViewport קובע לו max-height "אמיתי" נפרד) — בדיוק ה"נחתך
+  // ב-13:00" שהיא המשיכה לדווח עליו. זו בדיוק הסתירה שכבר אובחנה נכון
+  // בהערת ROUND 3 למעלה ("MOBILE_HOUR_BAND_HEIGHT floor was the real
+  // limiter, not this row's height") אבל מעולם לא טופלה בפועל — רק הוחזר
+  // שינוי אחר שניסה לפנות עוד שטח במקום לגעת ברצפה עצמה. שאלתי אותה
+  // במפורש איזו משתי המטרות עדיפה, והיא בחרה: "להגיע עד 14:00 תמיד" גם
+  // אם המשמעות היא ריבועים קצת פחות גבוהים במסכים צפופים. לכן הרצפה
+  // הקשיחה ל-60px הוחלפה ברצפת-שפיות קטנה בהרבה (MOBILE_HOUR_BAND_MIN_HEIGHT)
+  // שמונעת רק גבהים קיצוניים/שבורים (0 או שליליים מבאג עתידי), ולא חוסמת
+  // עוד את ההתאמה האמיתית לשטח הפנוי.
+  const MOBILE_HOUR_BAND_MIN_HEIGHT = 30;
   // אחרי כמה סבבים התברר שכל הפירוש הקודם היה שגוי: "עד השעה 2"/"עד השעה 3"
   // שלה לא התכוונו למספר שעות גלויות (2 שעות, 3 שעות) אלא לשעון עצמו — עד
   // השעה 14:00 בצהריים, לעומת מה שהיה קודם (עד השעה 15:00 בערך) לפני שהתחלנו
@@ -8606,40 +8667,9 @@
       const EXTRA_SAFETY_MARGIN = 10;
       const available = viewportBottom - rect.top - currentDayHeadHeight() - 14 - EXTRA_SAFETY_MARGIN;
       const targetHours = Math.max(1, MOBILE_CAL_TARGET_END_HOUR - calStartHour);
-      if (available > 0) return Math.max(MOBILE_HOUR_BAND_HEIGHT, available / targetHours);
+      if (available > 0) return Math.max(MOBILE_HOUR_BAND_MIN_HEIGHT, available / targetHours);
     }
     return MOBILE_HOUR_BAND_HEIGHT;
-  }
-  // כפתור אבחון זמני (ר' ה-HTML ליד #weekCalWrap): מציג alert אחד עם כל
-  // המספרים האמיתיים שמשתתפים בחישוב הזה על הטלפון שלה בפועל, כדי לצלם
-  // ולשלוח — במקום להמשיך לנחש מרחוק אחרי שהתיקון הקודם (סנכרון מול
-  // visualViewport) התברר כלא-מספיק בפועל אצלה.
-  function showCalHeightDiagnostic(){
-    const wrap = document.getElementById('weekCalWrap');
-    if (!wrap){ alert('לא נמצא היומן על המסך — פתחי את טאב "יומן" בסקירה קודם.'); return; }
-    const rect = wrap.getBoundingClientRect();
-    const vv = window.visualViewport;
-    const dayHead = currentDayHeadHeight();
-    const isMobileWidth = window.innerWidth <= MOBILE_CAL_BREAKPOINT;
-    const hourBand = computeHourBandHeight();
-    const lbls = Array.from(document.querySelectorAll('.cal-hour-lbl'));
-    const lbl14 = lbls.find(l => l.textContent.trim() === '14:00');
-    const wrapMaxHeight = parseFloat(wrap.style.maxHeight) || 0;
-    const line14TopFromWrapTop = lbl14 ? Math.round(lbl14.getBoundingClientRect().top - rect.top) : null;
-    const reaches14 = line14TopFromWrapTop !== null ? (line14TopFromWrapTop <= wrapMaxHeight + 2) : null;
-    const msg =
-      'אבחון גובה יומן:\n' +
-      'רוחב מסך: ' + window.innerWidth + 'px (מובייל: ' + (isMobileWidth ? 'כן' : 'לא') + ')\n' +
-      'גובה innerHeight: ' + window.innerHeight + 'px\n' +
-      'גובה visualViewport: ' + (vv ? Math.round(vv.height) + 'px (offsetTop ' + Math.round(vv.offsetTop) + ')' : 'לא זמין') + '\n' +
-      'תחילת היומן מלמעלה (rect.top): ' + Math.round(rect.top) + 'px\n' +
-      'גובה כותרת הימים: ' + dayHead + 'px\n' +
-      'גובה כל שעה בפועל: ' + Math.round(hourBand) + 'px (מינימום קבוע: ' + MOBILE_HOUR_BAND_HEIGHT + 'px)\n' +
-      'שטח מקסימלי לגלילה (wrap max-height): ' + Math.round(wrapMaxHeight) + 'px\n' +
-      'מיקום קו 14:00 מתחילת היומן: ' + (line14TopFromWrapTop === null ? 'לא נמצא' : line14TopFromWrapTop + 'px') + '\n' +
-      'מגיע ל-14:00 בלי גלילה: ' + (reaches14 === null ? 'לא ידוע' : (reaches14 ? 'כן' : 'לא — חסר ' + (line14TopFromWrapTop - wrapMaxHeight) + 'px'));
-    console.log(msg);
-    alert(msg);
   }
   // What hourBandHeight renderWeekCal() actually built the currently-rendered
   // grid with — read back by fitWeekCalToViewport() (and re-checked on every
@@ -9208,6 +9238,9 @@
         // highlight so it's obvious at a glance which block just appeared, exactly
         // mirroring the .client-card-highlight fade already used for a client card.
         if (pendingCalHighlightApptId && a.id === pendingCalHighlightApptId) block.classList.add('cal-appt-highlight');
+        // מסגרת ירוקה כשהלקוחה אישרה שהיא מגיעה — ר' ההערה הגדולה ליד
+        // .cal-appt-confirmed ב-CSS.
+        if (a.confirmedByClient) block.classList.add('cal-appt-confirmed');
         block.style.top = (hourIdx * hourBandHeight + quarterOffset * quarterHeight + 2) + 'px';
         block.style.height = (durationQuarters * quarterHeight - 3) + 'px';
         // Side-by-side columns for overlapping appointments — overrides the
