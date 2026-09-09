@@ -3942,7 +3942,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.09-אבחון-פירוט-רינדור-v31</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.09-אבחון-שלב-showPanel-v32</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -14056,6 +14056,11 @@
               if (calCalls >= 2){
                 msg += ' (יותר מפעם אחת — כנראה בנייה חוזרת של אותו יומן, ראה הערה בקוד)';
               }
+              const showPanelSec = window.__lastShowPanelSyncSec;
+              msg += '\nזמן ריצת הקוד עצמו (showPanel): ' + (typeof showPanelSec === 'number' ? showPanelSec.toFixed(1) + ' שניות' : 'לא נמדד');
+              if (typeof showPanelSec === 'number' && showPanelSec < renderElapsedSec - 1){
+                msg += ' — כלומר רוב הזמן לא בקוד שלנו אלא בדפדפן עצמו (ציור/פריסה של המסך)';
+              }
               alert(msg);
             });
           });
@@ -14085,7 +14090,20 @@
         // פותח את אותו פאנל הניהול פעם שנייה — בדיוק אותו רינדור כבד כפול,
         // רק ממקור אחר. זה תוקן עכשיו בתוך attemptRestoreAdminView() עצמו
         // (ראה שם).
+        // אבחון נוסף (09.09.2026, סבב שני): הבדיקה הקודמת (ר' panelRenderCallLog
+        // למעלה) הראתה ש-renderWeekCal() בכלל לא רצה (0 פעמים) בזמן שהאבחון
+        // הכולל עדיין הראה 14 שניות — כלומר זו לא בעיה של "בונים את היומן
+        // כמה פעמים". מודדים כאן ישירות כמה זמן הקריאה הסינכרונית ל-
+        // showPanel() עצמה לוקחת (שורת קוד ל-JS, נמדדת עם performance.now()
+        // לפני ואחרי הקריאה). אם המספר הזה יוצא קטן (הקוד עצמו רץ מהר) בזמן
+        // שהאבחון הכולל עדיין מראה 14 שניות — זו תהיה הוכחה שהעיכוב לא בקוד
+        // שלנו בכלל, אלא בעבודת הצביעה/פריסה (layout/paint) שהדפדפן עצמו
+        // עושה כשהוא הופך בפעם הראשונה תת-עץ DOM גדול (היומן, שכבר נבנה קודם
+        // כשהפאנל היה display:none) לגלוי — עבודה שקורית בתוך מנוע הדפדפן
+        // ולא ניתנת למדידה מתוך שום פונקציית JS.
+        const __showPanelStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
         if (pendingBusinessBtn && !document.body.classList.contains('admin-mode')) showPanel('business', pendingBusinessBtn);
+        window.__lastShowPanelSyncSec = Math.round((((typeof performance !== 'undefined' ? performance.now() : Date.now()) - __showPanelStart) / 1000) * 10) / 10;
         pendingBusinessBtn = null;
         // ה"ברוכה הבאה" עם הסבר על כל טאב הוסר לגמרי — היא ביקשה, מיותר לה
         // עכשיו שהיא כבר מכירה את המערכת. ראה גם הערת ה-HTML שהייתה מעל
