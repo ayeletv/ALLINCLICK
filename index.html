@@ -1160,22 +1160,49 @@
   }
   body.admin-mode .biz-topbar{display:flex;}
   .biz-topbar-inner{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    display:flex; align-items:center; gap:8px;
     max-width:1040px; margin:0 auto; width:100%;
     padding:10px 3vw;
-    /* The row itself spans the full bar width (including the empty middle
-       gap between the two button clusters), but only the buttons inside it
+    /* was justify-content:space-between with just 2 children (toggle, icons)
+       — now that #bizTopbarCalFilters sits between them (see its own comment
+       just below), space-between would blow the gap between it and the icons
+       cluster wide open instead of keeping everything snug next to the
+       hamburger as she asked ("צמוד לריבוע הזהב"). flex-wrap stays nowrap on
+       purpose: if the three selects ever don't fit, they should visibly
+       overflow/shrink (see #bizTopbarCalFilters min-width:0) rather than
+       wrap this bar onto a second line, which would only add back the exact
+       height this whole change exists to remove. */
+    flex-wrap:nowrap;
+    /* The row itself spans the full bar width, but only the buttons inside it
        should actually catch clicks — otherwise that invisible middle strip
        would sit on top of the backdrop/whatever's underneath, at this
        z-index, and silently swallow taps meant for them. */
     pointer-events:none;
   }
   .biz-topbar-inner > *{pointer-events:auto;}
+  /* ROUND 4 (09.09.2026): יומן/דוחות + שבועי/יומי/חודשי + כולם, relocated here
+     from their previous home (#overviewInnerTabRow, inside the scrolling
+     panel content — see the HTML comment above #inner-overview-calendar for
+     the full history/reasoning). Pushed to the far end (away from the
+     hamburger) via margin-inline-start:auto on .cal-topbar-icons below, so
+     the visual order reads [hamburger] [these 3 selects] ... [🖨️➕🚪], with
+     this group hugging the hamburger as she asked. min-width:0 + the tighter
+     per-select max-width override right below are both needed so 3 selects
+     can actually fit next to the hamburger AND the 3 icon buttons on one
+     390px-wide line without wrapping — verified in
+     test_topbar_calfilters_merge.js at 0/1/3-staff scenarios. */
+  .biz-topbar-cal-filters{display:flex; align-items:center; gap:5px; min-width:0; flex-shrink:1;}
+  .biz-topbar-cal-filters .cal-mini-btn{max-width:76px;}
+  .biz-topbar-cal-filters .mini-select{font-size:10.5px; padding:5px 20px 5px 8px;}
+  .biz-topbar-cal-filters .cal-mini-btn{padding:5px 8px 5px 18px; background-position:left 7px center;}
+  @media (max-width:480px){
+    .biz-topbar-cal-filters .cal-mini-btn{max-width:64px;}
+  }
   /* The 3 action icons (🖨️ my-day / ➕ add-appointment / 🚪 exit) that used to
      live inside the now-removed colored .cal-topbar card — .cal-icon-btn/
      .cal-topbar-icons keep their original names since other test/selector
      code already keys off them, they just live here now. */
-  .cal-topbar-icons{display:flex; gap:6px;}
+  .cal-topbar-icons{display:flex; gap:6px; flex-shrink:0; margin-inline-start:auto;}
   .cal-icon-btn{
     width:38px; height:38px; border-radius:10px; border:1.5px solid rgba(var(--panel-line-rgb),0.2);
     background:var(--panel-card-bg); color:var(--panel-text); font-size:16px;
@@ -3072,6 +3099,48 @@
     <button type="button" class="biz-subnav-toggle" id="bizSubNavToggle" onclick="toggleBizSubNavDrawer()" aria-haspopup="true" aria-expanded="false" aria-controls="bizSubNavDrawer" aria-label="תפריט ניווט">
       <span class="biz-subnav-toggle-bars" aria-hidden="true"></span>
     </button>
+    <!-- ROUND 4 (09.09.2026, same space-reclaiming request as the ROUND 1/2/3
+         history near #inner-overview-calendar below): she asked to move
+         יומן/דוחות + שבועי/יומי/חודשי + כולם up ONE MORE level, off the
+         scrolling panel content entirely and onto this fixed top bar itself,
+         right next to the gold hamburger button — not just sharing a line
+         inside the panel like rounds 1-3 did. This is a real (not cosmetic)
+         win for computeMobileHourBandHeight()/fitWeekCalToViewport(): both
+         measure available space from #weekCalWrap's own getBoundingClientRect().top,
+         so removing this whole row from the scrolling flow moves that top
+         edge up by the row's full height — directly growing the space the
+         6-hour grid gets to fit into before MOBILE_HOUR_BAND_MIN_HEIGHT's
+         floor can ever engage. Explicitly conditional on this actually
+         working on her real phone (her words: "אם זה יעשה את השינוי הזה אם
+         לא יצליח אין עניין") — verified in headless-browser testing at her
+         exact 390x844 screenshot viewport, with 0/1/3-staff scenarios, that
+         all three selects still fit on this one line without wrapping (see
+         test_topbar_calfilters_merge.js) — but only her own device can
+         confirm the real-world outcome; if it doesn't hold up there, revert
+         to the previous #overviewInnerTabRow (still described in the ROUND
+         1/2/3 comment below) rather than keep a squeeze that doesn't pay off.
+         Same underlying elements/IDs/onchange handlers as before (untouched
+         JS — onOverviewInnerTabChange/setOverviewView/onCalStaffFilterSelectChange/
+         renderStaffFilterRow all still do document.getElementById(...), so
+         moving the markup here doesn't require touching any of them), just a
+         new home + more compact sizing (.biz-topbar-cal-filters below) so
+         they fit next to the hamburger and the existing 🖨️/➕/🚪 icons without
+         this bar wrapping onto a second line (which would only add back the
+         height this whole change is trying to remove). -->
+    <div class="biz-topbar-cal-filters" id="bizTopbarCalFilters">
+      <select id="overviewInnerTabSelect" class="mini-select cal-mini-btn cal-mini-btn-primary" onchange="onOverviewInnerTabChange(this)">
+        <option value="inner-overview-calendar" selected>יומן</option>
+        <option value="inner-overview-reports">דוחות</option>
+      </select>
+      <span id="calWeekFiltersInline" style="display:flex; gap:5px;">
+        <select id="calViewModeSelect" class="mini-select cal-mini-btn" onchange="setOverviewView(this.value)">
+          <option value="week" selected>שבועי</option>
+          <option value="day">יומי</option>
+          <option value="month">חודשי</option>
+        </select>
+        <select id="calStaffFilterSelect" class="mini-select cal-mini-btn" onchange="onCalStaffFilterSelectChange(this)"></select>
+      </span>
+    </div>
     <div class="cal-topbar-icons">
       <button type="button" class="cal-icon-btn" onclick="openMyDayView()" title="תצוגת היום שלי" aria-label="תצוגת היום שלי">🖨️</button>
       <button type="button" class="cal-icon-btn" onclick="openManualBookingModal()" title="הוספת תור ידנית" aria-label="הוספת תור ידנית">➕</button>
@@ -3501,31 +3570,20 @@
            round 2: just the יומן/דוחות select and the שבועי/כולם selects share
            this line; #weekNavRow is back in its own #calChromeRow row below,
            inside #inner-overview-calendar (see the comment there). -->
-      <!-- She reported: "בקירה הכפתורים צמודים מאוד למסגרת... תוריד למטה" —
-           this row is the very first element in the whole "סקירה" tab, so
-           with no top spacing of its own the יומן/דוחות + שבועי/כולם select-
-           buttons sit flush against the top of the panel. PADDING-top, not
-           margin-top — see the big .inner-switcher CSS comment (round 4) for
-           exactly why: #panel-business (an ancestor) has no padding-top/
-           border-top of its own, so a first-child's margin-top CSS-collapses
-           straight through it, just exposing more dark background above the
-           whole light panel instead of creating real space between this row
-           and the button. padding-top stays inside the row's own box, same
-           fix, same reasoning, different tab. -->
-      <div class="cal-chrome-row" id="overviewInnerTabRow" style="padding-top:14px; margin-bottom:8px;">
-        <select id="overviewInnerTabSelect" class="mini-select cal-mini-btn cal-mini-btn-primary" onchange="onOverviewInnerTabChange(this)">
-          <option value="inner-overview-calendar" selected>יומן</option>
-          <option value="inner-overview-reports">דוחות</option>
-        </select>
-        <span id="calWeekFiltersInline" style="display:flex; gap:8px;">
-          <select id="calViewModeSelect" class="mini-select cal-mini-btn" onchange="setOverviewView(this.value)">
-            <option value="week" selected>שבועי</option>
-            <option value="day">יומי</option>
-            <option value="month">חודשי</option>
-          </select>
-          <select id="calStaffFilterSelect" class="mini-select cal-mini-btn" onchange="onCalStaffFilterSelectChange(this)"></select>
-        </span>
-      </div>
+      <!-- ROUND 4 (09.09.2026): this row (יומן/דוחות + שבועי/יומי/חודשי + כולם,
+           previously right here as #overviewInnerTabRow) moved up again — off
+           the scrolling panel entirely, onto the fixed top bar next to the
+           gold hamburger button. See the big comment on #bizTopbarCalFilters
+           near <div class="biz-topbar" id="bizTopbar"> above for the full
+           reasoning (it's a real vertical-space win for
+           computeMobileHourBandHeight(), not just cosmetic) and for why it's
+           still explicitly conditional on her real-device test. The three
+           <select> elements/IDs themselves are unchanged and still keep the
+           reports-tab PIN gate and staff-count-based show/hide logic exactly
+           as before (onOverviewInnerTabChange/renderStaffFilterRow don't care
+           where in the DOM their elements live) — nothing left here to
+           duplicate; if this round ever needs reverting, the exact previous
+           markup is preserved in this file's own history. -->
       <div id="inner-overview-calendar" class="inner-subpanel active">
       <!-- #statApptsToday/#statOpenSlots/#calSectionLabel stay in the markup,
            hidden, purely so renderOverviewStats()/setOverviewView() keep
@@ -3942,7 +4000,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.09-ביצועים-איחוד-הדבקות-יומן-v33</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.09-כפתורי-יומן-לסרגל-עליון-ואבחון-showPanel-v34</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -14117,9 +14175,16 @@
         // עושה כשהוא הופך בפעם הראשונה תת-עץ DOM גדול (היומן, שכבר נבנה קודם
         // כשהפאנל היה display:none) לגלוי — עבודה שקורית בתוך מנוע הדפדפן
         // ולא ניתנת למדידה מתוך שום פונקציית JS.
-        const __showPanelStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
-        if (pendingBusinessBtn && !document.body.classList.contains('admin-mode')) showPanel('business', pendingBusinessBtn);
-        window.__lastShowPanelSyncSec = Math.round((((typeof performance !== 'undefined' ? performance.now() : Date.now()) - __showPanelStart) / 1000) * 10) / 10;
+        // תיקון (סבב רביעי): הגרסה הקודמת עדכנה את window.__lastShowPanelSyncSec
+        // תמיד, גם כשה-if למטה לא קרא בפועל ל-showPanel() (כי attemptRestoreAdminView
+        // כבר פתחה את הפאנל קודם לכן) — מה שדרס בשקט מדידה אמיתית שכבר
+        // נרשמה שם ברגע מוקדם יותר, בקריאת "כמעט אפס" חסרת משמעות. עכשיו
+        // המדידה נכתבת רק כשבאמת קראנו כאן ל-showPanel().
+        if (pendingBusinessBtn && !document.body.classList.contains('admin-mode')){
+          const __showPanelStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+          showPanel('business', pendingBusinessBtn);
+          window.__lastShowPanelSyncSec = Math.round((((typeof performance !== 'undefined' ? performance.now() : Date.now()) - __showPanelStart) / 1000) * 10) / 10;
+        }
         pendingBusinessBtn = null;
         // ה"ברוכה הבאה" עם הסבר על כל טאב הוסר לגמרי — היא ביקשה, מיותר לה
         // עכשיו שהיא כבר מכירה את המערכת. ראה גם הערת ה-HTML שהייתה מעל
@@ -14281,8 +14346,20 @@
     // השני (שלא כוסה בתיקון הקודם ב-doLogin) לעיכוב הארוך שהיא דיווחה עליו
     // אחרי התחברות: לא תקיעות רשת, אלא שתי כניסות נפרדות לאותו פאנל —
     // התחברות עצמה, ואחר כך השחזור הזה שוב — כל אחת מרנדרת הכל מחדש.
+    // אבחון (09.09.2026, סבב רביעי): שני סבבים רצופים שהיא דיווחה עליהם הראו
+    // "זמן ריצת הקוד עצמו (showPanel) לא נמדד" — כי מדדנו רק את הקריאה
+    // ל-showPanel() בתוך doLogin's .then(), אבל בפועל בכל הבדיקות האמיתיות
+    // שלה הפאנל נפתח מכאן, מ-attemptRestoreAdminView(), לא משם (ר' ההערה
+    // למעלה - נכון כשטעינת הענן איטית/מסתיימת אחרי שה-onAuthStateChanged
+    // כבר ירה). אותה מדידה בדיוק, כאן, כדי שסוף-סוף יהיה מספר אמיתי גם
+    // בנתיב הזה — משתמשת באותו window.__lastShowPanelSyncSec ששני חלונות
+    // האבחון כבר מציגים, כך שלא צריך לשנות שום דבר בתצוגה עצמה.
+    // אותו תיקון בדיוק כמו ב-doLogin (ר' ההערה שם): נמדד רק כשבאמת קראנו
+    // כאן ל-showPanel(), אחרת אפשר לדרוס בטעות מדידה אמיתית שכבר נרשמה.
     if (!document.body.classList.contains('admin-mode')){
+      const __showPanelStart2 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
       showPanel('business', bizBtn);
+      window.__lastShowPanelSyncSec = Math.round((((typeof performance !== 'undefined' ? performance.now() : Date.now()) - __showPanelStart2) / 1000) * 10) / 10;
     }
     if (saved.subTab && saved.subTab !== 'overview'){
       var tabBtn = document.querySelector('#bizSubNavRow button[onclick*="\'' + saved.subTab + '\'"]');
