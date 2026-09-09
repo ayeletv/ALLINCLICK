@@ -3930,7 +3930,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.09-אבחון-זמני-התחברות-v28</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.09-אבחון-רינדור-פאנל-v29</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -13656,6 +13656,7 @@
     return { effectiveType: c.effectiveType || null, downlinkMbps: c.downlink || null, rttMs: c.rtt || null, saveData: !!c.saveData };
   }
   let loginTimingDiagShown = false;
+  let panelRenderDiagShown = false;
   function showLoginTimingDiagOnce(){
     if (loginTimingDiagShown) return;
     loginTimingDiagShown = true;
@@ -13955,6 +13956,33 @@
         // אחרי זה, רק בפעם הראשונה אחרי טעינת הדף. יש להוריד את זה שוב אחרי
         // שהיא תדווח מה המספרים בפועל ונבין אם יש מה לתקן.
         showLoginTimingDiagOnce();
+        // המשך אבחון (09.09.2026): היא דיווחה שגם אחרי חלון האבחון הזה —
+        // ההתחברות עצמה (1.1 שניות) וטעינת הענן (0.5 שניות) — עדיין יש עוד
+        // כ-15 שניות המתנה בין הלחיצה על "אישור" בחלון לבין שהיא בפועל רואה
+        // את פאנל הניהול. זה אומר שהאיטיות היא לא ברשת בכלל, אלא ב"ציור"
+        // בפועל של פאנל הניהול/היומן על המסך אחרי זה (עומס על המעבד של
+        // הטלפון, לא על החיבור). מודדים כאן בדיוק את הפרק הזה: מרגע שהיא
+        // סוגרת את חלון האבחון ועד אחרי ש-2 requestAnimationFrame עברו
+        // (מבטיח שכל עבודת ה-DOM הסינכרונית — כולל showPanel()/
+        // attemptRestoreAdminView() למטה — כבר הסתיימה ונצבעה בפועל על
+        // המסך). מוצג בחלון alert נוסף, פעם אחת, מאותה סיבה בדיוק שהוחזר
+        // האבחון הקודם — כדי שתוכל לצלם בלי כלי פיתוח. יש להסיר את שניהם
+        // יחד אחרי שנבין את המספר ונחליט אם/מה לתקן.
+        // panelRenderDiagShown — אותה סיבה בדיוק כמו loginTimingDiagShown:
+        // בלי השמירה הזו זה היה קופץ בכל התחברות חוזרת באותה טעינת דף, לא רק
+        // פעם אחת.
+        if (!panelRenderDiagShown){
+          panelRenderDiagShown = true;
+          const postAlertDiagStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+          requestAnimationFrame(function(){
+            requestAnimationFrame(function(){
+              const renderElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - postAlertDiagStart) / 1000;
+              window.__lastPanelRenderDiag = { elapsedSec: Math.round(renderElapsedSec * 10) / 10 };
+              console.log(`Panel render after login-alert dismissal took ${renderElapsedSec.toFixed(1)}s.`);
+              alert('אבחון נוסף — רינדור פאנל הניהול אחרי לחיצה על "אישור": ' + renderElapsedSec.toFixed(1) + ' שניות');
+            });
+          });
+        }
         restoreBtn();
         closeLoginOverlay();
         document.getElementById('loginEmail').value = '';
