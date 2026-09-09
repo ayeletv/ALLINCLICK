@@ -82,6 +82,18 @@
     appId: "1:737599524118:web:d0cf35be864f1e773c9437"
   };
   let db, auth;
+  // אבחון-פירוט (09.09.2026, ר' פירוט מלא ליד ההגדרה הישנה שהייתה כאן קודם
+  // ליד showLoginTimingDiagOnce): כשזה מערך, renderWeekCal() רושמת אליו כל
+  // ריצה שלה עצמה. הוגדר כאן, ממש בהתחלת הסקריפט — לא ליד שאר קוד האבחון
+  // למטה — כי renderWeekCal() עצמה נקראת פעם אחת באופן סינכרוני מוקדם מאוד
+  // (בסוף טעינת הדף, עוד לפני שהסקריפט מגיע לקוד האבחון). בדיקה ראשונית
+  // (שגויה) שהניחה ש-typeof על משתנה עם let שעדיין לא הוגדר פשוט מחזיר
+  // 'undefined' התבררה כשגויה: על משתנה עם let/const שכן קיים בהמשך אותו
+  // scope אבל עוד לא הגיע לשורת ההגדרה שלו (temporal dead zone), typeof
+  // דווקא זורק שגיאה — וזה בדיוק מה שקרה כאן וגרם לדף כולו "להישבר" בשקט
+  // (ר' ה-postmortem שהוביל לתיקון הזה). הפתרון: להגדיר את המשתנה כאן,
+  // ברגע הראשון האפשרי, כך שעד שרנדר-וויק-קאל נקראת לראשונה הוא כבר קיים.
+  let panelRenderCallLog = null;
   // Resolves once the invisible anonymous sign-in below has settled (success
   // OR failure). The cloud-load code waits on this before its very first read,
   // so a brand new browser session doesn't fire a Firestore read a beat before
@@ -3930,7 +3942,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.09-אבחון-רינדור-פאנל-v29</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.09-אבחון-פירוט-רינדור-v31</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -8990,6 +9002,17 @@
     return allClosed ? { reason } : null;
   }
   function renderWeekCal(){
+    // אבחון (09.09.2026): היא דיווחה שגם אחרי חלון "רינדור פאנל הניהול" (ר'
+    // panelRenderDiagShown למטה) שמראה שהציור הכולל של הפאנל לוקח כ-14
+    // שניות, עדיין לא ידוע איזה חלק בפנים לוקח את רוב הזמן. renderWeekCal()
+    // (הפונקציה הזו) בונה מחדש את כל טבלת היומן השבועית — כולל כל התאים,
+    // התורים, חסימות הזמן ועמודת הבקשות המיוחדות — וזה החשוד המרכזי, בעיקר
+    // כי fitWeekCalToViewport() (בסוף הפונקציה הזו, ובכמה מקומות אחרים
+    // ב-showPanel()) יכולה לקרוא לה שוב אם היא מזהה שגובה-השורה בפועל השתנה,
+    // ובטלפון איטי/לא יציב זה עלול לקרות כמה פעמים ברצף. נמדד ונרשם רק כשיש
+    // "חלון לכידה" פעיל (panelRenderCallLog מאותחל למערך) — כלומר רק בדיוק
+    // בפרק הזמן שאחרי התחברות מנהלת, לא בכל לחיצה רגילה ביומן.
+    const __rwcDiagStart = Array.isArray(panelRenderCallLog) ? (typeof performance !== 'undefined' ? performance.now() : Date.now()) : null;
     const calEl = document.getElementById('weekCal');
     if (!calEl) return;
     const navLabelEl = document.getElementById('weekNavLabel');
@@ -9360,6 +9383,16 @@
     // only this calendar box scrolls internally, sized to fit whatever room is
     // actually left below it.
     if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
+    // חלק ב' של אבחון הרינדור (ר' ההערה בתחילת הפונקציה): רושמים כמה זמן
+    // הריצה הזו עצמה לקחה, רק בזמן שיש חלון-לכידה פעיל. הערה: fitWeekCalToViewport()
+    // שזה עתה נקראה למעלה יכולה לגרום לקריאה מקוננת נוספת ל-renderWeekCal()
+    // (אם גובה-השורה השתנה) — במקרה הזה המדידה שלה כבר נרשמה בנפרד לפני
+    // שהגענו לכאן, וה-ms שלנו כאן כולל גם את הזמן שלה (לא "זמן נטו" מדויק),
+    // אבל לצורך אבחון גס-אך-מהיר של "כמה renderWeekCal רץ וכמה זמן זה לקח
+    // בסך הכל" זה מספיק ועדיף על פני מורכבות נוספת.
+    if (__rwcDiagStart !== null && Array.isArray(panelRenderCallLog)){
+      panelRenderCallLog.push({ ms: Math.round(((typeof performance !== 'undefined' ? performance.now() : Date.now()) - __rwcDiagStart) * 10) / 10 });
+    }
   }
   // Free-text requests that couldn't be fit into a real slot — admin-only
   // data entry for this pass (no public/client-facing submission form).
@@ -12241,6 +12274,16 @@
   function closeApptLookup(){
     document.getElementById('apptLookupOverlay').classList.remove('show');
   }
+  // אבחון אופציונלי (09.09.2026): היא דיווחה שגם חיפוש תור ללקוחה (תעודת
+  // זהות) "לוקח יותר זמן מהרגיל", בדיוק כמו שדיווחה על ההתחברות כמנהלת. אבל
+  // בניגוד להתחברות כמנהלת (שרק היא עושה), את המסך הזה פותחות גם לקוחות
+  // אמיתיות — אז אסור שחלון alert יקפוץ להן. מוצג רק כשמוסיפים ?diag=1
+  // לכתובת (משהו שרק היא תדע להוסיף בזמן שהיא בודקת בעצמה), כדי שיהיה לה
+  // דרך למדוד את זה בלי כלי פיתוח ובלי להטריד אף לקוחה אחרת.
+  function isDiagMode(){
+    try { return new URLSearchParams(window.location.search).get('diag') === '1'; }
+    catch (e) { return false; }
+  }
   async function searchMyAppointment(){
     // תעודת זהות is the real identity key everywhere else in this app (booking,
     // waitlist) — a phone number can be shared by two people in the same
@@ -12257,6 +12300,7 @@
     // an appointment added or changed since then (e.g. by the business owner)
     // otherwise wouldn't show up here.
     resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">מחפשת...</p>';
+    const lookupDiagStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
     // תוקן: היא דיווחה שהחיפוש נתקע לצמיתות על "מחפשת..." בלי להראות שום
     // תוצאה. ה-await כאן לא היה מוגבל בזמן בכלל — אם הבקשה לענן נתקעת (חיבור
     // חלש בטלפון, חזרה מהרקע ל-Safari בעיצומה של הבקשה וכו') הפונקציה פשוט
@@ -12276,9 +12320,11 @@
     } catch (e) {
       console.error('Appointment lookup refresh failed, searching with last-known data:', e);
     }
+    const cloudElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - lookupDiagStart) / 1000;
     const client = clients.find(c => c.teudatZehut === digits) || clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits);
     if (!client){
       resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצאה לקוחה עם תעודת הזהות הזו.</p>';
+      if (isDiagMode()) alert('אבחון חיפוש תור: טעינת נתונים ' + cloudElapsedSec.toFixed(1) + ' שניות (לא נמצאה לקוחה)');
       return;
     }
     // בעבר הסינון היה רק לפי תאריך (>= חצות היום) — כך תור שכבר עבר היום
@@ -12304,6 +12350,7 @@
       // זהות (הזיהוי האמיתי כאן), טלפון הוא רק גיבוי ללקוחות ותיקות בלי תז
       // בכרטיסייה — ראה client למעלה. היא ציינה שזה מטעה.
       resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצא תור עתידי עבור תעודת הזהות שהוזנה.</p>';
+      if (isDiagMode()) alert('אבחון חיפוש תור: טעינת נתונים ' + cloudElapsedSec.toFixed(1) + ' שניות (אין תור עתידי)');
       return;
     }
     closeApptLookup();
@@ -12311,6 +12358,16 @@
     // one — otherwise a customer with more than one booking only ever sees one of
     // them here, which looks like the others were lost.
     renderLookedUpAppointment(upcoming);
+    if (isDiagMode()){
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){
+          const totalElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - lookupDiagStart) / 1000;
+          const renderElapsedSec = Math.max(0, totalElapsedSec - cloudElapsedSec);
+          window.__lastApptLookupDiag = { cloudElapsedSec: Math.round(cloudElapsedSec * 10) / 10, renderElapsedSec: Math.round(renderElapsedSec * 10) / 10 };
+          alert('אבחון חיפוש תור: טעינת נתונים ' + cloudElapsedSec.toFixed(1) + ' שניות, ציור התוצאה על המסך ' + renderElapsedSec.toFixed(1) + ' שניות');
+        });
+      });
+    }
   }
   let lookedUpAppointmentsList = [];
   function renderLookedUpAppointment(apptOrList){
@@ -13657,6 +13714,9 @@
   }
   let loginTimingDiagShown = false;
   let panelRenderDiagShown = false;
+  // panelRenderCallLog (המערך שרנדר-וויק-קאל כותבת אליו) מוגדר הרבה יותר
+  // למעלה, ממש בתחילת הסקריפט — ר' ההערה שם למה זה קריטי שהוא יוגדר לפני
+  // שרנדר-וויק-קאל נקראת בפעם הראשונה.
   function showLoginTimingDiagOnce(){
     if (loginTimingDiagShown) return;
     loginTimingDiagShown = true;
@@ -13974,12 +14034,29 @@
         if (!panelRenderDiagShown){
           panelRenderDiagShown = true;
           const postAlertDiagStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+          // פותחים את "חלון הלכידה" של renderWeekCal() בדיוק כאן, רגע לפני
+          // שקוראים בהמשך ל-showPanel('business', ...) (זה מה שבפועל מפעיל
+          // את כל הרינדור הכבד) — כך שכל ריצה שלה מהרגע הזה ועד שהאבחון נסגר
+          // תיספר. ר' ההערה ליד ההגדרה של panelRenderCallLog למעלה.
+          panelRenderCallLog = [];
           requestAnimationFrame(function(){
             requestAnimationFrame(function(){
               const renderElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - postAlertDiagStart) / 1000;
-              window.__lastPanelRenderDiag = { elapsedSec: Math.round(renderElapsedSec * 10) / 10 };
-              console.log(`Panel render after login-alert dismissal took ${renderElapsedSec.toFixed(1)}s.`);
-              alert('אבחון נוסף — רינדור פאנל הניהול אחרי לחיצה על "אישור": ' + renderElapsedSec.toFixed(1) + ' שניות');
+              const calLog = panelRenderCallLog || [];
+              const calCalls = calLog.length;
+              const calTotalMs = calLog.reduce((sum, entry) => sum + entry.ms, 0);
+              window.__lastPanelRenderDiag = { elapsedSec: Math.round(renderElapsedSec * 10) / 10, renderWeekCalCalls: calCalls, renderWeekCalTotalSec: Math.round(calTotalMs) / 1000 };
+              console.log(`Panel render after login-alert dismissal took ${renderElapsedSec.toFixed(1)}s. renderWeekCal ran ${calCalls} time(s), totaling ${(calTotalMs / 1000).toFixed(1)}s.`, calLog);
+              // סוגרים את חלון הלכידה — קריאות renderWeekCal אחריות (למשל
+              // מלחיצות רגילות שלה ביומן אחרי שהפאנל כבר פתוח) לא רלוונטיות
+              // לאבחון הזה ולא צריכות להימשך להיספר.
+              panelRenderCallLog = null;
+              let msg = 'אבחון נוסף — רינדור פאנל הניהול אחרי לחיצה על "אישור": ' + renderElapsedSec.toFixed(1) + ' שניות';
+              msg += '\nמתוך זה, בניית לוח היומן (renderWeekCal) רצה ' + calCalls + ' פעם/פעמים, סה"כ ' + (calTotalMs / 1000).toFixed(1) + ' שניות';
+              if (calCalls >= 2){
+                msg += ' (יותר מפעם אחת — כנראה בנייה חוזרת של אותו יומן, ראה הערה בקוד)';
+              }
+              alert(msg);
             });
           });
         }
