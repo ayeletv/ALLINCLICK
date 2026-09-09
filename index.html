@@ -3942,7 +3942,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.09-אבחון-שלב-showPanel-v32</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.09-ביצועים-איחוד-הדבקות-יומן-v33</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -9030,6 +9030,17 @@
       navLabelEl.textContent = rangeTxt + (weekOffset === 0 ? ' (השבוע)' : '');
     }
     calEl.innerHTML = '';
+    // ביצועים (09.09.2026, סבב שלישי): היא דיווחה בדיקה אמיתית שבה renderWeekCal
+    // עצמה לקחה 9 מתוך 17 שניות. עד עכשיו כל עמודת יום (col) הודבקה ל-DOM
+    // החי (calEl.appendChild(col)) בנפרד, שש פעמים ברצף בתוך הלולאה למטה,
+    // ועוד הדבקה נפרדת לעמודת השעות ולעמודת הבקשות המיוחדות — סה"כ 8 פעולות
+    // הדבקה נפרדות ל-DOM שכבר גלוי על המסך, שכל אחת יכולה לגרום לדפדפן
+    // לחשב מחדש פריסה/סגנון בנפרד. במקום זה, כל האלמנטים נבנים כאן לתוך
+    // DocumentFragment (מחוץ ל-DOM החי לגמרי), ורק בסוף הפונקציה כולם
+    // מודבקים ל-calEl בפעולה אחת יחידה — בדיוק אותם אלמנטים, באותו סדר
+    // מדויק, בלי שום שינוי חזותי — רק פחות "עבודה" שהדפדפן צריך לעשות תוך
+    // כדי הבנייה עצמה.
+    const calFragment = document.createDocumentFragment();
     const hoursCol = document.createElement('div');
     hoursCol.className = 'cal-hours-col';
     // See computeHourBandHeight() above — a flat 96 on desktop widths (every
@@ -9064,7 +9075,7 @@
       lbl.textContent = String(h).padStart(2, '0');
       hoursCol.appendChild(lbl);
     }
-    calEl.appendChild(hoursCol);
+    calFragment.appendChild(hoursCol);
     weekDays.forEach((day, dayIdx) => {
       const col = document.createElement('div');
       col.className = 'cal-day-col';
@@ -9366,13 +9377,18 @@
         body.appendChild(block);
       });
       col.appendChild(body);
-      calEl.appendChild(col);
+      calFragment.appendChild(col);
     });
     // Where Saturday's column used to be (the salon is closed Saturday, so a
     // real time-grid column there was useless) — a plain scrollable list of
     // free-text "בקשות מיוחדות" instead. Same total column count as before, so
     // .week-cal's layout/width math is unaffected.
-    calEl.appendChild(renderSpecialRequestsColumn((calEndHour - calStartHour) * hourBandHeight));
+    calFragment.appendChild(renderSpecialRequestsColumn((calEndHour - calStartHour) * hourBandHeight));
+    // ר' ההערה למעלה ליד יצירת calFragment: כל מה שנבנה מעל (עמודת השעות,
+    // כל עמודות הימים, עמודת הבקשות המיוחדות) מודבק ל-DOM החי כאן, בפעם
+    // הראשונה והיחידה, בפעולה אחת — בדיוק אותו תוכן שהיה נבנה קודם בשמונה
+    // הדבקות נפרדות.
+    calEl.appendChild(calFragment);
     renderOverviewStats();
     // Size the calendar's own scroll area to end exactly at the bottom of the
     // viewport — she asked for the calendar to be reachable with no page
