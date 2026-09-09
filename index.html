@@ -3930,7 +3930,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 07.09-תיקון-גובה-יומן-מובייל-v27</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.09-אבחון-זמני-התחברות-v28</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -13947,10 +13947,14 @@
         window.__lastLoginDiag = { elapsedSec: Math.round(loginElapsedSec * 10) / 10, networkBreakdown: (typeof getNetworkTimingBreakdown === 'function' ? getNetworkTimingBreakdown(loginStartedAt) : null) };
         console.log(`Login (signInWithEmailAndPassword) took ${loginElapsedSec.toFixed(1)}s.`);
         // היא דיווחה (אחרי כמה סבבים של מדידה) שההתחברות עכשיו מהירה בפועל,
-        // אז ה-alert החוסם שדרש "אישור" בכל התחברות כבר לא נחוץ ומיותר —
-        // המדידה עצמה (window.__lastLoginDiag, כולל פירוט הרשת דרך
-        // getNetworkTimingBreakdown) עדיין נשמרת בשקט בקונסול למקרה שיהיה
-        // צורך לאבחן שוב בעתיד, פשוט בלי לקפוץ למשתמשת בכל כניסה.
+        // אז ה-alert החוסם שדרש "אישור" בכל התחברות הוסר אז — אבל היא
+        // דיווחה עכשיו (09.09.2026) שוב על 16 שניות, ספציפית בטלפון, ובטלפון
+        // אין לה גישה נוחה לכלי הפיתוח/קונסול כדי לקרוא את window.__lastLoginDiag
+        // בעצמה. אז מחזירים את ה-alert החוסם זמנית — מוצג פעם אחת בלבד לכל
+        // טעינת דף (loginTimingDiagShown) כך שהוא לא יקפוץ בכל התחברות חוזרת
+        // אחרי זה, רק בפעם הראשונה אחרי טעינת הדף. יש להוריד את זה שוב אחרי
+        // שהיא תדווח מה המספרים בפועל ונבין אם יש מה לתקן.
+        showLoginTimingDiagOnce();
         restoreBtn();
         closeLoginOverlay();
         document.getElementById('loginEmail').value = '';
