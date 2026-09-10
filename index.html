@@ -1205,8 +1205,13 @@
      שתיארה). התיקון: רקע בהיר מוצק (כמו כפתורי האייקון 🖨️/➕/🚪 שכבר יושבים
      כאן ומנוגדים היטב), עם צבע הטקסט/המסגרת של כל סלקט משמש עכשיו רק
      להבחנה בין השלושה — לא כמילוי הרקע. #overviewInnerTabSelect (יומן/דוחות)
-     שומר על מילוי מלא, אבל בזהב (כמו כפתור ההמבורגר לידו) במקום יין, כדי
-     שיישאר "הבולט מביניהם" בדיוק כמו קודם, רק בצבע שבאמת בולט על הרקע הזה. */
+     שומר על מילוי מלא כדי שיישאר "הבולט מביניהם" בדיוק כמו קודם — אבל לא
+     בזהב: היא ציינה בצדק שזהב ממש ליד כפתור ההמבורגר הזהוב עצמו נראה "דומה
+     מדי", כאילו זה חלק מאותו כפתור. במקום זה, --sage — הירוק הבהיר שכבר
+     קיים באתר (סטטוס "הגיעה"/מתג מופעל/עמודת הפופולריים ברשימת השירותים,
+     ר' :root למעלה) — צבע אחר לגמרי מזהב/יין, כך שקל להבחין בין שלושת
+     האלמנטים (זהב=המבורגר, ירוק=יומן/דוחות, בהיר=שבועי/כולם) בלי שניים
+     מהם "יתחרו" זה בזה. */
   .biz-topbar-cal-filters .mini-select,
   .biz-topbar-cal-filters .cal-mini-btn{
     background-color:var(--panel-card-bg);
@@ -1215,24 +1220,32 @@
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239B2C42' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
   .biz-topbar-cal-filters #calStaffFilterSelect.cal-mini-btn{
+    /* היא צדקה — "כולם" נשאר כמעט שקוף. הסיבה: הכלל הבסיסי המקורי של
+       #calStaffFilterSelect.cal-mini-btn (מעל, מיועד לרקע הבהיר של הפאנל)
+       כן קובע background-color משלו (rgba(122,94,12,0.10) — גוון זהב שקוף
+       כמעט לגמרי), וזה מנצח: ה-selector כאן לא הצהיר על background-color
+       בכלל עד עכשיו, אז ה-cascade פשוט ממשיך להשתמש בהצהרה היחידה שקיימת
+       (הכלל הבסיסי), ללא קשר לסגוליות הגבוהה יותר של ה-selector הזה — CSS
+       מתחרה per-property, לא per-rule. תיקון: להצהיר במפורש גם כאן. */
+    background-color:var(--panel-card-bg);
     color:var(--panel-gold);
     border-color:rgba(122,94,12,0.5);
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A5E0C' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
   .biz-topbar-cal-filters .cal-mini-btn-primary{
-    background-color:var(--gold);
-    background-image:linear-gradient(135deg, var(--gold), #A9800F);
+    background-color:var(--sage);
+    background-image:linear-gradient(135deg, var(--sage), #5F7856);
     color:var(--ink);
     border-color:rgba(255,255,255,0.35);
     font-weight:700;
   }
-  /* Same arrow, drawn in --ink so it's visible against the gold fill above —
+  /* Same arrow, drawn in --ink so it's visible against the sage fill above —
      background-image is declared twice on purpose (the gradient fill above,
      this override below) since background-image is a single property and
      a <select>'s arrow + its fill both need to live in it; layering both
      into one value here instead of fighting the cascade. */
   .biz-topbar-cal-filters .cal-mini-btn-primary{
-    background-image:linear-gradient(135deg, var(--gold), #A9800F), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23141014' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-image:linear-gradient(135deg, var(--sage), #5F7856), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23141014' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
   /* The 3 action icons (🖨️ my-day / ➕ add-appointment / 🚪 exit) that used to
      live inside the now-removed colored .cal-topbar card — .cal-icon-btn/
@@ -4049,7 +4062,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.09-תיקון-ניגודיות-והסתרה-בטאבים-אבחון-גובה-v35</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.10-כפתור-כולם-והצג-עוד-בביטולים-v38</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -6681,13 +6694,47 @@
     if (!data.cancellations.length){
       cancelEl.innerHTML = '<div class="cancel-row" style="color:#8A8178;">אין ביטולים בטווח זה</div>';
     }
-    data.cancellations.forEach(c => {
+    // תיקון (09.10.2026): היא ציינה בצדק — טווח ארוך (חודש, טווח מותאם אישית)
+    // יכול להצטבר לרשימת ביטולים ארוכה, "לא מעניין" לגלול דרך כולה. אותו
+    // דיוק כמו רשימת ביקורי לקוחה (renderClientAppointmentRows) — מציגים רק
+    // את 3 הראשונות, ושאר השורות בעטיפה מוסתרת עם כפתור "הצג עוד" שמחליף
+    // בין "הצג עוד"/"הצג פחות". נעשה שימוש חוזר מכוון באותם class-ים בדיוק
+    // (.visit-show-more-btn/.visit-rows-rest) — לא רק כי הם כבר מעוצבים
+    // נכון, אלא כדי שההתנהגות תהיה עקבית עם מה שהיא כבר מכירה מלקוחות.
+    const CANCEL_LIST_PAGE_SIZE = 3;
+    function buildCancelRow(c){
       const row = document.createElement('div');
       row.className = 'cancel-row';
       const dateLbl = c.date ? c.date.split('-').reverse().join('/') : '';
       row.innerHTML = `<span class="c-date">${dateLbl}${c.time ? ' · ' + c.time : ''}</span><span class="c-client">${c.client || 'לקוחה'}</span><span class="c-detail">${c.service || ''}${c.staffName ? ' · ' + c.staffName : ''}</span>`;
-      cancelEl.appendChild(row);
-    });
+      return row;
+    }
+    if (data.cancellations.length > CANCEL_LIST_PAGE_SIZE){
+      data.cancellations.slice(0, CANCEL_LIST_PAGE_SIZE).forEach(c => cancelEl.appendChild(buildCancelRow(c)));
+      const restWrap = document.createElement('div');
+      restWrap.className = 'visit-rows-rest';
+      restWrap.style.display = 'none';
+      data.cancellations.slice(CANCEL_LIST_PAGE_SIZE).forEach(c => restWrap.appendChild(buildCancelRow(c)));
+      cancelEl.appendChild(restWrap);
+      const showMoreBtn = document.createElement('button');
+      showMoreBtn.type = 'button';
+      showMoreBtn.className = 'visit-show-more-btn';
+      showMoreBtn.style.cssText = 'width:100%; background:none; border:1px dashed rgba(var(--panel-line-rgb),0.2); color:var(--panel-text-dim); border-radius:8px; font-size:12px; padding:6px; margin-top:4px; cursor:pointer;';
+      showMoreBtn.textContent = `הצג עוד (${data.cancellations.length - CANCEL_LIST_PAGE_SIZE})`;
+      // אותו תבנית replace בדיוק כמו .visit-show-more-btn הקיים (renderClientAppointmentRows
+      // ומקומות אחרים) — כולל אותה התנהגות: המספר בסוגריים נשאר צמוד גם
+      // כש"הצג פחות" מוצג ("הצג פחות (5)"), בכוונה, לעקביות עם מה שכבר קיים.
+      showMoreBtn.onclick = () => {
+        const nowShowing = restWrap.style.display !== 'none';
+        restWrap.style.display = nowShowing ? 'none' : 'block';
+        showMoreBtn.textContent = nowShowing
+          ? showMoreBtn.textContent.replace('הצג פחות', 'הצג עוד')
+          : showMoreBtn.textContent.replace('הצג עוד', 'הצג פחות');
+      };
+      cancelEl.appendChild(showMoreBtn);
+    } else {
+      data.cancellations.forEach(c => cancelEl.appendChild(buildCancelRow(c)));
+    }
     // Kept around so the export/print/email actions below can reuse exactly what's
     // on screen, instead of recomputing (and risking drifting from what the admin
     // actually sees if she flips the range again before clicking one of them).
@@ -12878,10 +12925,28 @@
   // than trust whatever's already in memory, every gated click now pulls the
   // real, current code from the cloud FIRST and only then decides — closing
   // that whole class of staleness down to a single quick network round-trip.
+  // תיקון (09.10.2026): "עברתי מיומן לדוחות — לא עובר, נשאר על היומן". מצאתי
+  // את הבאג — בדיוק אותה מחלקה בדיוק כמו הבאג שכבר תוקן פעם באתר הזה
+  // ב-searchMyAppointment() ("נתקע לצמיתות על 'מחפשת...'"), רק שכאן, בנתיב
+  // הזה, לא תוקן מעולם: ה-await/.then() כאן לא היה מוגבל בזמן בכלל. כל
+  // מעבר לטאב חסום (כולל "דוחות" — הוא חסום כברירת מחדל, ר' gatedTabsConfig
+  // למעלה) עובר קודם דרך CLOUD_DOC.get() כאן, ורק אחרי שהוא נפתר מחליטים אם
+  // להראות את הטאב. אם הבקשה הזו נתקעת בפועל (חיבור חלש בטלפון, חזרה
+  // מהרקע ל-Safari בעיצומה של הבקשה וכו') — ה-.then() שממשיך את כל התהליך
+  // (כולל showInnerTab/showSub שבפועל מחליפים את מה שרואים על המסך) פשוט
+  // אף פעם לא רץ, וגם ה-.catch() לא עוזר (הוא תופס דחייה, לא היעדר-תגובה
+  // לצמיתות) — בדיוק "לא עובר, נשאר על היומן" בלי שום הודעת שגיאה. אותו
+  // תיקון בדיוק כמו שם: הגבלת זמן של 8 שניות, ואם אין תשובה עד אז ממשיכים
+  // עם מה שכבר יש בזיכרון (בדיוק כמו שההערה למטה תמיד התכוונה שיקרה
+  // ב-offline/כישלון אמיתי — עכשיו זה קורה גם כשהבקשה פשוט נתקעת, לא רק
+  // כשהיא נכשלת בבירור).
   function refreshOwnerAccessCodeFromCloud(){
     if (typeof CLOUD_DOC === 'undefined' || !CLOUD_DOC) return Promise.resolve();
-    return CLOUD_DOC.get().then(doc => {
-      if (doc.exists){
+    return Promise.race([
+      CLOUD_DOC.get(),
+      new Promise(resolve => setTimeout(() => resolve(null), 8000))
+    ]).then(doc => {
+      if (doc && doc.exists){
         const d = doc.data();
         if (typeof d.ownerAccessCode === 'string') ownerAccessCode = d.ownerAccessCode;
         // Which tabs are gated is just as subject to the same staleness as the
