@@ -1259,6 +1259,17 @@
     transition:border-color 0.2s ease;
   }
   .cal-icon-btn:hover{border-color:var(--gold);}
+  /* ROUND 7: כשה-select של תפריט הפעולות המאוחד (🖨️/➕/🚪 -> "+" אחד, ר' ההערה
+     ליד המרקאפ שלו) לובש את .cal-icon-btn, עדיין צריך לבטל את מראה ה-select
+     הטבעי (חץ נפתח, ריפוד פנימי לא-סימטרי) כדי שהוא ייראה בדיוק כמו שלושת
+     כפתורי ה-🖨️/➕/🚪 המרובעים שהחליף — לא כמו עוד select עם חץ, שכבר יש כמה
+     מהם משמאלו (יומן/דוחות, שבועי/יומי/חודשי, כולם). */
+  select.cal-actions-menu-select{
+    appearance:none; -webkit-appearance:none; -moz-appearance:none;
+    text-align:center; text-align-last:center; text-indent:0;
+    background-image:none !important;
+  }
+  select.cal-actions-menu-select::-ms-expand{display:none;}
   /* Now that .biz-topbar itself is a wine-gradient bar (see its own comment
      above), a wine-colored toggle button on top of it would nearly vanish —
      so this switched to the app's other accent, gold, the same color used
@@ -3203,10 +3214,25 @@
         <select id="calStaffFilterSelect" class="mini-select cal-mini-btn" onchange="onCalStaffFilterSelectChange(this)"></select>
       </span>
     </div>
+    <!-- ROUND 7 (09.10.2026): היא ביקשה לאחד את שלושת כפתורי האייקון (🖨️/➕/🚪)
+         לכפתור "+" יחיד שפותח רשימת פעולות בלחיצה, "כמו שנפתח" הבחירה של
+         עובדת/תצוגה (ה-select-ים הצמודים משמאל) — כלומר בדיוק אותו מנגנון:
+         <select> טבעי מוכר שהדפדפן/הטלפון כבר יודע לפתוח כרשימה, במקום להמציא
+         מנגנון popup חדש. הסיבה שביקשה את זה: "עומס כפתורים למעלה" — ועכשיו
+         שכל שעה נוספת בגובה יומן דינמי (MOBILE_COMFORTABLE_ROW_HEIGHT למעלה)
+         תלויה בכמה שטח משתחרר בסרגל העליון, איחוד 3 כפתורים לאחד הוא גם שיפור
+         תפקודי ישיר, לא רק קוסמטי. onchange בוחר פעולה ומיד מאפס את הבחירה
+         בחזרה ל"+" (ר' onCalActionsMenuChange) כדי שהאייקון תמיד יציג "+" ולא
+         "יתקע" על הפעולה האחרונה שנבחרה. .cal-icon-btn נשאר על ה-select הזה
+         בכוונה — אותו גודל/מראה מרובע בדיוק כמו קודם (32-38px, ר' ההערה למעלה
+         עליו), רק שעכשיו יש רק ריבוע אחד ולא שלושה. -->
     <div class="cal-topbar-icons">
-      <button type="button" class="cal-icon-btn" onclick="openMyDayView()" title="תצוגת היום שלי" aria-label="תצוגת היום שלי">🖨️</button>
-      <button type="button" class="cal-icon-btn" onclick="openManualBookingModal()" title="הוספת תור ידנית" aria-label="הוספת תור ידנית">➕</button>
-      <button type="button" class="cal-icon-btn" onclick="doLogout()" title="התנתקות" aria-label="התנתקות">🚪</button>
+      <select id="calActionsMenuSelect" class="cal-icon-btn cal-actions-menu-select" onchange="onCalActionsMenuChange(this)" title="פעולות נוספות" aria-label="פעולות נוספות">
+        <option value="" selected>+</option>
+        <option value="myday">🖨️ תצוגת היום שלי</option>
+        <option value="add">➕ הוספת תור ידנית</option>
+        <option value="logout">🚪 התנתקות</option>
+      </select>
     </div>
   </div>
 </div>
@@ -4062,7 +4088,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.10-כפתור-כולם-והצג-עוד-בביטולים-v38</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.10-שעות-דינמיות-תפריט-פעולות-תיקון-אישור-טלפוני-v42</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -8768,19 +8794,44 @@
   // שמונעת רק גבהים קיצוניים/שבורים (0 או שליליים מבאג עתידי), ולא חוסמת
   // עוד את ההתאמה האמיתית לשטח הפנוי.
   const MOBILE_HOUR_BAND_MIN_HEIGHT = 30;
-  // אחרי כמה סבבים התברר שכל הפירוש הקודם היה שגוי: "עד השעה 2"/"עד השעה 3"
-  // שלה לא התכוונו למספר שעות גלויות (2 שעות, 3 שעות) אלא לשעון עצמו — עד
-  // השעה 14:00 בצהריים, לעומת מה שהיה קודם (עד השעה 15:00 בערך) לפני שהתחלנו
-  // לגעת בזה בכלל. מה שהיא רוצה בפועל: לראות כמעט את כל היום בלי לגלול (ככה
-  // שהיה תמיד), רק עם ריבועים קצת יותר גדולים/נוחים ללחיצה — שיראו עד 14:00
-  // בלי לגלול במקום עד 15:00, לא לצמצם דרסטית ל-2-3 שעות גלויות כמו בגרסאות
-  // הקודמות (טעות שלי). לכן החישוב כאן לא מחלק את השטח הפנוי במספר שרירותי —
-  // הוא מחשב כמה גובה צריך כל שעה כדי שבדיוק הטווח calStartHour (08:00) עד
-  // MOBILE_CAL_TARGET_END_HOUR (14:00) ימלא את השטח הפנוי האמיתי מתחת ל-
-  // #weekCalWrap, מה שמתאים את עצמו אוטומטית לכל מכשיר (לא משנה כמה שטח
-  // פנוי יש בפועל אצלה) — 18:00-14:00 (4 השעות האחרונות) עדיין נגישות
-  // בגלילה כרגיל.
-  const MOBILE_CAL_TARGET_END_HOUR = 14;
+  // תיקון יסודי (09.10.2026, סבב 6) — היא הסבירה בדיוק למה כל הסבבים
+  // הקודמים (כולל העברת #overviewInnerTabRow לסרגל העליון) לא שינו כלום
+  // בפועל: "כל הזמן משנה את עיצוב היומן שיהיה עוד ועוד מקום, ותכלס המקום
+  // מתפנה אבל השעה שגלויה נשארת אותו דבר". זו בדיוק ההתנהגות שהחישוב הישן
+  // (למטה, MOBILE_CAL_TARGET_END_HOUR קבוע=14) היה בנוי לתת: הוא תמיד קבע
+  // בדיוק 6 שעות (calStartHour עד 14) בלי קשר לכמה שטח פנוי יש — כל שטח
+  // נוסף שפינינו הלך רק להגדלת 6 השורות עצמן (ריבועים יותר נוחים), לא
+  // להוספת עוד שעות גלויות. זה בדיוק ההפך ממה שהיא רוצה בפועל: "כמה
+  // שפחות לגלול, כמה שיותר מוצג" — כלומר מספר השעות הגלוי צריך לגדול
+  // כשמתפנה מקום, לא להישאר קבוע. אישרה במפורש (דרך שאלה מפורשת): "כן -
+  // כמה שיותר שעות, גם אם קצת יותר קטן" — מעדיפה יותר שעות על פני ריבועים
+  // גדולים כשהשניים מתנגשים.
+  //
+  // התיקון הופך את הכיוון של החישוב: במקום "קבע 6 שעות, תן לגובה השורה
+  // לזוז", עכשיו "קבע גובה שורה מינימלי נוח ללחיצה (MOBILE_COMFORTABLE_ROW_HEIGHT),
+  // ותן למספר השעות הגלוי לזוז" — כמה שעות שלמות נכנסות בגובה הזה או יותר,
+  // בלי חצי-שורה חתוכה בתחתית (Math.floor, לא עיגול). MOBILE_CAL_MIN_VISIBLE_HOURS
+  // הוא רק רשת ביטחון למסכים קיצוניים-קטנים (או מצב נוף) שלא יירד מתחת
+  // ל-X שעות גלויות גם אם זה אומר ריבועים קטנים מהמינימום הנוח — עדיין
+  // עדיף על פחות מזה. אף פעם לא יותר מ-(calEndHour-calStartHour) כי אין
+  // עוד שעות בכלל להראות. 18:00 (סוף היום) תמיד נשאר נגיש בגלילה כרגיל,
+  // בלי קשר לכמה שעות נכנסות בלי גלילה.
+  // עדכון (09.10.2026, מיד אחרי הסבב הזה): היא כתבה מיד אחרי האישור שלה
+  // ("כן - כמה שיותר שעות, גם אם קצת יותר קטן") הבהרה חשובה: "לא בא לי
+  // שתדחוס מלא מלא שעות ולא יהיה ניתן לקבוע תור כי כל הריבועים ביומן יהיו
+  // פיצים... עד השעה 14:00 זה מספיק טוב וגם גודל טוב". כלומר: המספר 44px
+  // ששימש בברירת המחדל של השאלה שהצגתי (שממנו הגיע ה-46 המקורי) היה נמוך
+  // מדי בפועל — היא לא רוצה שהיומן ירדוף אחרי כמה שיותר שעות במחיר ריבועים
+  // קטנים מדי ללחיצה/הזנת תור, ואת ה-6 שעות/~102px שכבר ראתה בפועל
+  // (מהאבחון האמיתי שלה: "שטח פנוי=614.1px ל-6 שעות, גובה שורה שיצא=102.4px")
+  // היא הגדירה בעצמה כ"גודל טוב". לכן הועלה מ-46 ל-95: בתנאי המסך הרגילים
+  // שלה (614px פנוי) זה עדיין ייתן בדיוק 6 שעות בגובה ~102px — כלומר בתנאים
+  // הנוכחיים שום דבר לא משתנה חזותית לעומת מה שהיא כבר אישרה כטוב — אבל
+  // המנגנון הדינמי עדיין פעיל: אם יתפנה עוד שטח בעתיד (למשל מאיחוד כפתורי
+  // האייקונים לתפריט "+" אחד שביקשה בנפרד), מספר השעות הגלוי יגדל אוטומטית
+  // במקום להישאר תקוע על 6 כמו בבאג המקורי — בלי לרדת מתחת לגודל ריבוע נוח.
+  const MOBILE_COMFORTABLE_ROW_HEIGHT = 95;
+  const MOBILE_CAL_MIN_VISIBLE_HOURS = 4;
   function computeMobileHourBandHeight(){
     const wrap = document.getElementById('weekCalWrap');
     if (wrap && wrap.offsetParent !== null){
@@ -8832,18 +8883,18 @@
       // בבירור *מעל* ה-max-height בפועל, לא בדיוק עליו.
       const EXTRA_SAFETY_MARGIN = 10;
       const available = viewportBottom - rect.top - currentDayHeadHeight() - 14 - EXTRA_SAFETY_MARGIN;
-      const targetHours = Math.max(1, MOBILE_CAL_TARGET_END_HOUR - calStartHour);
+      // כמה שעות שלמות נכנסות בגובה נוח (46px) או יותר — לא עיגול, כדי שלא
+      // תיכנס שורה חתוכה-לחצי בתחתית. גדל אוטומטית כשמתפנה מקום (זה בדיוק
+      // מה שהיה חסר קודם), אבל לא פחות מ-MOBILE_CAL_MIN_VISIBLE_HOURS (רשת
+      // ביטחון למסך קטן/נוף) ולא יותר מכל היום עצמו (calEndHour-calStartHour
+      // — אין עוד שעות להראות מעבר לזה, ו-18:00 עצמו תמיד נשאר בגלילה).
+      const maxPossibleHours = Math.max(1, calEndHour - calStartHour);
+      const hoursFittingComfortably = Math.floor(available / MOBILE_COMFORTABLE_ROW_HEIGHT);
+      const targetHours = Math.min(maxPossibleHours, Math.max(MOBILE_CAL_MIN_VISIBLE_HOURS, hoursFittingComfortably));
       const result = available > 0 ? Math.max(MOBILE_HOUR_BAND_MIN_HEIGHT, available / targetHours) : MOBILE_HOUR_BAND_HEIGHT;
-      // אבחון חדש (09.09.2026, סבב 5): אחרי שהעברת השורה לסרגל העליון פינתה
-      // מקום מדוד ומאומת (48px, ר' ההערה הגדולה למעלה על #bizTopbarCalFilters)
-      // והיא עדיין מדווחת שהיומן נחתך באותו מקום בדיוק — אין טעם לנחש שוב
-      // איזה מנגנון אחר "בטח" אשם (בדיוק כמו איחוד ה-DocumentFragment שהיה
-      // תיקון אמיתי אבל לא זה שפתר את הבעיה בפועל). במקום זה, נשמרים כאן
-      // המספרים האמיתיים שהחישוב הזה עצמו רואה במכשיר שלה — rect.top, גובה
-      // המסך הזמין בפועל, וכמה מתוכו נחשב "פנוי" ל-6 השעות — ומוצגים בהודעת
-      // האבחון הקיימת (המשך למטה) שהיא כבר יודעת לצלם ולשלוח, כך שהפעם נדע
-      // בוודאות אם "רצפת" ה-30px אכן נדרסת (floored:true) או שהבעיה בכלל
-      // במקום אחר (available עצמו יוצא נמוך/שלילי מסיבה שעוד לא זיהינו).
+      // אבחון (המשיך מסבבים קודמים) — נשמר כדי שהודעת האבחון הקיימת (שהיא
+      // כבר יודעת לצלם ולשלוח) תמשיך להראות בדיוק כמה שעות נבחרו הפעם ולמה,
+      // עכשיו כשהמספר הזה עצמו דינמי ולא קבוע-6 כמו קודם.
       window.__lastCalFitDiag = {
         rectTop: Math.round(rect.top * 10) / 10,
         viewportBottom: Math.round(viewportBottom * 10) / 10,
@@ -13483,6 +13534,35 @@
     const allHaveKeys = serverArr.concat(lastLoadedArr, localArr).every(item => !!keyFn(item));
     if (!allHaveKeys) return localArr;
     const lastLoadedKeys = new Set(lastLoadedArr.map(keyFn));
+    // תיקון קריטי (09.10.2026): באג אמיתי שהיא נתקלה בו בפועל עם אישורי-טלפון
+    // (IVR) — היא לחצה 1 לאישור תור, ה-webhook כתב confirmedByClient=true
+    // לענן בהצלחה (ר' inforuIvrWebhook ב-functions/index.js), אבל אחרי כמה
+    // שניות זה "נעלם" — לא הופיע מסגרת ירוקה, וגם כרטיס פרטי התור המשיך
+    // להראות "לא מאושר". בדיקה נוספת שלה עם אותו תור בדיוק: שיחה שנייה,
+    // לחצה 2 לביטול — וזה כן התבטל בפועל. ההבדל הזה הוא בדיוק מה שחשף את
+    // הבאג: מחיקת-שורה כבר מטופלת נכון (ר' ההערה למטה, "deleted elsewhere"),
+    // אבל עדכון-שדה על שורה שעדיין קיימת לא היה מטופל בכלל.
+    //
+    // השורש: ה-autosave השקט הרץ כל 4 שניות בכל טאב ניהול פתוח (ר'
+    // setInterval(...saveState({silent:true})...4000) למטה) קורא כאן
+    // mergeListField ומריץ אותו בתוך טרנזקציה אמיתית מול הענן. עד עכשיו,
+    // לכל תור שקיים גם בשרת (serverArr, הגרסה הכי טרייה) וגם מקומית
+    // (localByKey, מה שהטאב הזה כבר טען לזיכרון), הקוד תמיד העדיף את הגרסה
+    // המקומית בלי לבדוק אם היא בכלל שונה מהמידע שהטאב הזה טען לאחרונה
+    // (lastLoadedArr) — בהנחה סמויה שהעתק המקומי הוא תמיד "העדכני ביותר" כי
+    // הוא מייצג עריכה של המשתמשת. זו הנחה נכונה כשהיא באמת ערכה את התור
+    // (למשל שינתה שעה) — אבל שגויה כשגורם אחר לגמרי (כאן: ה-webhook הטלפוני,
+    // לא הטאב הזה) שינה את אותו תור בענן אחרי שהטאב הזה טען אותו לאחרונה,
+    // מבלי שהטאב בכלל ידע על זה. במקרה הזה העתק המקומי הוא בדיוק ה-COPY
+    // הישן-מיושן (בלי confirmedByClient), וה-autosave כתב אותו בחזרה
+    // ומחק/דרס את הדגל שה-webhook בדיוק רשם רגע קודם — data race קלאסי.
+    //
+    // התיקון: להעדיף את הגרסה המקומית רק אם היא באמת שונה מהגרסה שהטאב הזה
+    // טען לאחרונה (lastLoadedArr) — סימן אמיתי שהמשתמשת בטאב הזה ערכה את
+    // הפריט הזה בעצמה. אם היא זהה (=הטאב מעולם לא נגע בפריט הזה מאז הטעינה
+    // האחרונה שלו), אז כל שינוי בגרסת השרת חייב להגיע ממקור אחר (webhook,
+    // טאב/מכשיר אחר) ועדיף להעדיף אותה — היא הגרסה הטרייה יותר.
+    const lastLoadedByKey = new Map(lastLoadedArr.map(item => [keyFn(item), item]));
     const localByKey = new Map(localArr.map(item => [keyFn(item), item]));
     const merged = [];
     const seenKeys = new Set();
@@ -13490,7 +13570,14 @@
       const k = keyFn(sItem);
       seenKeys.add(k);
       if (lastLoadedKeys.has(k) && !localByKey.has(k)) return; // this tab deleted it since its last load
-      merged.push(localByKey.has(k) ? localByKey.get(k) : sItem);
+      if (!localByKey.has(k)) { merged.push(sItem); return; }
+      const lItem = localByKey.get(k);
+      const lastLoadedItem = lastLoadedByKey.get(k);
+      const localUntouchedSinceLoad = lastLoadedItem !== undefined && JSON.stringify(lItem) === JSON.stringify(lastLoadedItem);
+      // לא נגעה בפריט הזה מאז הטעינה האחרונה שלה, אבל גרסת השרת שונה —
+      // מישהו/משהו אחר עדכן אותו בינתיים (בדיוק המקרה של אישור/ביטול
+      // טלפוני). להעדיף את השרת הטרי, לא לדרוס אותו בחזרה עם המידע הישן.
+      merged.push(localUntouchedSinceLoad ? sItem : lItem);
     });
     localArr.forEach(lItem => {
       const k = keyFn(lItem);
@@ -14346,6 +14433,18 @@
         errorEl.style.display = 'block';
         errorEl.textContent = 'התחברות נכשלה — בדקי את המייל והסיסמה (' + err.code + ')';
       });
+  }
+  // ROUND 7 (09.10.2026): מטפל בבחירה מתוך תפריט הפעולות המאוחד "+" (שהחליף
+  // את שלושת כפתורי ה-🖨️/➕/🚪 הנפרדים בסרגל העליון, ר' ההערה ליד המרקאפ
+  // שלו). מאפס את ה-select מיד בחזרה ל-"" (=האופציה "+") לפני/אחרי הפעלת
+  // הפעולה עצמה, כך שהתפריט תמיד מציג "+" ולא "נתקע" ויזואלית על שם הפעולה
+  // האחרונה שנבחרה — בדיוק כמו שכפתור רגיל לא "נשאר לחוץ" אחרי קליק.
+  function onCalActionsMenuChange(sel){
+    const action = sel.value;
+    sel.value = '';
+    if (action === 'myday') openMyDayView();
+    else if (action === 'add') openManualBookingModal();
+    else if (action === 'logout') doLogout();
   }
   function doLogout(){
     auth.signOut().then(() => {
