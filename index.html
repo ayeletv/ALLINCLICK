@@ -1198,6 +1198,42 @@
   @media (max-width:480px){
     .biz-topbar-cal-filters .cal-mini-btn{max-width:64px;}
   }
+  /* היא צדקה — הצבעים המקוריים של הסלקטים האלה (מילוי ורוד-שקוף חלש על
+     .cal-mini-btn, ומילוי יין מלא על .cal-mini-btn-primary) עוצבו לשבת על
+     הרקע הבהיר של הפאנל. עכשיו שהם יושבים על .biz-topbar עצמו — רקע יין כהה
+     בגרדיאנט — אותם צבעים כמעט נבלעים בתוכו ("ורוד על ורוד", בדיוק כמו
+     שתיארה). התיקון: רקע בהיר מוצק (כמו כפתורי האייקון 🖨️/➕/🚪 שכבר יושבים
+     כאן ומנוגדים היטב), עם צבע הטקסט/המסגרת של כל סלקט משמש עכשיו רק
+     להבחנה בין השלושה — לא כמילוי הרקע. #overviewInnerTabSelect (יומן/דוחות)
+     שומר על מילוי מלא, אבל בזהב (כמו כפתור ההמבורגר לידו) במקום יין, כדי
+     שיישאר "הבולט מביניהם" בדיוק כמו קודם, רק בצבע שבאמת בולט על הרקע הזה. */
+  .biz-topbar-cal-filters .mini-select,
+  .biz-topbar-cal-filters .cal-mini-btn{
+    background-color:var(--panel-card-bg);
+    color:var(--wine);
+    border-color:rgba(155,44,66,0.45);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239B2C42' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+  .biz-topbar-cal-filters #calStaffFilterSelect.cal-mini-btn{
+    color:var(--panel-gold);
+    border-color:rgba(122,94,12,0.5);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A5E0C' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+  .biz-topbar-cal-filters .cal-mini-btn-primary{
+    background-color:var(--gold);
+    background-image:linear-gradient(135deg, var(--gold), #A9800F);
+    color:var(--ink);
+    border-color:rgba(255,255,255,0.35);
+    font-weight:700;
+  }
+  /* Same arrow, drawn in --ink so it's visible against the gold fill above —
+     background-image is declared twice on purpose (the gradient fill above,
+     this override below) since background-image is a single property and
+     a <select>'s arrow + its fill both need to live in it; layering both
+     into one value here instead of fighting the cascade. */
+  .biz-topbar-cal-filters .cal-mini-btn-primary{
+    background-image:linear-gradient(135deg, var(--gold), #A9800F), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23141014' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
   /* The 3 action icons (🖨️ my-day / ➕ add-appointment / 🚪 exit) that used to
      live inside the now-removed colored .cal-topbar card — .cal-icon-btn/
      .cal-topbar-icons keep their original names since other test/selector
@@ -2482,8 +2518,21 @@
      pink" and ties back to the same accent already used for headings/buttons.
      --panel-text/--panel-gold are left exactly as they were (black body text +
      gold accent, both already confirmed to read clearly against the new pink —
-     see contrast note in the project report). */
-  #panel-business, #apptDetailOverlay, #manualBookingOverlay, #personalTimeOverlay, #clientProfileOverlay, #specialRequestDetailOverlay{
+     see contrast note in the project report).
+     #bizTopbar ADDED (09.09.2026, ROUND 4 contrast-fix): it's another
+     sibling-of-#panel-business element in the same situation as the overlays
+     above (admin-only, needs the same light tokens), and it turns out it was
+     ALREADY silently relying on --panel-card-bg (.cal-icon-btn's background)
+     without it ever being in scope here — meaning the 🖨️/➕/🚪 icon buttons
+     have quietly been rendering with NO background at all (fully transparent,
+     just their border) this whole time, not the intended light square. That
+     went unnoticed since a transparent button with a border still reads fine
+     against the wine bar. It became impossible to ignore once
+     #bizTopbarCalFilters (יומן/דוחות/שבועי/כולם) moved in here too and tried
+     to use the same tokens for real contrast against this dark bar — she
+     caught it immediately ("ורוד על ורוד"). Adding #bizTopbar here fixes both
+     at once, rather than hardcoding raw hex values in a second place. */
+  #panel-business, #apptDetailOverlay, #manualBookingOverlay, #personalTimeOverlay, #clientProfileOverlay, #specialRequestDetailOverlay, #bizTopbar{
     --panel-bg:#FBEFF3;
     --panel-card-bg:#FFF8FA;
     --panel-text:#221B1E;
@@ -4000,7 +4049,7 @@
     אם השינוי האחרון בקובץ אכן עלה לאתר החי: אם הטקסט הקטן הזה מופיע בתחתית העמוד,
     זו הגרסה הנכונה. אם הוא לא מופיע, האתר עדיין מציג קובץ ישן יותר.
   -->
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.09-כפתורי-יומן-לסרגל-עליון-ואבחון-showPanel-v34</div>
+  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.09-תיקון-ניגודיות-והסתרה-בטאבים-אבחון-גובה-v35</div>
 </footer>
 <!-- Small, quiet status pill — shows "שומר..." while a change is being written to
      the cloud and "נשמר ✓" for a couple of seconds right after it succeeds, so
@@ -8737,7 +8786,27 @@
       const EXTRA_SAFETY_MARGIN = 10;
       const available = viewportBottom - rect.top - currentDayHeadHeight() - 14 - EXTRA_SAFETY_MARGIN;
       const targetHours = Math.max(1, MOBILE_CAL_TARGET_END_HOUR - calStartHour);
-      if (available > 0) return Math.max(MOBILE_HOUR_BAND_MIN_HEIGHT, available / targetHours);
+      const result = available > 0 ? Math.max(MOBILE_HOUR_BAND_MIN_HEIGHT, available / targetHours) : MOBILE_HOUR_BAND_HEIGHT;
+      // אבחון חדש (09.09.2026, סבב 5): אחרי שהעברת השורה לסרגל העליון פינתה
+      // מקום מדוד ומאומת (48px, ר' ההערה הגדולה למעלה על #bizTopbarCalFilters)
+      // והיא עדיין מדווחת שהיומן נחתך באותו מקום בדיוק — אין טעם לנחש שוב
+      // איזה מנגנון אחר "בטח" אשם (בדיוק כמו איחוד ה-DocumentFragment שהיה
+      // תיקון אמיתי אבל לא זה שפתר את הבעיה בפועל). במקום זה, נשמרים כאן
+      // המספרים האמיתיים שהחישוב הזה עצמו רואה במכשיר שלה — rect.top, גובה
+      // המסך הזמין בפועל, וכמה מתוכו נחשב "פנוי" ל-6 השעות — ומוצגים בהודעת
+      // האבחון הקיימת (המשך למטה) שהיא כבר יודעת לצלם ולשלוח, כך שהפעם נדע
+      // בוודאות אם "רצפת" ה-30px אכן נדרסת (floored:true) או שהבעיה בכלל
+      // במקום אחר (available עצמו יוצא נמוך/שלילי מסיבה שעוד לא זיהינו).
+      window.__lastCalFitDiag = {
+        rectTop: Math.round(rect.top * 10) / 10,
+        viewportBottom: Math.round(viewportBottom * 10) / 10,
+        dayHeadHeight: currentDayHeadHeight(),
+        available: Math.round(available * 10) / 10,
+        targetHours: targetHours,
+        computedHourBandHeight: Math.round(result * 10) / 10,
+        floored: result === MOBILE_HOUR_BAND_MIN_HEIGHT && available / targetHours < MOBILE_HOUR_BAND_MIN_HEIGHT
+      };
+      return result;
     }
     return MOBILE_HOUR_BAND_HEIGHT;
   }
@@ -12747,6 +12816,15 @@
     document.getElementById('sub-' + name).classList.add('active');
     document.querySelectorAll('.subswitcher button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    // תיקון (ROUND 4, אחרי שהעבירו את #bizTopbarCalFilters לסרגל העליון
+    // הקבוע): היא שאלה בצדק — הסרגל העליון קבוע ותמיד גלוי, בכל טאב, לא רק
+    // ב"סקירה" (בניגוד ל-#overviewInnerTabRow הישן, שהיה חלק מתוך #sub-overview
+    // עצמו ולכן נעלם אוטומטית עם שאר הטאב כש-.subpanel.active עבר לטאב אחר).
+    // בלי התיקון הזה, יומן/דוחות + שבועי/כולם היו נשארים גלויים גם בטאב
+    // "לקוחות" או כל טאב אחר — לא רק מיותר אלא מטעה. עכשיו, בדיוק כמו
+    // ה-subpanel-ים עצמם, הקבוצה מוצגת רק כש-name==='overview'.
+    var topbarFilters = document.getElementById('bizTopbarCalFilters');
+    if (topbarFilters) topbarFilters.style.display = (name === 'overview') ? 'flex' : 'none';
     // קריאה שנייה, אחרי שינוי ה-DOM — ר' אותה הערה ב-showInnerTab() למטה
     // (CSS scroll anchoring יכול "לתקן" כמה פיקסלים בעצמו מיד אחרי שינוי
     // גובה התוכן, גם אחרי שכבר איפסנו למעלה).
@@ -14134,6 +14212,14 @@
               msg += '\nזמן ריצת הקוד עצמו (showPanel): ' + (typeof showPanelSec === 'number' ? showPanelSec.toFixed(1) + ' שניות' : 'לא נמדד');
               if (typeof showPanelSec === 'number' && showPanelSec < renderElapsedSec - 1){
                 msg += ' — כלומר רוב הזמן לא בקוד שלנו אלא בדפדפן עצמו (ציור/פריסה של המסך)';
+              }
+              // אבחון חדש (סבב 5) — ר' ההערה הגדולה ליד computeMobileHourBandHeight():
+              // המספרים האמיתיים שקבעו את גובה השורות ביומן במכשיר שלה כרגע,
+              // כדי שסוף-סוף נדע בוודאות למה היומן עדיין נחתך באותו מקום למרות
+              // שפינינו מקום מדוד — האם ה"רצפה" (30px) נדרסת, או שהבעיה במקום אחר.
+              const fitDiag = window.__lastCalFitDiag;
+              if (fitDiag){
+                msg += '\n\nאבחון גובה יומן: שטח פנוי=' + fitDiag.available + 'px ל-' + fitDiag.targetHours + ' שעות, גובה שורה שיצא=' + fitDiag.computedHourBandHeight + 'px' + (fitDiag.floored ? ' (הרצפה של 30px נדרסת — יש פחות מקום מ-180px!)' : '');
               }
               alert(msg);
             });
