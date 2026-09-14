@@ -9190,17 +9190,9 @@
         if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
       }, 560);
       let calFitWatchdogCount = 0;
-      let calFitWatchdogLastHeight = null;
-      const calFitWatchdogWrapEl = document.getElementById('weekCalWrap');
       const calFitWatchdogId = setInterval(function(){
         calFitWatchdogCount++;
         if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
-        const currentHeight = calFitWatchdogWrapEl ? calFitWatchdogWrapEl.style.maxHeight : null;
-        if (currentHeight !== null && currentHeight === calFitWatchdogLastHeight){
-          clearInterval(calFitWatchdogId);
-          return;
-        }
-        calFitWatchdogLastHeight = currentHeight;
         if (calFitWatchdogCount >= 8) clearInterval(calFitWatchdogId);
       }, 500);
     }
