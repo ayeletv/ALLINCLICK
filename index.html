@@ -10007,12 +10007,13 @@
   }
   let loginTimingDiagShown = false;
   let panelRenderDiagShown = false;
+  const DIAG_CODE_VERSION = 'סבב 6 (14.09.2026, אחה"צ) — תיקון showPanel + הסרת טשטוש';
   function showLoginTimingDiagOnce(){
     if (loginTimingDiagShown) return null;
     loginTimingDiagShown = true;
     const login = window.__lastLoginDiag;
     const cloud = window.__lastCloudLoadDiag;
-    const lines = ['אבחון זמני טעינה:'];
+    const lines = ['גרסת קוד (לבדיקה שהמכשיר טוען את העדכני ביותר): ' + DIAG_CODE_VERSION, 'אבחון זמני טעינה:'];
     lines.push('ההתחברות עצמה: ' + (login ? login.elapsedSec.toFixed(1) + ' שניות' : 'לא נמדד'));
     lines.push('טעינת נתוני היומן מהענן: ' + (cloud ? cloud.elapsedSec.toFixed(1) + ' שניות' + (cloud.approxKb !== null ? ` (~${cloud.approxKb}KB)` : '') : 'עדיין לא הסתיימה / לא נמדדה (כנראה שכבר הסתיימה בשקט לפני שהתחברת)'));
     const net = login && login.networkBreakdown;
