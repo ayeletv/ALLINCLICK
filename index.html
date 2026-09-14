@@ -5509,9 +5509,9 @@
     if (d.getTime() !== getTodayDateOnly().getTime()) return false;
     return !isAppointmentHistory(appt);
   }
-  function getClientAppointments(clientName){
-    return weekAppointments
-      .filter(a => a.client === clientName)
+  function getClientAppointments(clientName, prefiltered){
+    return (prefiltered || weekAppointments.filter(a => a.client === clientName))
+      .slice()
       .sort((a, b) => {
         const da = getAppointmentDateOnly(a) || new Date(0);
         const db = getAppointmentDateOnly(b) || new Date(0);
@@ -5572,6 +5572,12 @@
     const birthdayClients = [];
     const searchEl = document.getElementById('clientSearch');
     const searchTerm = searchEl ? searchEl.value.trim().toLowerCase() : '';
+    const apptsByClientName = {};
+    const apptById = new Map();
+    weekAppointments.forEach(a => {
+      (apptsByClientName[a.client] || (apptsByClientName[a.client] = [])).push(a);
+      if (a.id) apptById.set(a.id, a);
+    });
     const sortedClientIndices = clients.map((c, i) => i).sort((a, b) => clients[a].name.localeCompare(clients[b].name, 'he'));
     sortedClientIndices.forEach(i => {
       const c = clients[i];
@@ -5597,7 +5603,7 @@
       row.className = 'client-card';
       row.dataset.clientName = c.name;
       const avatarHtml = c.photo ? `<img src="${c.photo}">` : c.name.trim().charAt(0);
-      const allAppointments = getClientAppointments(c.name);
+      const allAppointments = getClientAppointments(c.name, apptsByClientName[c.name]);
       const todayAppts = allAppointments.filter(isAppointmentToday);
       const history = allAppointments.filter(isAppointmentHistory);
       const upcoming = allAppointments.filter(a => !isAppointmentHistory(a) && !isAppointmentToday(a));
@@ -5792,7 +5798,7 @@
       });
       row.querySelectorAll('[data-panel="history"] .visit-row').forEach(visitEl => {
         const apptId = visitEl.dataset.apptId;
-        const appt = weekAppointments.find(a => a.id === apptId);
+        const appt = apptById.get(apptId);
         if (!appt) return;
         visitEl.querySelectorAll('.visit-status-btn').forEach(btn => {
           btn.onclick = () => {
@@ -5836,14 +5842,14 @@
       });
       row.querySelectorAll('[data-panel="upcoming"] .visit-row').forEach(visitEl => {
         const apptId = visitEl.dataset.apptId;
-        const appt = weekAppointments.find(a => a.id === apptId);
+        const appt = apptById.get(apptId);
         if (!appt) return;
         const cancelBtn = visitEl.querySelector('[data-cancel-appt-id]');
         if (cancelBtn) cancelBtn.onclick = () => cancelAdminAppointment(appt);
       });
       row.querySelectorAll('[data-today-appt-id]').forEach(visitEl => {
         const apptId = visitEl.dataset.todayApptId;
-        const appt = weekAppointments.find(a => a.id === apptId);
+        const appt = apptById.get(apptId);
         if (!appt) return;
         visitEl.querySelectorAll('.visit-status-btn').forEach(btn => {
           btn.onclick = () => {
@@ -7296,14 +7302,6 @@
     const viewportBottom = vv ? (vv.height + vv.offsetTop) : window.innerHeight;
     const available = viewportBottom - rect.top - 14;
     let targetMaxHeight = Math.max(240, available);
-    if (window.innerWidth <= MOBILE_CAL_BREAKPOINT && window.__lastCalFitDiag){
-      const diag = window.__lastCalFitDiag;
-      if (typeof diag.dayHeadHeight === 'number' && typeof diag.targetHours === 'number' && typeof diag.computedHourBandHeight === 'number'){
-        const exactContentHeight = diag.dayHeadHeight + diag.targetHours * diag.computedHourBandHeight;
-        const snappedMaxHeight = exactContentHeight + 3;
-        if (snappedMaxHeight <= targetMaxHeight) targetMaxHeight = snappedMaxHeight;
-      }
-    }
     wrap.style.maxHeight = targetMaxHeight + 'px';
     wrap.style.overflowY = 'auto';
   }
