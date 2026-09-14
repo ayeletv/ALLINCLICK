@@ -3092,6 +3092,23 @@
   </div>
 </div>
 <script>
+  let pageHiddenMsAccumulated = 0;
+  let pageHiddenSince = (typeof document !== 'undefined' && document.hidden) ? (typeof performance !== 'undefined' ? performance.now() : Date.now()) : null;
+  function getPageHiddenMsSoFar(){
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    return pageHiddenMsAccumulated + (pageHiddenSince !== null ? (now - pageHiddenSince) : 0);
+  }
+  if (typeof document !== 'undefined'){
+    document.addEventListener('visibilitychange', function(){
+      const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+      if (document.hidden){
+        pageHiddenSince = now;
+      } else if (pageHiddenSince !== null){
+        pageHiddenMsAccumulated += (now - pageHiddenSince);
+        pageHiddenSince = null;
+      }
+    });
+  }
   let myDaySelectedStaff = 'all';
   function renderMyDayStaffFilterOptions(){
     const sel = document.getElementById('myDayStaffFilter');
@@ -9990,7 +10007,16 @@
       if (!entries.length) return null;
       const e = entries[entries.length - 1]; // האחרונה מבין אלה — הכי קרובה לבקשת ההתחברות הזו עצמה
       const round = (n) => Math.max(0, Math.round(n * 10) / 10);
+      const redacted = e.responseStart === 0 && e.requestStart === 0 && e.duration > 0;
+      if (redacted){
+        return {
+          redacted: true,
+          totalMs: round(e.duration),
+          dnsMs: null, connectMs: null, tlsMs: null, ttfbMs: null, downloadMs: null
+        };
+      }
       return {
+        redacted: false,
         dnsMs: round(e.domainLookupEnd - e.domainLookupStart),
         connectMs: round(e.connectEnd - e.connectStart),
         tlsMs: e.secureConnectionStart > 0 ? round(e.connectEnd - e.secureConnectionStart) : null,
@@ -10011,19 +10037,47 @@
     if (cores === null && memGb === null) return null;
     return { cores, memGb };
   }
+  function runStallProbes(){
+    const t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    setTimeout(function(){
+      const elapsedMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;
+      window.__lastMainThreadStallDiag = { elapsedMs: Math.round(elapsedMs) };
+    }, 0);
+    try {
+      if (typeof indexedDB === 'undefined'){
+        window.__lastIndexedDbDiag = { unavailable: true };
+      } else {
+        const idbStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+        const req = indexedDB.open('__diag_probe__');
+        req.onsuccess = function(){
+          const elapsedMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - idbStart;
+          window.__lastIndexedDbDiag = { elapsedMs: Math.round(elapsedMs), ok: true };
+          try { req.result.close(); } catch(e){}
+        };
+        req.onerror = function(){
+          const elapsedMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - idbStart;
+          window.__lastIndexedDbDiag = { elapsedMs: Math.round(elapsedMs), ok: false };
+        };
+      }
+    } catch (e) {
+      window.__lastIndexedDbDiag = { unavailable: true };
+    }
+  }
   let loginTimingDiagShown = false;
   let panelRenderDiagShown = false;
-  const DIAG_CODE_VERSION = 'סבב 7 (14.09.2026, ערב) — מידע חומרה/חיבור מדויק יותר';
+  const DIAG_CODE_VERSION = 'סבב 9 (14.09.2026, ערב) — תיקון באג באבחון הרשת + בדיקת thread ראשי/IndexedDB';
   function showLoginTimingDiagOnce(){
     if (loginTimingDiagShown) return null;
     loginTimingDiagShown = true;
     const login = window.__lastLoginDiag;
     const cloud = window.__lastCloudLoadDiag;
     const lines = ['גרסת קוד (לבדיקה שהמכשיר טוען את העדכני ביותר): ' + DIAG_CODE_VERSION, 'אבחון זמני טעינה:'];
-    lines.push('ההתחברות עצמה: ' + (login ? login.elapsedSec.toFixed(1) + ' שניות' : 'לא נמדד'));
+    lines.push('ההתחברות עצמה: ' + (login ? login.elapsedSec.toFixed(1) + ' שניות' : 'לא נמדד') + (login && login.hiddenSec > 0.3 ? ' (מתוכן ~' + login.hiddenSec.toFixed(1) + ' שניות הדף היה ברקע/לא בפוקוס)' : ''));
     lines.push('טעינת נתוני היומן מהענן: ' + (cloud ? cloud.elapsedSec.toFixed(1) + ' שניות' + (cloud.approxKb !== null ? ` (~${cloud.approxKb}KB)` : '') : 'עדיין לא הסתיימה / לא נמדדה (כנראה שכבר הסתיימה בשקט לפני שהתחברת)'));
     const net = login && login.networkBreakdown;
-    if (net){
+    if (net && net.redacted){
+      lines.push('פירוט רשת של ההתחברות עצמה: גוגל לא חושפים פירוט מלא לבקשה הזו, אבל משך הבקשה הכולל (המספר האמין היחיד שקיים) היה ' + net.totalMs + ' מ"ש — כלומר הבקשה עצמה ברשת הייתה מהירה.');
+    } else if (net){
       lines.push('פירוט רשת של ההתחברות עצמה:');
       lines.push('  DNS: ' + net.dnsMs + ' מ"ש, חיבור: ' + net.connectMs + ' מ"ש' + (net.tlsMs !== null ? ', TLS: ' + net.tlsMs + ' מ"ש' : ''));
       lines.push('  המתנה לשרת (TTFB): ' + net.ttfbMs + ' מ"ש, הורדה: ' + net.downloadMs + ' מ"ש, סה"כ בקשה: ' + net.totalMs + ' מ"ש');
@@ -10191,7 +10245,9 @@
     const password = document.getElementById('loginPassword').value;
     const errorEl = document.getElementById('loginError');
     errorEl.style.display = 'none';
+    runStallProbes();
     const loginStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    const loginHiddenMsStart = getPageHiddenMsSoFar();
     loginInFlight = true;
     const btnEl = document.getElementById('loginSubmitBtn');
     const btnOriginalText = btnEl ? btnEl.textContent : '';
@@ -10203,24 +10259,27 @@
     auth.signInWithEmailAndPassword(email, password)
       .then(() => {
         const loginElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - loginStartedAt) / 1000;
-        window.__lastLoginDiag = { elapsedSec: Math.round(loginElapsedSec * 10) / 10, networkBreakdown: (typeof getNetworkTimingBreakdown === 'function' ? getNetworkTimingBreakdown(loginStartedAt) : null) };
+        const loginHiddenSec = (getPageHiddenMsSoFar() - loginHiddenMsStart) / 1000;
+        window.__lastLoginDiag = { elapsedSec: Math.round(loginElapsedSec * 10) / 10, networkBreakdown: (typeof getNetworkTimingBreakdown === 'function' ? getNetworkTimingBreakdown(loginStartedAt) : null), hiddenSec: Math.round(loginHiddenSec * 10) / 10 };
         console.log(`Login (signInWithEmailAndPassword) took ${loginElapsedSec.toFixed(1)}s.`);
         const loginText = showLoginTimingDiagOnce();
         if (!panelRenderDiagShown){
           panelRenderDiagShown = true;
           const postLoginDiagStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+          const panelHiddenMsStart = getPageHiddenMsSoFar();
           panelRenderCallLog = [];
           clientsRenderCallLog = [];
           requestAnimationFrame(function(){
             requestAnimationFrame(function(){
               const renderElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - postLoginDiagStart) / 1000;
+              const panelHiddenSec = (getPageHiddenMsSoFar() - panelHiddenMsStart) / 1000;
               const calLog = panelRenderCallLog || [];
               const calCalls = calLog.length;
               const calTotalMs = calLog.reduce((sum, entry) => sum + entry.ms, 0);
               const clientsLog = clientsRenderCallLog || [];
               const clientsCalls = clientsLog.length;
               const clientsTotalMs = clientsLog.reduce((sum, entry) => sum + entry.ms, 0);
-              window.__lastPanelRenderDiag = { elapsedSec: Math.round(renderElapsedSec * 10) / 10, renderWeekCalCalls: calCalls, renderWeekCalTotalSec: Math.round(calTotalMs) / 1000, renderClientsCalls: clientsCalls, renderClientsTotalSec: Math.round(clientsTotalMs) / 1000 };
+              window.__lastPanelRenderDiag = { elapsedSec: Math.round(renderElapsedSec * 10) / 10, renderWeekCalCalls: calCalls, renderWeekCalTotalSec: Math.round(calTotalMs) / 1000, renderClientsCalls: clientsCalls, renderClientsTotalSec: Math.round(clientsTotalMs) / 1000, hiddenSec: Math.round(panelHiddenSec * 10) / 10 };
               console.log(`Panel render after login took ${renderElapsedSec.toFixed(1)}s. renderWeekCal ${calCalls}x/${(calTotalMs / 1000).toFixed(1)}s, renderClients ${clientsCalls}x/${(clientsTotalMs / 1000).toFixed(1)}s.`, calLog, clientsLog);
               panelRenderCallLog = null;
               clientsRenderCallLog = null;
@@ -10234,6 +10293,12 @@
               const unexplainedSec = renderElapsedSec - (calTotalMs / 1000) - (clientsTotalMs / 1000);
               if (unexplainedSec > 1){
                 msg += '\n• זמן שלא מוסבר על ידי אף אחד מהשניים האלה: ~' + unexplainedSec.toFixed(1) + ' שניות (כנראה ציור/פריסה של הדפדפן עצמו, או פונקציה אחרת)';
+              }
+              if (panelHiddenSec > 0.3){
+                msg += '\n• מתוך זה, הדף היה ברקע (לא בפוקוס, כנראה מעבר לאפליקציה אחרת) במשך: ~' + panelHiddenSec.toFixed(1) + ' שניות';
+                if (unexplainedSec > 1 && panelHiddenSec >= unexplainedSec * 0.6){
+                  msg += ' — כלומר רוב הזמן ה"לא מוסבר" הוא בעצם זמן שהדף לא היה פתוח מולך, לא בעיה בקוד!';
+                }
               }
               const rre = window.__lastRerenderEverythingDiag;
               if (rre){
@@ -10263,6 +10328,26 @@
                 msg += '\n\nכיסוי "טוען נתונים" מעל פאנל הניהול היה גלוי במשך: ' + overlayDiag.visibleSec.toFixed(1) + ' שניות בפתיחה האחרונה';
               } else {
                 msg += '\n\nכיסוי "טוען נתונים": לא היה גלוי כלל בפתיחה הזו (נתוני הענן כבר היו טעונים לפני ההתחברות)';
+              }
+              const stallDiag = window.__lastMainThreadStallDiag;
+              if (stallDiag){
+                msg += '\n\nבדיקת תגובתיות דפדפן (setTimeout שאמור לרוץ כמעט מיידית): ' + stallDiag.elapsedMs + ' מ"ש';
+                if (stallDiag.elapsedMs > 1000){
+                  msg += ' — זה גבוה מאוד! זה מוכיח שה-thread הראשי של הדפדפן עצמו נתקע, לא קשור לרשת/לקוד של האתר';
+                }
+              } else {
+                msg += '\n\nבדיקת תגובתיות דפדפן: עדיין לא הסתיימה (ר״ל — היא עצמה עדיין תקועה, מה שיהיה ממצא משמעותי בפני עצמו)';
+              }
+              const idbDiag = window.__lastIndexedDbDiag;
+              if (idbDiag && idbDiag.unavailable){
+                msg += '\nבדיקת IndexedDB: לא זמינה בדפדפן הזה';
+              } else if (idbDiag){
+                msg += '\nבדיקת פתיחת IndexedDB (השכבה ש-Firebase Auth משתמש בה מאחורי הקלעים): ' + idbDiag.elapsedMs + ' מ"ש' + (idbDiag.ok ? '' : ' (נכשלה)');
+                if (idbDiag.elapsedMs > 1000){
+                  msg += ' — גבוה מאוד! זה יכול להסביר בדיוק את ההמתנה, בלי שום קשר לרשת';
+                }
+              } else {
+                msg += '\nבדיקת פתיחת IndexedDB: עדיין לא הסתיימה (ר״ל — זו עצמה עדיין תקועה, מה שיהיה ממצא משמעותי בפני עצמו)';
               }
               const fullMsg = (loginText ? loginText + '\n\n' : '') + msg;
               console.log('אבחון מלא (תג בפינת המסך, לא חוסם):', fullMsg.replace(/\n/g, ' | '));
