@@ -10026,6 +10026,16 @@
       };
     } catch (err) { return null; }
   }
+  function getAllResourcesDuringWindow(sinceMs, untilMs){
+    try {
+      if (typeof performance === 'undefined' || typeof performance.getEntriesByType !== 'function') return null;
+      const entries = performance.getEntriesByType('resource')
+        .filter(e => e.startTime >= sinceMs - 50 && e.startTime <= untilMs + 50)
+        .map(e => ({ name: e.name.replace(/^https?:\/\//, '').slice(0, 60), durationMs: Math.round(e.duration * 10) / 10, startMs: Math.round((e.startTime - sinceMs) * 10) / 10 }))
+        .sort((a, b) => b.durationMs - a.durationMs);
+      return entries;
+    } catch (err) { return null; }
+  }
   function getConnectionInfo(){
     const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     if (!c) return null;
@@ -10065,7 +10075,7 @@
   }
   let loginTimingDiagShown = false;
   let panelRenderDiagShown = false;
-  const DIAG_CODE_VERSION = 'סבב 9 (14.09.2026, ערב) — תיקון באג באבחון הרשת + בדיקת thread ראשי/IndexedDB';
+  const DIAG_CODE_VERSION = 'סבב 10 (14.09.2026, לילה) — סריקת כל הבקשות ברשת בזמן ההתחברות (לא רק Auth)';
   function showLoginTimingDiagOnce(){
     if (loginTimingDiagShown) return null;
     loginTimingDiagShown = true;
@@ -10083,6 +10093,15 @@
       lines.push('  המתנה לשרת (TTFB): ' + net.ttfbMs + ' מ"ש, הורדה: ' + net.downloadMs + ' מ"ש, סה"כ בקשה: ' + net.totalMs + ' מ"ש');
     } else {
       lines.push('פירוט רשת: לא זמין (הדפדפן הזה לא חשף את הבקשה, או שכבר הייתה שמורה/מהירה מדי לפני שנמדדה)');
+    }
+    const allRes = login && login.allResources;
+    if (allRes && allRes.length){
+      lines.push('כל הבקשות ברשת בזמן ההתחברות (' + allRes.length + ' בקשות, 3 הארוכות ביותר):');
+      allRes.slice(0, 3).forEach(r => {
+        lines.push('  ' + r.name + ' — ' + r.durationMs + ' מ"ש (התחילה ב-' + r.startMs + ' מ"ש מתחילת ההתחברות)');
+      });
+    } else if (login){
+      lines.push('כל הבקשות ברשת בזמן ההתחברות: לא נמצאו בקשות רשת נוספות בחלון הזמן הזה מלבד ההתחברות עצמה');
     }
     const conn = getConnectionInfo();
     if (conn){
@@ -10260,7 +10279,8 @@
       .then(() => {
         const loginElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - loginStartedAt) / 1000;
         const loginHiddenSec = (getPageHiddenMsSoFar() - loginHiddenMsStart) / 1000;
-        window.__lastLoginDiag = { elapsedSec: Math.round(loginElapsedSec * 10) / 10, networkBreakdown: (typeof getNetworkTimingBreakdown === 'function' ? getNetworkTimingBreakdown(loginStartedAt) : null), hiddenSec: Math.round(loginHiddenSec * 10) / 10 };
+        const loginResolvedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+        window.__lastLoginDiag = { elapsedSec: Math.round(loginElapsedSec * 10) / 10, networkBreakdown: (typeof getNetworkTimingBreakdown === 'function' ? getNetworkTimingBreakdown(loginStartedAt) : null), hiddenSec: Math.round(loginHiddenSec * 10) / 10, allResources: (typeof getAllResourcesDuringWindow === 'function' ? getAllResourcesDuringWindow(loginStartedAt, loginResolvedAt) : null) };
         console.log(`Login (signInWithEmailAndPassword) took ${loginElapsedSec.toFixed(1)}s.`);
         const loginText = showLoginTimingDiagOnce();
         if (!panelRenderDiagShown){
