@@ -283,9 +283,7 @@
   .cloud-loading-overlay{
     display:none; position:absolute; inset:0; z-index:40;
     flex-direction:column; align-items:center; justify-content:center; gap:14px;
-    background:rgba(20,16,20,0.74);
-    backdrop-filter:blur(2px);
-    -webkit-backdrop-filter:blur(2px);
+    background:rgba(20,16,20,0.82);
     color:var(--ivory);
     font-size:14.5px;
     text-align:center;
@@ -9176,6 +9174,7 @@
   }
   setInterval(checkForArrivingClient, 20000);
   function showPanel(name, btn){
+    const __spStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById('panel-' + name).classList.add('active');
     document.querySelectorAll('.switcher button').forEach(b => b.classList.remove('active'));
@@ -9204,6 +9203,8 @@
         if (calFitWatchdogCount >= 8) clearInterval(calFitWatchdogId);
       }, 500);
     }
+    window.__lastShowPanelSyncSec = Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - __spStart) / 1000;
+    window.__showPanelCallCount = (window.__showPanelCallCount || 0) + 1;
   }
   function resetWeekCalScrollPosition(){
     window.scrollTo(0, 0);
@@ -9888,6 +9889,7 @@
     };
   }
   let cloudLoadingElapsedTimer = null;
+  let cloudOverlayShownAt = null;
   function updateCloudLoadingOverlay(){
     var overlay = document.getElementById('cloudLoadingOverlay');
     if (!overlay) return;
@@ -9896,6 +9898,7 @@
     overlay.classList.toggle('show', shouldShow);
     if (shouldShow && !cloudLoadingElapsedTimer){
       var startedAt = Date.now();
+      cloudOverlayShownAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
       var elapsedEl = document.getElementById('cloudLoadingElapsed');
       var tick = function(){
         if (elapsedEl) elapsedEl.textContent = Math.round((Date.now() - startedAt) / 1000) + ' שניות...';
@@ -9905,6 +9908,11 @@
     } else if (!shouldShow && cloudLoadingElapsedTimer){
       clearInterval(cloudLoadingElapsedTimer);
       cloudLoadingElapsedTimer = null;
+      if (cloudOverlayShownAt !== null){
+        var visibleSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - cloudOverlayShownAt) / 1000;
+        window.__lastCloudOverlayVisibleDiag = { visibleSec: Math.round(visibleSec * 10) / 10 };
+        cloudOverlayShownAt = null;
+      }
     }
   }
   let cloudLoadRetryCount = 0;
@@ -10237,6 +10245,12 @@
               } else {
                 msg += '\n\nהתחברות אנונימית אוטומטית: עדיין לא נמדדה (לא הספיקה לרוץ עד עכשיו)';
               }
+              const overlayDiag = window.__lastCloudOverlayVisibleDiag;
+              if (overlayDiag){
+                msg += '\n\nכיסוי "טוען נתונים" מעל פאנל הניהול היה גלוי במשך: ' + overlayDiag.visibleSec.toFixed(1) + ' שניות בפתיחה האחרונה';
+              } else {
+                msg += '\n\nכיסוי "טוען נתונים": לא היה גלוי כלל בפתיחה הזו (נתוני הענן כבר היו טעונים לפני ההתחברות)';
+              }
               const fullMsg = (loginText ? loginText + '\n\n' : '') + msg;
               console.log('אבחון מלא (תג בפינת המסך, לא חוסם):', fullMsg.replace(/\n/g, ' | '));
               if (typeof showDiagBadge === 'function') showDiagBadge(fullMsg);
@@ -10248,9 +10262,7 @@
         document.getElementById('loginEmail').value = '';
         document.getElementById('loginPassword').value = '';
         if (pendingBusinessBtn && !document.body.classList.contains('admin-mode')){
-          const __showPanelStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
           showPanel('business', pendingBusinessBtn);
-          window.__lastShowPanelSyncSec = Math.round((((typeof performance !== 'undefined' ? performance.now() : Date.now()) - __showPanelStart) / 1000) * 10) / 10;
         }
         pendingBusinessBtn = null;
       })
@@ -10360,9 +10372,7 @@
     var bizBtn = document.getElementById('businessTabBtn');
     if (!bizBtn) return;
     if (!document.body.classList.contains('admin-mode')){
-      const __showPanelStart2 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
       showPanel('business', bizBtn);
-      window.__lastShowPanelSyncSec = Math.round((((typeof performance !== 'undefined' ? performance.now() : Date.now()) - __showPanelStart2) / 1000) * 10) / 10;
     }
     if (saved.subTab && saved.subTab !== 'overview'){
       var tabBtn = document.querySelector('#bizSubNavRow button[onclick*="\'' + saved.subTab + '\'"]');
