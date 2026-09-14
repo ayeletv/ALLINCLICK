@@ -7295,7 +7295,16 @@
     const vv = window.visualViewport;
     const viewportBottom = vv ? (vv.height + vv.offsetTop) : window.innerHeight;
     const available = viewportBottom - rect.top - 14;
-    wrap.style.maxHeight = Math.max(240, available) + 'px';
+    let targetMaxHeight = Math.max(240, available);
+    if (window.innerWidth <= MOBILE_CAL_BREAKPOINT && window.__lastCalFitDiag){
+      const diag = window.__lastCalFitDiag;
+      if (typeof diag.dayHeadHeight === 'number' && typeof diag.targetHours === 'number' && typeof diag.computedHourBandHeight === 'number'){
+        const exactContentHeight = diag.dayHeadHeight + diag.targetHours * diag.computedHourBandHeight;
+        const snappedMaxHeight = exactContentHeight + 3;
+        if (snappedMaxHeight <= targetMaxHeight) targetMaxHeight = snappedMaxHeight;
+      }
+    }
+    wrap.style.maxHeight = targetMaxHeight + 'px';
     wrap.style.overflowY = 'auto';
   }
   window.addEventListener('resize', () => { if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport(); });
@@ -9181,9 +9190,17 @@
         if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
       }, 560);
       let calFitWatchdogCount = 0;
+      let calFitWatchdogLastHeight = null;
+      const calFitWatchdogWrapEl = document.getElementById('weekCalWrap');
       const calFitWatchdogId = setInterval(function(){
         calFitWatchdogCount++;
         if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
+        const currentHeight = calFitWatchdogWrapEl ? calFitWatchdogWrapEl.style.maxHeight : null;
+        if (currentHeight !== null && currentHeight === calFitWatchdogLastHeight){
+          clearInterval(calFitWatchdogId);
+          return;
+        }
+        calFitWatchdogLastHeight = currentHeight;
         if (calFitWatchdogCount >= 8) clearInterval(calFitWatchdogId);
       }, 500);
     }
@@ -9988,7 +10005,7 @@
     } else {
       lines.push('מידע חיבור (navigator.connection): לא זמין במכשיר/דפדפן הזה');
     }
-    alert(lines.join('\n'));
+    console.log('אבחון זמני טעינה (בשקט, בלי חלון קופץ):', lines.join(' | '));
   }
   function loadCloudData(){
     const cloudLoadStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
@@ -10162,7 +10179,7 @@
               if (fitDiag){
                 msg += '\n\nאבחון גובה יומן: שטח פנוי=' + fitDiag.available + 'px ל-' + fitDiag.targetHours + ' שעות, גובה שורה שיצא=' + fitDiag.computedHourBandHeight + 'px' + (fitDiag.floored ? ' (הרצפה של 30px נדרסת — יש פחות מקום מ-180px!)' : '');
               }
-              alert(msg);
+              console.log('אבחון נוסף — רינדור פאנל הניהול (בשקט):', msg.replace(/\n/g, ' | '));
             });
           });
         }
