@@ -54,7 +54,12 @@
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
     auth = firebase.auth();
-    anonAuthPromise = auth.signInAnonymously().catch(err => {
+    const anonAuthStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    anonAuthPromise = auth.signInAnonymously().then(() => {
+      const anonElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - anonAuthStartedAt) / 1000;
+      window.__lastAnonAuthDiag = { elapsedSec: Math.round(anonElapsedSec * 10) / 10 };
+      console.log(`Anonymous sign-in took ${anonElapsedSec.toFixed(1)}s.`);
+    }).catch(err => {
       console.error('Anonymous sign-in failed (only matters once Firestore rules require auth):', err);
     });
   } catch (e) {
@@ -10219,6 +10224,18 @@
               const fitDiag = window.__lastCalFitDiag;
               if (fitDiag){
                 msg += '\n\nאבחון גובה יומן: שטח פנוי=' + fitDiag.available + 'px ל-' + fitDiag.targetHours + ' שעות, גובה שורה שיצא=' + fitDiag.computedHourBandHeight + 'px';
+              }
+              const anonDiag = window.__lastAnonAuthDiag;
+              const loginDiagForCompare = window.__lastLoginDiag;
+              if (anonDiag){
+                msg += '\n\nהתחברות אנונימית אוטומטית (רצה כבר בטעינת הדף, לפני שהתחברת): ' + anonDiag.elapsedSec.toFixed(1) + ' שניות';
+                if (loginDiagForCompare && Math.abs(anonDiag.elapsedSec - loginDiagForCompare.elapsedSec) < 3){
+                  msg += ' — דומה לזמן ההתחברות שלך, כנראה בעיה כללית ולא ספציפית';
+                } else {
+                  msg += ' — שונה משמעותית מזמן ההתחברות שלך';
+                }
+              } else {
+                msg += '\n\nהתחברות אנונימית אוטומטית: עדיין לא נמדדה (לא הספיקה לרוץ עד עכשיו)';
               }
               const fullMsg = (loginText ? loginText + '\n\n' : '') + msg;
               console.log('אבחון מלא (תג בפינת המסך, לא חוסם):', fullMsg.replace(/\n/g, ' | '));
