@@ -48,6 +48,7 @@
   };
   let db, auth;
   let panelRenderCallLog = null;
+  let clientsRenderCallLog = null;
   let anonAuthPromise = Promise.resolve();
   try {
     firebase.initializeApp(firebaseConfig);
@@ -5567,6 +5568,7 @@
         </div>`;
   }
   function renderClients(){
+    const __rcDiagStart = Array.isArray(clientsRenderCallLog) ? (typeof performance !== 'undefined' ? performance.now() : Date.now()) : null;
     const listEl = document.getElementById('clientList');
     listEl.innerHTML = '';
     const birthdayClients = [];
@@ -5883,6 +5885,9 @@
       bdayAlertEl.classList.remove('show');
     }
     if (typeof renderBroadcastCount === 'function') renderBroadcastCount();
+    if (__rcDiagStart !== null && Array.isArray(clientsRenderCallLog)){
+      clientsRenderCallLog.push({ ms: Math.round(((typeof performance !== 'undefined' ? performance.now() : Date.now()) - __rcDiagStart) * 10) / 10 });
+    }
   }
   function handleClientPhotoUpload(event){
     const file = event.target.files[0];
@@ -9840,26 +9845,42 @@
     }
   }
   function rerenderEverything(){
-    if (typeof renderCategories === 'function') renderCategories();
-    if (typeof renderServices === 'function') renderServices();
-    if (typeof renderStaff === 'function') renderStaff();
-    if (typeof renderClients === 'function') renderClients();
-    if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
-    if (typeof renderWeekCal === 'function') renderWeekCal();
-    if (typeof renderWhatsNew === 'function') renderWhatsNew();
-    if (typeof renderInventory === 'function') renderInventory();
-    if (typeof renderBranding === 'function') renderBranding();
-    if (typeof renderCustomTemplates === 'function') renderCustomTemplates();
-    if (typeof renderMiniCal === 'function') renderMiniCal();
-    if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
-    if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
-    if (typeof renderHoursStaffPicker === 'function') renderHoursStaffPicker();
-    if (typeof renderHoursEditor === 'function') renderHoursEditor();
-    if (typeof renderHoursOverview === 'function') renderHoursOverview();
-    if (typeof renderReports === 'function') renderReports('week');
-    if (typeof renderOverviewDayView === 'function') renderOverviewDayView();
-    if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal();
-    if (typeof recheckAllPendingFlexibleRequests === 'function') recheckAllPendingFlexibleRequests();
+    const __reCalls = [
+      ['renderCategories', typeof renderCategories === 'function' ? renderCategories : null],
+      ['renderServices', typeof renderServices === 'function' ? renderServices : null],
+      ['renderStaff', typeof renderStaff === 'function' ? renderStaff : null],
+      ['renderClients', typeof renderClients === 'function' ? renderClients : null],
+      ['renderStaffFilterRow', typeof renderStaffFilterRow === 'function' ? renderStaffFilterRow : null],
+      ['renderWeekCal', typeof renderWeekCal === 'function' ? renderWeekCal : null],
+      ['renderWhatsNew', typeof renderWhatsNew === 'function' ? renderWhatsNew : null],
+      ['renderInventory', typeof renderInventory === 'function' ? renderInventory : null],
+      ['renderBranding', typeof renderBranding === 'function' ? renderBranding : null],
+      ['renderCustomTemplates', typeof renderCustomTemplates === 'function' ? renderCustomTemplates : null],
+      ['renderMiniCal', typeof renderMiniCal === 'function' ? renderMiniCal : null],
+      ['renderAvailableSlots', typeof renderAvailableSlots === 'function' ? renderAvailableSlots : null],
+      ['renderWaitlistAdmin', typeof renderWaitlistAdmin === 'function' ? renderWaitlistAdmin : null],
+      ['renderHoursStaffPicker', typeof renderHoursStaffPicker === 'function' ? renderHoursStaffPicker : null],
+      ['renderHoursEditor', typeof renderHoursEditor === 'function' ? renderHoursEditor : null],
+      ['renderHoursOverview', typeof renderHoursOverview === 'function' ? renderHoursOverview : null],
+      ['renderReports', typeof renderReports === 'function' ? () => renderReports('week') : null],
+      ['renderOverviewDayView', typeof renderOverviewDayView === 'function' ? renderOverviewDayView : null],
+      ['renderOverviewMonthCal', typeof renderOverviewMonthCal === 'function' ? renderOverviewMonthCal : null],
+      ['recheckAllPendingFlexibleRequests', typeof recheckAllPendingFlexibleRequests === 'function' ? recheckAllPendingFlexibleRequests : null]
+    ];
+    const __reNow = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    const __reStart = __reNow();
+    const __reBreakdown = [];
+    __reCalls.forEach(([name, fn]) => {
+      if (!fn) return;
+      const t0 = __reNow();
+      fn();
+      __reBreakdown.push({ name, ms: Math.round((__reNow() - t0) * 10) / 10 });
+    });
+    __reBreakdown.sort((a, b) => b.ms - a.ms);
+    window.__lastRerenderEverythingDiag = {
+      elapsedSec: Math.round(__reNow() - __reStart) / 1000,
+      top: __reBreakdown.slice(0, 5)
+    };
   }
   let cloudLoadingElapsedTimer = null;
   function updateCloudLoadingOverlay(){
@@ -9974,7 +9995,7 @@
   let loginTimingDiagShown = false;
   let panelRenderDiagShown = false;
   function showLoginTimingDiagOnce(){
-    if (loginTimingDiagShown) return;
+    if (loginTimingDiagShown) return null;
     loginTimingDiagShown = true;
     const login = window.__lastLoginDiag;
     const cloud = window.__lastCloudLoadDiag;
@@ -9995,7 +10016,24 @@
     } else {
       lines.push('מידע חיבור (navigator.connection): לא זמין במכשיר/דפדפן הזה');
     }
-    console.log('אבחון זמני טעינה (בשקט, בלי חלון קופץ):', lines.join(' | '));
+    console.log('אבחון זמני טעינה:', lines.join(' | '));
+    return lines.join('\n');
+  }
+  function showDiagBadge(text){
+    const old = document.getElementById('nonBlockingDiagBadge');
+    if (old) old.remove();
+    const badge = document.createElement('div');
+    badge.id = 'nonBlockingDiagBadge';
+    badge.style.cssText = 'position:fixed; bottom:10px; inset-inline-start:10px; inset-inline-end:10px; max-width:440px; margin-inline-start:auto; margin-inline-end:auto; background:rgba(15,15,20,0.95); color:#eee; font-size:12px; line-height:1.7; padding:12px 14px; border-radius:12px; z-index:999999; direction:rtl; text-align:right; box-shadow:0 4px 20px rgba(0,0,0,.45); white-space:pre-wrap; font-family:monospace; max-height:70vh; overflow-y:auto;';
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕ סגירה (אפשר לצלם קודם)';
+    closeBtn.style.cssText = 'display:block; margin-bottom:10px; background:rgba(255,255,255,0.18); border:none; color:#fff; border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; width:100%;';
+    closeBtn.onclick = () => badge.remove();
+    badge.appendChild(closeBtn);
+    const textEl = document.createElement('div');
+    textEl.textContent = text;
+    badge.appendChild(textEl);
+    document.body.appendChild(badge);
   }
   function loadCloudData(){
     const cloudLoadStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
@@ -10141,35 +10179,50 @@
         const loginElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - loginStartedAt) / 1000;
         window.__lastLoginDiag = { elapsedSec: Math.round(loginElapsedSec * 10) / 10, networkBreakdown: (typeof getNetworkTimingBreakdown === 'function' ? getNetworkTimingBreakdown(loginStartedAt) : null) };
         console.log(`Login (signInWithEmailAndPassword) took ${loginElapsedSec.toFixed(1)}s.`);
-        showLoginTimingDiagOnce();
+        const loginText = showLoginTimingDiagOnce();
         if (!panelRenderDiagShown){
           panelRenderDiagShown = true;
-          const postAlertDiagStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+          const postLoginDiagStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
           panelRenderCallLog = [];
+          clientsRenderCallLog = [];
           requestAnimationFrame(function(){
             requestAnimationFrame(function(){
-              const renderElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - postAlertDiagStart) / 1000;
+              const renderElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - postLoginDiagStart) / 1000;
               const calLog = panelRenderCallLog || [];
               const calCalls = calLog.length;
               const calTotalMs = calLog.reduce((sum, entry) => sum + entry.ms, 0);
-              window.__lastPanelRenderDiag = { elapsedSec: Math.round(renderElapsedSec * 10) / 10, renderWeekCalCalls: calCalls, renderWeekCalTotalSec: Math.round(calTotalMs) / 1000 };
-              console.log(`Panel render after login-alert dismissal took ${renderElapsedSec.toFixed(1)}s. renderWeekCal ran ${calCalls} time(s), totaling ${(calTotalMs / 1000).toFixed(1)}s.`, calLog);
+              const clientsLog = clientsRenderCallLog || [];
+              const clientsCalls = clientsLog.length;
+              const clientsTotalMs = clientsLog.reduce((sum, entry) => sum + entry.ms, 0);
+              window.__lastPanelRenderDiag = { elapsedSec: Math.round(renderElapsedSec * 10) / 10, renderWeekCalCalls: calCalls, renderWeekCalTotalSec: Math.round(calTotalMs) / 1000, renderClientsCalls: clientsCalls, renderClientsTotalSec: Math.round(clientsTotalMs) / 1000 };
+              console.log(`Panel render after login took ${renderElapsedSec.toFixed(1)}s. renderWeekCal ${calCalls}x/${(calTotalMs / 1000).toFixed(1)}s, renderClients ${clientsCalls}x/${(clientsTotalMs / 1000).toFixed(1)}s.`, calLog, clientsLog);
               panelRenderCallLog = null;
-              let msg = 'אבחון נוסף — רינדור פאנל הניהול אחרי לחיצה על "אישור": ' + renderElapsedSec.toFixed(1) + ' שניות';
-              msg += '\nמתוך זה, בניית לוח היומן (renderWeekCal) רצה ' + calCalls + ' פעם/פעמים, סה"כ ' + (calTotalMs / 1000).toFixed(1) + ' שניות';
-              if (calCalls >= 2){
-                msg += ' (יותר מפעם אחת — כנראה בנייה חוזרת של אותו יומן, ראה הערה בקוד)';
-              }
+              clientsRenderCallLog = null;
+              let msg = 'רינדור פאנל הניהול אחרי התחברות: ' + renderElapsedSec.toFixed(1) + ' שניות';
+              msg += '\n• בניית לוח היומן (renderWeekCal): ' + calCalls + ' פעם/פעמים, סה"כ ' + (calTotalMs / 1000).toFixed(1) + ' שניות';
+              if (calCalls >= 2) msg += ' (יותר מפעם אחת — בנייה חוזרת)';
+              msg += '\n• בניית רשימת הלקוחות (renderClients): ' + clientsCalls + ' פעם/פעמים, סה"כ ' + (clientsTotalMs / 1000).toFixed(1) + ' שניות';
+              if (clientsCalls >= 2) msg += ' (יותר מפעם אחת — בנייה חוזרת)';
               const showPanelSec = window.__lastShowPanelSyncSec;
-              msg += '\nזמן ריצת הקוד עצמו (showPanel): ' + (typeof showPanelSec === 'number' ? showPanelSec.toFixed(1) + ' שניות' : 'לא נמדד');
-              if (typeof showPanelSec === 'number' && showPanelSec < renderElapsedSec - 1){
-                msg += ' — כלומר רוב הזמן לא בקוד שלנו אלא בדפדפן עצמו (ציור/פריסה של המסך)';
+              msg += '\n• זמן ריצת showPanel עצמו: ' + (typeof showPanelSec === 'number' ? showPanelSec.toFixed(1) + ' שניות' : 'לא נמדד');
+              const unexplainedSec = renderElapsedSec - (calTotalMs / 1000) - (clientsTotalMs / 1000);
+              if (unexplainedSec > 1){
+                msg += '\n• זמן שלא מוסבר על ידי אף אחד מהשניים האלה: ~' + unexplainedSec.toFixed(1) + ' שניות (כנראה ציור/פריסה של הדפדפן עצמו, או פונקציה אחרת)';
+              }
+              const rre = window.__lastRerenderEverythingDiag;
+              if (rre){
+                msg += '\n\nטעינה ראשונית של כל נתוני העמוד (rerenderEverything, בד"כ קורה פעם אחת בתחילת הביקור, לפני ההתחברות): ' + rre.elapsedSec.toFixed(1) + ' שניות';
+                if (rre.top && rre.top.length){
+                  msg += '\n  הכי כבדות: ' + rre.top.map(t => t.name + '=' + t.ms.toFixed(0) + 'מ"ש').join(', ');
+                }
               }
               const fitDiag = window.__lastCalFitDiag;
               if (fitDiag){
-                msg += '\n\nאבחון גובה יומן: שטח פנוי=' + fitDiag.available + 'px ל-' + fitDiag.targetHours + ' שעות, גובה שורה שיצא=' + fitDiag.computedHourBandHeight + 'px' + (fitDiag.floored ? ' (הרצפה של 30px נדרסת — יש פחות מקום מ-180px!)' : '');
+                msg += '\n\nאבחון גובה יומן: שטח פנוי=' + fitDiag.available + 'px ל-' + fitDiag.targetHours + ' שעות, גובה שורה שיצא=' + fitDiag.computedHourBandHeight + 'px';
               }
-              console.log('אבחון נוסף — רינדור פאנל הניהול (בשקט):', msg.replace(/\n/g, ' | '));
+              const fullMsg = (loginText ? loginText + '\n\n' : '') + msg;
+              console.log('אבחון מלא (תג בפינת המסך, לא חוסם):', fullMsg.replace(/\n/g, ' | '));
+              if (typeof showDiagBadge === 'function') showDiagBadge(fullMsg);
             });
           });
         }
