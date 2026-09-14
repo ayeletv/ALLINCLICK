@@ -6268,7 +6268,7 @@
   }
   renderStaff();
   const staffColors = ['#E8CE7A', '#A6C29B', '#E2A8B9', '#D9AAB8', '#D9B27C'];
-  const calStartHour = 8, calEndHour = 18;
+  const calStartHour = 8, calEndHour = 23;
   const MOBILE_CAL_BREAKPOINT = 480;
   const DAY_HEAD_HEIGHT_DESKTOP = 56;
   const DAY_HEAD_HEIGHT_MOBILE = 50;
@@ -7886,7 +7886,7 @@
   }
   renderWhatsNew();
   const hourOptions = [];
-  for (let h = 7; h <= 21; h++) hourOptions.push(String(h).padStart(2,'0') + ':00');
+  for (let h = 7; h <= 23; h++) hourOptions.push(String(h).padStart(2,'0') + ':00');
   const days = [
     { name: 'ראשון', open: true, from: '09:00', to: '12:00' },
     { name: 'שני', open: true, from: '12:00', to: '17:00' },
@@ -10075,7 +10075,8 @@
   }
   let loginTimingDiagShown = false;
   let panelRenderDiagShown = false;
-  const DIAG_CODE_VERSION = 'סבב 10 (14.09.2026, לילה) — סריקת כל הבקשות ברשת בזמן ההתחברות (לא רק Auth)';
+  const DIAG_CODE_VERSION = 'סבב 12 (15.09.2026) — התג החזותי הוסתר לבקשתה לבדיקה עם רותי; האבחון עצמו ממשיך לרוץ ונשמר ל-console.log';
+  const DIAG_BADGE_VISIBLE = false;
   function showLoginTimingDiagOnce(){
     if (loginTimingDiagShown) return null;
     loginTimingDiagShown = true;
@@ -10289,7 +10290,13 @@
           const panelHiddenMsStart = getPageHiddenMsSoFar();
           panelRenderCallLog = [];
           clientsRenderCallLog = [];
+          const renderPhaseStallProbeStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+          setTimeout(function(){
+            const elapsedMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - renderPhaseStallProbeStart;
+            window.__lastRenderPhaseStallDiag = { elapsedMs: Math.round(elapsedMs) };
+          }, 0);
           requestAnimationFrame(function(){
+            const firstFrameSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - postLoginDiagStart) / 1000;
             requestAnimationFrame(function(){
               const renderElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - postLoginDiagStart) / 1000;
               const panelHiddenSec = (getPageHiddenMsSoFar() - panelHiddenMsStart) / 1000;
@@ -10299,7 +10306,7 @@
               const clientsLog = clientsRenderCallLog || [];
               const clientsCalls = clientsLog.length;
               const clientsTotalMs = clientsLog.reduce((sum, entry) => sum + entry.ms, 0);
-              window.__lastPanelRenderDiag = { elapsedSec: Math.round(renderElapsedSec * 10) / 10, renderWeekCalCalls: calCalls, renderWeekCalTotalSec: Math.round(calTotalMs) / 1000, renderClientsCalls: clientsCalls, renderClientsTotalSec: Math.round(clientsTotalMs) / 1000, hiddenSec: Math.round(panelHiddenSec * 10) / 10 };
+              window.__lastPanelRenderDiag = { elapsedSec: Math.round(renderElapsedSec * 10) / 10, firstFrameSec: Math.round(firstFrameSec * 10) / 10, renderWeekCalCalls: calCalls, renderWeekCalTotalSec: Math.round(calTotalMs) / 1000, renderClientsCalls: clientsCalls, renderClientsTotalSec: Math.round(clientsTotalMs) / 1000, hiddenSec: Math.round(panelHiddenSec * 10) / 10, stallProbe: window.__lastRenderPhaseStallDiag || null };
               console.log(`Panel render after login took ${renderElapsedSec.toFixed(1)}s. renderWeekCal ${calCalls}x/${(calTotalMs / 1000).toFixed(1)}s, renderClients ${clientsCalls}x/${(clientsTotalMs / 1000).toFixed(1)}s.`, calLog, clientsLog);
               panelRenderCallLog = null;
               clientsRenderCallLog = null;
@@ -10313,6 +10320,19 @@
               const unexplainedSec = renderElapsedSec - (calTotalMs / 1000) - (clientsTotalMs / 1000);
               if (unexplainedSec > 1){
                 msg += '\n• זמן שלא מוסבר על ידי אף אחד מהשניים האלה: ~' + unexplainedSec.toFixed(1) + ' שניות (כנראה ציור/פריסה של הדפדפן עצמו, או פונקציה אחרת)';
+                msg += '\n• זמן עד הפריים (frame) הראשון של הדפדפן: ' + firstFrameSec.toFixed(1) + ' שניות (מתוך ' + renderElapsedSec.toFixed(1) + ' הכולל — אם רוב הזמן כאן, התקיעה היא לפני הפריים הראשון)';
+                const stallProbe = window.__lastRenderPhaseStallDiag;
+                if (stallProbe && typeof stallProbe.elapsedMs === 'number'){
+                  const stallSec = stallProbe.elapsedMs / 1000;
+                  msg += '\n• בדיקת תגובתיות מקבילה (setTimeout שנקבע באותו הרגע): ' + stallProbe.elapsedMs + ' מ"ש';
+                  if (stallSec < unexplainedSec * 0.3){
+                    msg += ' — מהיר משמעותית מהזמן הלא-מוסבר, כלומר ה-thread הראשי היה פנוי ונראה שזה דווקא requestAnimationFrame עצמו שהושהה (למשל המסך כבה לרגע בלי שנתפס כ"ברקע")';
+                  } else {
+                    msg += ' — גם הוא התעכב באופן דומה, כלומר ה-thread הראשי עצמו היה תפוס במשהו (לא בעיה ספציפית ל-requestAnimationFrame)';
+                  }
+                } else {
+                  msg += '\n• בדיקת תגובתיות מקבילה: לא נמדדה';
+                }
               }
               if (panelHiddenSec > 0.3){
                 msg += '\n• מתוך זה, הדף היה ברקע (לא בפוקוס, כנראה מעבר לאפליקציה אחרת) במשך: ~' + panelHiddenSec.toFixed(1) + ' שניות';
@@ -10371,7 +10391,7 @@
               }
               const fullMsg = (loginText ? loginText + '\n\n' : '') + msg;
               console.log('אבחון מלא (תג בפינת המסך, לא חוסם):', fullMsg.replace(/\n/g, ' | '));
-              if (typeof showDiagBadge === 'function') showDiagBadge(fullMsg);
+              if (DIAG_BADGE_VISIBLE && typeof showDiagBadge === 'function') showDiagBadge(fullMsg);
             });
           });
         }
