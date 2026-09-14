@@ -10003,11 +10003,17 @@
   function getConnectionInfo(){
     const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     if (!c) return null;
-    return { effectiveType: c.effectiveType || null, downlinkMbps: c.downlink || null, rttMs: c.rtt || null, saveData: !!c.saveData };
+    return { effectiveType: c.effectiveType || null, actualType: c.type || null, downlinkMbps: c.downlink || null, rttMs: c.rtt || null, saveData: !!c.saveData };
+  }
+  function getDeviceHardwareInfo(){
+    const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) ? navigator.hardwareConcurrency : null;
+    const memGb = (typeof navigator !== 'undefined' && navigator.deviceMemory) ? navigator.deviceMemory : null;
+    if (cores === null && memGb === null) return null;
+    return { cores, memGb };
   }
   let loginTimingDiagShown = false;
   let panelRenderDiagShown = false;
-  const DIAG_CODE_VERSION = 'סבב 6 (14.09.2026, אחה"צ) — תיקון showPanel + הסרת טשטוש';
+  const DIAG_CODE_VERSION = 'סבב 7 (14.09.2026, ערב) — מידע חומרה/חיבור מדויק יותר';
   function showLoginTimingDiagOnce(){
     if (loginTimingDiagShown) return null;
     loginTimingDiagShown = true;
@@ -10026,9 +10032,15 @@
     }
     const conn = getConnectionInfo();
     if (conn){
-      lines.push('מידע חיבור (navigator.connection): סוג=' + (conn.effectiveType || '?') + ', מהירות≈' + (conn.downlinkMbps !== null ? conn.downlinkMbps + 'Mbps' : '?') + ', RTT≈' + (conn.rttMs !== null ? conn.rttMs + 'מ"ש' : '?') + (conn.saveData ? ', מצב חיסכון בנתונים פעיל' : ''));
+      lines.push('מידע חיבור (navigator.connection): רמת מהירות משוערת=' + (conn.effectiveType || '?') + ' (שם מטעה — זו הערכת איכות, לא סימן שמדובר בסלולרי דווקא)' + (conn.actualType ? ', מדיום בפועל=' + conn.actualType : '') + ', מהירות≈' + (conn.downlinkMbps !== null ? conn.downlinkMbps + 'Mbps' : '?') + ', RTT≈' + (conn.rttMs !== null ? conn.rttMs + 'מ"ש' : '?') + (conn.saveData ? ', מצב חיסכון בנתונים פעיל' : ''));
     } else {
       lines.push('מידע חיבור (navigator.connection): לא זמין במכשיר/דפדפן הזה');
+    }
+    const hw = getDeviceHardwareInfo();
+    if (hw){
+      lines.push('מידע חומרה של המכשיר: ' + (hw.cores !== null ? 'ליבות מעבד≈' + hw.cores : 'ליבות מעבד=?') + ', ' + (hw.memGb !== null ? 'זיכרון≈' + hw.memGb + 'GB' : 'זיכרון=לא זמין בדפדפן הזה'));
+    } else {
+      lines.push('מידע חומרה של המכשיר: לא זמין בדפדפן הזה (נפוץ ב-iPhone/Safari)');
     }
     console.log('אבחון זמני טעינה:', lines.join(' | '));
     return lines.join('\n');
