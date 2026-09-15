@@ -790,6 +790,25 @@
     white-space:nowrap;
   }
   .hours-day-card .new-icon{font-size:18px;}
+  .hours-staff-section{
+    border:1px solid rgba(245,238,228,0.12);
+    border-radius:18px;
+    padding:16px;
+    background:var(--ink);
+  }
+  .hours-staff-head{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
+  .hours-staff-avatar{
+    width:44px; height:44px; min-width:44px;
+    border-radius:50%;
+    overflow:hidden;
+    background:rgba(201,162,39,0.15);
+    color:var(--gold-soft);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Suez One'; font-weight:400; font-size:17px;
+  }
+  .hours-staff-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
+  .hours-staff-head h3{font-family:'Suez One'; font-weight:400; font-size:16px;}
+  .hours-staff-days{display:flex; flex-direction:column; gap:10px;}
   .hours-day-icon-0{background:rgba(155,44,66,0.16); color:var(--wine);}
   .hours-day-icon-1{background:rgba(201,162,39,0.16); color:var(--gold);}
   .hours-day-icon-2{background:rgba(124,148,115,0.18); color:var(--sage);}
@@ -1049,6 +1068,21 @@
     font-size:13px;
   }
   .hours-range select[disabled]{opacity:0.5;}
+  .hours-time-btn{
+    display:flex; align-items:center; gap:5px;
+    background:var(--panel-card-bg);
+    color:var(--panel-text);
+    border:1px solid rgba(var(--panel-line-rgb),0.2);
+    border-radius:8px;
+    padding:6px 8px;
+    font-family:'JetBrains Mono';
+    font-size:13px;
+    cursor:pointer;
+    line-height:1;
+  }
+  .hours-time-btn:hover{border-color:var(--sage);}
+  .hours-time-clock-ic{flex-shrink:0; color:var(--panel-text-dim);}
+  .hours-range.invalid .hours-time-btn{border-color:#b3462c;}
   .hours-range-warn{display:none; width:100%; direction:rtl; text-align:right; font-family:'Heebo'; font-size:11px; color:#b3462c;}
   .hours-range.invalid select{border-color:#b3462c;}
   .hours-range.invalid .hours-range-warn{display:block;}
@@ -1080,6 +1114,22 @@
   .hours-row.closed .hours-ranges-wrap select,
   .hours-row.closed .hours-ranges-wrap input,
   .hours-row.closed .hours-ranges-wrap button{display:none;}
+  .hours-time-sheet{max-width:300px; padding:20px;}
+  .hours-time-picker-cols{display:flex; align-items:stretch; justify-content:center; gap:10px;}
+  .hours-time-picker-colon{align-self:center; font-family:'JetBrains Mono'; font-size:20px; color:var(--ink); opacity:0.4;}
+  .hours-time-picker-col{
+    display:flex; flex-direction:column; gap:4px;
+    width:74px; max-height:216px; overflow-y:auto;
+    border:1px solid #EEE7DC; border-radius:10px; padding:4px;
+  }
+  .hours-time-picker-opt{
+    background:transparent; border:none; border-radius:7px;
+    padding:8px 0; font-family:'JetBrains Mono'; font-size:14px;
+    color:var(--ink); cursor:pointer; text-align:center; flex-shrink:0;
+  }
+  .hours-time-picker-opt:hover{background:#F3ECE0;}
+  .hours-time-picker-opt.selected{background:var(--wine); color:#fff; font-weight:600;}
+  .hours-time-picker-opt:disabled{opacity:0.35; cursor:not-allowed;}
   .inv-email-row{
     display:flex; align-items:center; gap:10px; flex-wrap:wrap;
     margin-bottom:16px;
@@ -2166,9 +2216,11 @@
       </span>
     </div>
     
+    
     <div class="cal-topbar-icons">
       <select id="calActionsMenuSelect" class="cal-icon-btn cal-actions-menu-select" onchange="onCalActionsMenuChange(this)" title="פעולות נוספות" aria-label="פעולות נוספות">
         <option value="" selected>+</option>
+        <option value="refresh">🔄 רענון היומן</option>
         <option value="myday">🖨️ תצוגת היום שלי</option>
         <option value="add">➕ הוספת תור ידנית</option>
         <option value="logout">🚪 התנתקות</option>
@@ -2374,7 +2426,7 @@
             </div>
             <div class="label" style="margin-top:10px;">איך תרצי לקבל תזכורת? (אפשר לבחור יותר מאחת)</div>
             <div class="reminder-choice" id="reminderChoice">
-              <label><input type="checkbox" name="reminderChannel" value="sms" checked> SMS</label>
+              <label><input type="checkbox" name="reminderChannel" value="sms"> SMS</label>
               <label><input type="checkbox" name="reminderChannel" value="call"> שיחת טלפון</label>
             </div>
             <div id="reminderChoiceError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש לבחור לפחות ערוץ תזכורת אחד לפני קביעת התור</div>
@@ -3139,6 +3191,22 @@
     </div>
   </div>
 </div>
+
+<div id="hoursTimePickerOverlay" class="myday-overlay" role="dialog" aria-modal="true" aria-label="בחירת שעה">
+  <div class="myday-sheet hours-time-sheet">
+    <div class="myday-header">
+      <h3 id="hoursTimePickerTitle">שעת התחלה</h3>
+      <div class="myday-actions">
+        <button type="button" onclick="closeHoursTimePicker()">✕ סגירה</button>
+      </div>
+    </div>
+    <div class="hours-time-picker-cols">
+      <div class="hours-time-picker-col" id="hoursTimePickerHourCol" role="listbox" aria-label="שעה"></div>
+      <div class="hours-time-picker-colon">:</div>
+      <div class="hours-time-picker-col" id="hoursTimePickerMinCol" role="listbox" aria-label="דקות"></div>
+    </div>
+  </div>
+</div>
 <script>
   let pageHiddenMsAccumulated = 0;
   let pageHiddenSince = (typeof document !== 'undefined' && document.hidden) ? (typeof performance !== 'undefined' ? performance.now() : Date.now()) : null;
@@ -3549,6 +3617,14 @@
       if (customWrap) customWrap.style.display = (this.value === 'custom' && this.checked) ? 'flex' : 'none';
     });
   });
+  document.getElementById('frDateFrom')?.addEventListener('change', function(){
+    const toEl = document.getElementById('frDateTo');
+    if (!toEl) return;
+    const todayStr = formatDateKey(todayMidnight);
+    const minForTo = this.value && this.value > todayStr ? this.value : todayStr;
+    toEl.min = minForTo;
+    if (toEl.value && toEl.value < minForTo) toEl.value = '';
+  });
   document.getElementById('frId')?.addEventListener('input', function(){
     this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
     splitNameIntoFields('', 'frFirstName', 'frLastName');
@@ -3589,7 +3665,10 @@
     if (anyRadio) anyRadio.checked = true;
     document.getElementById('frTimeFrom').value = '';
     document.getElementById('frTimeTo').value = '';
+    const frTodayStr = formatDateKey(todayMidnight);
+    document.getElementById('frDateFrom').min = frTodayStr;
     document.getElementById('frDateFrom').value = '';
+    document.getElementById('frDateTo').min = frTodayStr;
     document.getElementById('frDateTo').value = '';
     document.getElementById('frNote').value = '';
     document.getElementById('frId').value = '';
@@ -3664,6 +3743,55 @@
       preference.timeTo = timeToVal;
     } else {
       preference.timeOfDay = timeOfDay;
+    }
+    const frTodayStr = formatDateKey(todayMidnight);
+    if (preference.dateFrom && preference.dateFrom < frTodayStr){
+      errorEl.textContent = 'לא ניתן לבחור תאריך התחלה שכבר עבר.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    if (preference.dateTo && preference.dateTo < frTodayStr){
+      errorEl.textContent = 'לא ניתן לבחור תאריך סיום שכבר עבר.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    if (preference.dateFrom && preference.dateTo && preference.dateTo < preference.dateFrom){
+      errorEl.textContent = 'תאריך "עד" לא יכול להיות לפני תאריך "מ".';
+      errorEl.style.display = 'block';
+      return;
+    }
+    let frRangeFrom = preference.dateFrom
+      ? (d => new Date(d[0], d[1] - 1, d[2]))(preference.dateFrom.split('-').map(Number))
+      : new Date(todayMidnight);
+    if (frRangeFrom < todayMidnight) frRangeFrom = new Date(todayMidnight);
+    const frRangeTo = preference.dateTo
+      ? (d => new Date(d[0], d[1] - 1, d[2]))(preference.dateTo.split('-').map(Number))
+      : (d => { d.setDate(d.getDate() + 30); return d; })(new Date(todayMidnight));
+    const frCustomTimeAlreadyPassedToday = timeOfDay === 'custom' && timeFromVal && timeToVal
+      && timeToMinutes(timeToVal) <= nowMinutesReal;
+    let frAnyDayOpenAtAll = false; // at least one candidate date the business isn't fully closed on
+    let frAnyDayActuallyBookable = false; // same, but also not blocked by today's own already-passed custom time
+    const frCursor = new Date(frRangeFrom);
+    let frGuard = 0; // hard cap — the min/order checks above should already keep this bounded, this is just a backstop
+    while (frCursor <= frRangeTo && frGuard < 400){
+      if (preference.days.length === 0 || preference.days.includes(frCursor.getDay())){
+        const frClosed = isDateFullyClosedForBusiness(frCursor);
+        if (!frClosed) frAnyDayOpenAtAll = true;
+        const frTimePassed = sameDate(frCursor, todayMidnight) && frCustomTimeAlreadyPassedToday;
+        if (!frClosed && !frTimePassed) frAnyDayActuallyBookable = true;
+      }
+      frCursor.setDate(frCursor.getDate() + 1);
+      frGuard++;
+    }
+    if (!frAnyDayOpenAtAll){
+      errorEl.textContent = 'טווח התאריכים שבחרת חופף רק לימים שהעסק סגור בהם — יש לבחור טווח אחר.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    if (!frAnyDayActuallyBookable){
+      errorEl.textContent = 'טווח השעות שבחרת להיום כבר חלף — יש לבחור טווח שעות אחר או תאריך אחר.';
+      errorEl.style.display = 'block';
+      return;
     }
     const req = {
       id: 'sr_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
@@ -7921,7 +8049,7 @@
         <div class="new-icon">✦</div>
         <div class="new-body">
           <h4>מבשלים לך פינוק שווה</h4>
-          <p>תיכנסי בהמשך :)</p>
+          <p>בקרי שוב בקרוב :)</p>
         </div>
       </div>`;
     const adminEl = document.getElementById('whatsNewAdminList');
@@ -7999,40 +8127,69 @@
     const toMinutes = t => { const parts = String(t).split(':'); return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0); };
     const toTimeStr = m => { const mm = m % 1440; return String(Math.floor(mm / 60)).padStart(2, '0') + ':' + String(mm % 60).padStart(2, '0'); };
     const todayDow = new Date().getDay();
-    const perDay = days.map((day, dow) => {
-      const intervals = [];
-      (staff || []).forEach(s => {
-        if (!s || s.deleted) return;
+    const activeStaff = (staff || []).filter(s => s && !s.deleted);
+    if (!activeStaff.length){
+      wrap.innerHTML = `
+        <div class="new-card">
+          <div class="new-icon">✦</div>
+          <div class="new-body">
+            <h4>עדיין אין כאן צוות להצגה</h4>
+            <p style="direction:rtl; text-align:right;">תעדכני בקרוב :)</p>
+          </div>
+        </div>`;
+      return;
+    }
+    wrap.innerHTML = activeStaff.map(s => {
+      const perDay = days.map((day, dow) => {
         const dayInfo = s.hours && s.hours[dow];
-        if (!dayInfo || !dayInfo.open) return;
-        const ranges = (Array.isArray(dayInfo.ranges) && dayInfo.ranges.length)
-          ? dayInfo.ranges
-          : (dayInfo.from && dayInfo.to ? [{ from: dayInfo.from, to: dayInfo.to }] : []);
-        ranges.forEach(r => {
+        const rawRanges = (dayInfo && dayInfo.open)
+          ? ((Array.isArray(dayInfo.ranges) && dayInfo.ranges.length)
+              ? dayInfo.ranges
+              : (dayInfo.from && dayInfo.to ? [{ from: dayInfo.from, to: dayInfo.to }] : []))
+          : [];
+        const intervals = [];
+        rawRanges.forEach(r => {
           if (!r || !r.from || !r.to) return;
           const s0 = toMinutes(r.from), e0 = toMinutes(r.to);
           if (s0 >= e0) return;
           intervals.push([s0, e0]);
         });
+        intervals.sort((a, b) => a[0] - b[0]);
+        const merged = [];
+        intervals.forEach(([start, end]) => {
+          const last = merged[merged.length - 1];
+          if (last && start <= last[1]) last[1] = Math.max(last[1], end);
+          else merged.push([start, end]);
+        });
+        return { name: day.name, dow, ranges: merged.map(([st, en]) => ({ from: toTimeStr(st), to: toTimeStr(en) })) };
       });
-      intervals.sort((a, b) => a[0] - b[0]);
-      const mergedRanges = [];
-      intervals.forEach(([start, end]) => {
-        const last = mergedRanges[mergedRanges.length - 1];
-        if (last && start <= last[1]) last[1] = Math.max(last[1], end);
-        else mergedRanges.push([start, end]);
-      });
-      return { name: day.name, dow, ranges: mergedRanges.map(([s, e]) => ({ from: toTimeStr(s), to: toTimeStr(e) })) };
-    });
-    wrap.innerHTML = perDay.map(d => `
-      <div class="new-card hours-day-card${!d.ranges.length ? ' hours-day-closed' : ''}">
-        <div class="new-icon hours-day-icon-${d.dow}"><i class="ti ti-clock"></i></div>
-        <div class="new-body">
-          <h4>${d.name}${d.dow === todayDow ? '<span class="hours-today-tag">היום</span>' : ''}</h4>
-          <p>${d.ranges.length ? d.ranges.map(r => `${r.from}–${r.to}`).join(' , ') : 'סגור'}</p>
+      const hasAnyHours = perDay.some(d => d.ranges.length);
+      const avatarHtml = s.photo ? `<img src="${s.photo}" alt="">` : (s.name || '').trim().charAt(0);
+      const daysHtml = hasAnyHours ? perDay.map(d => `
+        <div class="new-card hours-day-card${!d.ranges.length ? ' hours-day-closed' : ''}">
+          <div class="new-icon hours-day-icon-${d.dow}"><i class="ti ti-clock"></i></div>
+          <div class="new-body">
+            <h4>${d.name}${d.dow === todayDow ? '<span class="hours-today-tag">היום</span>' : ''}</h4>
+            <p>${d.ranges.length ? d.ranges.map(r => `${r.from}–${r.to}`).join(' , ') : 'סגור'}</p>
+          </div>
         </div>
-      </div>
-    `).join('');
+      `).join('') : `
+        <div class="new-card">
+          <div class="new-icon">✦</div>
+          <div class="new-body">
+            <h4>עוד לא נקבעו לה שעות עבודה</h4>
+            <p style="direction:rtl; text-align:right;">תעדכני בקרוב :)</p>
+          </div>
+        </div>`;
+      return `
+        <div class="hours-staff-section">
+          <div class="hours-staff-head">
+            <div class="hours-staff-avatar">${avatarHtml}</div>
+            <h3>${s.name}</h3>
+          </div>
+          <div class="hours-staff-days">${daysHtml}</div>
+        </div>`;
+    }).join('');
   }
   renderHoursOverview();
   const todayMidnight = new Date(nowReal.getFullYear(), nowReal.getMonth(), nowReal.getDate());
@@ -8085,6 +8242,16 @@
       else merged.push([s, e]);
     });
     return merged;
+  }
+  function isDateFullyClosedForBusiness(dateObj){
+    const indices = staff.map((s, i) => i).filter(i => !staff[i].deleted);
+    if (!indices.length) return true;
+    const dow = dateObj.getDay();
+    return indices.every(idx => {
+      const dayInfo = staff[idx].hours && staff[idx].hours[dow];
+      if (!dayInfo || !dayInfo.open) return true;
+      return isDateClosedForStaff(idx, dateObj);
+    });
   }
   function hasAnySlotForStaff(cellDate, staffIdx){
     const svc = getBookingSvc();
@@ -8689,18 +8856,18 @@
       updateReminderChoiceNotice();
     });
   });
-  updateReminderChoiceNotice(); // מציג את הודעת "שימי לב: בחרת ב-SMS..." כבר על ברירת המחדל הראשונית, גם לפני שהיא נגעה בכלום.
+  updateReminderChoiceNotice(); // מציג כבר על הטעינה הראשונית את הקריאה "יש לבחור..." (שתי התיבות ריקות כברירת מחדל), גם לפני שהיא נגעה בכלום.
   function updateReminderChoiceNotice(){
     const noticeEl = document.getElementById('reminderChoiceNotice');
     if (!noticeEl) return;
     const checked = Array.from(document.querySelectorAll('input[name="reminderChannel"]:checked')).map(cb => cb.value);
     const labels = { sms: 'SMS', call: 'שיחת טלפון' };
-    if (!checked.length){ noticeEl.textContent = ''; return; }
+    if (!checked.length){ noticeEl.textContent = 'יש לבחור אופן קבלת תזכורת (SMS ו/או שיחת טלפון) לפני קביעת התור.'; return; }
     const channelsText = checked.map(v => labels[v]).join(' ו-');
     noticeEl.textContent = `⚠️ שימי לב: בחרת ב-${channelsText} כאופן ההתקשרות שלך לתזכורות התור. אם זה לא נכון (למשל אין לך SMS), אפשר לשנות את הבחירה כאן למעלה.`;
   }
   function applyReminderChannelPref(pref){
-    const channels = (Array.isArray(pref) && pref.length) ? pref : ['sms'];
+    const channels = (Array.isArray(pref) && pref.length) ? pref : [];
     document.querySelectorAll('input[name="reminderChannel"]').forEach(function(cb){
       cb.checked = channels.indexOf(cb.value) !== -1;
     });
@@ -9222,8 +9389,8 @@
         ${appt.confirmedByClient
           ? `<div style="color:#1c8a4b; font-weight:700; font-size:13px; margin-top:8px;">✓ אישרת שאת מגיעה</div>`
           : `<div class="my-appt-actions" style="margin-top:8px;"><button onclick="confirmListedAppointment(${idx})" style="border-color:#1c8a4b; color:#1c8a4b;">✓ אשרי שאת מגיעה</button></div>`}
+        
         <div class="my-appt-actions">
-          <button onclick="rescheduleListedAppointment(${idx})">שינוי מועד</button>
           <button class="danger" onclick="cancelListedAppointment(${idx})">ביטול תור</button>
         </div>
       </div>`;
@@ -9673,23 +9840,101 @@
     m = Math.max(0, Math.min(1440, Math.round(m)));
     return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
   }
-  function buildHourOptionsHtml(selectedValue, isToField){
+  function hoursTimeButtonLabel(hour, minute){
+    return (hour === '24') ? '00:00 (חצות)' : (hour + ':' + minute);
+  }
+  const HOURS_TIME_CLOCK_SVG = '<svg class="hours-time-clock-ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>';
+  function buildHoursTimeHourButtonsHtml(selectedValue, isToField){
     let html = '';
     const startHour = isToField ? 1 : 0;
     const maxHour = isToField ? 24 : 23;
     for (let h = startHour; h <= maxHour; h++){
       const v = String(h).padStart(2, '0');
       const label = (h === 24) ? '00 (חצות)' : v;
-      html += `<option value="${v}"${v === selectedValue ? ' selected' : ''}>${label}</option>`;
+      html += `<button type="button" class="hours-time-picker-opt${v === selectedValue ? ' selected' : ''}" data-value="${v}" role="option" aria-selected="${v === selectedValue}">${label}</button>`;
     }
     return html;
   }
-  function buildMinuteOptionsHtml(selectedValue){
-    const values = [];
-    for (let m = 0; m < 60; m += 5) values.push(String(m).padStart(2, '0'));
-    if (selectedValue && values.indexOf(selectedValue) === -1) values.push(selectedValue);
-    values.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-    return values.map(v => `<option value="${v}"${v === selectedValue ? ' selected' : ''}>${v}</option>`).join('');
+  function buildHoursTimeMinuteButtonsHtml(selectedValue, locked){
+    let html = '';
+    for (let m = 0; m < 60; m++){
+      const v = String(m).padStart(2, '0');
+      html += `<button type="button" class="hours-time-picker-opt${v === selectedValue ? ' selected' : ''}"${locked ? ' disabled' : ''} data-value="${v}" role="option" aria-selected="${v === selectedValue}">${v}</button>`;
+    }
+    return html;
+  }
+  let hoursTimePickerCtx = null;
+  function commitHoursTimeValue(hourVal, minuteVal){
+    if (!hoursTimePickerCtx) return;
+    const { dayHours, ri, part, rangeEl, refreshDownstream } = hoursTimePickerCtx;
+    if (part === 'to' && hourVal === '24') minuteVal = '00';
+    dayHours.ranges[ri][part] = hourVal + ':' + minuteVal;
+    rangeEl.classList.toggle('invalid', isHoursRangeInvalid(dayHours.ranges[ri]));
+    const label = rangeEl.querySelector(`.hours-time-btn[data-part="${part}"] .hours-time-btn-label`);
+    if (label) label.textContent = hoursTimeButtonLabel(hourVal, minuteVal);
+    refreshDownstream();
+  }
+  function closeHoursTimePicker(){
+    const overlay = document.getElementById('hoursTimePickerOverlay');
+    if (overlay) overlay.classList.remove('show');
+    hoursTimePickerCtx = null;
+  }
+  function openHoursTimePicker(dayHours, ri, part, rangeEl, refreshDownstream){
+    const isToField = part === 'to';
+    const hm = hoursDataValueToHourMinute(dayHours.ranges[ri][part]);
+    hoursTimePickerCtx = { dayHours, ri, part, rangeEl, refreshDownstream };
+    const titleEl = document.getElementById('hoursTimePickerTitle');
+    if (titleEl) titleEl.textContent = isToField ? 'שעת סיום' : 'שעת התחלה';
+    const locked = isToField && hm.hour === '24';
+    const hourCol = document.getElementById('hoursTimePickerHourCol');
+    const minCol = document.getElementById('hoursTimePickerMinCol');
+    hourCol.innerHTML = buildHoursTimeHourButtonsHtml(hm.hour, isToField);
+    minCol.innerHTML = buildHoursTimeMinuteButtonsHtml(locked ? '00' : hm.minute, locked);
+    const wireMinuteButtons = () => {
+      minCol.querySelectorAll('.hours-time-picker-opt').forEach(btn => {
+        btn.onclick = () => {
+          if (btn.disabled) return;
+          const hourBtn = hourCol.querySelector('.selected');
+          const hv = hourBtn ? hourBtn.dataset.value : '00';
+          const mv = btn.dataset.value;
+          minCol.querySelectorAll('.hours-time-picker-opt').forEach(b => {
+            b.classList.toggle('selected', b === btn);
+            b.setAttribute('aria-selected', String(b === btn));
+          });
+          commitHoursTimeValue(hv, mv);
+          closeHoursTimePicker();
+        };
+      });
+    };
+    hourCol.querySelectorAll('.hours-time-picker-opt').forEach(btn => {
+      btn.onclick = () => {
+        const hv = btn.dataset.value;
+        hourCol.querySelectorAll('.hours-time-picker-opt').forEach(b => {
+          b.classList.toggle('selected', b === btn);
+          b.setAttribute('aria-selected', String(b === btn));
+        });
+        if (isToField && hv === '24'){
+          minCol.innerHTML = buildHoursTimeMinuteButtonsHtml('00', true);
+          commitHoursTimeValue(hv, '00');
+          closeHoursTimePicker();
+        } else {
+          const curSel = minCol.querySelector('.selected');
+          const mv = curSel ? curSel.dataset.value : '00';
+          minCol.innerHTML = buildHoursTimeMinuteButtonsHtml(mv, false);
+          wireMinuteButtons();
+          commitHoursTimeValue(hv, mv);
+        }
+      };
+    });
+    wireMinuteButtons();
+    const overlay = document.getElementById('hoursTimePickerOverlay');
+    overlay.classList.add('show');
+    requestAnimationFrame(() => {
+      const selHour = hourCol.querySelector('.selected');
+      const selMin = minCol.querySelector('.selected');
+      if (selHour && selHour.scrollIntoView) selHour.scrollIntoView({ block: 'center' });
+      if (selMin && selMin.scrollIntoView) selMin.scrollIntoView({ block: 'center' });
+    });
   }
   function hoursDataValueToHourMinute(v){
     const parts = String(v || '09:00').split(':');
@@ -9719,19 +9964,12 @@
       const shiftsHtml = dayHours.ranges.map((r, ri) => {
         const fromHM = hoursDataValueToHourMinute(r.from);
         const toHM = hoursDataValueToHourMinute(r.to);
-        const toMinuteLocked = toHM.hour === '24'; // חצות: תמיד "24:00" בדיוק, אין "24:05"
+        const fromLabel = hoursTimeButtonLabel(fromHM.hour, fromHM.minute);
+        const toLabel = hoursTimeButtonLabel(toHM.hour, toHM.minute);
         return `<div class="hours-range${isHoursRangeInvalid(r) ? ' invalid' : ''}" data-range-idx="${ri}">
-          <div class="hours-time-group" data-part="from">
-            <select class="hours-time-select" data-part="from" data-unit="hour" aria-label="שעת התחלה">${buildHourOptionsHtml(fromHM.hour, false)}</select>
-            <span class="hours-time-sep">:</span>
-            <select class="hours-time-select" data-part="from" data-unit="minute" aria-label="דקות התחלה">${buildMinuteOptionsHtml(fromHM.minute)}</select>
-          </div>
+          <button type="button" class="hours-time-group hours-time-btn" data-part="from" aria-label="שעת התחלה: ${fromLabel}">${HOURS_TIME_CLOCK_SVG}<span class="hours-time-btn-label">${fromLabel}</span></button>
           <span>עד</span>
-          <div class="hours-time-group" data-part="to">
-            <select class="hours-time-select" data-part="to" data-unit="hour" aria-label="שעת סיום">${buildHourOptionsHtml(toHM.hour, true)}</select>
-            <span class="hours-time-sep">:</span>
-            <select class="hours-time-select" data-part="to" data-unit="minute" aria-label="דקות סיום"${toMinuteLocked ? ' disabled' : ''}>${buildMinuteOptionsHtml(toHM.minute)}</select>
-          </div>
+          <button type="button" class="hours-time-group hours-time-btn" data-part="to" aria-label="שעת סיום: ${toLabel}">${HOURS_TIME_CLOCK_SVG}<span class="hours-time-btn-label">${toLabel}</span></button>
           ${dayHours.ranges.length > 1 ? '<button type="button" class="hours-range-del" aria-label="הסרת משמרת">✕</button>' : ''}
           <span class="hours-range-warn">⚠ שעת הסיום מוקדמת/שווה לשעת ההתחלה — המשמרת הזו לא תוצג ולא תהיה ניתנת לקביעת תור</span>
         </div>`;
@@ -9754,25 +9992,9 @@
       row.querySelectorAll('.hours-range').forEach(rangeEl => {
         const ri = parseInt(rangeEl.dataset.rangeIdx);
         ['from', 'to'].forEach(part => {
-          const hourSel = rangeEl.querySelector(`select[data-part="${part}"][data-unit="hour"]`);
-          const minSel = rangeEl.querySelector(`select[data-part="${part}"][data-unit="minute"]`);
-          if (!hourSel || !minSel) return;
-          const applyMidnightLock = () => {
-            if (part === 'to' && hourSel.value === '24'){
-              minSel.value = '00';
-              minSel.disabled = true;
-            } else {
-              minSel.disabled = false;
-            }
-          };
-          const commit = () => {
-            applyMidnightLock();
-            dayHours.ranges[ri][part] = hourSel.value + ':' + minSel.value;
-            rangeEl.classList.toggle('invalid', isHoursRangeInvalid(dayHours.ranges[ri]));
-            refreshDownstream();
-          };
-          hourSel.onchange = commit;
-          minSel.onchange = commit;
+          const btn = rangeEl.querySelector(`.hours-time-btn[data-part="${part}"]`);
+          if (!btn) return;
+          btn.onclick = () => openHoursTimePicker(dayHours, ri, part, rangeEl, refreshDownstream);
         });
         const delBtn = rangeEl.querySelector('.hours-range-del');
         if (delBtn){
@@ -10615,9 +10837,23 @@
   function onCalActionsMenuChange(sel){
     const action = sel.value;
     sel.value = '';
-    if (action === 'myday') openMyDayView();
+    if (action === 'refresh') refreshCalendarView();
+    else if (action === 'myday') openMyDayView();
     else if (action === 'add') openManualBookingModal();
     else if (action === 'logout') doLogout();
+  }
+  function refreshCalendarView(){
+    if (typeof renderOverviewStats === 'function') renderOverviewStats();
+    if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
+    if (overviewViewMode === 'day'){
+      if (typeof renderOverviewDayView === 'function') renderOverviewDayView();
+    } else if (overviewViewMode === 'month'){
+      if (typeof renderOverviewMonthCal === 'function') renderOverviewMonthCal();
+    } else {
+      if (typeof renderWeekCal === 'function') renderWeekCal();
+      if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
+    }
+    if (typeof renderMiniCal === 'function') renderMiniCal();
   }
   function doLogout(){
     auth.signOut().then(() => {
