@@ -971,12 +971,17 @@
   .inner-subpanel.active{display:block; animation:fadeUp 0.4s ease forwards;}
   .hours-list{border:1px solid rgba(var(--panel-line-rgb),0.12); border-radius:16px; overflow:hidden;}
   .hours-row{
-    display:grid;
-    grid-template-columns:90px auto minmax(0,1fr);
-    align-items:center;
-    gap:14px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
     padding:14px 20px;
     border-bottom:1px solid rgba(var(--panel-line-rgb),0.08);
+  }
+  .hours-row-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
   }
   .hours-row:last-child{border-bottom:none;}
   .hours-row .day{font-weight:500; font-size:14px;}
@@ -1670,7 +1675,7 @@
   .phone-brand .logo-dot img{width:100%; height:100%; object-fit:cover;}
   .phone-brand .biz-name{font-family:'Suez One'; font-weight:400; font-size:16px; color:var(--ink);}
   @media (max-width:640px){
-    .hours-row{grid-template-columns:70px auto minmax(0,1fr); padding:12px 14px;}
+    .hours-row{padding:12px 14px;}
     .inv-row{grid-template-columns:1.1fr 100px 60px 60px; padding:10px 12px; font-size:12px;}
     .new-card{flex-wrap:wrap;}
   }
@@ -9568,8 +9573,10 @@
         </div>`;
       }).join('');
       row.innerHTML = `
-        <span class="day">${day.name}</span>
-        <div class="toggle${dayHours.open ? ' on' : ''}"></div>
+        <div class="hours-row-head">
+          <span class="day">${day.name}</span>
+          <div class="toggle${dayHours.open ? ' on' : ''}"></div>
+        </div>
         <div class="hours-ranges-wrap">
           ${shiftsHtml}
           <button type="button" class="hours-add-shift">+ משמרת (למשל ערב)</button>
