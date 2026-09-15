@@ -782,6 +782,7 @@
     white-space:nowrap;
   }
   .hours-day-card .new-icon{font-size:18px;}
+  .hours-day-card .new-body p{direction:ltr; text-align:right;}
   .hours-day-card.hours-day-closed .new-body p{color:#8A8178;}
   .hours-today-tag{
     font-size:10.5px; font-weight:400; font-family:'Heebo';
@@ -2962,28 +2963,6 @@
           <button class="step-back" onclick="mbGoToStep(2)">חזרה</button>
           <button class="cta" id="mbSubmitBtn" style="flex:1;" onclick="submitManualBooking()">הוספת תור</button>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="addSpecialRequestOverlay" class="myday-overlay">
-  <div class="myday-sheet">
-    <div class="myday-header">
-      <h3>הוספת בקשה מיוחדת</h3>
-      <div class="myday-actions">
-        <button onclick="closeAddSpecialRequestModal()">✕ סגירה</button>
-      </div>
-    </div>
-    <div style="display:flex; flex-direction:column; gap:10px;">
-      <input type="tel" inputmode="numeric" maxlength="9" id="srClientId" class="field" placeholder="תעודת זהות — מילוי תז יטען הכל אוטומטית (אופציונלי)">
-      <div id="srClientIdStatus" class="mb-client-id-status" style="display:none;"></div>
-      <input type="text" id="srClientName" class="field" placeholder="שם הלקוחה">
-      <input type="tel" id="srClientPhone" class="field" placeholder="050-0000000 (אופציונלי)">
-      <textarea id="srClientNote" class="client-note" style="min-height:70px; margin:0;" placeholder="מה מבקשים? (למשל: לקוחה שרוצה ערב, לא משנה איזה יום)"></textarea>
-      <div id="srError" style="display:none; color:var(--wine); font-size:13px;"></div>
-      <div class="step-nav">
-        <button class="cta" id="srSubmitBtn" style="flex:1;" onclick="submitAddSpecialRequest()">הוספת בקשה</button>
       </div>
     </div>
   </div>
@@ -6789,84 +6768,6 @@
     if (diffDays === 1) return 'נוספה אתמול';
     return `נוספה לפני ${diffDays} ימים`;
   }
-  function openAddSpecialRequestModal(){
-    document.getElementById('srClientId').value = '';
-    document.getElementById('srClientIdStatus').style.display = 'none';
-    const nameInput = document.getElementById('srClientName');
-    nameInput.value = '';
-    nameInput.readOnly = false;
-    nameInput.classList.remove('field-locked');
-    nameInput.title = '';
-    document.getElementById('srClientPhone').value = '';
-    document.getElementById('srClientNote').value = '';
-    document.getElementById('srError').style.display = 'none';
-    document.getElementById('addSpecialRequestOverlay').classList.add('show');
-  }
-  function closeAddSpecialRequestModal(){
-    document.getElementById('addSpecialRequestOverlay').classList.remove('show');
-  }
-  function updateSrClientIdStatus(){
-    const statusEl = document.getElementById('srClientIdStatus');
-    const idVal = (document.getElementById('srClientId')?.value || '');
-    if (idVal.length < 9){
-      statusEl.style.display = 'none';
-      statusEl.className = 'mb-client-id-status';
-      statusEl.textContent = '';
-      return;
-    }
-    const match = clients.find(c => c.teudatZehut === idVal);
-    statusEl.style.display = 'block';
-    if (match){
-      statusEl.className = 'mb-client-id-status matched';
-      statusEl.textContent = `✓ נמצאה לקוחה קיימת — ${match.name}`;
-    } else {
-      statusEl.className = 'mb-client-id-status new';
-      statusEl.textContent = '➕ לקוחה חדשה — לא נמצאה בכרטיסייה, אפשר למלא את השם/טלפון למטה בעצמך';
-    }
-  }
-  document.getElementById('srClientId')?.addEventListener('input', function(){
-    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
-    const nameInput = document.getElementById('srClientName');
-    const phoneInput = document.getElementById('srClientPhone');
-    nameInput.readOnly = false;
-    nameInput.classList.remove('field-locked');
-    nameInput.title = '';
-    if (this.value.length < 9){ updateSrClientIdStatus(); return; }
-    const match = clients.find(c => c.teudatZehut === this.value);
-    if (match){
-      nameInput.value = match.name;
-      nameInput.readOnly = true;
-      nameInput.classList.add('field-locked');
-      nameInput.title = 'השם מולא אוטומטית מכרטיס לקוחה קיימת — לשינוי השם יש לעדכן אותו בכרטיסיית הלקוחות.';
-      phoneInput.value = match.phone || '';
-    }
-    updateSrClientIdStatus();
-  });
-  function submitAddSpecialRequest(){
-    const errorEl = document.getElementById('srError');
-    const idDigits = document.getElementById('srClientId').value || '';
-    const name = document.getElementById('srClientName').value.trim();
-    const phone = document.getElementById('srClientPhone').value.trim();
-    const note = document.getElementById('srClientNote').value.trim();
-    if (!note){
-      errorEl.textContent = 'יש לתאר מה מבקשים (למשל: לקוחה שרוצה ערב, לא משנה איזה יום).';
-      errorEl.style.display = 'block';
-      return;
-    }
-    errorEl.style.display = 'none';
-    specialRequests.push({
-      id: 'sr_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
-      name,
-      phone,
-      teudatZehut: idDigits || null,
-      note,
-      createdAt: new Date().toISOString()
-    });
-    closeAddSpecialRequestModal();
-    renderWeekCal();
-    if (typeof saveState === 'function') saveState();
-    if (typeof showAdminToast === 'function') showAdminToast('✓ הבקשה נוספה בהצלחה');
-  }
   function deleteSpecialRequest(id){
     const req = specialRequests.find(r => r.id === id);
     if (!req) return;
@@ -7255,7 +7156,7 @@
     addBtn.title = 'הוספת בקשה מיוחדת';
     addBtn.setAttribute('aria-label', 'הוספת בקשה מיוחדת');
     addBtn.textContent = '+';
-    addBtn.onclick = openAddSpecialRequestModal;
+    addBtn.onclick = openFlexibleRequestOverlay;
     head.appendChild(addBtn);
     col.appendChild(head);
     const body = document.createElement('div');
@@ -10678,7 +10579,6 @@
     myDayOverlay: closeMyDayView,
     flexibleRequestOverlay: closeFlexibleRequestOverlay,
     manualBookingOverlay: closeManualBookingModal,
-    addSpecialRequestOverlay: closeAddSpecialRequestModal,
     slotChoiceOverlay: closeSlotChoiceOverlay,
     personalTimeOverlay: closePersonalTimeOverlay,
     apptDetailOverlay: closeApptDetailOverlay,
