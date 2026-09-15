@@ -649,6 +649,11 @@
   }
   .reminder-choice input[type="radio"]{width:auto; margin:0;}
   .reminder-choice input[type="checkbox"]{width:auto; margin:0;}
+  .reminder-choice-notice{
+    font-size:12px; font-weight:600; color:var(--gold-soft, #C9A227);
+    background:rgba(201,162,39,0.12); border:1px solid rgba(201,162,39,0.35);
+    border-radius:10px; padding:7px 10px; margin:2px 0 8px; line-height:1.5;
+  }
   .confirm-msg{
     display:none;
     align-items:center;
@@ -2361,6 +2366,8 @@
               <label><input type="checkbox" name="reminderChannel" value="call"> שיחת טלפון</label>
             </div>
             <div id="reminderChoiceError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש לבחור לפחות ערוץ תזכורת אחד לפני קביעת התור</div>
+            
+            <div id="reminderChoiceNotice" class="reminder-choice-notice"></div>
             <p style="font-size:11.5px; color:#8A8178; margin:2px 0 4px;">אישור התור וניהולו תמיד יישלחו גם במייל.</p>
             <input class="field" id="reminderEmailInput" type="email" placeholder="כתובת אימייל" style="display:none; margin-top:8px;">
             <div id="reminderEmailError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין כתובת אימייל כדי שנוכל לשלוח לך עדכונים על התור</div>
@@ -4520,6 +4527,11 @@
         <a id="cpCallLink" class="cp-icon-btn" title="התקשרות" href="#">📞 התקשרות</a>
         <a id="cpEmailLink" class="cp-icon-btn" title="שליחת מייל" href="#">✉️ שליחת מייל</a>
       </div>
+      <div class="mini-field-label" style="margin-top:14px; display:block;">אופן התקשרות (לתזכורות)</div>
+      <div class="reminder-choice" id="cpReminderChoice">
+        <label><input type="checkbox" class="cpReminderChannel" value="sms"${(!c.reminderChannelPref || c.reminderChannelPref.indexOf('sms') !== -1) ? ' checked' : ''}> SMS</label>
+        <label><input type="checkbox" class="cpReminderChannel" value="call"${(c.reminderChannelPref && c.reminderChannelPref.indexOf('call') !== -1) ? ' checked' : ''}> שיחת טלפון</label>
+      </div>
       <textarea class="client-note" id="cpNoteInput" placeholder="הערה אישית (העדפות, רגישויות...)">${c.note || ''}</textarea>
     `;
     const nameInput = fieldsEl.querySelector('#cpNameInput');
@@ -4554,6 +4566,13 @@
       });
     });
     updateCpContactLinks();
+    fieldsEl.querySelectorAll('.cpReminderChannel').forEach(function(cb){
+      cb.addEventListener('change', function(){
+        c.reminderChannelPref = Array.from(fieldsEl.querySelectorAll('.cpReminderChannel:checked')).map(el => el.value);
+        if (typeof saveState === 'function') saveState();
+        if (typeof showAdminToast === 'function') showAdminToast('✓ אופן ההתקשרות עודכן בהצלחה');
+      });
+    });
 
     const allAppointments = getClientAppointments(c.name);
     const history = allAppointments.filter(isAppointmentHistory);
@@ -8593,24 +8612,45 @@
         welcomeEl.textContent = `✓ ברוכה שובך, ${match.name}! אין צורך למלא פרטים נוספים.`;
         regEl.style.display = 'none';
         updateReminderEmailVisibility();
+        applyReminderChannelPref(match.reminderChannelPref);
         return;
       }
       welcomeEl.style.display = 'none';
       regEl.style.display = 'block';
       updateReminderEmailVisibility();
+      applyReminderChannelPref(null);
       return;
     }
     welcomeEl.style.display = 'none';
     regEl.style.display = 'none';
     updateReminderEmailVisibility();
+    applyReminderChannelPref(null);
   });
   document.querySelectorAll('input[name="reminderChannel"]').forEach(function(radio){
     radio.addEventListener('change', function(){
       document.getElementById('reminderChoiceError').style.display = 'none';
       document.getElementById('reminderEmailError').style.display = 'none';
       updateReminderEmailVisibility();
+      updateReminderChoiceNotice();
     });
   });
+  updateReminderChoiceNotice(); // מציג את הודעת "שימי לב: בחרת ב-SMS..." כבר על ברירת המחדל הראשונית, גם לפני שהיא נגעה בכלום.
+  function updateReminderChoiceNotice(){
+    const noticeEl = document.getElementById('reminderChoiceNotice');
+    if (!noticeEl) return;
+    const checked = Array.from(document.querySelectorAll('input[name="reminderChannel"]:checked')).map(cb => cb.value);
+    const labels = { sms: 'SMS', call: 'שיחת טלפון' };
+    if (!checked.length){ noticeEl.textContent = ''; return; }
+    const channelsText = checked.map(v => labels[v]).join(' ו-');
+    noticeEl.textContent = `⚠️ שימי לב: בחרת ב-${channelsText} כאופן ההתקשרות שלך לתזכורות התור. אם זה לא נכון (למשל אין לך SMS), אפשר לשנות את הבחירה כאן למעלה.`;
+  }
+  function applyReminderChannelPref(pref){
+    const channels = (Array.isArray(pref) && pref.length) ? pref : ['sms'];
+    document.querySelectorAll('input[name="reminderChannel"]').forEach(function(cb){
+      cb.checked = channels.indexOf(cb.value) !== -1;
+    });
+    updateReminderChoiceNotice();
+  }
   function getSiteUrl(){
     return window.location.href.split('#')[0];
   }
@@ -8836,13 +8876,14 @@
         if (enteredEmail) existingClient.email = enteredEmail;
       }
       customerEmail = existingClient.email || '';
+      existingClient.reminderChannelPref = reminderChannels;
     } else {
       const ftpEmail = document.getElementById('ftpEmail').value.trim();
       const reminderEmailEl = document.getElementById('reminderEmailInput');
       const reminderEmailVal = reminderEmailEl ? reminderEmailEl.value.trim() : '';
       const finalEmail = ftpEmail || reminderEmailVal;
       const ftpBirthday = readDMYPicker('ftpBirthdayDay', 'ftpBirthdayMonth', 'ftpBirthdayYear');
-      clients.push({ name: clientNameVal, phone: phoneVal.trim(), teudatZehut: idDigits, email: finalEmail, photo: null, visits: isTodayOrPastBooking ? 1 : 0, daysSinceVisit: isTodayOrPastBooking ? 0 : null, note: '', birthday: ftpBirthday });
+      clients.push({ name: clientNameVal, phone: phoneVal.trim(), teudatZehut: idDigits, email: finalEmail, photo: null, visits: isTodayOrPastBooking ? 1 : 0, daysSinceVisit: isTodayOrPastBooking ? 0 : null, note: '', birthday: ftpBirthday, reminderChannelPref: reminderChannels });
       customerEmail = finalEmail;
     }
     currentBookedAppointment = {
