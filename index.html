@@ -972,7 +972,7 @@
   .hours-list{border:1px solid rgba(var(--panel-line-rgb),0.12); border-radius:16px; overflow:hidden;}
   .hours-row{
     display:grid;
-    grid-template-columns:90px auto 1fr;
+    grid-template-columns:90px auto minmax(0,1fr);
     align-items:center;
     gap:14px;
     padding:14px 20px;
@@ -1002,6 +1002,8 @@
   .toggle.on::after{background:var(--ivory); right:20px;}
   .hours-range{
     display:flex;
+    flex-wrap:wrap;
+    min-width:0;
     align-items:center;
     gap:8px;
     font-family:'JetBrains Mono';
@@ -1017,7 +1019,7 @@
     font-size:13px;
   }
   .hours-range input[type=time]{ min-width:88px; }
-  .hours-ranges-wrap{display:flex; flex-direction:column; gap:8px;}
+  .hours-ranges-wrap{display:flex; flex-direction:column; gap:8px; min-width:0;}
   .hours-add-shift{
     align-self:flex-start;
     background:transparent;
@@ -1668,7 +1670,7 @@
   .phone-brand .logo-dot img{width:100%; height:100%; object-fit:cover;}
   .phone-brand .biz-name{font-family:'Suez One'; font-weight:400; font-size:16px; color:var(--ink);}
   @media (max-width:640px){
-    .hours-row{grid-template-columns:70px auto 1fr; padding:12px 14px;}
+    .hours-row{grid-template-columns:70px auto minmax(0,1fr); padding:12px 14px;}
     .inv-row{grid-template-columns:1.1fr 100px 60px 60px; padding:10px 12px; font-size:12px;}
     .new-card{flex-wrap:wrap;}
   }
