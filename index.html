@@ -84,6 +84,7 @@
     --gold-soft:#E8CE7A;
     --sage:#7C9473;
     --rose:#D98CA6;
+    --terracotta:#B8632F;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth; -webkit-text-size-adjust:100%; text-size-adjust:100%;}
@@ -483,6 +484,8 @@
   }
   .field:focus{outline:none; border-color:var(--wine);}
   .field.field-locked{background:#F1ECE3; color:#8A8178; cursor:not-allowed;}
+  .field-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .field-row .field{width:auto; flex:1 1 110px; min-width:0;}
   .mb-client-id-status{
     font-size:12.5px; font-weight:600; border-radius:8px;
     padding:6px 10px; margin-top:-4px;
@@ -787,6 +790,13 @@
     white-space:nowrap;
   }
   .hours-day-card .new-icon{font-size:18px;}
+  .hours-day-icon-0{background:rgba(155,44,66,0.16); color:var(--wine);}
+  .hours-day-icon-1{background:rgba(201,162,39,0.16); color:var(--gold);}
+  .hours-day-icon-2{background:rgba(124,148,115,0.18); color:var(--sage);}
+  .hours-day-icon-3{background:rgba(217,140,166,0.16); color:var(--rose);}
+  .hours-day-icon-4{background:rgba(110,31,48,0.2); color:#C9718A;}
+  .hours-day-icon-5{background:rgba(232,206,122,0.18); color:var(--gold-soft);}
+  .hours-day-icon-6{background:rgba(184,99,47,0.18); color:var(--terracotta);}
   .hours-day-card .new-body p{direction:ltr; text-align:right;}
   .hours-day-card.hours-day-closed .new-body p{color:#8A8178;}
   .hours-today-tag{
@@ -1020,7 +1030,6 @@
     min-width:0;
     align-items:center;
     gap:8px;
-    direction:ltr;
     font-family:'JetBrains Mono';
     font-size:13px;
   }
@@ -2345,8 +2354,11 @@
             <div id="bookingIdError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין תעודת זהות תקנית (9 ספרות)</div>
             <div id="bookingWelcomeBack" style="display:none; color:var(--sage); font-size:12px; margin:-4px 0 8px;"></div>
             <div id="newClientRegistration" style="display:none;">
-              <input class="field" id="bookingNameInput" placeholder="שם מלא">
-              <div id="bookingNameError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין שם מלא</div>
+              <div class="field-row">
+                <input class="field" id="bookingFirstNameInput" placeholder="שם פרטי">
+                <input class="field" id="bookingLastNameInput" placeholder="שם משפחה">
+              </div>
+              <div id="bookingNameError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין שם פרטי ושם משפחה</div>
               <input class="field" id="bookingPhoneInput" type="tel" placeholder="050-0000000">
               <div id="bookingPhoneError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">מספר טלפון לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567)</div>
               <div id="firstTimePerks" class="first-time-perks">
@@ -2865,7 +2877,10 @@
       <textarea id="frNote" class="client-note" style="min-height:50px;" placeholder="הערה נוספת (אופציונלי) — כל דבר שלא נכנס לשדות למעלה"></textarea>
       <div class="label" style="margin-top:6px;">פרטי קשר</div>
       <input type="tel" inputmode="numeric" maxlength="9" id="frId" class="field" placeholder="תעודת זהות">
-      <input type="text" id="frName" class="field" placeholder="שם מלא">
+      <div class="field-row">
+        <input type="text" id="frFirstName" class="field" placeholder="שם פרטי">
+        <input type="text" id="frLastName" class="field" placeholder="שם משפחה">
+      </div>
       <input type="tel" id="frPhone" class="field" placeholder="050-0000000">
       <input type="email" id="frEmail" class="field" placeholder="אימייל">
       
@@ -2899,7 +2914,10 @@
         <input type="tel" inputmode="numeric" maxlength="9" id="mbClientId" class="field" placeholder="תעודת זהות — מילוי תז יטען הכל אוטומטית">
         
         <div id="mbClientIdStatus" class="mb-client-id-status" style="display:none;"></div>
-        <input type="text" id="mbClientName" class="field" placeholder="שם הלקוחה">
+        <div class="field-row">
+          <input type="text" id="mbClientFirstName" class="field" placeholder="שם פרטי">
+          <input type="text" id="mbClientLastName" class="field" placeholder="שם משפחה">
+        </div>
         <input type="tel" id="mbClientPhone" class="field" placeholder="050-0000000">
         <input type="email" id="mbClientEmail" class="field" placeholder="אימייל (אופציונלי)">
         <textarea id="mbClientNote" class="client-note" style="min-height:44px; margin:0;" placeholder="הערה אישית על הלקוחה (העדפות, רגישויות...)"></textarea>
@@ -3533,13 +3551,13 @@
   });
   document.getElementById('frId')?.addEventListener('input', function(){
     this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
-    document.getElementById('frName').value = '';
+    splitNameIntoFields('', 'frFirstName', 'frLastName');
     document.getElementById('frPhone').value = '';
     document.getElementById('frEmail').value = '';
     if (this.value.length < 9) return;
     const match = clients.find(c => c.teudatZehut === this.value);
     if (match){
-      document.getElementById('frName').value = match.name || '';
+      splitNameIntoFields(match.name || '', 'frFirstName', 'frLastName');
       document.getElementById('frPhone').value = match.phone || '';
       if (match.email) document.getElementById('frEmail').value = match.email;
     }
@@ -3575,7 +3593,7 @@
     document.getElementById('frDateTo').value = '';
     document.getElementById('frNote').value = '';
     document.getElementById('frId').value = '';
-    document.getElementById('frName').value = '';
+    splitNameIntoFields('', 'frFirstName', 'frLastName');
     document.getElementById('frPhone').value = '';
     document.getElementById('frEmail').value = '';
     document.querySelectorAll('input[name="frReminderChannel"]').forEach(cb => { cb.checked = (cb.value === 'sms'); });
@@ -3592,7 +3610,9 @@
     const errorEl = document.getElementById('frError');
     const svcObjs = frSelectedServiceObjs();
     const idDigits = (document.getElementById('frId').value || '').replace(/[^0-9]/g, '');
-    const name = document.getElementById('frName').value.trim();
+    const firstNameOk = document.getElementById('frFirstName').value.trim();
+    const lastNameOk = document.getElementById('frLastName').value.trim();
+    const name = combineNameFields('frFirstName', 'frLastName');
     const phone = document.getElementById('frPhone').value.trim();
     const emailInput = document.getElementById('frEmail');
     const existingClient = idDigits ? clients.find(c => c.teudatZehut === idDigits) : null;
@@ -3607,8 +3627,8 @@
       errorEl.style.display = 'block';
       return;
     }
-    if (!name){
-      errorEl.textContent = 'יש להזין שם מלא.';
+    if (!firstNameOk || !lastNameOk){
+      errorEl.textContent = 'יש להזין שם פרטי ושם משפחה.';
       errorEl.style.display = 'block';
       return;
     }
@@ -3758,20 +3778,26 @@
     mbRefreshCalendarAndSlots();
   });
   function mbLockClientName(name){
-    const nameInput = document.getElementById('mbClientName');
-    if (!nameInput) return;
-    nameInput.value = name;
-    nameInput.readOnly = true;
-    nameInput.classList.add('field-locked');
-    nameInput.title = 'השם מולא אוטומטית מכרטיס לקוחה קיימת — לשינוי השם יש לעדכן אותו בכרטיסיית הלקוחות.';
+    const firstInput = document.getElementById('mbClientFirstName');
+    const lastInput = document.getElementById('mbClientLastName');
+    if (!firstInput || !lastInput) return;
+    splitNameIntoFields(name, 'mbClientFirstName', 'mbClientLastName');
+    [firstInput, lastInput].forEach(el => {
+      el.readOnly = true;
+      el.classList.add('field-locked');
+      el.title = 'השם מולא אוטומטית מכרטיס לקוחה קיימת — לשינוי השם יש לעדכן אותו בכרטיסיית הלקוחות.';
+    });
   }
   function mbUnlockClientName(clearValue){
-    const nameInput = document.getElementById('mbClientName');
-    if (!nameInput) return;
-    nameInput.readOnly = false;
-    nameInput.classList.remove('field-locked');
-    nameInput.title = '';
-    if (clearValue) nameInput.value = '';
+    const firstInput = document.getElementById('mbClientFirstName');
+    const lastInput = document.getElementById('mbClientLastName');
+    if (!firstInput || !lastInput) return;
+    [firstInput, lastInput].forEach(el => {
+      el.readOnly = false;
+      el.classList.remove('field-locked');
+      el.title = '';
+      if (clearValue) el.value = '';
+    });
   }
   function updateMbClientIdStatus(){
     const statusEl = document.getElementById('mbClientIdStatus');
@@ -3815,7 +3841,7 @@
   });
   document.getElementById('mbClientPhone')?.addEventListener('input', function(){
     const digits = this.value.replace(/[^0-9]/g, '');
-    const nameInput = document.getElementById('mbClientName');
+    const nameInput = document.getElementById('mbClientFirstName');
     const idInput = document.getElementById('mbClientId');
     const emailInput = document.getElementById('mbClientEmail');
     const noteInput = document.getElementById('mbClientNote');
@@ -3848,9 +3874,10 @@
   }
   function mbContinueToStep2(){
     const errEl = document.getElementById('mbStep1Error');
-    const name = document.getElementById('mbClientName').value.trim();
-    if (!name){
-      if (errEl){ errEl.style.display = 'block'; errEl.textContent = 'יש למלא שם לקוחה לפני שממשיכים.'; }
+    const firstOk = document.getElementById('mbClientFirstName').value.trim();
+    const lastOk = document.getElementById('mbClientLastName').value.trim();
+    if (!firstOk || !lastOk){
+      if (errEl){ errEl.style.display = 'block'; errEl.textContent = 'יש למלא שם פרטי ושם משפחה לפני שממשיכים.'; }
       return;
     }
     if (errEl) errEl.style.display = 'none';
@@ -4586,16 +4613,18 @@
     renderCpPhotoGrid();
   }
   function submitManualBooking(){
-    const name = document.getElementById('mbClientName').value.trim();
+    const firstNameOk = document.getElementById('mbClientFirstName').value.trim();
+    const lastNameOk = document.getElementById('mbClientLastName').value.trim();
+    const name = combineNameFields('mbClientFirstName', 'mbClientLastName');
     const phone = document.getElementById('mbClientPhone').value.trim();
     const idDigits = (document.getElementById('mbClientId')?.value || '').replace(/[^0-9]/g, '');
     const staffValRaw = document.getElementById('mbStaff').value;
     const dateVal = document.getElementById('mbDate').value;
     const timeVal = document.getElementById('mbTime').value;
     const errorEl = document.getElementById('mbError');
-    if (!name || !dateVal || !timeVal || !mbSelectedServices.length || !staffValRaw){
+    if (!firstNameOk || !lastNameOk || !dateVal || !timeVal || !mbSelectedServices.length || !staffValRaw){
       errorEl.style.display = 'block';
-      errorEl.textContent = 'יש למלא שם, תאריך, שעה, טיפול/ים ועובדת.';
+      errorEl.textContent = 'יש למלא שם פרטי, שם משפחה, תאריך, שעה, טיפול/ים ועובדת.';
       return;
     }
     if (phone && !isValidIsraeliPhone(phone)){
@@ -7879,7 +7908,7 @@
   let whatsNewItems = [];
   function renderWhatsNew(){
     const custEl = document.getElementById('whatsNewList');
-    custEl.innerHTML = whatsNewItems.map(item => `
+    custEl.innerHTML = whatsNewItems.length ? whatsNewItems.map(item => `
       <div class="new-card${item.photo ? ' has-photo' : ''}">
         ${item.photo ? `<div class="new-card-photo"><img src="${item.photo}" alt=""></div>` : '<div class="new-icon">✦</div>'}
         <div class="new-body">
@@ -7887,7 +7916,14 @@
           <p>${item.desc}</p>
         </div>
         ${item.badge ? '<div class="new-badge">חדש</div>' : ''}
-      </div>`).join('');
+      </div>`).join('') : `
+      <div class="new-card">
+        <div class="new-icon">✦</div>
+        <div class="new-body">
+          <h4>מבשלים לך פינוק שווה</h4>
+          <p>תיכנסי בהמשך :)</p>
+        </div>
+      </div>`;
     const adminEl = document.getElementById('whatsNewAdminList');
     if (!adminEl) return;
     adminEl.innerHTML = '';
@@ -7990,7 +8026,7 @@
     });
     wrap.innerHTML = perDay.map(d => `
       <div class="new-card hours-day-card${!d.ranges.length ? ' hours-day-closed' : ''}">
-        <div class="new-icon"><i class="ti ti-clock"></i></div>
+        <div class="new-icon hours-day-icon-${d.dow}"><i class="ti ti-clock"></i></div>
         <div class="new-body">
           <h4>${d.name}${d.dow === todayDow ? '<span class="hours-today-tag">היום</span>' : ''}</h4>
           <p>${d.ranges.length ? d.ranges.map(r => `${r.from}–${r.to}`).join(' , ') : 'סגור'}</p>
@@ -8460,7 +8496,7 @@
   }
   function showWaitlistPrompt(time, reason){
     const boxEl = document.getElementById('waitlistBox');
-    const knownName = (document.getElementById('bookingNameInput')?.value || '').trim();
+    const knownName = combineNameFields('bookingFirstNameInput', 'bookingLastNameInput');
     const knownPhone = (document.getElementById('bookingPhoneInput')?.value || '').trim();
     const knownId = (document.getElementById('bookingIdInput')?.value || '').replace(/[^0-9]/g, '');
     const knownClient = knownId.length === 9 ? clients.find(c => c.teudatZehut === knownId) : null;
@@ -8497,10 +8533,13 @@
       <div class="waitlist-prompt">
         השעה ${time} לא זמינה — ${reason || 'תפוסה כרגע.'}
         <input type="tel" inputmode="numeric" maxlength="9" id="wlId" class="field" style="margin-top:8px;" placeholder="תעודת זהות">
-        <input type="text" id="wlName" class="field" placeholder="שם מלא">
+        <div class="field-row">
+          <input type="text" id="wlFirstName" class="field" placeholder="שם פרטי">
+          <input type="text" id="wlLastName" class="field" placeholder="שם משפחה">
+        </div>
         <input type="tel" id="wlPhone" class="field" placeholder="050-0000000">
         <input type="email" id="wlEmail" class="field" placeholder="אימייל (כדי שנוכל להודיע לך אם יתפנה מקום)">
-        <div id="wlError" style="display:none; color:var(--wine); font-size:12px; margin-bottom:6px;">יש למלא תעודת זהות (9 ספרות), שם, טלפון ואימייל תקינים</div>
+        <div id="wlError" style="display:none; color:var(--wine); font-size:12px; margin-bottom:6px;">יש למלא תעודת זהות (9 ספרות), שם פרטי, שם משפחה, טלפון ואימייל תקינים</div>
         <div><button onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
       </div>`;
     document.getElementById('wlId').addEventListener('input', function(){
@@ -8508,7 +8547,7 @@
       if (this.value.length === 9){
         const match = clients.find(c => c.teudatZehut === this.value);
         if (match){
-          document.getElementById('wlName').value = match.name || '';
+          splitNameIntoFields(match.name || '', 'wlFirstName', 'wlLastName');
           document.getElementById('wlPhone').value = match.phone || '';
           if (match.email) document.getElementById('wlEmail').value = match.email;
         }
@@ -8524,16 +8563,17 @@
       idDigits = presetId;
       email = presetEmail;
     } else {
-      const nameEl = document.getElementById('wlName');
+      const firstNameOk = document.getElementById('wlFirstName').value.trim();
+      const lastNameOk = document.getElementById('wlLastName').value.trim();
       const phoneEl = document.getElementById('wlPhone');
       const idEl = document.getElementById('wlId');
       const emailEl = document.getElementById('wlEmail');
       const errorEl = document.getElementById('wlError');
-      name = nameEl.value.trim();
+      name = combineNameFields('wlFirstName', 'wlLastName');
       phone = phoneEl.value.trim();
       idDigits = idEl.value.replace(/[^0-9]/g, '');
       email = emailEl.value.trim();
-      if (!name || !isValidIsraeliPhone(phone) || idDigits.length !== 9 || !email){
+      if (!firstNameOk || !lastNameOk || !isValidIsraeliPhone(phone) || idDigits.length !== 9 || !email){
         errorEl.style.display = 'block';
         return;
       }
@@ -8570,11 +8610,27 @@
     const digits = (phone || '').replace(/[^0-9]/g, '');
     return /^0\d{8,9}$/.test(digits);
   }
-  document.getElementById('bookingNameInput').addEventListener('input', function(){
-    if (this.value.trim()){
-      document.getElementById('bookingNameError').style.display = 'none';
-      this.style.borderColor = '';
-    }
+  function combineNameFields(firstId, lastId){
+    const first = (document.getElementById(firstId)?.value || '').trim();
+    const last = (document.getElementById(lastId)?.value || '').trim();
+    return (first + ' ' + last).replace(/\s+/g, ' ').trim();
+  }
+  function splitNameIntoFields(fullName, firstId, lastId){
+    const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
+    const firstEl = document.getElementById(firstId);
+    const lastEl = document.getElementById(lastId);
+    if (firstEl) firstEl.value = parts.shift() || '';
+    if (lastEl) lastEl.value = parts.join(' ');
+  }
+  ['bookingFirstNameInput', 'bookingLastNameInput'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', function(){
+      const bothFilled = document.getElementById('bookingFirstNameInput').value.trim() && document.getElementById('bookingLastNameInput').value.trim();
+      if (bothFilled){
+        document.getElementById('bookingNameError').style.display = 'none';
+        document.getElementById('bookingFirstNameInput').style.borderColor = '';
+        document.getElementById('bookingLastNameInput').style.borderColor = '';
+      }
+    });
   });
   document.getElementById('ftpEmail').addEventListener('input', function(){
     if (this.value.trim()){
@@ -8599,14 +8655,13 @@
     this.style.borderColor = '';
     const welcomeEl = document.getElementById('bookingWelcomeBack');
     const regEl = document.getElementById('newClientRegistration');
-    const nameInput = document.getElementById('bookingNameInput');
     const phoneInput = document.getElementById('bookingPhoneInput');
-    nameInput.value = '';
+    splitNameIntoFields('', 'bookingFirstNameInput', 'bookingLastNameInput');
     phoneInput.value = '';
     if (digits.length === 9){
       const match = clients.find(c => c.teudatZehut === digits);
       if (match){
-        nameInput.value = match.name;
+        splitNameIntoFields(match.name, 'bookingFirstNameInput', 'bookingLastNameInput');
         phoneInput.value = match.phone || '';
         welcomeEl.style.display = 'block';
         welcomeEl.textContent = `✓ ברוכה שובך, ${match.name}! אין צורך למלא פרטים נוספים.`;
@@ -8707,19 +8762,22 @@
     idErrorEl.style.display = 'none';
     idInput.style.borderColor = '';
     const existingClientPre = clients.find(c => c.teudatZehut === idDigits);
-    const nameInput = document.getElementById('bookingNameInput');
+    const firstNameInput = document.getElementById('bookingFirstNameInput');
+    const lastNameInput = document.getElementById('bookingLastNameInput');
     const nameErrorEl = document.getElementById('bookingNameError');
     const phoneVal = document.getElementById('bookingPhoneInput').value;
     const errorEl = document.getElementById('bookingPhoneError');
     if (!existingClientPre){
-      if (!nameInput.value.trim()){
+      if (!firstNameInput.value.trim() || !lastNameInput.value.trim()){
         nameErrorEl.style.display = 'block';
-        nameInput.style.borderColor = 'var(--wine)';
-        nameInput.focus();
+        firstNameInput.style.borderColor = 'var(--wine)';
+        lastNameInput.style.borderColor = 'var(--wine)';
+        (firstNameInput.value.trim() ? lastNameInput : firstNameInput).focus();
         return;
       }
       nameErrorEl.style.display = 'none';
-      nameInput.style.borderColor = '';
+      firstNameInput.style.borderColor = '';
+      lastNameInput.style.borderColor = '';
       if (!isValidIsraeliPhone(phoneVal)){
         errorEl.style.display = 'block';
         document.getElementById('bookingPhoneInput').style.borderColor = 'var(--wine)';
@@ -8807,7 +8865,7 @@
     const svc = getBookingSvc();
     const svcObjsForAppt = bkSelectedServices.length ? bkSelectedServiceObjs() : (svc ? [svc] : []);
     const emp = staff[resolvedStaffIndex];
-    const clientNameVal = document.getElementById('bookingNameInput').value.trim() || 'לקוחה';
+    const clientNameVal = combineNameFields('bookingFirstNameInput', 'bookingLastNameInput') || 'לקוחה';
     const dayKey = weekdayKeys[bookingSelectedDate.getDay()];
     const existingClient = clients.find(c => c.teudatZehut === idDigits);
     const existingClientNameForOverlap = existingClient ? existingClient.name : clientNameVal;
@@ -9006,9 +9064,8 @@
     document.getElementById('myAppointment').style.display = 'none';
     document.getElementById('bookingFormWrap').style.display = 'block';
     if (previousClient){
-      const nameEl = document.getElementById('bookingNameInput');
       const phoneEl = document.getElementById('bookingPhoneInput');
-      if (nameEl) nameEl.value = previousClient.name || '';
+      splitNameIntoFields(previousClient.name || '', 'bookingFirstNameInput', 'bookingLastNameInput');
       if (phoneEl) phoneEl.value = previousClient.phone || '';
       const idEl = document.getElementById('bookingIdInput');
       if (idEl){ idEl.value = previousClient.teudatZehut || ''; idEl.dispatchEvent(new Event('input')); }
@@ -9025,9 +9082,8 @@
     document.getElementById('myAppointment').style.display = 'none';
     document.getElementById('bookingFormWrap').style.display = 'block';
     if (previousClient){
-      const name = document.getElementById('bookingNameInput');
       const phone = document.getElementById('bookingPhoneInput');
-      if (name) name.value = previousClient.name || '';
+      splitNameIntoFields(previousClient.name || '', 'bookingFirstNameInput', 'bookingLastNameInput');
       if (phone) phone.value = previousClient.phone || '';
       const idEl = document.getElementById('bookingIdInput');
       if (idEl){ idEl.value = previousClient.teudatZehut || ''; idEl.dispatchEvent(new Event('input')); }
