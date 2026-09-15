@@ -37,6 +37,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyDdFyCz3er-cxE0uoa5bGGTxe37cBFA12w",
@@ -46,13 +48,14 @@
     messagingSenderId: "737599524118",
     appId: "1:737599524118:web:d0cf35be864f1e773c9437"
   };
-  let db, auth;
+  let db, auth, storage;
   let panelRenderCallLog = null;
   let clientsRenderCallLog = null;
   let anonAuthPromise = Promise.resolve();
   try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
+    if (typeof firebase.storage === 'function') storage = firebase.storage();
     auth = firebase.auth();
     const anonAuthStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
     anonAuthPromise = auth.signInAnonymously().then(() => {
@@ -1011,19 +1014,29 @@
     min-width:0;
     align-items:center;
     gap:8px;
+    direction:ltr;
     font-family:'JetBrains Mono';
     font-size:13px;
   }
-  .hours-range select, .hours-range input[type=time]{
+  .hours-time-group{
+    display:flex;
+    align-items:center;
+    gap:3px;
+  }
+  .hours-time-sep{color:var(--panel-text-dim);}
+  .hours-range select{
     background:var(--panel-card-bg);
     color:var(--panel-text);
     border:1px solid rgba(var(--panel-line-rgb),0.2);
     border-radius:8px;
-    padding:6px 8px;
+    padding:6px 4px;
     font-family:'JetBrains Mono';
     font-size:13px;
   }
-  .hours-range input[type=time]{ min-width:88px; }
+  .hours-range select[disabled]{opacity:0.5;}
+  .hours-range-warn{display:none; width:100%; direction:rtl; text-align:right; font-family:'Heebo'; font-size:11px; color:#b3462c;}
+  .hours-range.invalid select{border-color:#b3462c;}
+  .hours-range.invalid .hours-range-warn{display:block;}
   .hours-ranges-wrap{display:flex; flex-direction:column; gap:8px; min-width:0;}
   .hours-add-shift{
     align-self:flex-start;
@@ -2953,6 +2966,28 @@
     </div>
   </div>
 </div>
+
+<div id="addSpecialRequestOverlay" class="myday-overlay">
+  <div class="myday-sheet">
+    <div class="myday-header">
+      <h3>הוספת בקשה מיוחדת</h3>
+      <div class="myday-actions">
+        <button onclick="closeAddSpecialRequestModal()">✕ סגירה</button>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <input type="tel" inputmode="numeric" maxlength="9" id="srClientId" class="field" placeholder="תעודת זהות — מילוי תז יטען הכל אוטומטית (אופציונלי)">
+      <div id="srClientIdStatus" class="mb-client-id-status" style="display:none;"></div>
+      <input type="text" id="srClientName" class="field" placeholder="שם הלקוחה">
+      <input type="tel" id="srClientPhone" class="field" placeholder="050-0000000 (אופציונלי)">
+      <textarea id="srClientNote" class="client-note" style="min-height:70px; margin:0;" placeholder="מה מבקשים? (למשל: לקוחה שרוצה ערב, לא משנה איזה יום)"></textarea>
+      <div id="srError" style="display:none; color:var(--wine); font-size:13px;"></div>
+      <div class="step-nav">
+        <button class="cta" id="srSubmitBtn" style="flex:1;" onclick="submitAddSpecialRequest()">הוספת בקשה</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="apptDetailOverlay" class="appt-detail-overlay">
   <div class="appt-detail-topbar">
     <button type="button" class="appt-detail-back" onclick="closeApptDetailOverlay()" aria-label="חזרה ליומן">→ חזרה</button>
@@ -4098,6 +4133,7 @@
       time: appt.time,
       dur: appt.dur || 30,
       client: w.name,
+      teudatZehut: w.teudatZehut || null,
       service: appt.service,
       staff: appt.staff,
       status: 'pending',
@@ -4202,7 +4238,7 @@
     if (typeof renderOverviewMonthCal==='function') renderOverviewMonthCal();
     if (typeof saveState==='function') await saveState();
     if (typeof recheckAllPendingFlexibleRequests === 'function') await recheckAllPendingFlexibleRequests();
-    const cancelledClient = clients.find(c => c.name === appt.client);
+    const cancelledClient = findClientForAppt(appt);
     if (cancelledClient && cancelledClient.email){
       sendEmail(
         cancelledClient.email,
@@ -4241,8 +4277,9 @@
   document.getElementById('apptDetailClientBtn')?.addEventListener('click', () => {
     if (!apptDetailCurrent) return;
     const clientName = apptDetailCurrent.client;
+    const clientTz = apptDetailCurrent.teudatZehut;
     closeApptDetailOverlay();
-    openClientProfileByName(clientName);
+    openClientProfileByName(clientName, clientTz);
   });
   let clientProfileCurrent = null; // direct reference into the `clients` array
   function showClientProfile(c){
@@ -4252,7 +4289,18 @@
     document.getElementById('clientProfileOverlay').classList.add('show');
   }
   function openClientProfileByRef(c){ showClientProfile(c); }
-  function openClientProfileByName(name){ showClientProfile(clients.find(c => c.name === name) || null); }
+  function findClientForAppt(appt){
+    if (!appt) return null;
+    if (appt.teudatZehut){
+      const byId = clients.find(c => c && c.teudatZehut === appt.teudatZehut);
+      if (byId) return byId;
+    }
+    return clients.find(c => c && c.name === appt.client) || null;
+  }
+  function openClientProfileByName(name, teudatZehut){
+    const match = (teudatZehut && clients.find(c => c && c.teudatZehut === teudatZehut)) || clients.find(c => c.name === name) || null;
+    showClientProfile(match);
+  }
   function closeClientProfileOverlay(){
     document.getElementById('clientProfileOverlay').classList.remove('show');
     clientProfileCurrent = null;
@@ -4434,7 +4482,7 @@
       renderCpPhotoGrid();
       if (typeof saveState === 'function') saveState();
       if (typeof showAdminToast === 'function') showAdminToast('✓ התמונה הועלתה בהצלחה');
-    }, { maxDim: 640, quality: 0.6 });
+    }, { maxDim: 640, quality: 0.6, storageFolder: 'clients' });
   }
   document.getElementById('cpAddPhotoBtn')?.addEventListener('click', () => document.getElementById('cpPhotoInput')?.click());
   document.getElementById('cpPhotoInput')?.addEventListener('change', handleCpPhotoUpload);
@@ -4634,6 +4682,7 @@
       time: timeVal,
       dur,
       client: name,
+      teudatZehut: idDigits || null,
       service: combinedServiceName,
       services: combinedServicesList,
       price: totalPrice,
@@ -5224,11 +5273,21 @@
     const intl = digits.replace(/^0/, '972');
     return 'https://wa.me/' + intl;
   }
+  function uploadImageAndGetUrl(dataUrl, folder, mime){
+    if (!storage || typeof storage.ref !== 'function') return Promise.resolve(null);
+    const ext = (mime && mime.indexOf('png') !== -1) ? 'png' : 'jpg';
+    const path = folder + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 10) + '.' + ext;
+    return storage.ref(path).putString(dataUrl, 'data_url').then(snapshot => snapshot.ref.getDownloadURL()).catch(err => {
+      console.error('Image upload to Storage failed — falling back to storing it as base64 directly (still works, but counts against the shared document\'s 1MB limit):', err);
+      return null;
+    });
+  }
   function readImageCompressed(file, callback, opts){
     opts = opts || {};
     const maxDim = opts.maxDim || 900;
     const quality = opts.quality || 0.75;
     const mime = opts.mime || 'image/jpeg';
+    const storageFolder = opts.storageFolder || null;
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
@@ -5241,11 +5300,17 @@
         canvas.height = h;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, w, h);
+        let dataUrl;
         try {
-          callback(canvas.toDataURL(mime, quality));
+          dataUrl = canvas.toDataURL(mime, quality);
         } catch (err) {
           console.error('Image compression failed, using original file as-is:', err);
-          callback(e.target.result);
+          dataUrl = e.target.result;
+        }
+        if (storageFolder){
+          uploadImageAndGetUrl(dataUrl, storageFolder, mime).then(url => callback(url || dataUrl));
+        } else {
+          callback(dataUrl);
         }
       };
       img.onerror = () => callback(e.target.result);
@@ -5263,7 +5328,7 @@
       document.getElementById('logoPlaceholder').style.display = 'none';
       renderBranding();
       if (typeof saveState === 'function') saveState();
-    }, { maxDim: 500, mime: 'image/png' });
+    }, { maxDim: 500, mime: 'image/png', storageFolder: 'public/branding' });
   }
   function onHeroIconTap(){
     const badgeEl = document.querySelector('#heroBizNameIcon .hero-name-icon-badge');
@@ -5926,7 +5991,7 @@
       document.getElementById('clientPhotoPreview').src = newClientPhoto;
       document.getElementById('clientPhotoPreview').style.display = 'block';
       document.getElementById('clientPhotoPlaceholder').style.display = 'none';
-    });
+    }, { storageFolder: 'clients' });
   }
   function scrollToQuickAdd(subpanelId, focusFieldId){
     const subEl = document.getElementById(subpanelId);
@@ -6154,7 +6219,7 @@
             if (typeof renderStaffPicker === 'function') renderStaffPicker();
             if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
             if (typeof showAdminToast === 'function') showAdminToast('✓ תמונת העובדת עודכנה בהצלחה');
-          }, { maxDim: 300, mime: 'image/png' });
+          }, { maxDim: 300, mime: 'image/png', storageFolder: 'public/staff' });
         };
         row.querySelectorAll('.staff-cat-check').forEach(cb => {
           cb.onchange = () => {
@@ -6254,7 +6319,7 @@
       document.getElementById('staffPhotoPreview').src = newStaffPhoto;
       document.getElementById('staffPhotoPreview').style.display = 'block';
       document.getElementById('staffPhotoPlaceholder').style.display = 'none';
-    });
+    }, { storageFolder: 'public/staff' });
   }
   function addStaff(){
     const nameEl = document.getElementById('newStaffName');
@@ -6391,7 +6456,7 @@
     const note = (appt.note || '').trim();
     const isNewOrChanged = note && note !== (previousNote || '').trim();
     if (!isNewOrChanged) return false;
-    const relatedClient = clients.find(c => c.name === appt.client);
+    const relatedClient = findClientForAppt(appt);
     if (relatedClient){
       if (!Array.isArray(relatedClient.followUps)) relatedClient.followUps = [];
       relatedClient.followUps.push({
@@ -6401,7 +6466,10 @@
         duration: appt.dur || 30
       });
     }
-    if (typeof clientProfileCurrent !== 'undefined' && clientProfileCurrent && clientProfileCurrent.name === appt.client && typeof renderCpFollowUps === 'function'){
+    const isProfileForThisAppt = clientProfileCurrent && (appt.teudatZehut
+      ? clientProfileCurrent.teudatZehut === appt.teudatZehut
+      : clientProfileCurrent.name === appt.client);
+    if (typeof clientProfileCurrent !== 'undefined' && isProfileForThisAppt && typeof renderCpFollowUps === 'function'){
       renderCpFollowUps();
     }
     return true;
@@ -6721,19 +6789,80 @@
     if (diffDays === 1) return 'נוספה אתמול';
     return `נוספה לפני ${diffDays} ימים`;
   }
-  function addSpecialRequest(){
-    const name = prompt('שם הלקוחה:');
-    if (name === null) return;
-    const phone = prompt('טלפון (אופציונלי):', '') || '';
-    const note = prompt('מה מבקשים? (למשל: לקוחה שרוצה ערב, לא משנה איזה יום)');
-    if (note === null || !note.trim()) return;
+  function openAddSpecialRequestModal(){
+    document.getElementById('srClientId').value = '';
+    document.getElementById('srClientIdStatus').style.display = 'none';
+    const nameInput = document.getElementById('srClientName');
+    nameInput.value = '';
+    nameInput.readOnly = false;
+    nameInput.classList.remove('field-locked');
+    nameInput.title = '';
+    document.getElementById('srClientPhone').value = '';
+    document.getElementById('srClientNote').value = '';
+    document.getElementById('srError').style.display = 'none';
+    document.getElementById('addSpecialRequestOverlay').classList.add('show');
+  }
+  function closeAddSpecialRequestModal(){
+    document.getElementById('addSpecialRequestOverlay').classList.remove('show');
+  }
+  function updateSrClientIdStatus(){
+    const statusEl = document.getElementById('srClientIdStatus');
+    const idVal = (document.getElementById('srClientId')?.value || '');
+    if (idVal.length < 9){
+      statusEl.style.display = 'none';
+      statusEl.className = 'mb-client-id-status';
+      statusEl.textContent = '';
+      return;
+    }
+    const match = clients.find(c => c.teudatZehut === idVal);
+    statusEl.style.display = 'block';
+    if (match){
+      statusEl.className = 'mb-client-id-status matched';
+      statusEl.textContent = `✓ נמצאה לקוחה קיימת — ${match.name}`;
+    } else {
+      statusEl.className = 'mb-client-id-status new';
+      statusEl.textContent = '➕ לקוחה חדשה — לא נמצאה בכרטיסייה, אפשר למלא את השם/טלפון למטה בעצמך';
+    }
+  }
+  document.getElementById('srClientId')?.addEventListener('input', function(){
+    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
+    const nameInput = document.getElementById('srClientName');
+    const phoneInput = document.getElementById('srClientPhone');
+    nameInput.readOnly = false;
+    nameInput.classList.remove('field-locked');
+    nameInput.title = '';
+    if (this.value.length < 9){ updateSrClientIdStatus(); return; }
+    const match = clients.find(c => c.teudatZehut === this.value);
+    if (match){
+      nameInput.value = match.name;
+      nameInput.readOnly = true;
+      nameInput.classList.add('field-locked');
+      nameInput.title = 'השם מולא אוטומטית מכרטיס לקוחה קיימת — לשינוי השם יש לעדכן אותו בכרטיסיית הלקוחות.';
+      phoneInput.value = match.phone || '';
+    }
+    updateSrClientIdStatus();
+  });
+  function submitAddSpecialRequest(){
+    const errorEl = document.getElementById('srError');
+    const idDigits = document.getElementById('srClientId').value || '';
+    const name = document.getElementById('srClientName').value.trim();
+    const phone = document.getElementById('srClientPhone').value.trim();
+    const note = document.getElementById('srClientNote').value.trim();
+    if (!note){
+      errorEl.textContent = 'יש לתאר מה מבקשים (למשל: לקוחה שרוצה ערב, לא משנה איזה יום).';
+      errorEl.style.display = 'block';
+      return;
+    }
+    errorEl.style.display = 'none';
     specialRequests.push({
       id: 'sr_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
-      name: (name || '').trim(),
-      phone: phone.trim(),
-      note: note.trim(),
+      name,
+      phone,
+      teudatZehut: idDigits || null,
+      note,
       createdAt: new Date().toISOString()
     });
+    closeAddSpecialRequestModal();
     renderWeekCal();
     if (typeof saveState === 'function') saveState();
     if (typeof showAdminToast === 'function') showAdminToast('✓ הבקשה נוספה בהצלחה');
@@ -6881,6 +7010,7 @@
           time: match.time,
           dur: duration,
           client: req.name || 'לקוחה',
+          teudatZehut: req.teudatZehut || null,
           service: combinedServiceName,
           services: svcList,
           price: totalPrice,
@@ -7032,7 +7162,9 @@
         const appt = {
           id: 'appt_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
           day: dayKey, date: match.date, time: match.time, dur: duration,
-          client: w.name || 'לקוחה', service: (svc && svc.name) || w.service || 'שירות',
+          client: w.name || 'לקוחה',
+          teudatZehut: w.teudatZehut || null,
+          service: (svc && svc.name) || w.service || 'שירות',
           services: svc ? [{ name: svc.name, duration: svc.duration || 0, price: svc.price || 0 }] : [],
           price: svc ? (svc.price || 0) : 0, staff: match.staffIdx, status: 'pending', note: '',
           reminderChannels: ['sms']
@@ -7123,7 +7255,7 @@
     addBtn.title = 'הוספת בקשה מיוחדת';
     addBtn.setAttribute('aria-label', 'הוספת בקשה מיוחדת');
     addBtn.textContent = '+';
-    addBtn.onclick = addSpecialRequest;
+    addBtn.onclick = openAddSpecialRequestModal;
     head.appendChild(addBtn);
     col.appendChild(head);
     const body = document.createElement('div');
@@ -7808,7 +7940,7 @@
       document.getElementById('newSvcPhotoPreview').src = newSvcPhoto;
       document.getElementById('newSvcPhotoPreview').style.display = 'block';
       document.getElementById('newSvcPhotoPlaceholder').style.display = 'none';
-    }, { maxDim: 500 });
+    }, { maxDim: 500, storageFolder: 'public/services' });
   }
   function removeService(i){
     const svc = services[i];
@@ -7872,7 +8004,7 @@
       document.getElementById('wnPhotoPreview').src = newWnPhoto;
       document.getElementById('wnPhotoPreview').style.display = 'block';
       document.getElementById('wnPhotoPlaceholder').style.display = 'none';
-    });
+    }, { storageFolder: 'public/whatsnew' });
   }
   function addWhatsNew(){
     const titleEl = document.getElementById('newWnTitle');
@@ -7909,7 +8041,7 @@
     const wrap = document.getElementById('hoursOverviewList');
     if (!wrap) return;
     const toMinutes = t => { const parts = String(t).split(':'); return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0); };
-    const toTimeStr = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+    const toTimeStr = m => { const mm = m % 1440; return String(Math.floor(mm / 60)).padStart(2, '0') + ':' + String(mm % 60).padStart(2, '0'); };
     const todayDow = new Date().getDay();
     const perDay = days.map((day, dow) => {
       const intervals = [];
@@ -7922,7 +8054,9 @@
           : (dayInfo.from && dayInfo.to ? [{ from: dayInfo.from, to: dayInfo.to }] : []);
         ranges.forEach(r => {
           if (!r || !r.from || !r.to) return;
-          intervals.push([toMinutes(r.from), toMinutes(r.to)]);
+          const s0 = toMinutes(r.from), e0 = toMinutes(r.to);
+          if (s0 >= e0) return;
+          intervals.push([s0, e0]);
         });
       });
       intervals.sort((a, b) => a[0] - b[0]);
@@ -8600,7 +8734,7 @@
     try {
       if (!appt) return;
       if (!Array.isArray(appt.reminderChannels) || !appt.reminderChannels.includes('sms')) return;
-      const client = clients.find(c => c && c.name === appt.client);
+      const client = findClientForAppt(appt);
       if (!client || !client.phone) return;
       fetch(SMS_FUNCTION_URL, {
         method: 'POST',
@@ -8817,6 +8951,7 @@
       time: selectedSlot,
       dur: svc ? (svc.duration || 30) : 30,
       client: clientNameVal,
+      teudatZehut: (existingClient && existingClient.teudatZehut) || idDigits || null,
       service: svc ? svc.name : 'שירות',
       services: svcObjsForAppt.map(o => ({ name: o.name, duration: o.duration || 0, price: o.price || 0 })),
       price: svc ? svc.price : 0,
@@ -8921,7 +9056,7 @@
   function rescheduleAppointment(){
     const apptBeingRescheduled = currentBookedAppointment;
     const waitlistMatches = apptBeingRescheduled ? getWaitlistMatchesForAppointment(apptBeingRescheduled) : [];
-    const previousClient = apptBeingRescheduled ? clients.find(c => c.name === apptBeingRescheduled.client) : null;
+    const previousClient = apptBeingRescheduled ? findClientForAppt(apptBeingRescheduled) : null;
     removeCurrentBookedAppointment();
     if (waitlistMatches.length && typeof renderWaitlistMatchAlert === 'function'){
       renderWaitlistMatchAlert(waitlistMatches, apptBeingRescheduled);
@@ -8941,7 +9076,7 @@
   }
   function bookAdditionalAppointment(){
     const previousAppointment = currentBookedAppointment;
-    const previousClient = previousAppointment ? clients.find(c => c.name === previousAppointment.client) : null;
+    const previousClient = previousAppointment ? findClientForAppt(previousAppointment) : null;
     currentBookedAppointment = null;
     selectedSlot = null;
     bkSelectedServices = [];
@@ -8965,7 +9100,7 @@
     logCancellation(apptBeingCancelled);
     removeCurrentBookedAppointment();
     if (apptBeingCancelled){
-      const client = clients.find(c => c.name === apptBeingCancelled.client);
+      const client = findClientForAppt(apptBeingCancelled);
       if (client && client.email){
         sendEmail(
           client.email,
@@ -9120,7 +9255,7 @@
     if (typeof renderMiniCal === 'function') renderMiniCal();
     if (typeof saveState === 'function') saveState();
     try {
-      const client = clients.find(c => c.name === appt.client);
+      const client = findClientForAppt(appt);
       if (client && client.email){
         sendEmail(
           client.email,
@@ -9170,9 +9305,9 @@
     showClientArrivalPopup(next);
   }
   function showClientArrivalPopup(appt){
-    const client = clients.find(c => c.name === appt.client);
+    const client = findClientForAppt(appt);
     const emp = staff[appt.staff];
-    const history = weekAppointments.filter(a => a !== appt && a.client === appt.client);
+    const history = weekAppointments.filter(a => a !== appt && (appt.teudatZehut ? a.teudatZehut === appt.teudatZehut : a.client === appt.client));
     const contentEl = document.getElementById('clientArrivalContent');
     const queueNote = arrivalQueue.length ? `<p style="color:#8A8178; font-size:12px; margin-top:10px;">עוד ${arrivalQueue.length} לקוחה/ות ממתינות בתור להצגה</p>` : '';
     contentEl.innerHTML = `
@@ -9540,11 +9675,30 @@
     m = Math.max(0, Math.min(1440, Math.round(m)));
     return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
   }
-  function hoursDataValueToTimeInput(v){
-    return v === '24:00' ? '00:00' : (v || '09:00');
+  function buildHourOptionsHtml(selectedValue, isToField){
+    let html = '';
+    const startHour = isToField ? 1 : 0;
+    const maxHour = isToField ? 24 : 23;
+    for (let h = startHour; h <= maxHour; h++){
+      const v = String(h).padStart(2, '0');
+      const label = (h === 24) ? '00 (חצות)' : v;
+      html += `<option value="${v}"${v === selectedValue ? ' selected' : ''}>${label}</option>`;
+    }
+    return html;
   }
-  function timeInputToHoursDataValue(v, isToField){
-    return (isToField && v === '00:00') ? '24:00' : v;
+  function buildMinuteOptionsHtml(selectedValue){
+    const values = [];
+    for (let m = 0; m < 60; m += 5) values.push(String(m).padStart(2, '0'));
+    if (selectedValue && values.indexOf(selectedValue) === -1) values.push(selectedValue);
+    values.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+    return values.map(v => `<option value="${v}"${v === selectedValue ? ' selected' : ''}>${v}</option>`).join('');
+  }
+  function hoursDataValueToHourMinute(v){
+    const parts = String(v || '09:00').split(':');
+    return { hour: (parts[0] || '09').padStart(2, '0'), minute: (parts[1] || '00').padStart(2, '0') };
+  }
+  function isHoursRangeInvalid(r){
+    return !r || !r.from || !r.to || hoursEditorTimeToMinutes(r.from) >= hoursEditorTimeToMinutes(r.to);
   }
   function renderHoursEditor(){
     const hoursList = document.getElementById('hoursList');
@@ -9565,11 +9719,23 @@
       const row = document.createElement('div');
       row.className = 'hours-row' + (dayHours.open ? '' : ' closed');
       const shiftsHtml = dayHours.ranges.map((r, ri) => {
-        return `<div class="hours-range" data-range-idx="${ri}">
-          <input type="time" step="60" data-part="from" value="${hoursDataValueToTimeInput(r.from)}">
+        const fromHM = hoursDataValueToHourMinute(r.from);
+        const toHM = hoursDataValueToHourMinute(r.to);
+        const toMinuteLocked = toHM.hour === '24'; // חצות: תמיד "24:00" בדיוק, אין "24:05"
+        return `<div class="hours-range${isHoursRangeInvalid(r) ? ' invalid' : ''}" data-range-idx="${ri}">
+          <div class="hours-time-group" data-part="from">
+            <select class="hours-time-select" data-part="from" data-unit="hour" aria-label="שעת התחלה">${buildHourOptionsHtml(fromHM.hour, false)}</select>
+            <span class="hours-time-sep">:</span>
+            <select class="hours-time-select" data-part="from" data-unit="minute" aria-label="דקות התחלה">${buildMinuteOptionsHtml(fromHM.minute)}</select>
+          </div>
           <span>עד</span>
-          <input type="time" step="60" data-part="to" value="${hoursDataValueToTimeInput(r.to)}">
+          <div class="hours-time-group" data-part="to">
+            <select class="hours-time-select" data-part="to" data-unit="hour" aria-label="שעת סיום">${buildHourOptionsHtml(toHM.hour, true)}</select>
+            <span class="hours-time-sep">:</span>
+            <select class="hours-time-select" data-part="to" data-unit="minute" aria-label="דקות סיום"${toMinuteLocked ? ' disabled' : ''}>${buildMinuteOptionsHtml(toHM.minute)}</select>
+          </div>
           ${dayHours.ranges.length > 1 ? '<button type="button" class="hours-range-del" aria-label="הסרת משמרת">✕</button>' : ''}
+          <span class="hours-range-warn">⚠ שעת הסיום מוקדמת/שווה לשעת ההתחלה — המשמרת הזו לא תוצג ולא תהיה ניתנת לקביעת תור</span>
         </div>`;
       }).join('');
       row.innerHTML = `
@@ -9589,12 +9755,26 @@
       };
       row.querySelectorAll('.hours-range').forEach(rangeEl => {
         const ri = parseInt(rangeEl.dataset.rangeIdx);
-        rangeEl.querySelectorAll('input[type=time]').forEach(inp => {
-          inp.onchange = () => {
-            if (!inp.value) return; // דפדפן מחזיר '' לקלט חלקי/לא-תקין — מתעלמים ולא דורסים ערך תקין קיים
-            dayHours.ranges[ri][inp.dataset.part] = timeInputToHoursDataValue(inp.value, inp.dataset.part === 'to');
+        ['from', 'to'].forEach(part => {
+          const hourSel = rangeEl.querySelector(`select[data-part="${part}"][data-unit="hour"]`);
+          const minSel = rangeEl.querySelector(`select[data-part="${part}"][data-unit="minute"]`);
+          if (!hourSel || !minSel) return;
+          const applyMidnightLock = () => {
+            if (part === 'to' && hourSel.value === '24'){
+              minSel.value = '00';
+              minSel.disabled = true;
+            } else {
+              minSel.disabled = false;
+            }
+          };
+          const commit = () => {
+            applyMidnightLock();
+            dayHours.ranges[ri][part] = hourSel.value + ':' + minSel.value;
+            rangeEl.classList.toggle('invalid', isHoursRangeInvalid(dayHours.ranges[ri]));
             refreshDownstream();
           };
+          hourSel.onchange = commit;
+          minSel.onchange = commit;
         });
         const delBtn = rangeEl.querySelector('.hours-range-del');
         if (delBtn){
@@ -10498,6 +10678,7 @@
     myDayOverlay: closeMyDayView,
     flexibleRequestOverlay: closeFlexibleRequestOverlay,
     manualBookingOverlay: closeManualBookingModal,
+    addSpecialRequestOverlay: closeAddSpecialRequestModal,
     slotChoiceOverlay: closeSlotChoiceOverlay,
     personalTimeOverlay: closePersonalTimeOverlay,
     apptDetailOverlay: closeApptDetailOverlay,
