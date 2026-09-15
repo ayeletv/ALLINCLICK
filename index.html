@@ -1007,7 +1007,7 @@
     font-family:'JetBrains Mono';
     font-size:13px;
   }
-  .hours-range select{
+  .hours-range select, .hours-range input[type=time]{
     background:var(--panel-card-bg);
     color:var(--panel-text);
     border:1px solid rgba(var(--panel-line-rgb),0.2);
@@ -1016,6 +1016,7 @@
     font-family:'JetBrains Mono';
     font-size:13px;
   }
+  .hours-range input[type=time]{ min-width:88px; }
   .hours-ranges-wrap{display:flex; flex-direction:column; gap:8px;}
   .hours-add-shift{
     align-self:flex-start;
@@ -1042,6 +1043,7 @@
   .hours-row.closed .hours-ranges-wrap{opacity:0.3; pointer-events:none;}
   .hours-row.closed .hours-ranges-wrap::before{content:'סגור'; color:var(--panel-text-dim); font-family:'Heebo';}
   .hours-row.closed .hours-ranges-wrap select,
+  .hours-row.closed .hours-ranges-wrap input,
   .hours-row.closed .hours-ranges-wrap button{display:none;}
   .inv-email-row{
     display:flex; align-items:center; gap:10px; flex-wrap:wrap;
@@ -6268,7 +6270,7 @@
   }
   renderStaff();
   const staffColors = ['#E8CE7A', '#A6C29B', '#E2A8B9', '#D9AAB8', '#D9B27C'];
-  const calStartHour = 8, calEndHour = 23;
+  const calStartHour = 8, calEndHour = 24;
   const MOBILE_CAL_BREAKPOINT = 480;
   const DAY_HEAD_HEIGHT_DESKTOP = 56;
   const DAY_HEAD_HEIGHT_MOBILE = 50;
@@ -9523,6 +9525,20 @@
     if (typeof saveState === 'function') saveState();
     if (typeof showAdminToast === 'function') showAdminToast('✓ התאריך נסגר בהצלחה');
   }
+  function hoursEditorTimeToMinutes(t){
+    const parts = String(t || '0:0').split(':');
+    return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+  }
+  function hoursEditorMinutesToTime(m){
+    m = Math.max(0, Math.min(1440, Math.round(m)));
+    return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  }
+  function hoursDataValueToTimeInput(v){
+    return v === '24:00' ? '00:00' : (v || '09:00');
+  }
+  function timeInputToHoursDataValue(v, isToField){
+    return (isToField && v === '00:00') ? '24:00' : v;
+  }
   function renderHoursEditor(){
     const hoursList = document.getElementById('hoursList');
     if (!hoursList || !staff[hoursEditorStaffIndex]) return;
@@ -9542,12 +9558,10 @@
       const row = document.createElement('div');
       row.className = 'hours-row' + (dayHours.open ? '' : ' closed');
       const shiftsHtml = dayHours.ranges.map((r, ri) => {
-        const fromOptions = hourOptions.map(h => `<option value="${h}" ${h===r.from?'selected':''}>${h}</option>`).join('');
-        const toOptions = hourOptions.map(h => `<option value="${h}" ${h===r.to?'selected':''}>${h}</option>`).join('');
         return `<div class="hours-range" data-range-idx="${ri}">
-          <select data-part="from">${fromOptions}</select>
+          <input type="time" step="60" data-part="from" value="${hoursDataValueToTimeInput(r.from)}">
           <span>עד</span>
-          <select data-part="to">${toOptions}</select>
+          <input type="time" step="60" data-part="to" value="${hoursDataValueToTimeInput(r.to)}">
           ${dayHours.ranges.length > 1 ? '<button type="button" class="hours-range-del" aria-label="הסרת משמרת">✕</button>' : ''}
         </div>`;
       }).join('');
@@ -9566,9 +9580,10 @@
       };
       row.querySelectorAll('.hours-range').forEach(rangeEl => {
         const ri = parseInt(rangeEl.dataset.rangeIdx);
-        rangeEl.querySelectorAll('select').forEach(sel => {
-          sel.onchange = () => {
-            dayHours.ranges[ri][sel.dataset.part] = sel.value;
+        rangeEl.querySelectorAll('input[type=time]').forEach(inp => {
+          inp.onchange = () => {
+            if (!inp.value) return; // דפדפן מחזיר '' לקלט חלקי/לא-תקין — מתעלמים ולא דורסים ערך תקין קיים
+            dayHours.ranges[ri][inp.dataset.part] = timeInputToHoursDataValue(inp.value, inp.dataset.part === 'to');
             refreshDownstream();
           };
         });
@@ -9584,9 +9599,9 @@
       row.querySelector('.hours-add-shift').onclick = () => {
         const last = dayHours.ranges[dayHours.ranges.length - 1];
         const newFrom = last ? last.to : '09:00';
-        const fromIdx = hourOptions.indexOf(newFrom);
-        const newTo = fromIdx !== -1 ? hourOptions[Math.min(fromIdx + 2, hourOptions.length - 1)] : '18:00';
-        dayHours.ranges.push({ from: newFrom, to: newTo === newFrom ? hourOptions[hourOptions.length - 1] : newTo });
+        const cappedToMin = Math.min(hoursEditorTimeToMinutes(newFrom) + 120, 1440);
+        const newTo = cappedToMin >= 1440 ? '24:00' : hoursEditorMinutesToTime(cappedToMin);
+        dayHours.ranges.push({ from: newFrom, to: newTo === newFrom ? '24:00' : newTo });
         renderHoursEditor();
         refreshDownstream();
       };
