@@ -8453,45 +8453,75 @@
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
   const ISRAELI_HOLIDAY_FULL_CLOSURES = {
+    '2026-09-11': 'ערב ראש השנה',
     '2026-09-12': 'ראש השנה', '2026-09-13': 'ראש השנה',
+    '2026-09-20': 'ערב יום כיפור',
     '2026-09-21': 'יום כיפור',
+    '2026-09-25': 'ערב סוכות',
     '2026-09-26': 'סוכות',
+    '2026-09-27': 'חול המועד סוכות', '2026-09-28': 'חול המועד סוכות', '2026-09-29': 'חול המועד סוכות', '2026-09-30': 'חול המועד סוכות', '2026-10-01': 'חול המועד סוכות',
+    '2026-10-02': 'הושענא רבה (ערב שמחת תורה)',
     '2026-10-03': 'שמחת תורה',
+    '2026-04-01': 'ערב פסח',
     '2026-04-02': 'פסח',
+    '2026-04-03': 'חול המועד פסח', '2026-04-04': 'חול המועד פסח', '2026-04-05': 'חול המועד פסח', '2026-04-06': 'חול המועד פסח', '2026-04-07': 'חול המועד פסח',
     '2026-04-08': 'שביעי של פסח',
+    '2026-05-21': 'ערב שבועות',
     '2026-05-22': 'שבועות',
 
+    '2027-10-01': 'ערב ראש השנה',
     '2027-10-02': 'ראש השנה', '2027-10-03': 'ראש השנה',
+    '2027-10-10': 'ערב יום כיפור',
     '2027-10-11': 'יום כיפור',
+    '2027-10-15': 'ערב סוכות',
     '2027-10-16': 'סוכות',
+    '2027-10-17': 'חול המועד סוכות', '2027-10-18': 'חול המועד סוכות', '2027-10-19': 'חול המועד סוכות', '2027-10-20': 'חול המועד סוכות', '2027-10-21': 'חול המועד סוכות',
+    '2027-10-22': 'הושענא רבה (ערב שמחת תורה)',
     '2027-10-23': 'שמחת תורה',
+    '2027-04-21': 'ערב פסח',
     '2027-04-22': 'פסח',
+    '2027-04-23': 'חול המועד פסח', '2027-04-24': 'חול המועד פסח', '2027-04-25': 'חול המועד פסח', '2027-04-26': 'חול המועד פסח', '2027-04-27': 'חול המועד פסח',
     '2027-04-28': 'שביעי של פסח',
+    '2027-06-10': 'ערב שבועות',
     '2027-06-11': 'שבועות',
 
+    '2028-09-20': 'ערב ראש השנה',
     '2028-09-21': 'ראש השנה', '2028-09-22': 'ראש השנה',
+    '2028-09-29': 'ערב יום כיפור',
     '2028-09-30': 'יום כיפור',
+    '2028-10-04': 'ערב סוכות',
     '2028-10-05': 'סוכות',
+    '2028-10-06': 'חול המועד סוכות', '2028-10-07': 'חול המועד סוכות', '2028-10-08': 'חול המועד סוכות', '2028-10-09': 'חול המועד סוכות', '2028-10-10': 'חול המועד סוכות',
+    '2028-10-11': 'הושענא רבה (ערב שמחת תורה)',
     '2028-10-12': 'שמחת תורה',
+    '2028-04-10': 'ערב פסח',
     '2028-04-11': 'פסח',
+    '2028-04-12': 'חול המועד פסח', '2028-04-13': 'חול המועד פסח', '2028-04-14': 'חול המועד פסח', '2028-04-15': 'חול המועד פסח', '2028-04-16': 'חול המועד פסח',
     '2028-04-17': 'שביעי של פסח',
+    '2028-05-30': 'ערב שבועות',
     '2028-05-31': 'שבועות',
 
+    '2029-09-09': 'ערב ראש השנה',
     '2029-09-10': 'ראש השנה', '2029-09-11': 'ראש השנה',
+    '2029-09-18': 'ערב יום כיפור',
     '2029-09-19': 'יום כיפור',
+    '2029-09-23': 'ערב סוכות',
     '2029-09-24': 'סוכות',
+    '2029-09-25': 'חול המועד סוכות', '2029-09-26': 'חול המועד סוכות', '2029-09-27': 'חול המועד סוכות', '2029-09-28': 'חול המועד סוכות', '2029-09-29': 'חול המועד סוכות',
+    '2029-09-30': 'הושענא רבה (ערב שמחת תורה)',
     '2029-10-01': 'שמחת תורה',
+    '2029-03-30': 'ערב פסח',
     '2029-03-31': 'פסח',
+    '2029-04-01': 'חול המועד פסח', '2029-04-02': 'חול המועד פסח', '2029-04-03': 'חול המועד פסח', '2029-04-04': 'חול המועד פסח', '2029-04-05': 'חול המועד פסח',
     '2029-04-06': 'שביעי של פסח',
+    '2029-05-19': 'ערב שבועות',
     '2029-05-20': 'שבועות'
   };
-  const ISRAELI_HOLIDAY_EREV_CLOSURES = {
-    '2026-09-11': 'ערב ראש השנה', '2026-09-20': 'ערב יום כיפור', '2026-09-25': 'ערב סוכות', '2026-10-02': 'ערב שמחת תורה', '2026-04-01': 'ערב פסח', '2026-05-21': 'ערב שבועות',
-    '2027-10-01': 'ערב ראש השנה', '2027-10-10': 'ערב יום כיפור', '2027-10-15': 'ערב סוכות', '2027-10-22': 'ערב שמחת תורה', '2027-04-21': 'ערב פסח', '2027-06-10': 'ערב שבועות',
-    '2028-09-20': 'ערב ראש השנה', '2028-09-29': 'ערב יום כיפור', '2028-10-04': 'ערב סוכות', '2028-10-11': 'ערב שמחת תורה', '2028-04-10': 'ערב פסח', '2028-05-30': 'ערב שבועות',
-    '2029-09-09': 'ערב ראש השנה', '2029-09-18': 'ערב יום כיפור', '2029-09-23': 'ערב סוכות', '2029-09-30': 'ערב שמחת תורה', '2029-03-30': 'ערב פסח', '2029-05-19': 'ערב שבועות'
-  };
-  const EREV_CHAG_CLOSE_TIME = '14:00';
+  function getHolidayTooltipForDate(dateObj){
+    const dateStr = dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
+    if (ISRAELI_HOLIDAY_FULL_CLOSURES[dateStr]) return `סגור לרגל ${ISRAELI_HOLIDAY_FULL_CLOSURES[dateStr]}`;
+    return '';
+  }
   function getClosedDateEntry(staffIdx, dateStr){
     if (ISRAELI_HOLIDAY_FULL_CLOSURES[dateStr]) return { date: dateStr, reason: ISRAELI_HOLIDAY_FULL_CLOSURES[dateStr], holiday: true };
     const s = staff[staffIdx];
@@ -8515,11 +8545,8 @@
       : (dayInfo.from && dayInfo.to ? [{ from: dayInfo.from, to: dayInfo.to }] : []);
     const isToday = sameDate(dateObj, todayMidnight);
     const earliestToday = isToday ? Math.ceil((getNowMinutesReal() + minLeadMinutes) / fineStepMinutes) * fineStepMinutes : -Infinity;
-    const dateStr = dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
-    const isErevChag = !!ISRAELI_HOLIDAY_EREV_CLOSURES[dateStr];
-    const erevChagCloseMin = isErevChag ? timeToMinutes(EREV_CHAG_CLOSE_TIME) : Infinity;
     return rawRanges
-      .map(r => [Math.max(timeToMinutes(r.from), earliestToday), Math.min(timeToMinutes(r.to), erevChagCloseMin)])
+      .map(r => [Math.max(timeToMinutes(r.from), earliestToday), timeToMinutes(r.to)])
       .filter(([s, e]) => s < e)
       .sort((a, b) => a[0] - b[0]);
   }
@@ -8606,12 +8633,16 @@
       else if (isClosedDay) cell.classList.add('closed-day');
       else if (noSlots) cell.classList.add('closed-day');
       cell.textContent = d;
+      const holidayTip = getHolidayTooltipForDate(cellDate);
       if (!isPast && !isClosedDay && !noSlots){
         cell.onclick = () => {
           bookingSelectedDate = cellDate;
           renderMiniCal();
           renderAvailableSlots();
         };
+        if (holidayTip) cell.title = holidayTip;
+      } else if (isClosedDay){
+        if (holidayTip) cell.title = holidayTip;
       } else if (noSlots){
         cell.title = 'אין שעות פנויות ביום זה לשירות/עובדת שנבחרו';
       }
@@ -8738,6 +8769,7 @@
       else if (isClosedDay) cell.classList.add('closed-day');
       else if (noSlots) cell.classList.add('closed-day');
       cell.textContent = d;
+      const holidayTip = getHolidayTooltipForDate(cellDate);
       if (!isPast && !isClosedDay && !noSlots){
         cell.onclick = () => {
           mbSelectedDate = cellDate;
@@ -8745,6 +8777,9 @@
           renderMbCal();
           renderManualBookingSlots();
         };
+        if (holidayTip) cell.title = holidayTip;
+      } else if (isClosedDay){
+        if (holidayTip) cell.title = holidayTip;
       } else if (noSlots){
         cell.title = 'אין שעות פנויות ביום זה לעובדת/שירות שנבחרו';
       }
