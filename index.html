@@ -362,12 +362,12 @@
   #svcManageCatGrid .cat-tile-name{font-size:12.5px;}
   #svcManageCatGrid .cat-tile-count{font-size:9px;}
   .cat-back-btn{
-    background:rgba(201,162,39,0.12); border:1px solid rgba(201,162,39,0.4);
-    color:var(--gold-soft); font-family:'Heebo'; font-size:13.5px; font-weight:700;
+    background:rgba(217,140,166,0.16); border:1px solid rgba(217,140,166,0.55);
+    color:#A83D63; font-family:'Heebo'; font-size:13.5px; font-weight:700;
     cursor:pointer; padding:9px 16px; border-radius:999px;
     display:inline-flex; align-items:center; gap:4px;
   }
-  .cat-back-btn:hover, .cat-back-btn:active{background:rgba(201,162,39,0.22);}
+  .cat-back-btn:hover, .cat-back-btn:active{background:rgba(217,140,166,0.28);}
   #panel-business .cat-back-btn{
     background:rgba(155,44,66,0.1); border-color:rgba(155,44,66,0.24);
     color:var(--wine);
@@ -2816,8 +2816,9 @@
       <div id="inner-categories" class="inner-subpanel">
         <div class="label" style="margin-bottom:10px;">קטגוריות ראשיות</div>
         <div class="client-list" id="categoryList"></div>
-        <div class="client-add-row">
+        <div class="client-add-row" style="flex-direction:column; align-items:stretch;">
           <input type="text" id="newCategoryName" placeholder="שם קטגוריה (למשל: לייזר)">
+          <textarea id="newCategoryMessage" class="client-note" style="min-height:50px;" placeholder="הודעת קטגוריה (אופציונלי) — תוצג ללקוחה בסיום קביעת תור, למשל הנחיות הכנה לטיפול"></textarea>
           <button class="cta" style="width:auto; margin-top:0;" onclick="addCategory()">הוספת קטגוריה</button>
         </div>
       </div>
@@ -3817,7 +3818,7 @@
       ? (d => new Date(d[0], d[1] - 1, d[2]))(preference.dateTo.split('-').map(Number))
       : (d => { d.setDate(d.getDate() + 30); return d; })(new Date(todayMidnight));
     const frCustomTimeAlreadyPassedToday = timeOfDay === 'custom' && timeFromVal && timeToVal
-      && timeToMinutes(timeToVal) <= nowMinutesReal;
+      && timeToMinutes(timeToVal) <= getNowMinutesReal();
     let frAnyDayOpenAtAll = false; // at least one candidate date the business isn't fully closed on
     let frAnyDayActuallyBookable = false; // same, but also not blocked by today's own already-passed custom time
     const frCursor = new Date(frRangeFrom);
@@ -6416,6 +6417,7 @@
   }
   let staff = [];
   let categories = [];
+  let categoryMessages = {};
   let services = [];
   let cancellationLog = [];
   let lateCancellations = [];
@@ -6665,7 +6667,10 @@
   const weekdayLabels = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
   const nowReal = new Date();
   const todayDow = nowReal.getDay();
-  const nowMinutesReal = nowReal.getHours() * 60 + nowReal.getMinutes();
+  function getNowMinutesReal(){
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  }
   const defaultWeekSunday = new Date(nowReal);
   defaultWeekSunday.setDate(nowReal.getDate() - todayDow);
   if (todayDow === 6) defaultWeekSunday.setDate(defaultWeekSunday.getDate() + 7);
@@ -7869,11 +7874,16 @@
       const row = document.createElement('div');
       row.className = 'client-card';
       const isEditing = editingCategoryIndices.has(i);
+      const msg = categoryMessages[cat] || '';
       if (!isEditing){
         row.innerHTML = `
           <div class="client-info">
             <div class="name-row">
-              <div style="flex:1;"><h4>${cat}</h4><div class="phone">${count} שירותים בקטגוריה זו</div></div>
+              <div style="flex:1;">
+                <h4>${cat}</h4>
+                <div class="phone">${count} שירותים בקטגוריה זו</div>
+                ${msg ? `<div style="font-size:12.5px; color:var(--panel-text-dim); margin-top:6px; white-space:pre-wrap;">💬 ${msg}</div>` : ''}
+              </div>
               <button class="svc-edit" aria-label="עריכת קטגוריה" title="עריכה">✎</button>
               <button class="svc-del" aria-label="מחיקת קטגוריה">✕</button>
             </div>
@@ -7889,6 +7899,8 @@
               <div style="flex:1;"><input class="cat-name-input field" value="${cat}" style="font-family:'Suez One',serif; font-size:16px; margin-bottom:4px;"><div class="phone">${count} שירותים בקטגוריה זו</div></div>
               <button class="svc-del" aria-label="מחיקת קטגוריה">✕</button>
             </div>
+            <div class="label" style="margin:8px 0 4px;">הודעת קטגוריה (אופציונלי) — תוצג ללקוחה בסיום קביעת תור לשירות מהקטגוריה הזו, למשל הנחיות הכנה לטיפול</div>
+            <textarea class="cat-message-input client-note" style="min-height:60px;" placeholder="לדוגמה: יש לגלח 12 שעות לפני הטיפול. אין להגיע שזופה בשבועיים שלפני. במידה ונלקחה אנטיביוטיקה יש להמתין 10 ימים מסיום הנטילה.">${msg}</textarea>
             <div style="margin-top:10px;"><button class="cta cat-save-btn" style="width:auto; padding:8px 22px; font-size:13px;">💾 שמירה</button></div>
           </div>`;
         row.querySelector('.cat-save-btn').onclick = () => {
@@ -7899,6 +7911,7 @@
             alert(`כבר קיימת קטגוריה בשם "${newName}".`);
             return;
           }
+          const newMsg = row.querySelector('.cat-message-input').value.trim();
           if (newName !== cat){
             categories[i] = newName;
             services.forEach(s => { if (s.category === cat) s.category = newName; });
@@ -7907,7 +7920,10 @@
               const idx = s.categories.indexOf(cat);
               if (idx !== -1) s.categories[idx] = newName;
             });
+            delete categoryMessages[cat];
           }
+          if (newMsg) categoryMessages[newName] = newMsg;
+          else delete categoryMessages[newName];
           editingCategoryIndices.delete(i);
           renderCategories();
           renderCategoryOptions();
@@ -7924,6 +7940,7 @@
         }
         if (!confirm(`למחוק את הקטגוריה "${cat}"?`)) return;
         categories.splice(i, 1);
+        delete categoryMessages[cat];
         editingCategoryIndices.clear();
         renderCategories();
         renderCategoryOptions();
@@ -7940,7 +7957,11 @@
     const name = nameEl.value.trim();
     if (!name || categories.includes(name)) return;
     categories.push(name);
+    const msgEl = document.getElementById('newCategoryMessage');
+    const msg = msgEl ? msgEl.value.trim() : '';
+    if (msg) categoryMessages[name] = msg;
     nameEl.value = '';
+    if (msgEl) msgEl.value = '';
     renderCategories();
     if (typeof saveState === 'function') saveState();
     if (typeof showAdminToast === 'function') showAdminToast('✓ הקטגוריה נוספה בהצלחה');
@@ -8170,6 +8191,8 @@
   renderReports('week');
   renderWeekCal();
   let whatsNewItems = [];
+  let editingWnIndices = new Set();
+  let wnEditPendingPhotos = new Map();
   function renderWhatsNew(){
     const custEl = document.getElementById('whatsNewList');
     custEl.innerHTML = whatsNewItems.length ? whatsNewItems.map(item => `
@@ -8194,20 +8217,82 @@
     whatsNewItems.forEach((item, i) => {
       const row = document.createElement('div');
       row.className = 'client-card';
-      row.innerHTML = `
-        ${item.photo ? `<div class="client-avatar"><img src="${item.photo}"></div>` : ''}
-        <div class="client-info">
-          <div class="name-row">
-            <div>
-              <h4 style="display:flex; align-items:center; gap:6px;">${item.title}${item.badge ? '<span class="new-badge" style="position:static;">חדש</span>' : ''}</h4>
-              <p style="font-size:13px; color:var(--panel-text-dim); margin-top:4px;">${item.desc}</p>
+      const isEditing = editingWnIndices.has(i);
+      if (!isEditing){
+        row.innerHTML = `
+          ${item.photo ? `<div class="client-avatar"><img src="${item.photo}"></div>` : ''}
+          <div class="client-info">
+            <div class="name-row">
+              <div>
+                <h4 style="display:flex; align-items:center; gap:6px;">${item.title}${item.badge ? '<span class="new-badge" style="position:static;">חדש</span>' : ''}</h4>
+                <p style="font-size:13px; color:var(--panel-text-dim); margin-top:4px;">${item.desc}</p>
+              </div>
+              <button class="svc-edit" aria-label="עריכת עדכון" title="עריכה">✎</button>
+              <button class="svc-del" aria-label="מחיקת עדכון">✕</button>
             </div>
-            <button class="svc-del" aria-label="מחיקת עדכון">✕</button>
-          </div>
-        </div>`;
+          </div>`;
+        row.querySelector('.svc-edit').onclick = () => {
+          editingWnIndices.add(i);
+          renderWhatsNew();
+        };
+      } else {
+        const pendingPhoto = wnEditPendingPhotos.has(i) ? wnEditPendingPhotos.get(i) : item.photo;
+        row.innerHTML = `
+          <div class="client-info" style="width:100%;">
+            <input type="text" class="wn-edit-title field" value="${item.title.replace(/"/g, '&quot;')}" placeholder="כותרת" style="margin-bottom:8px;">
+            <textarea class="wn-edit-desc client-note" style="min-height:60px; margin-bottom:8px;" placeholder="תיאור קצר...">${item.desc}</textarea>
+            <div class="label" style="margin:6px 0 6px;">תמונה (אופציונלי)</div>
+            <div class="brand-logo-upload wn-edit-photo-upload" style="width:100%; height:120px; border-radius:12px; margin-bottom:8px;">
+              <span class="wn-edit-photo-placeholder" style="display:${pendingPhoto ? 'none' : 'flex'};">+ הוספת תמונה</span>
+              <img class="wn-edit-photo-preview" src="${pendingPhoto || ''}" style="display:${pendingPhoto ? 'block' : 'none'}; width:100%; height:100%; object-fit:cover; border-radius:12px;">
+            </div>
+            <input type="file" class="wn-edit-photo-file" accept="image/*" style="display:none;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--panel-text-dim); margin-bottom:10px;">
+              <input type="checkbox" class="wn-edit-badge" style="width:auto;" ${item.badge ? 'checked' : ''}> להציג תג "חדש"
+            </label>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="cta wn-save-btn" style="width:auto; padding:8px 22px; font-size:13px; margin-top:0;">💾 שמירה</button>
+              <button class="cat-back-btn wn-cancel-btn" type="button">ביטול</button>
+              <button class="svc-del" aria-label="מחיקת עדכון" style="margin-inline-start:auto;">✕</button>
+            </div>
+          </div>`;
+        const photoUploadEl = row.querySelector('.wn-edit-photo-upload');
+        const photoFileEl = row.querySelector('.wn-edit-photo-file');
+        photoUploadEl.onclick = () => photoFileEl.click();
+        photoFileEl.onchange = (event) => {
+          const file = event.target.files[0];
+          if (!file) return;
+          readImageCompressed(file, (dataUrl) => {
+            wnEditPendingPhotos.set(i, dataUrl);
+            row.querySelector('.wn-edit-photo-preview').src = dataUrl;
+            row.querySelector('.wn-edit-photo-preview').style.display = 'block';
+            row.querySelector('.wn-edit-photo-placeholder').style.display = 'none';
+          }, { storageFolder: 'public/whatsnew' });
+        };
+        row.querySelector('.wn-save-btn').onclick = () => {
+          const newTitle = row.querySelector('.wn-edit-title').value.trim();
+          const newDesc = row.querySelector('.wn-edit-desc').value.trim();
+          if (!newTitle || !newDesc){ alert('צריך למלא כותרת ותיאור.'); return; }
+          const newBadge = row.querySelector('.wn-edit-badge').checked;
+          const newPhoto = wnEditPendingPhotos.has(i) ? wnEditPendingPhotos.get(i) : item.photo;
+          whatsNewItems[i] = { title: newTitle, desc: newDesc, badge: newBadge, photo: newPhoto || null };
+          wnEditPendingPhotos.delete(i);
+          editingWnIndices.delete(i);
+          renderWhatsNew();
+          if (typeof saveState === 'function') saveState();
+          if (typeof showAdminToast === 'function') showAdminToast('✓ העדכון נשמר בהצלחה');
+        };
+        row.querySelector('.wn-cancel-btn').onclick = () => {
+          wnEditPendingPhotos.delete(i);
+          editingWnIndices.delete(i);
+          renderWhatsNew();
+        };
+      }
       row.querySelector('.svc-del').onclick = () => {
         if (!confirm(`למחוק את העדכון "${item.title}"?`)) return;
         whatsNewItems.splice(i, 1);
+        editingWnIndices.delete(i);
+        wnEditPendingPhotos.delete(i);
         renderWhatsNew();
         if (typeof saveState === 'function') saveState();
         if (typeof showAdminToast === 'function') showAdminToast('✓ העדכון נמחק בהצלחה');
@@ -8367,7 +8452,48 @@
   function sameDate(a, b){
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
+  const ISRAELI_HOLIDAY_FULL_CLOSURES = {
+    '2026-09-12': 'ראש השנה', '2026-09-13': 'ראש השנה',
+    '2026-09-21': 'יום כיפור',
+    '2026-09-26': 'סוכות',
+    '2026-10-03': 'שמחת תורה',
+    '2026-04-02': 'פסח',
+    '2026-04-08': 'שביעי של פסח',
+    '2026-05-22': 'שבועות',
+
+    '2027-10-02': 'ראש השנה', '2027-10-03': 'ראש השנה',
+    '2027-10-11': 'יום כיפור',
+    '2027-10-16': 'סוכות',
+    '2027-10-23': 'שמחת תורה',
+    '2027-04-22': 'פסח',
+    '2027-04-28': 'שביעי של פסח',
+    '2027-06-11': 'שבועות',
+
+    '2028-09-21': 'ראש השנה', '2028-09-22': 'ראש השנה',
+    '2028-09-30': 'יום כיפור',
+    '2028-10-05': 'סוכות',
+    '2028-10-12': 'שמחת תורה',
+    '2028-04-11': 'פסח',
+    '2028-04-17': 'שביעי של פסח',
+    '2028-05-31': 'שבועות',
+
+    '2029-09-10': 'ראש השנה', '2029-09-11': 'ראש השנה',
+    '2029-09-19': 'יום כיפור',
+    '2029-09-24': 'סוכות',
+    '2029-10-01': 'שמחת תורה',
+    '2029-03-31': 'פסח',
+    '2029-04-06': 'שביעי של פסח',
+    '2029-05-20': 'שבועות'
+  };
+  const ISRAELI_HOLIDAY_EREV_CLOSURES = {
+    '2026-09-11': 'ערב ראש השנה', '2026-09-20': 'ערב יום כיפור', '2026-09-25': 'ערב סוכות', '2026-10-02': 'ערב שמחת תורה', '2026-04-01': 'ערב פסח', '2026-05-21': 'ערב שבועות',
+    '2027-10-01': 'ערב ראש השנה', '2027-10-10': 'ערב יום כיפור', '2027-10-15': 'ערב סוכות', '2027-10-22': 'ערב שמחת תורה', '2027-04-21': 'ערב פסח', '2027-06-10': 'ערב שבועות',
+    '2028-09-20': 'ערב ראש השנה', '2028-09-29': 'ערב יום כיפור', '2028-10-04': 'ערב סוכות', '2028-10-11': 'ערב שמחת תורה', '2028-04-10': 'ערב פסח', '2028-05-30': 'ערב שבועות',
+    '2029-09-09': 'ערב ראש השנה', '2029-09-18': 'ערב יום כיפור', '2029-09-23': 'ערב סוכות', '2029-09-30': 'ערב שמחת תורה', '2029-03-30': 'ערב פסח', '2029-05-19': 'ערב שבועות'
+  };
+  const EREV_CHAG_CLOSE_TIME = '14:00';
   function getClosedDateEntry(staffIdx, dateStr){
+    if (ISRAELI_HOLIDAY_FULL_CLOSURES[dateStr]) return { date: dateStr, reason: ISRAELI_HOLIDAY_FULL_CLOSURES[dateStr], holiday: true };
     const s = staff[staffIdx];
     if (!s || !s.closedDates) return null;
     for (let i = 0; i < s.closedDates.length; i++){
@@ -8383,13 +8509,17 @@
   }
   function getEffectiveDayWindows(dayInfo, dateObj){
     if (!dayInfo || !dayInfo.open) return [];
+    if (dateObj < todayMidnight) return [];
     const rawRanges = (Array.isArray(dayInfo.ranges) && dayInfo.ranges.length)
       ? dayInfo.ranges
       : (dayInfo.from && dayInfo.to ? [{ from: dayInfo.from, to: dayInfo.to }] : []);
     const isToday = sameDate(dateObj, todayMidnight);
-    const earliestToday = isToday ? Math.ceil((nowMinutesReal + minLeadMinutes) / fineStepMinutes) * fineStepMinutes : -Infinity;
+    const earliestToday = isToday ? Math.ceil((getNowMinutesReal() + minLeadMinutes) / fineStepMinutes) * fineStepMinutes : -Infinity;
+    const dateStr = dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
+    const isErevChag = !!ISRAELI_HOLIDAY_EREV_CLOSURES[dateStr];
+    const erevChagCloseMin = isErevChag ? timeToMinutes(EREV_CHAG_CLOSE_TIME) : Infinity;
     return rawRanges
-      .map(r => [Math.max(timeToMinutes(r.from), earliestToday), timeToMinutes(r.to)])
+      .map(r => [Math.max(timeToMinutes(r.from), earliestToday), Math.min(timeToMinutes(r.to), erevChagCloseMin)])
       .filter(([s, e]) => s < e)
       .sort((a, b) => a[0] - b[0]);
   }
@@ -8870,10 +9000,13 @@
   function buildBlockedLateCancelMessage(appt){
     return `לא ניתן לבטל את התור (${appt.service}, ${formatDateDMY(appt.date)} ${appt.time}) — ביטלת כבר פעמיים בפחות מ-12 שעות לפני התור. כדי להימנע מחיוב יש להגיע לתור כרגיל; אחרת יהיה עליך לשלם את מחיר הטיפול לפני קביעת תור נוסף.`;
   }
+  function buildBlockedLateCancelSmsMessage(appt){
+    return 'לא ניתן לבטל את התור — כבר ביטלת פעמיים באיחור. יש להגיע או להתקשר.';
+  }
   function sendBlockedLateCancelNotice(appt, client){
     const msg = buildBlockedLateCancelMessage(appt);
     if (client && client.email) sendEmail(client.email, 'לא ניתן לבטל את התור', msg);
-    try { queueApptSms(appt, msg); } catch (e) { console.error('Blocked late-cancel SMS failed (message itself unaffected):', e); }
+    try { queueApptSms(appt, buildBlockedLateCancelSmsMessage(appt)); } catch (e) { console.error('Blocked late-cancel SMS failed (message itself unaffected):', e); }
   }
   function resetLateCancelBlock(client){
     if (!client) return;
@@ -9360,12 +9493,19 @@
     document.getElementById('bookingFormWrap').style.display = 'none';
     const apptEl = document.getElementById('myAppointment');
     apptEl.style.display = 'block';
+    const bookedCategoryMessages = [...new Set(svcObjsForAppt.map(o => o && o.category).filter(Boolean))]
+      .map(cat => categoryMessages[cat])
+      .filter(Boolean);
+    const categoryMessagesHtml = bookedCategoryMessages.length
+      ? bookedCategoryMessages.map(m => `<div class="billing-notice show" style="margin-top:12px;">${m.replace(/\n/g, '<br>')}</div>`).join('')
+      : '';
     apptEl.innerHTML = `
       <div class="status-dot">✓ מאושר${customerEmail ? ' — אישור נשלח למייל' : ''}</div>
       <h4>${svc ? svc.name : 'שירות'}</h4>
       <div class="appt-meta">${bookingSelectedDate.getDate()} ב${hebrewMonths[bookingSelectedDate.getMonth()]} (${hebrewDateStr(bookingSelectedDate)}), ${selectedSlot}${svc ? ' · ' + svc.price + ' ש"ח' : ''}${emp ? ' · אצל ' + emp.name : ''}</div>
       <div class="appt-meta" style="margin-top:2px;">תזכורת באמצעות: ${reminderText}</div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      ${categoryMessagesHtml}
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
         <a href="${gcalUrl}" target="_blank" rel="noopener" class="gcal-link">📅 הוספה ל-Google Calendar</a>
         <a href="${icsUrl}" download="תור-${svc ? svc.name : ''}.ics" class="gcal-link">📥 הוספה ליומן (iPhone/Outlook)</a>
       </div>
@@ -10416,7 +10556,8 @@
     const simpleFields = {
       branding, customTemplates, staff,
       categories, services, whatsNewItems, invAlertEmail, inventory,
-      ownerAccessCode, gatedTabsConfig, personalBlocks, specialRequests
+      ownerAccessCode, gatedTabsConfig, personalBlocks, specialRequests,
+      categoryMessages
     };
     pendingSaveCount++;
     return db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
@@ -10468,7 +10609,7 @@
           branding, clients, customTemplates,
           staff, weekAppointments, categories, services, whatsNewItems,
           invAlertEmail, inventory, waitlist, cancellationLog, lateCancellations, ownerAccessCode,
-          gatedTabsConfig, personalBlocks, specialRequests,
+          gatedTabsConfig, personalBlocks, specialRequests, categoryMessages,
           savedAt: committedPayload.savedAt
         };
         CLOUD_DOC.collection('backups').doc(backupDateKey).set(fullSnapshot).catch(err => console.error('Backup save failed:', err));
@@ -10584,6 +10725,7 @@
     if (data.categories) categories = data.categories;
     if (data.services) services = data.services;
     if (data.whatsNewItems) whatsNewItems = data.whatsNewItems;
+    if (data.categoryMessages && typeof data.categoryMessages === 'object') categoryMessages = data.categoryMessages;
     if (typeof data.invAlertEmail === 'string') invAlertEmail = data.invAlertEmail;
     if (data.inventory) inventory = data.inventory;
     if (data.waitlist) waitlist = data.waitlist;
