@@ -14,6 +14,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js">
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js">
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js">
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/1.66.0/iconfont/tabler-icons.min.css">
+
 <style>
 @font-face {
   font-family: 'Suez One';
@@ -790,24 +797,57 @@
     white-space:nowrap;
   }
   .hours-day-card .new-icon{font-size:18px;}
-  .hours-staff-section{
-    border:1px solid rgba(245,238,228,0.12);
-    border-radius:18px;
-    padding:16px;
-    background:var(--ink);
+  .hours-staff-tabs{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:14px;
+    margin-bottom:18px;
   }
-  .hours-staff-head{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
-  .hours-staff-avatar{
-    width:44px; height:44px; min-width:44px;
+  .hours-staff-tab{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    max-width:82px;
+    background:none;
+    border:none;
+    padding:4px;
+    cursor:pointer;
+    font-family:'Heebo';
+  }
+  .hours-staff-tab-avatar{
+    width:56px; height:56px; min-width:56px;
     border-radius:50%;
     overflow:hidden;
     background:rgba(201,162,39,0.15);
     color:var(--gold-soft);
     display:flex; align-items:center; justify-content:center;
-    font-family:'Suez One'; font-weight:400; font-size:17px;
+    font-family:'Suez One'; font-weight:400; font-size:20px;
+    border:2px solid transparent;
+    transition:border-color 0.15s ease, background 0.15s ease;
   }
-  .hours-staff-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
-  .hours-staff-head h3{font-family:'Suez One'; font-weight:400; font-size:16px;}
+  .hours-staff-tab-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
+  .hours-staff-tab-name{
+    font-size:12px;
+    color:var(--ivory-dim);
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    transition:color 0.15s ease;
+  }
+  .hours-staff-tab.active .hours-staff-tab-avatar{
+    border-color:var(--gold);
+    background:rgba(201,162,39,0.3);
+  }
+  .hours-staff-tab.active .hours-staff-tab-name{color:var(--gold-soft); font-weight:500;}
+  .hours-staff-detail{
+    border:1px solid rgba(245,238,228,0.12);
+    border-radius:18px;
+    padding:16px;
+    background:var(--ink);
+  }
   .hours-staff-days{display:flex; flex-direction:column; gap:10px;}
   .hours-day-icon-0{background:rgba(155,44,66,0.16); color:var(--wine);}
   .hours-day-icon-1{background:rgba(201,162,39,0.16); color:var(--gold);}
@@ -5789,12 +5829,16 @@
   }
   function renderOneAppointmentRow(a, options){
       if (options.upcoming){
+        const confirmedBadge = a.confirmedByClient
+          ? `<span class="upcoming-confirmed-badge" style="display:inline-flex; align-items:center; gap:3px; color:#1c8a4b; background:rgba(28,138,75,0.12); border:1px solid rgba(28,138,75,0.35); border-radius:6px; padding:2px 7px; font-size:11px; font-weight:700; white-space:nowrap;">✓ אושר</span>`
+          : '';
         return `
           <div class="visit-row upcoming-visit-row" data-appt-id="${a.id || ''}">
             <div class="visit-row-head">
               <span class="visit-date">${formatHistoryDate(a)}</span>
               <span class="t">${a.time || ''}</span>
               <span class="visit-svc">${a.service || 'שירות'}${a.dur ? ` <span class="visit-dur">(${a.dur} דק')</span>` : ''}</span>
+              ${confirmedBadge}
               <button class="visit-cancel-btn" data-cancel-appt-id="${a.id || ''}" title="ביטול התור הזה" style="margin-inline-start:auto; background:none; border:1px solid rgba(155,44,66,0.4); color:var(--wine); border-radius:8px; font-size:12px; padding:3px 8px; cursor:pointer;">✕ ביטול</button>
             </div>
             <div class="upcoming-meta">${a.staff !== undefined && staff[a.staff] ? 'אצל ' + staff[a.staff].name + ' · ' : ''}${formatAppointmentStatus(a)}</div>
@@ -6864,25 +6908,34 @@
         });
         clusterItems.forEach(item => { item.colCount = columnEnds.length; });
       });
-      apptLayout.forEach(({ a, start, dur, col, colCount }) => {
+      const singleColumnByStart = apptLayout.filter(item => item.colCount === 1).sort((x, y) => x.start - y.start);
+      singleColumnByStart.forEach((item, i) => {
+        const next = singleColumnByStart[i + 1];
+        item.nextSingleStart = next ? next.start : null;
+      });
+      apptLayout.forEach(item => {
+        const { a, start, dur, col, colCount } = item;
         const hourIdx = Math.floor(start / 60) - calStartHour;
         if (hourIdx < 0 || hourIdx >= (calEndHour - calStartHour)) return;
-        const minuteOffsetInHour = start % 60;
-        const quarterOffset = Math.round(minuteOffsetInHour / 15);
-        const durationQuarters = Math.max(1, Math.round(dur / 15));
+        const topPx = ((start - calStartHour * 60) / 60) * hourBandHeight;
+        let heightPx = Math.max(quarterHeight, (dur / 60) * hourBandHeight);
+        if (colCount === 1 && item.nextSingleStart != null){
+          const nextTopPx = ((item.nextSingleStart - calStartHour * 60) / 60) * hourBandHeight;
+          heightPx = Math.min(heightPx, Math.max(4, nextTopPx - topPx));
+        }
         const block = document.createElement('div');
         block.className = 'cal-appt';
         block.dataset.apptId = a.id || '';
         if (pendingCalHighlightApptId && a.id === pendingCalHighlightApptId) block.classList.add('cal-appt-highlight');
         if (a.confirmedByClient) block.classList.add('cal-appt-confirmed');
-        block.style.top = (hourIdx * hourBandHeight + quarterOffset * quarterHeight + 2) + 'px';
-        block.style.height = (durationQuarters * quarterHeight - 3) + 'px';
+        block.style.top = (topPx + 2) + 'px';
+        block.style.height = (heightPx - 3) + 'px';
         const colWidthPct = 100 / colCount;
         block.style.insetInlineStart = `calc(${col * colWidthPct}% + 3px)`;
         block.style.insetInlineEnd = `calc(${(colCount - col - 1) * colWidthPct}% + 3px)`;
         block.style.background = staffColors[a.staff % staffColors.length];
         block.title = `${a.client} · ${a.service} · ${a.time} (${dur} דק') — לחיצה לצפייה בפרטי התור`;
-        const blockHeightPx = durationQuarters * quarterHeight - 3;
+        const blockHeightPx = heightPx - 3;
         block.innerHTML = (blockHeightPx >= 34)
           ? `<span class="cal-appt-name">${a.client}</span><span class="cal-appt-meta">${a.time.slice(0,5)} · ${a.service}</span>`
           : `<span class="cal-appt-name">${a.client}</span>`;
@@ -8121,12 +8174,71 @@
     { name: 'שישי', open: true, from: '08:00', to: '13:00' },
     { name: 'שבת', open: false, from: '09:00', to: '17:00' }
   ];
+  const hoursOverviewToMinutes = t => { const parts = String(t).split(':'); return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0); };
+  const hoursOverviewToTimeStr = m => { const mm = m % 1440; return String(Math.floor(mm / 60)).padStart(2, '0') + ':' + String(mm % 60).padStart(2, '0'); };
+  function computeHoursOverviewStaffDays(s){
+    return days.map((day, dow) => {
+      const dayInfo = s.hours && s.hours[dow];
+      const rawRanges = (dayInfo && dayInfo.open)
+        ? ((Array.isArray(dayInfo.ranges) && dayInfo.ranges.length)
+            ? dayInfo.ranges
+            : (dayInfo.from && dayInfo.to ? [{ from: dayInfo.from, to: dayInfo.to }] : []))
+        : [];
+      const intervals = [];
+      rawRanges.forEach(r => {
+        if (!r || !r.from || !r.to) return;
+        const s0 = hoursOverviewToMinutes(r.from), e0 = hoursOverviewToMinutes(r.to);
+        if (s0 >= e0) return;
+        intervals.push([s0, e0]);
+      });
+      intervals.sort((a, b) => a[0] - b[0]);
+      const merged = [];
+      intervals.forEach(([start, end]) => {
+        const last = merged[merged.length - 1];
+        if (last && start <= last[1]) last[1] = Math.max(last[1], end);
+        else merged.push([start, end]);
+      });
+      return { name: day.name, dow, ranges: merged.map(([st, en]) => ({ from: hoursOverviewToTimeStr(st), to: hoursOverviewToTimeStr(en) })) };
+    });
+  }
+  let hoursOverviewSelectedIdx = 0;
+  function renderHoursStaffDetail(s, todayDow){
+    const detail = document.getElementById('hoursStaffDetail');
+    if (!detail) return;
+    const perDay = computeHoursOverviewStaffDays(s);
+    const hasAnyHours = perDay.some(d => d.ranges.length);
+    detail.innerHTML = hasAnyHours ? `<div class="hours-staff-days">${perDay.map(d => `
+        <div class="new-card hours-day-card${!d.ranges.length ? ' hours-day-closed' : ''}">
+          <div class="new-icon hours-day-icon-${d.dow}"><i class="ti ti-clock"></i></div>
+          <div class="new-body">
+            <h4>${d.name}${d.dow === todayDow ? '<span class="hours-today-tag">היום</span>' : ''}</h4>
+            <p>${d.ranges.length ? d.ranges.map(r => `${r.from}–${r.to}`).join(' , ') : 'סגור'}</p>
+          </div>
+        </div>
+      `).join('')}</div>` : `
+      <div class="new-card">
+        <div class="new-icon">✦</div>
+        <div class="new-body">
+          <h4>עוד לא נקבעו לה שעות עבודה</h4>
+          <p style="direction:rtl; text-align:right;">תעדכני בקרוב :)</p>
+        </div>
+      </div>`;
+  }
+  function selectHoursOverviewStaff(idx){
+    const activeStaff = (staff || []).filter(s => s && !s.deleted);
+    if (!activeStaff.length || idx < 0 || idx >= activeStaff.length) return;
+    hoursOverviewSelectedIdx = idx;
+    const tabsWrap = document.getElementById('hoursStaffTabs');
+    if (tabsWrap){
+      tabsWrap.querySelectorAll('.hours-staff-tab').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.staffIdx, 10) === idx);
+      });
+    }
+    renderHoursStaffDetail(activeStaff[idx], new Date().getDay());
+  }
   function renderHoursOverview(){
     const wrap = document.getElementById('hoursOverviewList');
     if (!wrap) return;
-    const toMinutes = t => { const parts = String(t).split(':'); return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0); };
-    const toTimeStr = m => { const mm = m % 1440; return String(Math.floor(mm / 60)).padStart(2, '0') + ':' + String(mm % 60).padStart(2, '0'); };
-    const todayDow = new Date().getDay();
     const activeStaff = (staff || []).filter(s => s && !s.deleted);
     if (!activeStaff.length){
       wrap.innerHTML = `
@@ -8139,57 +8251,22 @@
         </div>`;
       return;
     }
-    wrap.innerHTML = activeStaff.map(s => {
-      const perDay = days.map((day, dow) => {
-        const dayInfo = s.hours && s.hours[dow];
-        const rawRanges = (dayInfo && dayInfo.open)
-          ? ((Array.isArray(dayInfo.ranges) && dayInfo.ranges.length)
-              ? dayInfo.ranges
-              : (dayInfo.from && dayInfo.to ? [{ from: dayInfo.from, to: dayInfo.to }] : []))
-          : [];
-        const intervals = [];
-        rawRanges.forEach(r => {
-          if (!r || !r.from || !r.to) return;
-          const s0 = toMinutes(r.from), e0 = toMinutes(r.to);
-          if (s0 >= e0) return;
-          intervals.push([s0, e0]);
-        });
-        intervals.sort((a, b) => a[0] - b[0]);
-        const merged = [];
-        intervals.forEach(([start, end]) => {
-          const last = merged[merged.length - 1];
-          if (last && start <= last[1]) last[1] = Math.max(last[1], end);
-          else merged.push([start, end]);
-        });
-        return { name: day.name, dow, ranges: merged.map(([st, en]) => ({ from: toTimeStr(st), to: toTimeStr(en) })) };
-      });
-      const hasAnyHours = perDay.some(d => d.ranges.length);
+    if (hoursOverviewSelectedIdx < 0 || hoursOverviewSelectedIdx >= activeStaff.length) hoursOverviewSelectedIdx = 0;
+    const tabsHtml = activeStaff.map((s, i) => {
       const avatarHtml = s.photo ? `<img src="${s.photo}" alt="">` : (s.name || '').trim().charAt(0);
-      const daysHtml = hasAnyHours ? perDay.map(d => `
-        <div class="new-card hours-day-card${!d.ranges.length ? ' hours-day-closed' : ''}">
-          <div class="new-icon hours-day-icon-${d.dow}"><i class="ti ti-clock"></i></div>
-          <div class="new-body">
-            <h4>${d.name}${d.dow === todayDow ? '<span class="hours-today-tag">היום</span>' : ''}</h4>
-            <p>${d.ranges.length ? d.ranges.map(r => `${r.from}–${r.to}`).join(' , ') : 'סגור'}</p>
-          </div>
-        </div>
-      `).join('') : `
-        <div class="new-card">
-          <div class="new-icon">✦</div>
-          <div class="new-body">
-            <h4>עוד לא נקבעו לה שעות עבודה</h4>
-            <p style="direction:rtl; text-align:right;">תעדכני בקרוב :)</p>
-          </div>
-        </div>`;
       return `
-        <div class="hours-staff-section">
-          <div class="hours-staff-head">
-            <div class="hours-staff-avatar">${avatarHtml}</div>
-            <h3>${s.name}</h3>
-          </div>
-          <div class="hours-staff-days">${daysHtml}</div>
-        </div>`;
+        <button type="button" class="hours-staff-tab${i === hoursOverviewSelectedIdx ? ' active' : ''}" data-staff-idx="${i}" aria-label="${s.name}">
+          <div class="hours-staff-tab-avatar">${avatarHtml}</div>
+          <span class="hours-staff-tab-name">${s.name}</span>
+        </button>`;
     }).join('');
+    wrap.innerHTML = `
+      <div class="hours-staff-tabs" id="hoursStaffTabs">${tabsHtml}</div>
+      <div class="hours-staff-detail" id="hoursStaffDetail"></div>`;
+    wrap.querySelectorAll('.hours-staff-tab').forEach(btn => {
+      btn.onclick = () => selectHoursOverviewStaff(parseInt(btn.dataset.staffIdx, 10));
+    });
+    renderHoursStaffDetail(activeStaff[hoursOverviewSelectedIdx], new Date().getDay());
   }
   renderHoursOverview();
   const todayMidnight = new Date(nowReal.getFullYear(), nowReal.getMonth(), nowReal.getDate());
@@ -8305,8 +8382,8 @@
       const dow = cellDate.getDay();
       const isPast = cellDate < todayMidnight;
       const isClosedDay = selectedStaffIndex === 'any'
-        ? getCapableStaffIndicesForCats(getBookingCategories()).every(idx => !(staff[idx] && staff[idx].hours[dow].open) || isDateClosedForStaff(idx, cellDate))
-        : !(staff[selectedStaffIndex] && staff[selectedStaffIndex].hours[dow].open) || isDateClosedForStaff(selectedStaffIndex, cellDate);
+        ? getCapableStaffIndicesForCats(getBookingCategories()).every(idx => !(staff[idx] && staff[idx].hours[dow] && staff[idx].hours[dow].open) || isDateClosedForStaff(idx, cellDate))
+        : !(staff[selectedStaffIndex] && staff[selectedStaffIndex].hours[dow] && staff[selectedStaffIndex].hours[dow].open) || isDateClosedForStaff(selectedStaffIndex, cellDate);
       const noSlots = !isPast && !isClosedDay && !hasAnySlot(cellDate);
       const cell = document.createElement('div');
       cell.className = 'cal-day-cell';
@@ -8645,6 +8722,7 @@
   function logCancellation(appt){
     if (!appt) return;
     cancellationLog.push({
+      id: 'cancel_' + Date.now() + '_' + Math.floor(Math.random()*10000),
       date: appt.date,
       time: appt.time || '',
       service: appt.service,
@@ -9206,7 +9284,9 @@
   let currentBookedAppointment = null;
   function removeCurrentBookedAppointment(){
     if (!currentBookedAppointment) return;
-    const idx = weekAppointments.indexOf(currentBookedAppointment);
+    const idx = currentBookedAppointment.id
+      ? weekAppointments.findIndex(a => a.id === currentBookedAppointment.id)
+      : weekAppointments.indexOf(currentBookedAppointment);
     if (idx !== -1) weekAppointments.splice(idx, 1);
     currentBookedAppointment = null;
     if (typeof renderWeekCal === 'function') renderWeekCal();
@@ -9396,25 +9476,33 @@
       </div>`;
     }).join('') + `<button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
   }
+  function resolveCurrentAppt(listAppt){
+    if (!listAppt) return null;
+    if (!listAppt.id) return listAppt; // רשומה ישנה בלי id — אין לפי מה למצוא מחדש, ממשיכים עם מה שיש
+    return weekAppointments.find(a => a.id === listAppt.id) || listAppt;
+  }
   function confirmListedAppointment(idx){
-    const appt = lookedUpAppointmentsList[idx];
-    if (!appt) return;
+    const listAppt = lookedUpAppointmentsList[idx];
+    if (!listAppt) return;
+    const appt = resolveCurrentAppt(listAppt);
     appt.confirmedByClient = true;
     appt.confirmedAt = new Date().toISOString();
+    lookedUpAppointmentsList[idx] = appt;
     if (typeof saveState === 'function') saveState();
     renderLookedUpAppointment(lookedUpAppointmentsList);
   }
   function rescheduleListedAppointment(idx){
-    currentBookedAppointment = lookedUpAppointmentsList[idx];
+    currentBookedAppointment = resolveCurrentAppt(lookedUpAppointmentsList[idx]);
     lookedUpAppointmentsList = [];
     rescheduleAppointment();
   }
   function cancelListedAppointment(idx){
-    const appt = lookedUpAppointmentsList[idx];
-    if (!appt) return;
+    const listAppt = lookedUpAppointmentsList[idx];
+    if (!listAppt) return;
+    const appt = resolveCurrentAppt(listAppt);
     const waitlistMatches = getWaitlistMatchesForAppointment(appt);
     logCancellation(appt);
-    const pos = weekAppointments.indexOf(appt);
+    const pos = appt.id ? weekAppointments.findIndex(a => a.id === appt.id) : weekAppointments.indexOf(appt);
     if (pos !== -1) weekAppointments.splice(pos, 1);
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderMiniCal === 'function') renderMiniCal();
@@ -9434,7 +9522,7 @@
     } catch (e) {
       console.error('cancelListedAppointment: notification failed (cancellation itself succeeded):', e);
     }
-    const remaining = lookedUpAppointmentsList.filter(a => a !== appt);
+    const remaining = lookedUpAppointmentsList.filter(a => a !== listAppt);
     renderLookedUpAppointment(remaining);
   }
   const shownArrivalPopups = new Set();
@@ -9509,9 +9597,12 @@
     const heroEl = document.querySelector('.hero');
     if (heroEl) heroEl.style.display = isAdmin ? 'none' : '';
     document.body.classList.toggle('admin-mode', isAdmin);
+    if (isAdmin && !window.__adminOnlyPanelsRenderedOnce && typeof rerenderEverything === 'function'){
+      window.__adminOnlyPanelsRenderedOnce = true;
+      rerenderEverything();
+    }
     if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
     if (isAdmin) resetWeekCalScrollPosition();
-    if (isAdmin && typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
     if (isAdmin && typeof recheckAllPendingFlexibleRequests === 'function') recheckAllPendingFlexibleRequests();
     if (isAdmin){
       requestAnimationFrame(function(){
@@ -9519,15 +9610,14 @@
         if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
         setTimeout(resetWeekCalScrollPosition, 300);
       });
-      setTimeout(function(){
-        if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
-      }, 560);
-      let calFitWatchdogCount = 0;
-      const calFitWatchdogId = setInterval(function(){
-        calFitWatchdogCount++;
-        if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
-        if (calFitWatchdogCount >= 8) clearInterval(calFitWatchdogId);
-      }, 500);
+      (function(){
+        let ticks = 0;
+        const watchdog = setInterval(function(){
+          ticks++;
+          if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
+          if (ticks >= 8) clearInterval(watchdog);
+        }, 500);
+      })();
     }
     window.__lastShowPanelSyncSec = Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - __spStart) / 1000;
     window.__showPanelCallCount = (window.__showPanelCallCount || 0) + 1;
@@ -10133,7 +10223,7 @@
     const nowIso = new Date().toISOString();
     const simpleFields = {
       branding, customTemplates, staff,
-      categories, services, whatsNewItems, invAlertEmail, inventory, cancellationLog,
+      categories, services, whatsNewItems, invAlertEmail, inventory,
       ownerAccessCode, gatedTabsConfig, personalBlocks, specialRequests
     };
     pendingSaveCount++;
@@ -10155,6 +10245,13 @@
       const mergedClients = mergeListField(server.clients, lastLoadedSnapshot.clients, clients, c => c && c.teudatZehut ? 'tz:' + c.teudatZehut : (c && c.phone ? 'p:' + String(c.phone).replace(/[^0-9]/g, '') : null));
       if (JSON.stringify(mergedClients) !== JSON.stringify(server.clients || [])) hasChange = true;
       payload.clients = mergedClients;
+      const mergedCancellationLog = mergeListField(server.cancellationLog, lastLoadedSnapshot.cancellationLog, cancellationLog, c => c && c.id);
+      const cancelLogCutoff = new Date();
+      cancelLogCutoff.setDate(cancelLogCutoff.getDate() - 400);
+      const cancelLogCutoffKey = formatDateKey(cancelLogCutoff);
+      const trimmedCancellationLog = mergedCancellationLog.filter(c => c && c.cancelledAt >= cancelLogCutoffKey);
+      if (JSON.stringify(trimmedCancellationLog) !== JSON.stringify(server.cancellationLog || [])) hasChange = true;
+      payload.cancellationLog = trimmedCancellationLog;
       if (!hasChange) return null; // nothing this tab needs to write right now
       if (!silent) showSaveStatus('שומר...');
       tx.set(CLOUD_DOC, payload, { merge: true });
@@ -10165,6 +10262,7 @@
       weekAppointments = committedPayload.weekAppointments;
       waitlist = committedPayload.waitlist;
       clients = committedPayload.clients;
+      cancellationLog = committedPayload.cancellationLog;
       lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(committedPayload));
       const backupDateKey = committedPayload.savedAt.slice(0, 10);
       if (backupDateKey !== lastBackupDateKey){
@@ -10276,6 +10374,15 @@
     if (data.clients) clients = data.clients;
     if (data.customTemplates) customTemplates = data.customTemplates;
     if (data.staff) staff = data.staff;
+    if (Array.isArray(staff)){
+      staff.forEach(s => {
+        if (!s) return;
+        if (!s.hours || typeof s.hours !== 'object') s.hours = {};
+        for (let dow = 0; dow < 7; dow++){
+          if (!s.hours[dow]) s.hours[dow] = { open: false, ranges: [] };
+        }
+      });
+    }
     if (data.weekAppointments) weekAppointments = data.weekAppointments;
     if (data.categories) categories = data.categories;
     if (data.services) services = data.services;
@@ -10292,26 +10399,28 @@
     }
   }
   function rerenderEverything(){
+    const isAdminActive = (typeof isLoggedIn !== 'undefined' && isLoggedIn) ||
+      (typeof document !== 'undefined' && document.body && document.body.classList.contains('admin-mode'));
     const __reCalls = [
-      ['renderCategories', typeof renderCategories === 'function' ? renderCategories : null],
+      ['renderCategories', isAdminActive && typeof renderCategories === 'function' ? renderCategories : null],
       ['renderServices', typeof renderServices === 'function' ? renderServices : null],
-      ['renderStaff', typeof renderStaff === 'function' ? renderStaff : null],
-      ['renderClients', typeof renderClients === 'function' ? renderClients : null],
-      ['renderStaffFilterRow', typeof renderStaffFilterRow === 'function' ? renderStaffFilterRow : null],
-      ['renderWeekCal', typeof renderWeekCal === 'function' ? renderWeekCal : null],
+      ['renderStaff', isAdminActive && typeof renderStaff === 'function' ? renderStaff : null],
+      ['renderClients', isAdminActive && typeof renderClients === 'function' ? renderClients : null],
+      ['renderStaffFilterRow', isAdminActive && typeof renderStaffFilterRow === 'function' ? renderStaffFilterRow : null],
+      ['renderWeekCal', isAdminActive && typeof renderWeekCal === 'function' ? renderWeekCal : null],
       ['renderWhatsNew', typeof renderWhatsNew === 'function' ? renderWhatsNew : null],
-      ['renderInventory', typeof renderInventory === 'function' ? renderInventory : null],
+      ['renderInventory', isAdminActive && typeof renderInventory === 'function' ? renderInventory : null],
       ['renderBranding', typeof renderBranding === 'function' ? renderBranding : null],
-      ['renderCustomTemplates', typeof renderCustomTemplates === 'function' ? renderCustomTemplates : null],
+      ['renderCustomTemplates', isAdminActive && typeof renderCustomTemplates === 'function' ? renderCustomTemplates : null],
       ['renderMiniCal', typeof renderMiniCal === 'function' ? renderMiniCal : null],
       ['renderAvailableSlots', typeof renderAvailableSlots === 'function' ? renderAvailableSlots : null],
-      ['renderWaitlistAdmin', typeof renderWaitlistAdmin === 'function' ? renderWaitlistAdmin : null],
-      ['renderHoursStaffPicker', typeof renderHoursStaffPicker === 'function' ? renderHoursStaffPicker : null],
-      ['renderHoursEditor', typeof renderHoursEditor === 'function' ? renderHoursEditor : null],
+      ['renderWaitlistAdmin', isAdminActive && typeof renderWaitlistAdmin === 'function' ? renderWaitlistAdmin : null],
+      ['renderHoursStaffPicker', isAdminActive && typeof renderHoursStaffPicker === 'function' ? renderHoursStaffPicker : null],
+      ['renderHoursEditor', isAdminActive && typeof renderHoursEditor === 'function' ? renderHoursEditor : null],
       ['renderHoursOverview', typeof renderHoursOverview === 'function' ? renderHoursOverview : null],
-      ['renderReports', typeof renderReports === 'function' ? () => renderReports('week') : null],
-      ['renderOverviewDayView', typeof renderOverviewDayView === 'function' ? renderOverviewDayView : null],
-      ['renderOverviewMonthCal', typeof renderOverviewMonthCal === 'function' ? renderOverviewMonthCal : null],
+      ['renderReports', isAdminActive && typeof renderReports === 'function' ? () => renderReports('week') : null],
+      ['renderOverviewDayView', isAdminActive && typeof renderOverviewDayView === 'function' ? renderOverviewDayView : null],
+      ['renderOverviewMonthCal', isAdminActive && typeof renderOverviewMonthCal === 'function' ? renderOverviewMonthCal : null],
       ['recheckAllPendingFlexibleRequests', typeof recheckAllPendingFlexibleRequests === 'function' ? recheckAllPendingFlexibleRequests : null]
     ];
     const __reNow = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
@@ -10633,7 +10742,18 @@
       rerenderEverything();
     }).catch(err => console.error('Background live-sync check failed:', err));
   }
-  setInterval(pollForRemoteUpdates, 6000);
+  let __pendingRemoteUpdatePollTimeout = null;
+  function scheduleNextRemoteUpdatePoll(){
+    const isAdminActive = (typeof isLoggedIn !== 'undefined' && isLoggedIn) ||
+      (typeof document !== 'undefined' && document.body && document.body.classList.contains('admin-mode'));
+    const delay = isAdminActive ? 6000 : 30000;
+    if (__pendingRemoteUpdatePollTimeout) clearTimeout(__pendingRemoteUpdatePollTimeout);
+    __pendingRemoteUpdatePollTimeout = setTimeout(function pollForRemoteUpdatesTick(){
+      pollForRemoteUpdates();
+      scheduleNextRemoteUpdatePoll();
+    }, delay);
+  }
+  setTimeout(scheduleNextRemoteUpdatePoll, 0);
   function scheduleMidnightRefresh(){
     const now = new Date();
     const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
@@ -10655,6 +10775,7 @@
   let pendingBusinessBtn = null;
   auth.onAuthStateChanged(user => {
     isLoggedIn = !!user && !user.isAnonymous;
+    if (typeof scheduleNextRemoteUpdatePoll === 'function') scheduleNextRemoteUpdatePoll();
     const btn = document.getElementById('businessTabBtn');
     if (btn) btn.style.display = isLoggedIn ? '' : 'none';
     const bookingBtn = document.getElementById('bookingTabBtn');
