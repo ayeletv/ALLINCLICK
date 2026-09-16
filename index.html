@@ -1384,6 +1384,7 @@
   .cancel-row .c-date{font-family:'JetBrains Mono'; color:var(--panel-gold); flex:0 0 auto;}
   .cancel-row .c-client{font-weight:500; flex:1 1 120px;}
   .cancel-row .c-detail{color:var(--panel-text-dim); font-size:12.5px; flex:1 1 160px;}
+  .cancel-row .c-cancelled{color:var(--panel-text-dim); font-size:11.5px; font-family:'JetBrains Mono'; flex:0 0 auto; opacity:0.75;}
   .report-actions-row{
     display:flex;
     align-items:center;
@@ -3189,6 +3190,14 @@
         <div class="client-history" id="cpHistory"></div>
       </div>
     </div>
+    
+    <div class="appt-detail-card cp-section">
+      <div class="cp-banner"><div class="cp-banner-title"><span class="cp-banner-icon">⏰</span><h3>ביטולים מאוחרים</h3></div></div>
+      <div class="cp-body">
+        <div id="cpLateCancelStatus"></div>
+        <div id="cpLateCancelHistory" style="margin-top:10px;"></div>
+      </div>
+    </div>
     <div class="appt-detail-card cp-section">
       <div class="cp-banner">
         <div class="cp-banner-title"><span class="cp-banner-icon">📝</span><h3>מעקבים</h3></div>
@@ -4407,10 +4416,21 @@
   }
   async function cancelAdminAppointment(appt){
     if (!appt) return;
-    const confirmed = confirm(`לבטל את התור של ${appt.client} ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time}?`);
-    if (!confirmed) return;
+    const lateStatus = isLateCancellationAttempt(appt) ? getLateCancelStatusForAppt(appt) : null;
+    if (lateStatus && lateStatus.blocked){
+      const overrideConfirmed = confirm(`שימו לב: ${appt.client} כבר ביטלה/לא הגיעה ${lateStatus.count} פעמים בפחות מ-12 שעות לפני התור, ואמורה להיות חסומה מביטול נוסף באיחור.\n\nלבטל בכל זאת כחריגה (למשל אם המנהלת עצמה מוותרת על התשלום)?`);
+      if (!overrideConfirmed) return;
+    } else {
+      const confirmed = confirm(`לבטל את התור של ${appt.client} ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time}?`);
+      if (!confirmed) return;
+    }
     const matches = getWaitlistMatchesForAppointment(appt);
     logCancellation(appt);
+    if (lateStatus){
+      logLateCancellation(appt, 'cancel');
+      const updatedStatus = getLateCancelStatusForAppt(appt);
+      if (updatedStatus.count === 2) sendLateCancelAdminAlert(appt, 2, false);
+    }
     const idx = weekAppointments.findIndex(a => a.id === appt.id);
     if (idx !== -1) weekAppointments.splice(idx,1);
     if (typeof renderWeekCal==='function') renderWeekCal();
@@ -4779,6 +4799,54 @@
 
     renderCpFollowUps();
     renderCpPhotoGrid();
+    renderCpLateCancellations();
+  }
+  function renderCpLateCancellations(){
+    const c = clientProfileCurrent;
+    const statusEl = document.getElementById('cpLateCancelStatus');
+    const historyEl = document.getElementById('cpLateCancelHistory');
+    if (!c || !statusEl || !historyEl) return;
+    const key = getLateCancelKey(c);
+    const resetAt = c.lateCancelResetAt;
+    const allEntries = lateCancellations
+      .filter(e => e && getLateCancelKey(e) === key)
+      .slice()
+      .sort((a, b) => new Date(b.cancelledAtIso || 0) - new Date(a.cancelledAtIso || 0));
+    const countedEntries = allEntries.filter(e => !resetAt || (e.cancelledAtIso && e.cancelledAtIso > resetAt));
+    const count = countedEntries.length;
+    const blocked = count >= 2;
+    statusEl.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+        <div style="font-size:13.5px;${blocked ? ' color:#B3261E; font-weight:700;' : ''}">
+          ${blocked
+            ? `⛔ חסומה מביטול נוסף באיחור (${count} ביטולים/אי-הגעות מאוחרים)`
+            : `${count} / 2 ביטולים/אי-הגעות מאוחרים (פחות מ-12 שעות לפני התור)`}
+        </div>
+        ${allEntries.length ? `<button type="button" class="template-btn" id="cpResetLateCancelBtn" style="width:auto; padding:6px 14px; font-size:12.5px;">איפוס מונה</button>` : ''}
+      </div>`;
+    const resetBtn = statusEl.querySelector('#cpResetLateCancelBtn');
+    if (resetBtn){
+      resetBtn.onclick = () => {
+        if (!confirm(`לאפס את מונה הביטולים המאוחרים של ${c.name || 'הלקוחה'}? ההיסטוריה תישאר גלויה, אבל היא לא תהיה יותר חסומה.`)) return;
+        resetLateCancelBlock(c);
+      };
+    }
+    if (!allEntries.length){
+      historyEl.innerHTML = '<p style="color:var(--panel-text-dim); font-size:13px;">אין ביטולים/אי-הגעות מאוחרים רשומים.</p>';
+      return;
+    }
+    const rowHtml = e => {
+      const dateLbl = e.date ? formatDateDMY(e.date) : '';
+      const cancelledLbl = e.cancelledAtIso ? formatCancelledAtLabel(e) : '—';
+      const typeLbl = e.type === 'no-show' ? 'לא הגיעה' : 'ביטול';
+      const afterReset = resetAt && e.cancelledAtIso && e.cancelledAtIso <= resetAt;
+      return `
+      <div class="cp-followup-row"${afterReset ? ' style="opacity:0.5;"' : ''}>
+        <div class="cp-followup-header">${e.service || ''} · ${dateLbl} ${e.time || ''}${afterReset ? ' (לפני איפוס)' : ''}</div>
+        <div class="cp-followup-text">${typeLbl} · נרשם ב-${cancelledLbl}</div>
+      </div>`;
+    };
+    historyEl.innerHTML = allEntries.map(rowHtml).join('');
   }
   function submitManualBooking(){
     const firstNameOk = document.getElementById('mbClientFirstName').value.trim();
@@ -5007,7 +5075,7 @@
       const row = document.createElement('div');
       row.className = 'cancel-row';
       const dateLbl = c.date ? c.date.split('-').reverse().join('/') : '';
-      row.innerHTML = `<span class="c-date">${dateLbl}${c.time ? ' · ' + c.time : ''}</span><span class="c-client">${c.client || 'לקוחה'}</span><span class="c-detail">${c.service || ''}${c.staffName ? ' · ' + c.staffName : ''}</span>`;
+      row.innerHTML = `<span class="c-date">${dateLbl}${c.time ? ' · ' + c.time : ''}</span><span class="c-client">${c.client || 'לקוחה'}</span><span class="c-detail">${c.service || ''}${c.staffName ? ' · ' + c.staffName : ''}</span><span class="c-cancelled">בוטל: ${formatCancelledAtLabel(c)}</span>`;
       return row;
     }
     if (data.cancellations.length > CANCEL_LIST_PAGE_SIZE){
@@ -5036,6 +5104,17 @@
     lastReportData = data;
   }
   let lastReportData = null;
+  function formatCancelledAtLabel(c){
+    if (!c || !c.cancelledAtIso) return '—';
+    const d = new Date(c.cancelledAtIso);
+    if (isNaN(d.getTime())) return '—';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+  }
   function getApptPrice(a){
     if (typeof a.price === 'number') return a.price;
     if (Array.isArray(a.services) && a.services.length) return a.services.reduce((sum, s) => sum + (s.price || 0), 0);
@@ -5295,9 +5374,9 @@
     lastReportData.popular.forEach(p => rows.push([p.name, p.count]));
     rows.push([]);
     rows.push(['ביטולים']);
-    rows.push(['תאריך', 'שעה', 'לקוחה', 'שירות', 'עובדת', 'מחיר']);
+    rows.push(['תאריך', 'שעה', 'לקוחה', 'שירות', 'עובדת', 'מחיר', 'בוטל בתאריך']);
     lastReportData.cancellations.forEach(c => rows.push([
-      c.date ? c.date.split('-').reverse().join('/') : '', c.time || '', c.client || '', c.service || '', c.staffName || '', c.price || 0
+      c.date ? c.date.split('-').reverse().join('/') : '', c.time || '', c.client || '', c.service || '', c.staffName || '', c.price || 0, formatCancelledAtLabel(c)
     ]));
     const blob = buildXlsxBlob(rows, 'דוח');
     const url = URL.createObjectURL(blob);
@@ -5316,7 +5395,7 @@
     const win = window.open('', '_blank');
     if (!win){ showReportActionStatus('הדפדפן חסם את פתיחת חלון ההדפסה — נסי לאשר חלונות קופצים לאתר.'); return; }
     const popularRows = lastReportData.popular.map(p => `<tr><td>${p.name}</td><td>${p.count}</td></tr>`).join('') || '<tr><td colspan="2">אין נתונים</td></tr>';
-    const cancelRows = lastReportData.cancellations.map(c => `<tr><td>${c.date ? c.date.split('-').reverse().join('/') : ''}</td><td>${c.time || ''}</td><td>${c.client || ''}</td><td>${c.service || ''}</td><td>${c.staffName || ''}</td></tr>`).join('') || '<tr><td colspan="5">אין ביטולים בטווח זה</td></tr>';
+    const cancelRows = lastReportData.cancellations.map(c => `<tr><td>${c.date ? c.date.split('-').reverse().join('/') : ''}</td><td>${c.time || ''}</td><td>${c.client || ''}</td><td>${c.service || ''}</td><td>${c.staffName || ''}</td><td>${formatCancelledAtLabel(c)}</td></tr>`).join('') || '<tr><td colspan="6">אין ביטולים בטווח זה</td></tr>';
     win.document.write(`<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>דוח ${rangeLbl}</title>
       <style>
         body{font-family:Arial, sans-serif; padding:24px; color:#222;}
@@ -5339,7 +5418,7 @@
       <h2>השירותים הכי מבוקשים</h2>
       <table><tr><th>שירות</th><th>כמות</th></tr>${popularRows}</table>
       <h2>ביטולים בטווח</h2>
-      <table><tr><th>תאריך</th><th>שעה</th><th>לקוחה</th><th>שירות</th><th>עובדת</th></tr>${cancelRows}</table>
+      <table><tr><th>תאריך</th><th>שעה</th><th>לקוחה</th><th>שירות</th><th>עובדת</th><th>בוטל בתאריך</th></tr>${cancelRows}</table>
     </body></html>`);
     win.document.close();
     win.focus();
@@ -5358,7 +5437,7 @@
       ? lastReportData.popular.map(p => `- ${p.name}: ${p.count}`).join('\n')
       : '(אין נתונים)';
     const cancelText = lastReportData.cancellations.length
-      ? lastReportData.cancellations.map(c => `- ${c.date ? c.date.split('-').reverse().join('/') : ''} ${c.time || ''} — ${c.client || ''} (${c.service || ''}${c.staffName ? ', ' + c.staffName : ''})`).join('\n')
+      ? lastReportData.cancellations.map(c => `- ${c.date ? c.date.split('-').reverse().join('/') : ''} ${c.time || ''} — ${c.client || ''} (${c.service || ''}${c.staffName ? ', ' + c.staffName : ''}) | בוטל: ${formatCancelledAtLabel(c)}`).join('\n')
       : '(אין ביטולים בטווח זה)';
     const bodyText = `דוח ${rangeLbl}:\n\n` +
       `הכנסה: ${lastReportData.revenue}\n` +
@@ -6339,6 +6418,7 @@
   let categories = [];
   let services = [];
   let cancellationLog = [];
+  let lateCancellations = [];
   let selectedCategoryForBooking = null;
   let newStaffPhoto = null;
   let selectedStaffIndex = 0;
@@ -6886,10 +6966,11 @@
         const dur = a.dur || 30;
         return { a, start, dur, end: start + dur, col: 0, colCount: 1 };
       });
+      const minGapMinutesForFullHeight = (quarterHeight / hourBandHeight) * 60;
       let cluster = [], clusterEnd = -Infinity;
       const clusters = [];
       apptLayout.forEach(item => {
-        if (cluster.length && item.start >= clusterEnd){
+        if (cluster.length && item.start >= clusterEnd + minGapMinutesForFullHeight){
           clusters.push(cluster);
           cluster = [];
           clusterEnd = -Infinity;
@@ -6901,7 +6982,7 @@
       clusters.forEach(clusterItems => {
         const columnEnds = []; // columnEnds[i] = end time of the last appointment placed in column i so far
         clusterItems.forEach(item => {
-          let col = columnEnds.findIndex(end => item.start >= end);
+          let col = columnEnds.findIndex(end => item.start >= end + minGapMinutesForFullHeight);
           if (col === -1){ col = columnEnds.length; columnEnds.push(item.end); }
           else columnEnds[col] = item.end;
           item.col = col;
@@ -7113,6 +7194,7 @@
     try {
       committed = await db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
         const server = doc.exists ? doc.data() : {};
+        backfillMissingListIds(server);
         const serverRequests = server.specialRequests || lastLoadedSnapshot.specialRequests || [];
         const serverReq = serverRequests.find(r => r && r.id === req.id);
         if (serverReq && serverReq.status === 'matched') return null;
@@ -7272,6 +7354,7 @@
     try {
       committed = await db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
         const server = doc.exists ? doc.data() : {};
+        backfillMissingListIds(server);
         const serverWaitlist = server.waitlist || lastLoadedSnapshot.waitlist || [];
         const serverEntry = serverWaitlist.find(x => x && x.id === w.id);
         if (!serverEntry || serverEntry.status === 'matched') return null;
@@ -8729,12 +8812,75 @@
       client: appt.client || '',
       staffName: (staff[appt.staff] && staff[appt.staff].name) || '',
       price: getApptPrice(appt),
-      cancelledAt: formatDateKey(new Date())
+      cancelledAt: formatDateKey(new Date()),
+      cancelledAtIso: new Date().toISOString()
     });
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 400);
     const cutoffKey = formatDateKey(cutoff);
     cancellationLog = cancellationLog.filter(c => c && c.cancelledAt >= cutoffKey);
+  }
+  function getLateCancelKey(source){
+    if (!source) return null;
+    if (source.teudatZehut) return 'tz:' + source.teudatZehut;
+    const name = source.client || source.name || '';
+    return name ? 'name:' + name : null;
+  }
+  function isLateCancellationAttempt(appt){
+    if (!appt || !appt.date || !appt.time) return false;
+    const dParts = appt.date.split('-').map(Number);
+    const tParts = appt.time.split(':').map(Number);
+    if (dParts.length !== 3 || tParts.length !== 2) return false;
+    const apptDateTime = new Date(dParts[0], dParts[1] - 1, dParts[2], tParts[0], tParts[1]);
+    const hoursUntil = (apptDateTime.getTime() - Date.now()) / 3600000;
+    return hoursUntil < 12;
+  }
+  function getLateCancelStatusForAppt(appt){
+    const key = getLateCancelKey(appt);
+    const client = findClientForAppt(appt);
+    if (!key) return { key: null, count: 0, blocked: false, client };
+    const resetAt = client && client.lateCancelResetAt;
+    const relevant = lateCancellations.filter(e => e && getLateCancelKey(e) === key && (!resetAt || (e.cancelledAtIso && e.cancelledAtIso > resetAt)));
+    return { key, count: relevant.length, blocked: relevant.length >= 2, client, entries: relevant };
+  }
+  function logLateCancellation(appt, type){
+    if (!appt) return;
+    lateCancellations.push({
+      id: 'latecancel_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+      teudatZehut: appt.teudatZehut || null,
+      client: appt.client || '',
+      date: appt.date,
+      time: appt.time || '',
+      service: appt.service,
+      staffName: (staff[appt.staff] && staff[appt.staff].name) || '',
+      price: getApptPrice(appt),
+      cancelledAtIso: new Date().toISOString(),
+      type: type === 'no-show' ? 'no-show' : 'cancel'
+    });
+  }
+  function sendLateCancelAdminAlert(appt, count, wasBlockedAttempt){
+    if (!invAlertEmail) return;
+    const dateLbl = formatDateDMY(appt.date);
+    const subject = wasBlockedAttempt ? 'לקוחה ניסתה לבטל תור באיחור — חסומה' : 'לקוחה עם ביטולים מאוחרים חוזרים';
+    const body = wasBlockedAttempt
+      ? `שימי לב: ${appt.client} ניסתה לבטל שוב תור בפחות מ-12 שעות לפניו (${appt.service}, ${dateLbl} ${appt.time}) — זו כבר הפעם השלישית, אז הביטול נחסם אוטומטית. מומלץ להתקשר אליה ולעדכן אותה: או שהיא מגיעה לתור, או שהיא משלמת את מחיר הטיפול, אחרת לא תוכל לקבוע תור נוסף בלי תשלום מראש.`
+      : `שימי לב: ${appt.client} הגיעה ל-${count} ביטולים/אי-הגעות בפחות מ-12 שעות לפני התור (הכי אחרון: ${appt.service}, ${dateLbl} ${appt.time}). ביטול מאוחר נוסף שלה ייחסם אוטומטית — ניתן לראות את ההיסטוריה המלאה בכרטסת הלקוחה, בטאב "ביטולים מאוחרים".`;
+    sendEmail(invAlertEmail, subject, body);
+  }
+  function buildBlockedLateCancelMessage(appt){
+    return `לא ניתן לבטל את התור (${appt.service}, ${formatDateDMY(appt.date)} ${appt.time}) — ביטלת כבר פעמיים בפחות מ-12 שעות לפני התור. כדי להימנע מחיוב יש להגיע לתור כרגיל; אחרת יהיה עליך לשלם את מחיר הטיפול לפני קביעת תור נוסף.`;
+  }
+  function sendBlockedLateCancelNotice(appt, client){
+    const msg = buildBlockedLateCancelMessage(appt);
+    if (client && client.email) sendEmail(client.email, 'לא ניתן לבטל את התור', msg);
+    try { queueApptSms(appt, msg); } catch (e) { console.error('Blocked late-cancel SMS failed (message itself unaffected):', e); }
+  }
+  function resetLateCancelBlock(client){
+    if (!client) return;
+    client.lateCancelResetAt = new Date().toISOString();
+    if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast(`✓ מונה הביטולים המאוחרים של ${client.name || 'הלקוחה'} אופס בהצלחה`);
+    if (typeof renderClientProfileOverlay === 'function') renderClientProfileOverlay();
   }
   function renderWaitlistAdmin(){
     if (typeof renderWeekCal === 'function') renderWeekCal();
@@ -9341,8 +9487,20 @@
   }
   function cancelAppointment(){
     const apptBeingCancelled = currentBookedAppointment;
+    const lateStatus = apptBeingCancelled && isLateCancellationAttempt(apptBeingCancelled) ? getLateCancelStatusForAppt(apptBeingCancelled) : null;
+    if (lateStatus && lateStatus.blocked){
+      alert(buildBlockedLateCancelMessage(apptBeingCancelled));
+      sendBlockedLateCancelNotice(apptBeingCancelled, lateStatus.client);
+      sendLateCancelAdminAlert(apptBeingCancelled, lateStatus.count, true);
+      return;
+    }
     const waitlistMatches = apptBeingCancelled ? getWaitlistMatchesForAppointment(apptBeingCancelled) : [];
     logCancellation(apptBeingCancelled);
+    if (lateStatus){
+      logLateCancellation(apptBeingCancelled, 'cancel');
+      const updatedStatus = getLateCancelStatusForAppt(apptBeingCancelled);
+      if (updatedStatus.count === 2) sendLateCancelAdminAlert(apptBeingCancelled, 2, false);
+    }
     removeCurrentBookedAppointment();
     if (apptBeingCancelled){
       const client = findClientForAppt(apptBeingCancelled);
@@ -9500,8 +9658,20 @@
     const listAppt = lookedUpAppointmentsList[idx];
     if (!listAppt) return;
     const appt = resolveCurrentAppt(listAppt);
+    const lateStatus = isLateCancellationAttempt(appt) ? getLateCancelStatusForAppt(appt) : null;
+    if (lateStatus && lateStatus.blocked){
+      alert(buildBlockedLateCancelMessage(appt));
+      sendBlockedLateCancelNotice(appt, lateStatus.client);
+      sendLateCancelAdminAlert(appt, lateStatus.count, true);
+      return;
+    }
     const waitlistMatches = getWaitlistMatchesForAppointment(appt);
     logCancellation(appt);
+    if (lateStatus){
+      logLateCancellation(appt, 'cancel');
+      const updatedStatus = getLateCancelStatusForAppt(appt);
+      if (updatedStatus.count === 2) sendLateCancelAdminAlert(appt, 2, false);
+    }
     const pos = appt.id ? weekAppointments.findIndex(a => a.id === appt.id) : weekAppointments.indexOf(appt);
     if (pos !== -1) weekAppointments.splice(pos, 1);
     if (typeof renderWeekCal === 'function') renderWeekCal();
@@ -9578,9 +9748,20 @@
   }
   function markArrivalStatus(apptId, status){
     const appt = weekAppointments.find(a => a.id === apptId);
-    if (appt) appt.status = status;
+    if (appt){
+      appt.status = status;
+      if (status === 'no-show'){
+        const shouldCount = confirm(`"${appt.client}" לא הגיעה לתור (${appt.service}, ${appt.time}) — לרשום את זה כאי-הגעה מאוחרת (פחות מ-12 שעות), שתיכנס להיסטוריית "ביטולים מאוחרים" שלה?`);
+        if (shouldCount){
+          logLateCancellation(appt, 'no-show');
+          const updatedStatus = getLateCancelStatusForAppt(appt);
+          if (updatedStatus.count === 2) sendLateCancelAdminAlert(appt, 2, false);
+        }
+      }
+    }
     closeClientArrivalOverlay();
     if (typeof renderClients === 'function') renderClients();
+    if (typeof saveState === 'function') saveState();
   }
   function closeClientArrivalOverlay(){
     document.getElementById('clientArrivalOverlay').classList.remove('show');
@@ -10189,6 +10370,17 @@
   let lastLoadedSnapshot = null;
   let pendingSaveCount = 0;
   function cloneJSON(v){ return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
+  function backfillMissingListIds(data){
+    if (!data) return;
+    const stamp = (arr, prefix) => {
+      if (!Array.isArray(arr)) return;
+      arr.forEach(item => {
+        if (item && !item.id) item.id = prefix + '_legacy_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
+      });
+    };
+    stamp(data.weekAppointments, 'appt');
+    stamp(data.waitlist, 'wl');
+  }
   function mergeListField(serverArr, lastLoadedArr, localArr, keyFn){
     serverArr = serverArr || []; lastLoadedArr = lastLoadedArr || []; localArr = localArr || [];
     const allHaveKeys = serverArr.concat(lastLoadedArr, localArr).every(item => !!keyFn(item));
@@ -10229,6 +10421,7 @@
     pendingSaveCount++;
     return db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
       const server = doc.exists ? doc.data() : {};
+      backfillMissingListIds(server);
       const payload = { savedAt: nowIso };
       let hasChange = false;
       Object.keys(simpleFields).forEach(key => {
@@ -10252,6 +10445,9 @@
       const trimmedCancellationLog = mergedCancellationLog.filter(c => c && c.cancelledAt >= cancelLogCutoffKey);
       if (JSON.stringify(trimmedCancellationLog) !== JSON.stringify(server.cancellationLog || [])) hasChange = true;
       payload.cancellationLog = trimmedCancellationLog;
+      const mergedLateCancellations = mergeListField(server.lateCancellations, lastLoadedSnapshot.lateCancellations, lateCancellations, c => c && c.id);
+      if (JSON.stringify(mergedLateCancellations) !== JSON.stringify(server.lateCancellations || [])) hasChange = true;
+      payload.lateCancellations = mergedLateCancellations;
       if (!hasChange) return null; // nothing this tab needs to write right now
       if (!silent) showSaveStatus('שומר...');
       tx.set(CLOUD_DOC, payload, { merge: true });
@@ -10263,6 +10459,7 @@
       waitlist = committedPayload.waitlist;
       clients = committedPayload.clients;
       cancellationLog = committedPayload.cancellationLog;
+      lateCancellations = committedPayload.lateCancellations;
       lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(committedPayload));
       const backupDateKey = committedPayload.savedAt.slice(0, 10);
       if (backupDateKey !== lastBackupDateKey){
@@ -10270,7 +10467,7 @@
         const fullSnapshot = {
           branding, clients, customTemplates,
           staff, weekAppointments, categories, services, whatsNewItems,
-          invAlertEmail, inventory, waitlist, cancellationLog, ownerAccessCode,
+          invAlertEmail, inventory, waitlist, cancellationLog, lateCancellations, ownerAccessCode,
           gatedTabsConfig, personalBlocks, specialRequests,
           savedAt: committedPayload.savedAt
         };
@@ -10391,6 +10588,7 @@
     if (data.inventory) inventory = data.inventory;
     if (data.waitlist) waitlist = data.waitlist;
     if (data.cancellationLog) cancellationLog = data.cancellationLog;
+    if (data.lateCancellations) lateCancellations = data.lateCancellations;
     if (data.personalBlocks) personalBlocks = data.personalBlocks;
     if (data.specialRequests) specialRequests = data.specialRequests;
     if (typeof data.ownerAccessCode === 'string') ownerAccessCode = data.ownerAccessCode;
@@ -10686,6 +10884,7 @@
         return;
       }
       const rawCloudData = doc.data();
+      backfillMissingListIds(rawCloudData);
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       applyCloudData(rawCloudData);
       pruneExpiredWaitlistEntries();
@@ -10719,6 +10918,7 @@
     CLOUD_DOC.get().then(doc => {
       if (!doc.exists) return;
       const rawCloudData = doc.data();
+      backfillMissingListIds(rawCloudData);
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       applyCloudData(rawCloudData);
       pruneExpiredWaitlistEntries();
@@ -10736,6 +10936,7 @@
       if (!doc.exists) return;
       const rawCloudData = doc.data();
       if (rawCloudData.savedAt === lastLoadedSnapshot.savedAt) return; // שום דבר לא השתנה בענן מאז הבדיקה הקודמת
+      backfillMissingListIds(rawCloudData);
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       applyCloudData(rawCloudData);
       pruneExpiredWaitlistEntries();
