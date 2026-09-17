@@ -1662,7 +1662,8 @@
     transition:background 0.2s ease, color 0.2s ease;
   }
   .cal-day-head .heb-date{font-size:8.5px; color:var(--panel-text-dim); opacity:0.75;}
-  .cal-day-head.cal-day-today{background:rgba(155,44,66,0.12);}
+  .cal-day-head.cal-day-today{background:rgba(124,148,115,0.20);}
+  .cal-day-head.cal-day-today .cal-day-name, .cal-day-head.cal-day-today .cal-day-num{color:var(--sage);}
   .cal-day-body{position:relative;}
   .cal-day-head.day-closed{background:rgba(155,44,66,0.07);}
   .cal-day-head.day-closed .cal-day-name, .cal-day-head.day-closed .cal-day-num{color:var(--wine);}
@@ -3677,19 +3678,7 @@
     toEl.min = minForTo;
     if (toEl.value && toEl.value < minForTo) toEl.value = '';
   });
-  document.getElementById('frId')?.addEventListener('input', function(){
-    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
-    splitNameIntoFields('', 'frFirstName', 'frLastName');
-    document.getElementById('frPhone').value = '';
-    document.getElementById('frEmail').value = '';
-    if (this.value.length < 9) return;
-    const match = clients.find(c => c.teudatZehut === this.value);
-    if (match){
-      splitNameIntoFields(match.name || '', 'frFirstName', 'frLastName');
-      document.getElementById('frPhone').value = match.phone || '';
-      if (match.email) document.getElementById('frEmail').value = match.email;
-    }
-  });
+  wireIdentityAutofill({ idId: 'frId', firstId: 'frFirstName', lastId: 'frLastName', phoneId: 'frPhone', emailId: 'frEmail' });
   function openFlexibleRequestOverlay(){
     frSelectedServices = (typeof bkSelectedServices !== 'undefined' && bkSelectedServices.length)
       ? bkSelectedServices.map(sel => ({ svcIndex: sel.svcIndex }))
@@ -9020,6 +9009,7 @@
     if (selectedStaffIndex === 'any') return renderAvailableSlotsAny();
     slotsEl.innerHTML = '';
     document.getElementById('waitlistBox').innerHTML = '';
+    const prevSelectedSlot = selectedSlot; // ר' ההערה הגדולה ליד renderAvailableSlots
     selectedSlot = null;
     const svc = getBookingSvc();
     const dow = bookingSelectedDate.getDay();
@@ -9058,6 +9048,7 @@
     };
     const minutesToTime = (m) => String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0');
     let firstFree = null;
+    const freeSlotTimes = []; // ר' ההערה הגדולה ליד renderAvailableSlots — לשמר בחירה קיימת
     windows.forEach(([openMin, closeMin]) => {
       const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
       for (let bucketStart = firstBucket; bucketStart + duration <= closeMin; bucketStart += slotStepMinutes){
@@ -9075,6 +9066,7 @@
         if (available){
           slotStaffAssignment[timeStr] = selectedStaffIndex;
           if (firstFree === null) firstFree = timeStr;
+          freeSlotTimes.push(timeStr);
           d.onclick = () => {
             document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
             d.classList.add('selected');
@@ -9100,9 +9092,13 @@
       }
     });
     if (firstFree){
-      selectedSlot = firstFree;
-      const firstEl = Array.from(slotsEl.children).find(el => el.textContent === firstFree);
-      if (firstEl) firstEl.classList.add('selected');
+      const prevStillFree = prevSelectedSlot && freeSlotTimes.indexOf(prevSelectedSlot) !== -1;
+      const toSelect = prevStillFree ? prevSelectedSlot : (prevSelectedSlot ? null : firstFree);
+      if (toSelect){
+        selectedSlot = toSelect;
+        const selEl = Array.from(slotsEl.children).find(el => el.textContent === toSelect);
+        if (selEl) selEl.classList.add('selected');
+      }
     } else {
       slotsEl.innerHTML += '<div style="grid-column:1/-1; font-size:13px; color:#8A8178; margin-top:6px;">אין שעות פנויות עם משך הטיפול הזה היום.</div>';
       const wlTime = minutesToTime(windows[0][0]);
@@ -9112,6 +9108,7 @@
   function renderAvailableSlotsAny(){
     slotsEl.innerHTML = '';
     document.getElementById('waitlistBox').innerHTML = '';
+    const prevSelectedSlot = selectedSlot; // ר' ההערה הגדולה ליד renderAvailableSlots
     selectedSlot = null;
     const svc = getBookingSvc();
     const dow = bookingSelectedDate.getDay();
@@ -9154,6 +9151,7 @@
     };
     const minutesToTime = (m) => String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0');
     let firstFree = null;
+    const freeSlotTimes = []; // ר' ההערה הגדולה ליד renderAvailableSlots — לשמר בחירה קיימת
     const mergedWindows = mergeWindows(allWindows);
     mergedWindows.forEach(([openMin, closeMin]) => {
       const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
@@ -9173,6 +9171,7 @@
         if (available){
           slotStaffAssignment[timeStr] = chosenStaff;
           if (firstFree === null) firstFree = timeStr;
+          freeSlotTimes.push(timeStr);
           d.onclick = () => {
             document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
             d.classList.add('selected');
@@ -9186,9 +9185,13 @@
       }
     });
     if (firstFree){
-      selectedSlot = firstFree;
-      const firstEl = Array.from(slotsEl.children).find(el => el.textContent === firstFree);
-      if (firstEl) firstEl.classList.add('selected');
+      const prevStillFree = prevSelectedSlot && freeSlotTimes.indexOf(prevSelectedSlot) !== -1;
+      const toSelect = prevStillFree ? prevSelectedSlot : (prevSelectedSlot ? null : firstFree);
+      if (toSelect){
+        selectedSlot = toSelect;
+        const selEl = Array.from(slotsEl.children).find(el => el.textContent === toSelect);
+        if (selEl) selEl.classList.add('selected');
+      }
     } else {
       slotsEl.innerHTML += '<div style="grid-column:1/-1; font-size:13px; color:#8A8178; margin-top:6px;">אין שעות פנויות עם משך הטיפול הזה היום, אצל אף עובדת מתאימה.</div>';
       const wlTime = minutesToTime(mergedWindows[0][0]);
@@ -9342,17 +9345,7 @@
         <div id="wlError" style="display:none; color:var(--wine); font-size:12px; margin-bottom:6px;">יש למלא תעודת זהות (9 ספרות), שם פרטי, שם משפחה, טלפון ואימייל תקינים</div>
         <div><button onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
       </div>`;
-    document.getElementById('wlId').addEventListener('input', function(){
-      this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
-      if (this.value.length === 9){
-        const match = clients.find(c => c.teudatZehut === this.value);
-        if (match){
-          splitNameIntoFields(match.name || '', 'wlFirstName', 'wlLastName');
-          document.getElementById('wlPhone').value = match.phone || '';
-          if (match.email) document.getElementById('wlEmail').value = match.email;
-        }
-      }
-    });
+    wireIdentityAutofill({ idId: 'wlId', firstId: 'wlFirstName', lastId: 'wlLastName', phoneId: 'wlPhone', emailId: 'wlEmail' });
     scrollWaitlistBoxIntoView();
   }
   function joinWaitlist(time, presetName, presetPhone, presetId, presetEmail){
@@ -9415,6 +9408,86 @@
     const last = (document.getElementById(lastId)?.value || '').trim();
     return (first + ' ' + last).replace(/\s+/g, ' ').trim();
   }
+  function findClientByFullName(fullName){
+    const wanted = (fullName || '').replace(/\s+/g, ' ').trim();
+    if (!wanted) return null;
+    const matches = clients.filter(c => c && (c.name || '').replace(/\s+/g, ' ').trim() === wanted);
+    return matches.length === 1 ? matches[0] : null; // חד-משמעי בלבד
+  }
+  function findClientByPhoneDigits(phone){
+    const digits = (phone || '').replace(/[^0-9]/g, '');
+    if (digits.length < 9) return null;
+    const matches = clients.filter(c => c && (c.phone || '').replace(/[^0-9]/g, '') === digits);
+    return matches.length === 1 ? matches[0] : null;
+  }
+  let identityAutofillBusy = false;
+  function wireIdentityAutofill(cfg){
+    const el = (id) => id ? document.getElementById(id) : null;
+    const idEl = el(cfg.idId), firstEl = el(cfg.firstId), lastEl = el(cfg.lastId),
+          phoneEl = el(cfg.phoneId), emailEl = el(cfg.emailId), noteEl = el(cfg.noteId);
+    const setVal = (element, value) => { if (element) element.value = value || ''; };
+    const fillFrom = (match) => {
+      if (!match) return;
+      if (firstEl || lastEl) splitNameIntoFields(match.name || '', cfg.firstId, cfg.lastId);
+      if (idEl && match.teudatZehut) setVal(idEl, match.teudatZehut);
+      if (phoneEl && match.phone) setVal(phoneEl, match.phone);
+      if (emailEl && match.email) setVal(emailEl, match.email);
+      if (noteEl && match.note) setVal(noteEl, match.note);
+    };
+    const clearAllButSelf = (selfEl) => {
+      [idEl, phoneEl, emailEl, noteEl].forEach(e => { if (e && e !== selfEl) setVal(e, ''); });
+      if (firstEl !== selfEl && lastEl !== selfEl) splitNameIntoFields('', cfg.firstId, cfg.lastId);
+    };
+
+    const notifyId = () => {
+      if (cfg.notifyIdOnFill && idEl) idEl.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    if (idEl && !cfg.skipIdListener) idEl.addEventListener('input', function(){
+      if (identityAutofillBusy) return;
+      identityAutofillBusy = true;
+      try {
+        this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
+        clearAllButSelf(this);
+        if (this.value.length === 9){
+          fillFrom(clients.find(c => c && c.teudatZehut === this.value));
+        }
+      } finally { identityAutofillBusy = false; }
+    });
+
+    if (phoneEl) phoneEl.addEventListener('input', function(){
+      if (identityAutofillBusy) return;
+      identityAutofillBusy = true;
+      try {
+        const digits = this.value.replace(/[^0-9]/g, '');
+        if (!digits.length){
+          clearAllButSelf(this);
+        } else if (digits.length >= 9){
+          const m = findClientByPhoneDigits(digits);
+          if (m){ fillFrom(m); notifyId(); }
+        }
+      } finally { identityAutofillBusy = false; }
+    });
+
+    [firstEl, lastEl].forEach(nameEl => {
+      if (!nameEl) return;
+      nameEl.addEventListener('input', function(){
+        if (identityAutofillBusy) return;
+        const first = (firstEl && firstEl.value || '').trim();
+        const last = (lastEl && lastEl.value || '').trim();
+        if (!first || !last) return;
+        const match = findClientByFullName(first + ' ' + last);
+        if (!match) return;
+        identityAutofillBusy = true;
+        try {
+          if (idEl && match.teudatZehut) setVal(idEl, match.teudatZehut);
+          if (phoneEl && match.phone) setVal(phoneEl, match.phone);
+          if (emailEl && match.email) setVal(emailEl, match.email);
+          if (noteEl && match.note) setVal(noteEl, match.note);
+          notifyId();
+        } finally { identityAutofillBusy = false; }
+      });
+    });
+  }
   function splitNameIntoFields(fullName, firstId, lastId){
     const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
     const firstEl = document.getElementById(firstId);
@@ -9448,6 +9521,11 @@
     if (regEl && regEl.style.display !== 'none'){ emailInput.style.display = 'none'; return; }
     emailInput.style.display = match ? 'block' : 'none';
   }
+  wireIdentityAutofill({
+    idId: 'bookingIdInput', firstId: 'bookingFirstNameInput', lastId: 'bookingLastNameInput',
+    phoneId: 'bookingPhoneInput', emailId: 'ftpEmail',
+    skipIdListener: true, notifyIdOnFill: true,
+  });
   document.getElementById('bookingIdInput').addEventListener('input', function(){
     this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
     const digits = this.value;
@@ -10856,7 +10934,11 @@
       const lItem = localByKey.get(k);
       const lastLoadedItem = lastLoadedByKey.get(k);
       const localUntouchedSinceLoad = lastLoadedItem !== undefined && JSON.stringify(lItem) === JSON.stringify(lastLoadedItem);
-      merged.push(localUntouchedSinceLoad ? sItem : lItem);
+      if (localUntouchedSinceLoad){
+        Object.keys(lItem).forEach(k => { if (!(k in sItem)) delete lItem[k]; });
+        Object.assign(lItem, sItem);
+      }
+      merged.push(lItem);
     });
     localArr.forEach(lItem => {
       const k = keyFn(lItem);
