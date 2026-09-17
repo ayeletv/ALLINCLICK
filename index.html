@@ -2681,7 +2681,11 @@
           <input type="file" id="clientPhotoFile" accept="image/*" style="display:none;" onchange="handleClientPhotoUpload(event)">
           
           <input type="tel" inputmode="numeric" maxlength="9" id="newClientId" placeholder="תעודת זהות (חובה)">
-          <input type="text" id="newClientName" placeholder="שם הלקוחה">
+          
+          <div class="field-row">
+            <input type="text" id="newClientFirstName" placeholder="שם פרטי">
+            <input type="text" id="newClientLastName" placeholder="שם משפחה">
+          </div>
           <input type="text" id="newClientPhone" placeholder="050-0000000">
           <input type="email" id="newClientEmail" placeholder="אימייל">
           <div id="newClientError" style="display:none; flex-basis:100%; color:var(--wine); font-size:12.5px; line-height:1.5;"></div>
@@ -6710,7 +6714,7 @@
     }
   }
   function openAddClientModal(){
-    ['newClientId', 'newClientName', 'newClientPhone', 'newClientEmail'].forEach(id => {
+    ['newClientId', 'newClientFirstName', 'newClientLastName', 'newClientPhone', 'newClientEmail'].forEach(id => {
       const el = document.getElementById(id);
       if (el){ el.value = ''; el.style.borderColor = ''; }
     });
@@ -6729,7 +6733,8 @@
     document.getElementById('addClientOverlay')?.classList.remove('show');
   }
   function addClient(){
-    const nameEl = document.getElementById('newClientName');
+    const firstEl = document.getElementById('newClientFirstName');
+    const lastEl = document.getElementById('newClientLastName');
     const phoneEl = document.getElementById('newClientPhone');
     const emailEl = document.getElementById('newClientEmail');
     const idEl = document.getElementById('newClientId');
@@ -6740,9 +6745,11 @@
     };
     showErr('');
     if (idEl) idEl.style.borderColor = '';
-    nameEl.style.borderColor = '';
-    const name = nameEl.value.trim();
-    if (!name){ showErr('יש להזין שם לקוחה.', nameEl); return; }
+    if (firstEl) firstEl.style.borderColor = '';
+    if (lastEl) lastEl.style.borderColor = '';
+    if (!firstEl || !firstEl.value.trim()){ showErr('יש להזין שם פרטי.', firstEl); return; }
+    if (!lastEl || !lastEl.value.trim()){ showErr('יש להזין שם משפחה.', lastEl); return; }
+    const name = combineNameFields('newClientFirstName', 'newClientLastName');
     const idDigits = ((idEl && idEl.value) || '').replace(/[^0-9]/g, '');
     if (!idDigits){
       showErr('יש להזין תעודת זהות — אי אפשר להוסיף לקוחה בלעדיה.', idEl);
@@ -6765,7 +6772,7 @@
     if (typeof saveState === 'function') saveState();
     const weakNote = weakTeudatZehutNote(idDigits);
     if (weakNote && typeof showAdminToast === 'function') showAdminToast('⚠️ ' + weakNote);
-    nameEl.value = ''; phoneEl.value = ''; emailEl.value = '';
+    firstEl.value = ''; lastEl.value = ''; phoneEl.value = ''; emailEl.value = '';
     if (idEl) idEl.value = '';
     populateDMYPicker('newClientBirthdayDay', 'newClientBirthdayMonth', 'newClientBirthdayYear', { allowBlank: true, yearsBack: 100, force: true });
     newClientPhoto = null;
