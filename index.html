@@ -1608,20 +1608,42 @@
     font-size:14px;
   }
   .client-add-row input::placeholder{color:var(--panel-text-dim);}
-  #addClientOverlay{background:rgba(60,40,50,0.45);}
-  #addClientOverlay .myday-sheet{overflow-x:hidden; box-shadow:0 18px 50px rgba(20,16,20,0.28);}
-  #addClientOverlay .client-add-row{flex-direction:column; align-items:stretch; gap:10px; flex-wrap:nowrap;}
-  #addClientOverlay .client-add-row input{flex:0 0 auto; width:100%; min-width:0; box-sizing:border-box;}
-  #addClientOverlay .client-add-row .brand-logo-upload{align-self:center; margin-bottom:2px;}
-  #addClientOverlay .dmy-date-picker{width:100%;}
-  #addClientOverlay .dmy-date-picker select{flex:1 1 0; min-width:0;}
-  #addClientOverlay .add-client-actions{display:flex; gap:10px; margin-top:6px;}
-  #addClientOverlay .add-client-actions .cta{
-    flex:1 1 0; margin-top:0; padding:12px 10px;
-    font-size:14.5px; font-weight:700; border-radius:12px;
+  .myday-overlay.add-modal-overlay{background:rgba(60,40,50,0.45);}
+  .myday-sheet.add-modal{
+    max-width:460px; padding:22px;
+    overflow-x:hidden;
+    box-shadow:0 18px 50px rgba(20,16,20,0.28);
   }
-  #addClientOverlay .add-client-actions .cta.ghost{flex:0 0 38%;}
-  #addClientOverlay .myday-actions button{padding:6px 12px; font-size:12.5px;}
+  .add-modal .add-modal-body{display:flex; flex-direction:column; gap:10px;}
+  .add-modal .field{margin-bottom:0;}
+  .add-modal .field-row{display:flex; gap:8px; flex-wrap:nowrap;}
+  .add-modal .field-row .field{flex:1 1 0; width:auto; min-width:0;}
+  .add-modal textarea.field{min-height:60px; resize:vertical; line-height:1.5;}
+  .add-modal .add-modal-label{font-size:12.5px; color:#8A8178; margin:2px 0 -4px;}
+  .add-modal .brand-logo-upload{align-self:center; margin-bottom:2px;}
+  .add-modal .dmy-date-picker{width:100%;}
+  .add-modal .dmy-date-picker select{
+    flex:1 1 0; min-width:0; width:auto;
+    border:1.5px solid #E4DACB;
+    border-radius:12px;
+    padding:12px 10px;
+    background:#fff;
+    color:var(--ink);
+    font-family:'Heebo';
+    font-size:14px;
+  }
+  .add-modal .dmy-date-picker select:focus{outline:none; border-color:var(--wine);}
+  .add-modal .add-modal-error{display:none; color:var(--wine); font-size:12.5px; line-height:1.5;}
+  .add-modal .add-modal-actions{display:flex; gap:10px; margin-top:6px;}
+  .add-modal .add-modal-actions .cta{
+    flex:1 1 0; margin-top:0; padding:13px 10px;
+    font-size:15px; font-weight:600; border-radius:12px;
+  }
+  .add-modal .add-modal-actions .cta.ghost{
+    flex:0 0 34%; background:#F3ECE0; color:var(--ink);
+  }
+  .add-modal .add-modal-actions .cta.ghost:hover{background:#EBE2D3;}
+  .add-modal .myday-actions button{padding:6px 12px; font-size:12.5px;}
   .client-add-row .cta{flex:0 0 auto; padding:11px 24px;}
   .dmy-date-picker{
     display:flex;
@@ -2711,19 +2733,9 @@
       <div id="inner-staff" class="inner-subpanel active">
         <div class="search-with-add-row">
           <input type="text" id="staffSearch" class="search-input" placeholder="חיפוש עובדת לפי שם..." oninput="renderStaff()">
-          <button type="button" class="quick-add-fab" onclick="scrollToQuickAdd('sub-staff', 'newStaffName')" title="הוספת עובדת" aria-label="הוספת עובדת">+</button>
+          <button type="button" class="quick-add-fab" onclick="openAddStaffModal()" title="הוספת עובדת" aria-label="הוספת עובדת">+</button>
         </div>
         <div class="client-list" id="staffList"></div>
-        <div class="client-add-row">
-          <div class="brand-logo-upload small" id="staffPhotoUpload" onclick="document.getElementById('staffPhotoFile').click()">
-            <span id="staffPhotoPlaceholder">+ תמונה</span>
-            <img id="staffPhotoPreview" style="display:none;">
-          </div>
-          <input type="file" id="staffPhotoFile" accept="image/*" style="display:none;" onchange="handleStaffPhotoUpload(event)">
-          <input type="text" id="newStaffName" placeholder="שם העובדת">
-          <input type="text" id="newStaffRole" placeholder="תפקיד (למשל: מניקוריסטית)">
-          <button class="cta" style="width:auto; margin-top:0;" onclick="addStaff()">הוספת עובדת</button>
-        </div>
       </div>
       <div id="inner-hours" class="inner-subpanel">
         <div class="label" style="margin-bottom:10px;">שעות הפעילות של:</div>
@@ -2824,24 +2836,10 @@
         <button onclick="showInnerTab('sub-servicesgroup', 'inner-categories', this)">קטגוריות</button>
       </div>
       <div id="inner-services" class="inner-subpanel active">
-        
-        <div class="svc-add-row">
-          
-          <span id="newSvcCategoryLockedLabel" class="svc-add-cat-locked" style="display:none;"></span>
-          <select id="newSvcCategory" class="field-dark"></select>
-          <input type="text" id="newSvcName" placeholder="שם השירות (למשל: לייזר ידיים)">
-          <input type="number" id="newSvcPrice" placeholder="מחיר בש&quot;ח">
-          <input type="number" id="newSvcDuration" placeholder="משך בדקות">
-          <div class="brand-logo-upload" id="newSvcPhotoUpload" onclick="document.getElementById('newSvcPhotoFile').click()" style="width:52px; height:52px; border-radius:10px; font-size:10px; text-align:center;">
-            <span id="newSvcPhotoPlaceholder">+ תמונה</span>
-            <img id="newSvcPhotoPreview" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:10px;">
-          </div>
-          <input type="file" id="newSvcPhotoFile" accept="image/*" style="display:none;" onchange="handleSvcPhotoUpload(event)">
-          <button class="cta" style="width:auto; margin-top:0;" onclick="addService()">הוספת שירות</button>
+        <div class="search-with-add-row quick-add-row-standalone" style="justify-content:flex-end;">
+          <button type="button" class="quick-add-fab" onclick="openAddServiceModal()" title="הוספת שירות" aria-label="הוספת שירות">+</button>
         </div>
-        
-        <div style="height:18px;"></div>
-        
+
         <div id="svcManageCatGridView">
           <div class="cat-grid" id="svcManageCatGrid"></div>
           <div id="svcManageCatEmpty" style="display:none; font-size:13px; color:var(--panel-text-dim); padding:16px 4px;">עדיין אין קטגוריות עם שירותים — יש להוסיף קטגוריה בטאב "קטגוריות", ואז שירות ראשון למעלה.</div>
@@ -2853,13 +2851,11 @@
         </div>
       </div>
       <div id="inner-categories" class="inner-subpanel">
-        <div class="label" style="margin-bottom:10px;">קטגוריות ראשיות</div>
-        <div class="client-list" id="categoryList"></div>
-        <div class="client-add-row" style="flex-direction:column; align-items:stretch;">
-          <input type="text" id="newCategoryName" placeholder="שם קטגוריה (למשל: לייזר)">
-          <textarea id="newCategoryMessage" class="client-note" style="min-height:50px;" placeholder="הודעת קטגוריה (אופציונלי) — תוצג ללקוחה בסיום קביעת תור, למשל הנחיות הכנה לטיפול"></textarea>
-          <button class="cta" style="width:auto; margin-top:0;" onclick="addCategory()">הוספת קטגוריה</button>
+        <div class="search-with-add-row quick-add-row-standalone" style="justify-content:space-between;">
+          <div class="label" style="margin:0;">קטגוריות ראשיות</div>
+          <button type="button" class="quick-add-fab" onclick="openAddCategoryModal()" title="הוספת קטגוריה" aria-label="הוספת קטגוריה">+</button>
         </div>
+        <div class="client-list" id="categoryList"></div>
       </div>
     </div>
     <div id="sub-whatsnewadmin" class="subpanel">
@@ -2886,19 +2882,13 @@
     <div id="sub-inventory" class="subpanel">
       
       <div class="search-with-add-row quick-add-row-standalone" style="justify-content:flex-end;">
-        <button type="button" class="quick-add-fab" onclick="scrollToQuickAdd('sub-inventory', 'newInvName')" title="הוספת מוצר" aria-label="הוספת מוצר">+</button>
+        <button type="button" class="quick-add-fab" onclick="openAddInventoryModal()" title="הוספת מוצר" aria-label="הוספת מוצר">+</button>
       </div>
       <div style="font-size:12px; color:var(--panel-text-dim); margin-bottom:14px;">מייל ההתראות (למלאי נמוך, ולברירת המחדל בשליחת דוחות) מוגדר כעת בטאב <b>הגדרות</b> → מיתוג, לצד פרטי העסק.</div>
       <div class="inv-alert" id="invAlert"></div>
       <div class="inv-list">
         <div class="inv-row head"><span>מוצר</span><span>במלאי</span><span>סף התראה</span><span>סטטוס</span></div>
         <div id="invList"></div>
-      </div>
-      <div class="svc-add-row" style="margin-top:16px;">
-        <input type="text" id="newInvName" placeholder="שם מוצר (למשל: לק סגול)">
-        <input type="number" id="newInvStock" placeholder="כמות התחלתית">
-        <input type="number" id="newInvThreshold" placeholder="סף התראה">
-        <button class="cta" style="width:auto; margin-top:0;" onclick="addInventoryItem()">הוספת מוצר</button>
       </div>
     </div>
   </div>
@@ -2939,44 +2929,140 @@
   </div>
 </div>
 
-<div id="addClientOverlay" class="myday-overlay">
-          <div class="myday-sheet" style="max-width:420px;">
-            <div class="myday-header">
-              <h3>הוספת לקוחה</h3>
-              <div class="myday-actions">
-                <button type="button" onclick="closeAddClientModal()">✕ סגירה</button>
-              </div>
-            </div>
-        <div class="client-add-row">
-          <div class="brand-logo-upload small" id="clientPhotoUpload" onclick="document.getElementById('clientPhotoFile').click()">
-            <span id="clientPhotoPlaceholder">+ תמונה</span>
-            <img id="clientPhotoPreview" style="display:none;">
-          </div>
-          <input type="file" id="clientPhotoFile" accept="image/*" style="display:none;" onchange="handleClientPhotoUpload(event)">
-          
-          <input type="tel" inputmode="numeric" maxlength="9" id="newClientId" placeholder="תעודת זהות (חובה)">
-          
-          <div class="field-row">
-            <input type="text" id="newClientFirstName" placeholder="שם פרטי">
-            <input type="text" id="newClientLastName" placeholder="שם משפחה">
-          </div>
-          <input type="text" id="newClientPhone" placeholder="050-0000000">
-          <input type="email" id="newClientEmail" placeholder="אימייל">
-          <div id="newClientError" style="display:none; flex-basis:100%; color:var(--wine); font-size:12.5px; line-height:1.5;"></div>
-          
-          <div class="mini-field-label" style="margin-bottom:-4px;">🎂 יום הולדת</div>
-          <div class="dmy-date-picker" id="newClientBirthdayWrap">
-            <select id="newClientBirthdayDay" aria-label="יום לידה"></select>
-            <select id="newClientBirthdayMonth" aria-label="חודש לידה"></select>
-            <select id="newClientBirthdayYear" aria-label="שנת לידה"></select>
-          </div>
-          <div class="add-client-actions">
-            <button class="cta" onclick="addClient()">שמירה</button>
-            <button type="button" class="cta ghost" onclick="closeAddClientModal()">חזרה</button>
-          </div>
-        </div>
-          </div>
-        </div>
+<div id="addClientOverlay" class="myday-overlay add-modal-overlay">
+  <div class="myday-sheet add-modal">
+    <div class="myday-header">
+      <h3>הוספת לקוחה</h3>
+      <div class="myday-actions">
+        <button type="button" onclick="closeAddClientModal()">✕ סגירה</button>
+      </div>
+    </div>
+    <div class="add-modal-body">
+      <div class="brand-logo-upload small" id="clientPhotoUpload" onclick="document.getElementById('clientPhotoFile').click()">
+        <span id="clientPhotoPlaceholder">+ תמונה</span>
+        <img id="clientPhotoPreview" style="display:none;">
+      </div>
+      <input type="file" id="clientPhotoFile" accept="image/*" style="display:none;" onchange="handleClientPhotoUpload(event)">
+      <input type="tel" inputmode="numeric" maxlength="9" id="newClientId" class="field" placeholder="תעודת זהות (חובה)">
+      <div class="field-row">
+        <input type="text" id="newClientFirstName" class="field" placeholder="שם פרטי">
+        <input type="text" id="newClientLastName" class="field" placeholder="שם משפחה">
+      </div>
+      <input type="text" id="newClientPhone" class="field" placeholder="050-0000000">
+      <input type="email" id="newClientEmail" class="field" placeholder="אימייל">
+      <div class="add-modal-label">🎂 יום הולדת</div>
+      <div class="dmy-date-picker" id="newClientBirthdayWrap">
+        <select id="newClientBirthdayDay" aria-label="יום לידה"></select>
+        <select id="newClientBirthdayMonth" aria-label="חודש לידה"></select>
+        <select id="newClientBirthdayYear" aria-label="שנת לידה"></select>
+      </div>
+      <div id="newClientError" class="add-modal-error"></div>
+      <div class="add-modal-actions">
+        <button class="cta" onclick="addClient()">שמירה</button>
+        <button type="button" class="cta ghost" onclick="closeAddClientModal()">חזרה</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="addStaffOverlay" class="myday-overlay add-modal-overlay">
+  <div class="myday-sheet add-modal">
+    <div class="myday-header">
+      <h3>הוספת עובדת</h3>
+      <div class="myday-actions">
+        <button type="button" onclick="closeAddStaffModal()">✕ סגירה</button>
+      </div>
+    </div>
+    <div class="add-modal-body">
+      <div class="brand-logo-upload small" id="staffPhotoUpload" onclick="document.getElementById('staffPhotoFile').click()">
+        <span id="staffPhotoPlaceholder">+ תמונה</span>
+        <img id="staffPhotoPreview" style="display:none;">
+      </div>
+      <input type="file" id="staffPhotoFile" accept="image/*" style="display:none;" onchange="handleStaffPhotoUpload(event)">
+      <input type="text" id="newStaffName" class="field" placeholder="שם העובדת">
+      <input type="text" id="newStaffRole" class="field" placeholder="תפקיד (למשל: מניקוריסטית)">
+      <div id="newStaffError" class="add-modal-error"></div>
+      <div class="add-modal-actions">
+        <button class="cta" onclick="addStaff()">שמירה</button>
+        <button type="button" class="cta ghost" onclick="closeAddStaffModal()">חזרה</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="addServiceOverlay" class="myday-overlay add-modal-overlay">
+  <div class="myday-sheet add-modal">
+    <div class="myday-header">
+      <h3>הוספת שירות</h3>
+      <div class="myday-actions">
+        <button type="button" onclick="closeAddServiceModal()">✕ סגירה</button>
+      </div>
+    </div>
+    <div class="add-modal-body">
+      <div class="brand-logo-upload small" id="newSvcPhotoUpload" onclick="document.getElementById('newSvcPhotoFile').click()">
+        <span id="newSvcPhotoPlaceholder">+ תמונה</span>
+        <img id="newSvcPhotoPreview" style="display:none;">
+      </div>
+      <input type="file" id="newSvcPhotoFile" accept="image/*" style="display:none;" onchange="handleSvcPhotoUpload(event)">
+      <span id="newSvcCategoryLockedLabel" class="svc-add-cat-locked" style="display:none;"></span>
+      <select id="newSvcCategory" class="field"></select>
+      <input type="text" id="newSvcName" class="field" placeholder="שם השירות (למשל: לייזר ידיים)">
+      <div class="field-row">
+        <input type="number" id="newSvcPrice" class="field" placeholder="מחיר בש&quot;ח">
+        <input type="number" id="newSvcDuration" class="field" placeholder="משך בדקות">
+      </div>
+      <div id="newSvcError" class="add-modal-error"></div>
+      <div class="add-modal-actions">
+        <button class="cta" onclick="addService()">שמירה</button>
+        <button type="button" class="cta ghost" onclick="closeAddServiceModal()">חזרה</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="addCategoryOverlay" class="myday-overlay add-modal-overlay">
+  <div class="myday-sheet add-modal">
+    <div class="myday-header">
+      <h3>הוספת קטגוריה</h3>
+      <div class="myday-actions">
+        <button type="button" onclick="closeAddCategoryModal()">✕ סגירה</button>
+      </div>
+    </div>
+    <div class="add-modal-body">
+      <input type="text" id="newCategoryName" class="field" placeholder="שם קטגוריה (למשל: לייזר)">
+      <div class="add-modal-label">הודעת קטגוריה (אופציונלי) — תוצג ללקוחה בסיום קביעת תור</div>
+      <textarea id="newCategoryMessage" class="field" placeholder="למשל: נא להגיע ללא איפור, ולהימנע מחשיפה לשמש 48 שעות לפני הטיפול"></textarea>
+      <div id="newCategoryError" class="add-modal-error"></div>
+      <div class="add-modal-actions">
+        <button class="cta" onclick="addCategory()">שמירה</button>
+        <button type="button" class="cta ghost" onclick="closeAddCategoryModal()">חזרה</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="addInventoryOverlay" class="myday-overlay add-modal-overlay">
+  <div class="myday-sheet add-modal">
+    <div class="myday-header">
+      <h3>הוספת מוצר למלאי</h3>
+      <div class="myday-actions">
+        <button type="button" onclick="closeAddInventoryModal()">✕ סגירה</button>
+      </div>
+    </div>
+    <div class="add-modal-body">
+      <input type="text" id="newInvName" class="field" placeholder="שם מוצר (למשל: לק סגול)">
+      <div class="field-row">
+        <input type="number" id="newInvStock" class="field" placeholder="כמות התחלתית">
+        <input type="number" id="newInvThreshold" class="field" placeholder="סף התראה">
+      </div>
+      <div id="newInvError" class="add-modal-error"></div>
+      <div class="add-modal-actions">
+        <button class="cta" onclick="addInventoryItem()">שמירה</button>
+        <button type="button" class="cta ghost" onclick="closeAddInventoryModal()">חזרה</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div id="apptLookupOverlay" class="myday-overlay">
   <div class="myday-sheet">
@@ -6735,6 +6821,51 @@
   function closeAddClientModal(){
     document.getElementById('addClientOverlay')?.classList.remove('show');
   }
+  function addModalShowError(errId, msg, focusEl){
+    const el = document.getElementById(errId);
+    if (el){ el.textContent = msg || ''; el.style.display = msg ? 'block' : 'none'; }
+    if (focusEl){ focusEl.style.borderColor = 'var(--wine)'; focusEl.focus({ preventScroll: true }); }
+  }
+  function openAddModal(overlayId, fieldIds, firstFieldId, errId){
+    fieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el){ el.value = ''; el.style.borderColor = ''; }
+    });
+    addModalShowError(errId, '');
+    document.getElementById(overlayId)?.classList.add('show');
+    setTimeout(() => document.getElementById(firstFieldId)?.focus({ preventScroll: true }), 60);
+  }
+  function closeAddModal(overlayId){
+    document.getElementById(overlayId)?.classList.remove('show');
+  }
+  function openAddStaffModal(){
+    newStaffPhoto = null;
+    const prev = document.getElementById('staffPhotoPreview');
+    const ph = document.getElementById('staffPhotoPlaceholder');
+    if (prev) prev.style.display = 'none';
+    if (ph) ph.style.display = 'block';
+    openAddModal('addStaffOverlay', ['newStaffName', 'newStaffRole'], 'newStaffName', 'newStaffError');
+  }
+  function closeAddStaffModal(){ closeAddModal('addStaffOverlay'); }
+  function openAddServiceModal(){
+    newSvcPhoto = null;
+    const prev = document.getElementById('newSvcPhotoPreview');
+    const ph = document.getElementById('newSvcPhotoPlaceholder');
+    if (prev){ prev.style.display = 'none'; prev.src = ''; }
+    if (ph) ph.style.display = 'block';
+    if (typeof renderCategoryOptions === 'function') renderCategoryOptions();
+    if (typeof updateSvcAddRowForCategory === 'function') updateSvcAddRowForCategory(svcManageCurrentCategory || '');
+    openAddModal('addServiceOverlay', ['newSvcName', 'newSvcPrice', 'newSvcDuration'], 'newSvcName', 'newSvcError');
+  }
+  function closeAddServiceModal(){ closeAddModal('addServiceOverlay'); }
+  function openAddCategoryModal(){
+    openAddModal('addCategoryOverlay', ['newCategoryName', 'newCategoryMessage'], 'newCategoryName', 'newCategoryError');
+  }
+  function closeAddCategoryModal(){ closeAddModal('addCategoryOverlay'); }
+  function openAddInventoryModal(){
+    openAddModal('addInventoryOverlay', ['newInvName', 'newInvStock', 'newInvThreshold'], 'newInvName', 'newInvError');
+  }
+  function closeAddInventoryModal(){ closeAddModal('addInventoryOverlay'); }
   function addClient(){
     const firstEl = document.getElementById('newClientFirstName');
     const lastEl = document.getElementById('newClientLastName');
@@ -7105,8 +7236,11 @@
     const nameEl = document.getElementById('newStaffName');
     const roleEl = document.getElementById('newStaffRole');
     const name = nameEl.value.trim();
-    if (!name) return;
+    if (!name){ addModalShowError('newStaffError', 'יש להקליד שם עובדת.', nameEl); return; }
+    if (staff.some(s => s && s.name === name)){ addModalShowError('newStaffError', 'כבר קיימת עובדת בשם הזה.', nameEl); return; }
+    addModalShowError('newStaffError', '');
     staff.push({ name, role: roleEl.value.trim() || 'צוות', photo: newStaffPhoto, hours: makeDefaultHours(), closedDates: [], categories: categories.slice() });
+    closeAddStaffModal();
     nameEl.value = ''; roleEl.value = '';
     newStaffPhoto = null;
     document.getElementById('staffPhotoPreview').style.display = 'none';
@@ -8506,7 +8640,10 @@
   function addCategory(){
     const nameEl = document.getElementById('newCategoryName');
     const name = nameEl.value.trim();
-    if (!name || categories.includes(name)) return;
+    if (!name){ addModalShowError('newCategoryError', 'יש להקליד שם קטגוריה.', nameEl); return; }
+    if (categories.includes(name)){ addModalShowError('newCategoryError', 'כבר קיימת קטגוריה בשם הזה.', nameEl); return; }
+    addModalShowError('newCategoryError', '');
+    closeAddCategoryModal();
     categories.push(name);
     const msgEl = document.getElementById('newCategoryMessage');
     const msg = msgEl ? msgEl.value.trim() : '';
@@ -8702,7 +8839,12 @@
     const name = nameEl.value.trim();
     const price = parseInt(priceEl.value);
     const duration = parseInt(durationEl.value);
-    if (!name || !price || !duration || !category) return;
+    if (!category){ addModalShowError('newSvcError', 'יש לבחור קטגוריה. אם אין עדיין — מוסיפים אותה בטאב "קטגוריות".'); return; }
+    if (!name){ addModalShowError('newSvcError', 'יש להקליד שם שירות.', nameEl); return; }
+    if (!price){ addModalShowError('newSvcError', 'יש להקליד מחיר.', priceEl); return; }
+    if (!duration){ addModalShowError('newSvcError', 'יש להקליד משך טיפול בדקות — בלעדיו אי אפשר לחשב שעות פנויות.', durationEl); return; }
+    addModalShowError('newSvcError', '');
+    closeAddServiceModal();
     services.push({ name, price, duration, category, photo: newSvcPhoto });
     nameEl.value = '';
     priceEl.value = '';
@@ -11514,7 +11656,11 @@
     const name = nameEl.value.trim();
     const stock = parseInt(stockEl.value);
     const threshold = parseInt(thresholdEl.value);
-    if (!name || isNaN(stock) || isNaN(threshold)) return;
+    if (!name){ addModalShowError('newInvError', 'יש להקליד שם מוצר.', nameEl); return; }
+    if (isNaN(stock)){ addModalShowError('newInvError', 'יש להקליד כמות התחלתית.', stockEl); return; }
+    if (isNaN(threshold)){ addModalShowError('newInvError', 'יש להקליד סף התראה — מתחתיו יישלח מייל.', thresholdEl); return; }
+    addModalShowError('newInvError', '');
+    closeAddInventoryModal();
     inventory.push({ name, stock, threshold });
     nameEl.value = '';
     stockEl.value = '';
@@ -12464,6 +12610,11 @@
     specialRequestDetailOverlay: closeSpecialRequestDetailOverlay,
     apptLookupOverlay: closeApptLookup,
     clientArrivalOverlay: closeClientArrivalOverlay,
+    addClientOverlay: closeAddClientModal,
+    addStaffOverlay: closeAddStaffModal,
+    addServiceOverlay: closeAddServiceModal,
+    addCategoryOverlay: closeAddCategoryModal,
+    addInventoryOverlay: closeAddInventoryModal,
     loginOverlay: closeLoginOverlay
   };
   var appBackNavSuppressPop = false;
