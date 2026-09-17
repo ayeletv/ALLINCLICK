@@ -2467,7 +2467,14 @@
           </div>
           <div class="booking-step" id="bstep-4">
             <div class="label">פרטי קשר</div>
-            <input class="field" id="bookingIdInput" type="tel" inputmode="numeric" maxlength="9" placeholder="תעודת זהות">
+            
+            <input class="field" id="bookingIdInput" type="tel" inputmode="numeric" maxlength="10" placeholder="תעודת זהות או מספר טלפון">
+            
+            <div id="bookingTzUpdateBox" style="display:none;">
+              <div class="reminder-choice-notice" style="margin-bottom:6px;">שמחות לראותך! 😉 חסרה לנו תעודת הזהות שלך — נשמח שתשלימי אותה הפעם, ובפעמים הבאות כבר לא נטריד.</div>
+              <input class="field" id="bookingTzUpdateInput" type="tel" inputmode="numeric" maxlength="9" placeholder="תעודת זהות">
+              <div id="bookingTzUpdateNote" class="reminder-choice-notice" style="display:none;"></div>
+            </div>
             <div id="bookingIdError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין תעודת זהות תקנית (9 ספרות)</div>
             <div id="bookingWelcomeBack" style="display:none; color:var(--sage); font-size:12px; margin:-4px 0 8px;"></div>
             <div id="newClientRegistration" style="display:none;">
@@ -2632,10 +2639,19 @@
         <div class="inv-alert bday" id="birthdayAlert"></div>
         <div class="search-with-add-row">
           <input type="text" id="clientSearch" class="search-input" placeholder="חיפוש לקוחה לפי שם, טלפון או תעודת זהות..." oninput="renderClients()">
-          <button type="button" class="quick-add-fab" onclick="scrollToQuickAdd('sub-clients', 'newClientName')" title="הוספת לקוחה" aria-label="הוספת לקוחה">+</button>
+          <button type="button" class="quick-add-fab" onclick="openAddClientModal()" title="הוספת לקוחה" aria-label="הוספת לקוחה">+</button>
         </div>
         <div class="client-list" id="clientList"></div>
-        <div class="client-add-row">
+        
+        <div id="addClientOverlay" class="myday-overlay">
+          <div class="myday-sheet" style="max-width:420px;">
+            <div class="myday-header">
+              <h3>הוספת לקוחה</h3>
+              <div class="myday-actions">
+                <button type="button" onclick="closeAddClientModal()">✕ סגירה</button>
+              </div>
+            </div>
+        <div class="client-add-row" style="flex-direction:column; align-items:stretch;">
           <div class="brand-logo-upload small" id="clientPhotoUpload" onclick="document.getElementById('clientPhotoFile').click()">
             <span id="clientPhotoPlaceholder">+ תמונה</span>
             <img id="clientPhotoPreview" style="display:none;">
@@ -2654,7 +2670,12 @@
             <select id="newClientBirthdayMonth" aria-label="חודש לידה"></select>
             <select id="newClientBirthdayYear" aria-label="שנת לידה"></select>
           </div>
-          <button class="cta" style="width:auto; margin-top:0;" onclick="addClient()">הוספת לקוחה</button>
+          <div style="display:flex; gap:8px; margin-top:4px;">
+            <button class="cta" style="flex:1; margin-top:0;" onclick="addClient()">💾 שמירה</button>
+            <button type="button" class="cta ghost" style="margin-top:0;" onclick="closeAddClientModal()">חזרה</button>
+          </div>
+        </div>
+          </div>
         </div>
       </div>
       <div id="inner-broadcast" class="inner-subpanel">
@@ -2937,7 +2958,7 @@
       </div>
     </div>
     <div style="display:flex; flex-direction:column; gap:10px;">
-      <input type="tel" inputmode="numeric" maxlength="10" id="lookupId" class="field" placeholder="תעודת זהות">
+      <input type="tel" inputmode="numeric" maxlength="10" id="lookupId" class="field" placeholder="תעודת זהות או מספר טלפון">
       <button class="cta" onclick="searchMyAppointment()">חיפוש</button>
       <div id="lookupResult"></div>
     </div>
@@ -6666,6 +6687,25 @@
       setTimeout(function(){ focusEl.focus(); }, 400);
     }
   }
+  function openAddClientModal(){
+    ['newClientId', 'newClientName', 'newClientPhone', 'newClientEmail'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el){ el.value = ''; el.style.borderColor = ''; }
+    });
+    const errEl = document.getElementById('newClientError');
+    if (errEl){ errEl.style.display = 'none'; errEl.textContent = ''; }
+    newClientPhoto = null;
+    const prev = document.getElementById('clientPhotoPreview');
+    const ph = document.getElementById('clientPhotoPlaceholder');
+    if (prev) prev.style.display = 'none';
+    if (ph) ph.style.display = 'block';
+    if (typeof populateDMYPicker === 'function') populateDMYPicker('newClientBirthdayDay', 'newClientBirthdayMonth', 'newClientBirthdayYear', { allowBlank: true, yearsBack: 100, force: true });
+    document.getElementById('addClientOverlay')?.classList.add('show');
+    setTimeout(() => document.getElementById('newClientId')?.focus(), 60);
+  }
+  function closeAddClientModal(){
+    document.getElementById('addClientOverlay')?.classList.remove('show');
+  }
   function addClient(){
     const nameEl = document.getElementById('newClientName');
     const phoneEl = document.getElementById('newClientPhone');
@@ -6682,8 +6722,8 @@
     const name = nameEl.value.trim();
     if (!name){ showErr('יש להזין שם לקוחה.', nameEl); return; }
     const idDigits = ((idEl && idEl.value) || '').replace(/[^0-9]/g, '');
-    if (!/^\d{9}$/.test(idDigits)){
-      showErr('יש להזין תעודת זהות תקינה (9 ספרות) — אי אפשר להוסיף לקוחה בלעדיה.', idEl);
+    if (!idDigits){
+      showErr('יש להזין תעודת זהות — אי אפשר להוסיף לקוחה בלעדיה.', idEl);
       return;
     }
     const dupe = clients.find(c => c && c.teudatZehut === idDigits);
@@ -6701,6 +6741,8 @@
     const birthdayVal = readDMYPicker('newClientBirthdayDay', 'newClientBirthdayMonth', 'newClientBirthdayYear');
     clients.push({ name, teudatZehut: idDigits, phone: phoneEl.value.trim(), email: emailEl.value.trim(), photo: newClientPhoto, visits: 0, daysSinceVisit: null, note: "", birthday: birthdayVal, followUps: [], photos: [] });
     if (typeof saveState === 'function') saveState();
+    const weakNote = weakTeudatZehutNote(idDigits);
+    if (weakNote && typeof showAdminToast === 'function') showAdminToast('⚠️ ' + weakNote);
     nameEl.value = ''; phoneEl.value = ''; emailEl.value = '';
     if (idEl) idEl.value = '';
     populateDMYPicker('newClientBirthdayDay', 'newClientBirthdayMonth', 'newClientBirthdayYear', { allowBlank: true, yearsBack: 100, force: true });
@@ -6708,6 +6750,7 @@
     document.getElementById('clientPhotoPreview').style.display = 'none';
     document.getElementById('clientPhotoPlaceholder').style.display = 'block';
     renderClients();
+    closeAddClientModal();
   }
   let broadcastPhoto = null;
   function handleBroadcastPhotoUpload(event){
@@ -9853,6 +9896,49 @@
     const digits = (phone || '').replace(/[^0-9]/g, '');
     return /^0\d{8,9}$/.test(digits);
   }
+  function isPlausibleTeudatZehut(digits){
+    return /^\d{9}$/.test(String(digits || ''));
+  }
+  function resolveClientByIdOrPhone(raw){
+    const digits = String(raw || '').replace(/[^0-9]/g, '');
+    const out = { digits, typedAsTz: isPlausibleTeudatZehut(digits), typedAsPhone: isValidIsraeliPhone(raw), client: null, matchedBy: null };
+    if (!digits) return out;
+    const byTz = clients.find(c => c && c.teudatZehut === digits);
+    if (byTz){ out.client = byTz; out.matchedBy = 'tz'; return out; }
+    const byPhone = clients.find(c => c && (c.phone || '').replace(/[^0-9]/g, '') === digits);
+    if (byPhone){ out.client = byPhone; out.matchedBy = 'phone'; return out; }
+    return out;
+  }
+  function weakTeudatZehutNote(digits){
+    const d = String(digits || '').replace(/[^0-9]/g, '');
+    if (!d || isPlausibleTeudatZehut(d)) return '';
+    return 'שימי לב: תעודת הזהות שהוזנה אינה תקינה (צריכה להיות 9 ספרות). אפשר להמשיך, אבל מומלץ לתקן.';
+  }
+  function clientNeedsTeudatZehut(client){
+    return !!client && !isPlausibleTeudatZehut(client.teudatZehut);
+  }
+  function refreshBookingTzPrompt(){
+    const box = document.getElementById('bookingTzUpdateBox');
+    if (!box) return;
+    const raw = (document.getElementById('bookingIdInput')?.value || '');
+    const resolved = resolveClientByIdOrPhone(raw);
+    const show = !!resolved.client && clientNeedsTeudatZehut(resolved.client);
+    box.style.display = show ? 'block' : 'none';
+    if (!show){
+      const inp = document.getElementById('bookingTzUpdateInput');
+      if (inp) inp.value = '';
+      const note = document.getElementById('bookingTzUpdateNote');
+      if (note){ note.style.display = 'none'; note.textContent = ''; }
+    }
+  }
+  document.getElementById('bookingTzUpdateInput')?.addEventListener('input', function(){
+    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
+    const note = document.getElementById('bookingTzUpdateNote');
+    if (!note) return;
+    const msg = weakTeudatZehutNote(this.value);
+    note.textContent = msg;
+    note.style.display = msg ? 'block' : 'none';
+  });
   function combineNameFields(firstId, lastId){
     const first = (document.getElementById(firstId)?.value || '').trim();
     const last = (document.getElementById(lastId)?.value || '').trim();
@@ -9964,8 +10050,7 @@
   function updateReminderEmailVisibility(){
     const emailInput = document.getElementById('reminderEmailInput');
     if (!emailInput) return;
-    const digits = document.getElementById('bookingIdInput').value.replace(/[^0-9]/g, '');
-    const match = clients.find(c => c.teudatZehut === digits);
+    const match = resolveClientByIdOrPhone(document.getElementById('bookingIdInput').value).client;
     if (match && match.email){ emailInput.style.display = 'none'; return; }
     const regEl = document.getElementById('newClientRegistration');
     if (regEl && regEl.style.display !== 'none'){ emailInput.style.display = 'none'; return; }
@@ -9977,7 +10062,7 @@
     skipIdListener: true, notifyIdOnFill: true,
   });
   document.getElementById('bookingIdInput').addEventListener('input', function(){
-    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
+    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
     const digits = this.value;
     document.getElementById('bookingIdError').style.display = 'none';
     this.style.borderColor = '';
@@ -9986,18 +10071,21 @@
     const phoneInput = document.getElementById('bookingPhoneInput');
     splitNameIntoFields('', 'bookingFirstNameInput', 'bookingLastNameInput');
     phoneInput.value = '';
+    refreshBookingTzPrompt();
+    const resolvedHere = resolveClientByIdOrPhone(this.value);
+    if (resolvedHere.client){
+      const match = resolvedHere.client;
+      splitNameIntoFields(match.name, 'bookingFirstNameInput', 'bookingLastNameInput');
+      phoneInput.value = match.phone || '';
+      welcomeEl.style.display = 'block';
+      welcomeEl.textContent = `✓ ברוכה שובך, ${match.name}! אין צורך למלא פרטים נוספים.`;
+      regEl.style.display = 'none';
+      updateReminderEmailVisibility();
+      applyReminderChannelPref(match.reminderChannelPref);
+      refreshBookingTzPrompt();
+      return;
+    }
     if (digits.length === 9){
-      const match = clients.find(c => c.teudatZehut === digits);
-      if (match){
-        splitNameIntoFields(match.name, 'bookingFirstNameInput', 'bookingLastNameInput');
-        phoneInput.value = match.phone || '';
-        welcomeEl.style.display = 'block';
-        welcomeEl.textContent = `✓ ברוכה שובך, ${match.name}! אין צורך למלא פרטים נוספים.`;
-        regEl.style.display = 'none';
-        updateReminderEmailVisibility();
-        applyReminderChannelPref(match.reminderChannelPref);
-        return;
-      }
       welcomeEl.style.display = 'none';
       regEl.style.display = 'block';
       updateReminderEmailVisibility();
@@ -10080,8 +10168,9 @@
     }
     const idInput = document.getElementById('bookingIdInput');
     const idErrorEl = document.getElementById('bookingIdError');
-    const idDigits = (idInput.value || '').replace(/[^0-9]/g, '');
-    if (!/^\d{9}$/.test(idDigits)){
+    const typedDigits = (idInput.value || '').replace(/[^0-9]/g, '');
+    const idResolved = resolveClientByIdOrPhone(idInput.value);
+    if (!idResolved.typedAsTz && !idResolved.typedAsPhone){
       idErrorEl.style.display = 'block';
       idInput.style.borderColor = 'var(--wine)';
       idInput.focus();
@@ -10089,7 +10178,28 @@
     }
     idErrorEl.style.display = 'none';
     idInput.style.borderColor = '';
-    const existingClientPre = clients.find(c => c.teudatZehut === idDigits);
+    const existingClientPre = idResolved.client;
+    const tzUpdateInput = document.getElementById('bookingTzUpdateInput');
+    const tzUpdateDigits = ((tzUpdateInput && tzUpdateInput.value) || '').replace(/[^0-9]/g, '');
+    if (existingClientPre && clientNeedsTeudatZehut(existingClientPre) && !tzUpdateDigits){
+      idErrorEl.style.display = 'block';
+      idErrorEl.textContent = 'כדי להמשיך יש להשלים את תעודת הזהות — זה חד-פעמי, ובפעמים הבאות לא נבקש שוב.';
+      const tzBox = document.getElementById('bookingTzUpdateBox');
+      if (tzBox) tzBox.style.display = 'block';
+      if (tzUpdateInput) tzUpdateInput.focus();
+      return;
+    }
+    if (existingClientPre && tzUpdateDigits && clientNeedsTeudatZehut(existingClientPre)){
+      const clashTz = clients.find(c => c && c !== existingClientPre && c.teudatZehut === tzUpdateDigits);
+      if (clashTz){
+        idErrorEl.style.display = 'block';
+        idErrorEl.textContent = 'תעודת הזהות שהוזנה כבר רשומה על לקוחה אחרת — נא לבדוק שוב או ליצור איתנו קשר.';
+        return;
+      }
+      existingClientPre.teudatZehut = tzUpdateDigits;
+    }
+    const idDigits = (existingClientPre && existingClientPre.teudatZehut)
+      || (idResolved.typedAsTz ? typedDigits : '');
     const bookingBlockStatus = getLateCancelStatusForIdentity({ teudatZehut: idDigits, name: (existingClientPre && existingClientPre.name) || '' });
     if (bookingBlockStatus.blocked){
       alert(buildBlockedBookingClientMessage());
@@ -10499,7 +10609,7 @@
     const digits = raw.replace(/[^0-9]/g, '');
     const resultEl = document.getElementById('lookupResult');
     if (digits.length !== 9 && !isValidIsraeliPhone(raw)){
-      resultEl.innerHTML = '<p style="color:var(--wine); font-size:13px;">יש להזין תעודת זהות תקנית (9 ספרות).</p>';
+      resultEl.innerHTML = '<p style="color:var(--wine); font-size:13px;">יש להזין תעודת זהות (9 ספרות) או מספר טלפון.</p>';
       return;
     }
     resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">מחפשת...</p>';
@@ -10519,7 +10629,7 @@
     const cloudElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - lookupDiagStart) / 1000;
     const client = clients.find(c => c.teudatZehut === digits) || clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits);
     if (!client){
-      resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצאה לקוחה עם תעודת הזהות הזו.</p>';
+      resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצאה לקוחה עם תעודת הזהות או מספר הטלפון שהוזנו. אפשר לנסות את הפרטים האחרים, או ליצור איתנו קשר.</p>';
       if (isDiagMode()) alert('אבחון חיפוש תור: טעינת נתונים ' + cloudElapsedSec.toFixed(1) + ' שניות (לא נמצאה לקוחה)');
       return;
     }
@@ -10537,7 +10647,7 @@
       .sort((a, b) => a.startDateTime - b.startDateTime)
       .map(entry => entry.appt);
     if (!upcoming.length){
-      resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצא תור עתידי עבור תעודת הזהות שהוזנה.</p>';
+      resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצא תור עתידי עבור הפרטים שהוזנו.</p>';
       if (isDiagMode()) alert('אבחון חיפוש תור: טעינת נתונים ' + cloudElapsedSec.toFixed(1) + ' שניות (אין תור עתידי)');
       return;
     }
