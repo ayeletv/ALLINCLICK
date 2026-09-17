@@ -2760,6 +2760,8 @@
           <div class="label" style="margin:12px 0 6px;">מייל המנהלת (לקבלת התראות)<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">לכתובת הזו נשלחות התראות על מלאי נמוך, והיא מוצעת כברירת מחדל כששולחים דוח למייל — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות כאן.</span></span></div>
           <input type="email" id="invAlertEmail" class="field-dark" placeholder="you@example.com" oninput="updateInvAlertEmail()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ כתובת המייל להתראות נשמרה בהצלחה')">
           <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:4px;">לכתובת הזו מגיעות התראות מלאי נמוך, והיא מוצעת כברירת מחדל בשליחת דוחות למייל (בטאב "דוחות") — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות את זה כאן.</div>
+          <div class="label" style="margin:16px 0 6px;">ימי חג ששוחררו<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">חגים וערבי חג נחסמים אוטומטית בכל היומנים. אם את כן עובדת ביום חג מסוים, לוחצים על החסימה (הפסים האדומים) ישירות ביומן השבועי ומאשרים את השאלה — והיום נפתח. כל יום שפתחת ככה מופיע כאן, ואפשר להחזיר אותו לחסום בלחיצה על ✕.</span></span></div>
+          <div id="holidayOverridesList" style="font-size:13.5px; color:var(--panel-text-dim);"></div>
         </div>
       </div>
       <div class="label" style="margin:22px 0 10px;">כך זה ייראה ללקוחה</div>
@@ -4370,6 +4372,15 @@
     }
     return true;
   }
+  function filterStillPendingWaitlistMatches(matches){
+    if (!Array.isArray(matches) || !matches.length) return [];
+    return matches.filter(m => {
+      if (!m) return false;
+      const current = m.id ? waitlist.find(x => x && x.id === m.id) : null;
+      if (!current) return false;
+      return current.status !== 'matched';
+    });
+  }
   function renderWaitlistMatchAlert(matches, appt){
     if (!matches || !matches.length) return;
     const existing = document.getElementById('waitlistMatchAlert');
@@ -4450,7 +4461,7 @@
     }
     queueApptSms(appt, getShortApptSmsText('cancelled', appt.service, formatDateDMY(appt.date), appt.time));
     showAdminToast('✓ התור בוטל בהצלחה' + (cancelledClient && cancelledClient.email ? ' — נשלח מייל לעדכון הלקוחה' : ''));
-    const freshMatches = matches.filter(w => w.status !== 'matched');
+    const freshMatches = filterStillPendingWaitlistMatches(matches);
     if (freshMatches.length) renderWaitlistMatchAlert(freshMatches, appt);
   }
   let apptDetailCurrent = null;
@@ -5452,6 +5463,16 @@
   }
   let branding = { name: '', logo: null, phone: '', address: '' };
   let invAlertEmail = '';
+  let holidayOverrides = [];
+  function migrateLegacyTishaBavFlag(){
+    if (typeof TISHA_BAV_CLOSURES !== 'object' || !TISHA_BAV_CLOSURES) return;
+    Object.keys(TISHA_BAV_CLOSURES).forEach(d => {
+      if (holidayOverrides.indexOf(d) === -1) holidayOverrides.push(d);
+    });
+  }
+  function isHolidayOverridden(dateStr){
+    return Array.isArray(holidayOverrides) && holidayOverrides.indexOf(dateStr) !== -1;
+  }
   let ownerAccessCode = '';
   let gatedTabsConfig = { clients: true, staff: true, servicesgroup: true, inventory: true, settings: true, reports: true };
   const GATED_TAB_LABELS = { clients: 'לקוחות', staff: 'צוות', servicesgroup: 'שירותים', inventory: 'מלאי', settings: 'הגדרות', reports: 'דוחות' };
@@ -5705,6 +5726,7 @@
     if (invEmailInputEl && document.activeElement !== invEmailInputEl) invEmailInputEl.value = invAlertEmail || '';
     const ownerCodeInputEl = document.getElementById('ownerAccessCodeInput');
     if (ownerCodeInputEl && document.activeElement !== ownerCodeInputEl) ownerCodeInputEl.value = ownerAccessCode || '';
+    if (typeof renderHolidayOverrides === 'function') renderHolidayOverrides();
     if (typeof renderGatedTabsCheckboxes === 'function') renderGatedTabsCheckboxes();
     const heroBizNameEl = document.getElementById('heroBizName');
     const heroPlatformLineEl = document.getElementById('heroPlatformLine');
@@ -6887,15 +6909,27 @@
       body.className = 'cal-day-body';
       body.style.height = (calEndHour - calStartHour) * hourBandHeight + 'px';
       const closedInfo = getWeekColClosedInfo(day.fullDate);
+      const isPastDay = typeof getTodayDateOnly === 'function' && day.fullDate < getTodayDateOnly();
       if (closedInfo){
         head.classList.add('day-closed');
         body.classList.add('day-closed');
-        body.style.cursor = 'not-allowed';
-        body.title = closedInfo.reason ? `סגור — ${closedInfo.reason}` : 'סגור';
+        const canRelease = !isPastDay;
+        body.style.cursor = canRelease ? 'pointer' : 'not-allowed';
+        body.title = (closedInfo.reason ? `סגור — ${closedInfo.reason}` : 'סגור')
+          + (canRelease ? ' (לחיצה כדי לשחרר את היום מהחסימה)' : '');
         const label = document.createElement('div');
         label.className = 'cal-day-closed-label';
         label.textContent = closedInfo.reason ? `סגור — ${closedInfo.reason}` : 'סגור';
         body.appendChild(label);
+        if (canRelease){
+          body.addEventListener('click', (e) => {
+            if (e.target.closest('.cal-appt')) return;
+            releaseCalendarBlockForDate(formatDateKey(day.fullDate), day.fullDate);
+          });
+        }
+      } else if (isPastDay){
+        body.style.cursor = 'default';
+        body.title = 'תאריך שעבר — אי אפשר לקבוע תור. אפשר ללחוץ על תור קיים כדי לראות את הפרטים שלו.';
       } else {
         body.style.cursor = 'pointer';
         body.title = 'לחיצה על שעה פנויה מוסיפה תור';
@@ -6925,6 +6959,10 @@
       body.onclick = (e) => {
         if (closedInfo) return;
         if (e.target.closest('.cal-appt')) return;
+        if (isPastDay){
+          if (typeof showAdminToast === 'function') showAdminToast('⛔ לא ניתן לקבוע תור בתאריך שעבר');
+          return;
+        }
         const rect = body.getBoundingClientRect();
         const offsetY = Math.max(0, e.clientY - rect.top);
         const rawMinutes = calStartHour * 60 + (offsetY / hourBandHeight) * 60;
@@ -8515,15 +8553,34 @@
     '2029-04-01': 'חול המועד פסח', '2029-04-02': 'חול המועד פסח', '2029-04-03': 'חול המועד פסח', '2029-04-04': 'חול המועד פסח', '2029-04-05': 'חול המועד פסח',
     '2029-04-06': 'שביעי של פסח',
     '2029-05-19': 'ערב שבועות',
-    '2029-05-20': 'שבועות'
+    '2029-05-20': 'שבועות',
+
+    '2026-03-03': 'פורים',
+    '2027-03-23': 'פורים',
+    '2028-03-12': 'פורים',
+    '2029-03-01': 'פורים'
+  };
+  const TISHA_BAV_CLOSURES = {
+    '2026-07-22': 'ערב תשעה באב',
+    '2026-07-23': 'תשעה באב',
+    '2027-08-11': 'ערב תשעה באב',
+    '2027-08-12': 'תשעה באב',
+    '2028-07-31': 'ערב תשעה באב',
+    '2028-08-01': 'תשעה באב',
+    '2029-07-22': 'תשעה באב (נדחה משבת)'
   };
   function getHolidayTooltipForDate(dateObj){
     const dateStr = dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
+    if (isHolidayOverridden(dateStr)) return '';
     if (ISRAELI_HOLIDAY_FULL_CLOSURES[dateStr]) return `סגור לרגל ${ISRAELI_HOLIDAY_FULL_CLOSURES[dateStr]}`;
+    if (TISHA_BAV_CLOSURES[dateStr]) return `סגור לרגל ${TISHA_BAV_CLOSURES[dateStr]}`;
     return '';
   }
   function getClosedDateEntry(staffIdx, dateStr){
-    if (ISRAELI_HOLIDAY_FULL_CLOSURES[dateStr]) return { date: dateStr, reason: ISRAELI_HOLIDAY_FULL_CLOSURES[dateStr], holiday: true };
+    if (!isHolidayOverridden(dateStr)){
+      if (ISRAELI_HOLIDAY_FULL_CLOSURES[dateStr]) return { date: dateStr, reason: ISRAELI_HOLIDAY_FULL_CLOSURES[dateStr], holiday: true };
+      if (TISHA_BAV_CLOSURES[dateStr]) return { date: dateStr, reason: TISHA_BAV_CLOSURES[dateStr], holiday: true };
+    }
     const s = staff[staffIdx];
     if (!s || !s.closedDates) return null;
     for (let i = 0; i < s.closedDates.length; i++){
@@ -8532,6 +8589,60 @@
       else if (entry && entry.date === dateStr) return entry;
     }
     return null;
+  }
+  async function releaseCalendarBlockForDate(dateStr, dateObj){
+    if (!dateStr) return;
+    const indices = (typeof selectedStaffFilter !== 'undefined' && selectedStaffFilter !== 'all')
+      ? [selectedStaffFilter]
+      : staff.map((s, i) => i).filter(i => staff[i] && !staff[i].deleted);
+    if (!indices.length) return;
+
+    const holidayName = (!isHolidayOverridden(dateStr) && (ISRAELI_HOLIDAY_FULL_CLOSURES[dateStr] || TISHA_BAV_CLOSURES[dateStr])) || '';
+    const manualBlocks = [];
+    indices.forEach(idx => {
+      const s = staff[idx];
+      if (!s || !Array.isArray(s.closedDates)) return;
+      const pos = s.closedDates.findIndex(e => (typeof e === 'string' ? e : (e && e.date)) === dateStr);
+      if (pos !== -1) manualBlocks.push({ staffIdx: idx, pos });
+    });
+    const dow = dateObj ? dateObj.getDay() : null;
+    const allWeeklyClosed = dow === null ? false : indices.every(idx => {
+      const s = staff[idx];
+      const dayInfo = s && s.hours && s.hours[dow];
+      return !dayInfo || !dayInfo.open;
+    });
+
+    const dateLabel = dateObj
+      ? `${dateObj.getDate()}/${dateObj.getMonth() + 1}/${dateObj.getFullYear()}`
+      : dateStr;
+
+    if (!holidayName && !manualBlocks.length){
+      alert(`היום הזה (${dateLabel}) סגור לפי שעות העבודה הקבועות שלך, לא בגלל חסימה חד-פעמית.\n\nכדי לפתוח אותו צריך לשנות את שעות העבודה של אותו יום בשבוע — בהגדרות → שעות עבודה.`);
+      return;
+    }
+
+    let question = `לשחרר את ${dateLabel} מהחסימה?\n\n`;
+    if (holidayName) question += `• חסימת חג: ${holidayName}\n`;
+    if (manualBlocks.length) question += `• חסימה ידנית שהגדרת ("ימים סגורים")\n`;
+    question += `\nהיום ייפתח לקביעת תורים בכל היומנים — גם אצלך וגם אצל הלקוחות.`;
+    if (allWeeklyClosed){
+      question += `\n\nשימי לב: היום הזה גם סגור בשעות העבודה הקבועות שלך, ולכן הוא יישאר סגור גם אחרי השחרור. כדי לפתוח אותו בפועל צריך לשנות גם את שעות העבודה של אותו יום בשבוע.`;
+    }
+    if (!confirm(question)) return;
+
+    if (holidayName && !isHolidayOverridden(dateStr)) holidayOverrides.push(dateStr);
+    manualBlocks.sort((a, b) => b.pos - a.pos).forEach(({ staffIdx, pos }) => {
+      staff[staffIdx].closedDates.splice(pos, 1);
+    });
+
+    if (typeof saveState === 'function') await saveState();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof renderMiniCal === 'function') renderMiniCal();
+    if (typeof renderMbCal === 'function') renderMbCal();
+    if (typeof renderClosedDates === 'function') renderClosedDates();
+    if (typeof renderHolidayOverrides === 'function') renderHolidayOverrides();
+    if (typeof showAdminToast === 'function') showAdminToast(`✓ ${dateLabel} שוחרר מהחסימה`);
+    if (typeof recheckAllPendingFlexibleRequests === 'function') await recheckAllPendingFlexibleRequests();
   }
   function isDateClosedForStaff(staffIdx, date){
     const dateStr = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
@@ -9627,7 +9738,8 @@
     const previousClient = apptBeingRescheduled ? findClientForAppt(apptBeingRescheduled) : null;
     removeCurrentBookedAppointment();
     if (waitlistMatches.length && typeof renderWaitlistMatchAlert === 'function'){
-      renderWaitlistMatchAlert(waitlistMatches, apptBeingRescheduled);
+      const freshRescheduleMatches = filterStillPendingWaitlistMatches(waitlistMatches);
+      if (freshRescheduleMatches.length) renderWaitlistMatchAlert(freshRescheduleMatches, apptBeingRescheduled);
     }
     document.getElementById('myAppointment').style.display = 'none';
     document.getElementById('bookingFormWrap').style.display = 'block';
@@ -9687,7 +9799,8 @@
         );
       }
       if (waitlistMatches.length && typeof renderWaitlistMatchAlert === 'function'){
-        renderWaitlistMatchAlert(waitlistMatches, apptBeingCancelled);
+        const freshCancelMatches = filterStillPendingWaitlistMatches(waitlistMatches);
+        if (freshCancelMatches.length) renderWaitlistMatchAlert(freshCancelMatches, apptBeingCancelled);
       }
     }
     const apptEl = document.getElementById('myAppointment');
@@ -9862,7 +9975,8 @@
         );
       }
       if (waitlistMatches.length && typeof renderWaitlistMatchAlert === 'function'){
-        renderWaitlistMatchAlert(waitlistMatches, appt);
+        const freshListedMatches = filterStillPendingWaitlistMatches(waitlistMatches);
+        if (freshListedMatches.length) renderWaitlistMatchAlert(freshListedMatches, appt);
       }
     } catch (e) {
       console.error('cancelListedAppointment: notification failed (cancellation itself succeeded):', e);
@@ -10469,6 +10583,45 @@
     invAlertEmail = document.getElementById('invAlertEmail').value.trim();
     renderInventory();
   }
+  function renderHolidayOverrides(){
+    const el = document.getElementById('holidayOverridesList');
+    if (!el) return;
+    const list = Array.isArray(holidayOverrides) ? holidayOverrides.slice().sort() : [];
+    if (!list.length){
+      el.innerHTML = 'אין ימי חג פתוחים — כל החגים וערבי החג חסומים אוטומטית.';
+      return;
+    }
+    el.textContent = '';
+    list.forEach(dateStr => {
+      const [y, mo, d] = dateStr.split('-');
+      const name = ISRAELI_HOLIDAY_FULL_CLOSURES[dateStr] || TISHA_BAV_CLOSURES[dateStr] || 'חג';
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:4px 0;';
+      const span = document.createElement('span');
+      span.textContent = `${d}/${mo}/${y} — ${name} (פתוח)`;
+      const btn = document.createElement('button');
+      btn.className = 'mini-btn';
+      btn.textContent = '✕';
+      btn.title = 'להחזיר את היום לחסום';
+      btn.onclick = () => restoreHolidayBlock(dateStr);
+      row.appendChild(span);
+      row.appendChild(btn);
+      el.appendChild(row);
+    });
+  }
+  function restoreHolidayBlock(dateStr){
+    const pos = Array.isArray(holidayOverrides) ? holidayOverrides.indexOf(dateStr) : -1;
+    if (pos === -1) return;
+    const [y, mo, d] = dateStr.split('-');
+    if (!confirm(`להחזיר את ${d}/${mo}/${y} להיות חסום (סגור לרגל החג)?`)) return;
+    holidayOverrides.splice(pos, 1);
+    if (typeof saveState === 'function') saveState();
+    if (typeof renderHolidayOverrides === 'function') renderHolidayOverrides();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof renderMiniCal === 'function') renderMiniCal();
+    if (typeof renderMbCal === 'function') renderMbCal();
+    if (typeof showAdminToast === 'function') showAdminToast(`✓ ${d}/${mo}/${y} חזר להיות חסום`);
+  }
   function updateOwnerAccessCode(){
     ownerAccessCode = document.getElementById('ownerAccessCodeInput').value.trim();
   }
@@ -10592,7 +10745,7 @@
       branding, customTemplates, staff,
       categories, services, whatsNewItems, invAlertEmail, inventory,
       ownerAccessCode, gatedTabsConfig, personalBlocks, specialRequests,
-      categoryMessages
+      categoryMessages, holidayOverrides
     };
     pendingSaveCount++;
     return db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
@@ -10762,6 +10915,8 @@
     if (data.whatsNewItems) whatsNewItems = data.whatsNewItems;
     if (data.categoryMessages && typeof data.categoryMessages === 'object') categoryMessages = data.categoryMessages;
     if (typeof data.invAlertEmail === 'string') invAlertEmail = data.invAlertEmail;
+    if (Array.isArray(data.holidayOverrides)) holidayOverrides = data.holidayOverrides.slice();
+    else if (data.openOnTishaBav === true) migrateLegacyTishaBavFlag();
     if (data.inventory) inventory = data.inventory;
     if (data.waitlist) waitlist = data.waitlist;
     if (data.cancellationLog) cancellationLog = data.cancellationLog;
