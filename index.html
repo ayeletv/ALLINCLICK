@@ -1608,7 +1608,8 @@
     font-size:14px;
   }
   .client-add-row input::placeholder{color:var(--panel-text-dim);}
-  #addClientOverlay .myday-sheet{overflow-x:hidden;}
+  #addClientOverlay{background:rgba(60,40,50,0.45);}
+  #addClientOverlay .myday-sheet{overflow-x:hidden; box-shadow:0 18px 50px rgba(20,16,20,0.28);}
   #addClientOverlay .client-add-row{flex-direction:column; align-items:stretch; gap:10px; flex-wrap:nowrap;}
   #addClientOverlay .client-add-row input{flex:0 0 auto; width:100%; min-width:0; box-sizing:border-box;}
   #addClientOverlay .client-add-row .brand-logo-upload{align-self:center; margin-bottom:2px;}
@@ -2665,44 +2666,6 @@
         </div>
         <div class="client-list" id="clientList"></div>
         
-        <div id="addClientOverlay" class="myday-overlay">
-          <div class="myday-sheet" style="max-width:420px;">
-            <div class="myday-header">
-              <h3>הוספת לקוחה</h3>
-              <div class="myday-actions">
-                <button type="button" onclick="closeAddClientModal()">✕ סגירה</button>
-              </div>
-            </div>
-        <div class="client-add-row">
-          <div class="brand-logo-upload small" id="clientPhotoUpload" onclick="document.getElementById('clientPhotoFile').click()">
-            <span id="clientPhotoPlaceholder">+ תמונה</span>
-            <img id="clientPhotoPreview" style="display:none;">
-          </div>
-          <input type="file" id="clientPhotoFile" accept="image/*" style="display:none;" onchange="handleClientPhotoUpload(event)">
-          
-          <input type="tel" inputmode="numeric" maxlength="9" id="newClientId" placeholder="תעודת זהות (חובה)">
-          
-          <div class="field-row">
-            <input type="text" id="newClientFirstName" placeholder="שם פרטי">
-            <input type="text" id="newClientLastName" placeholder="שם משפחה">
-          </div>
-          <input type="text" id="newClientPhone" placeholder="050-0000000">
-          <input type="email" id="newClientEmail" placeholder="אימייל">
-          <div id="newClientError" style="display:none; flex-basis:100%; color:var(--wine); font-size:12.5px; line-height:1.5;"></div>
-          
-          <div class="mini-field-label" style="margin-bottom:-4px;">🎂 יום הולדת</div>
-          <div class="dmy-date-picker" id="newClientBirthdayWrap">
-            <select id="newClientBirthdayDay" aria-label="יום לידה"></select>
-            <select id="newClientBirthdayMonth" aria-label="חודש לידה"></select>
-            <select id="newClientBirthdayYear" aria-label="שנת לידה"></select>
-          </div>
-          <div class="add-client-actions">
-            <button class="cta" onclick="addClient()">שמירה</button>
-            <button type="button" class="cta ghost" onclick="closeAddClientModal()">חזרה</button>
-          </div>
-        </div>
-          </div>
-        </div>
       </div>
       <div id="inner-broadcast" class="inner-subpanel">
         <div class="broadcast-box">
@@ -2975,6 +2938,46 @@
     <div id="clientArrivalContent"></div>
   </div>
 </div>
+
+<div id="addClientOverlay" class="myday-overlay">
+          <div class="myday-sheet" style="max-width:420px;">
+            <div class="myday-header">
+              <h3>הוספת לקוחה</h3>
+              <div class="myday-actions">
+                <button type="button" onclick="closeAddClientModal()">✕ סגירה</button>
+              </div>
+            </div>
+        <div class="client-add-row">
+          <div class="brand-logo-upload small" id="clientPhotoUpload" onclick="document.getElementById('clientPhotoFile').click()">
+            <span id="clientPhotoPlaceholder">+ תמונה</span>
+            <img id="clientPhotoPreview" style="display:none;">
+          </div>
+          <input type="file" id="clientPhotoFile" accept="image/*" style="display:none;" onchange="handleClientPhotoUpload(event)">
+          
+          <input type="tel" inputmode="numeric" maxlength="9" id="newClientId" placeholder="תעודת זהות (חובה)">
+          
+          <div class="field-row">
+            <input type="text" id="newClientFirstName" placeholder="שם פרטי">
+            <input type="text" id="newClientLastName" placeholder="שם משפחה">
+          </div>
+          <input type="text" id="newClientPhone" placeholder="050-0000000">
+          <input type="email" id="newClientEmail" placeholder="אימייל">
+          <div id="newClientError" style="display:none; flex-basis:100%; color:var(--wine); font-size:12.5px; line-height:1.5;"></div>
+          
+          <div class="mini-field-label" style="margin-bottom:-4px;">🎂 יום הולדת</div>
+          <div class="dmy-date-picker" id="newClientBirthdayWrap">
+            <select id="newClientBirthdayDay" aria-label="יום לידה"></select>
+            <select id="newClientBirthdayMonth" aria-label="חודש לידה"></select>
+            <select id="newClientBirthdayYear" aria-label="שנת לידה"></select>
+          </div>
+          <div class="add-client-actions">
+            <button class="cta" onclick="addClient()">שמירה</button>
+            <button type="button" class="cta ghost" onclick="closeAddClientModal()">חזרה</button>
+          </div>
+        </div>
+          </div>
+        </div>
+
 <div id="apptLookupOverlay" class="myday-overlay">
   <div class="myday-sheet">
     <div class="myday-header">
@@ -11622,6 +11625,7 @@
       cancellationLog = committedPayload.cancellationLog;
       lateCancellations = committedPayload.lateCancellations;
       lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(committedPayload));
+      publishPublicView(); // כל שינוי שנשמר מתעדכן גם במסמך הציבורי
       const backupDateKey = committedPayload.savedAt.slice(0, 10);
       if (backupDateKey !== lastBackupDateKey){
         lastBackupDateKey = backupDateKey;
@@ -11643,6 +11647,60 @@
         ? '⚠ השינוי האחרון לא נשמר בעננן — כנראה שהתמונה שהועלתה גדולה מדי. נא לנסות תמונה אחרת ולא לרענן את הדף בינתיים.'
         : '⚠ השינוי האחרון לא נשמר בעננן. נא לבדוק את החיבור לאינטרנט ולנסות שוב — לא לרענן את הדף בינתיים, אחרת השינוי יאבד.');
     }).finally(() => { pendingSaveCount--; });
+  }
+  const PUBLIC_DOC = db.collection('publicView').doc('default');
+  let lastPublishedPublicJson = null;
+  function isOwnerSession(){
+    const u = auth && auth.currentUser;
+    return !!(u && !u.isAnonymous);
+  }
+  function buildPublicView(){
+    const busy = [];
+    (weekAppointments || []).forEach(a => {
+      if (!a || !a.date || !a.time) return;
+      busy.push({ id: a.id, date: a.date, time: a.time, dur: a.dur || 30, staff: a.staff, kind: 'appt' });
+    });
+    (personalBlocks || []).forEach(b => {
+      if (!b || !b.date || !b.time) return;
+      busy.push({ id: b.id, date: b.date, time: b.time, dur: b.duration || 15, staff: b.staff, kind: 'block' });
+    });
+    return {
+      branding: {
+        name: (branding && branding.name) || '',
+        logo: (branding && branding.logo) || null,
+        phone: (branding && branding.phone) || '',
+        address: (branding && branding.address) || '',
+      },
+      staff: (staff || []).map(s => ({
+        name: (s && s.name) || '',
+        role: (s && s.role) || '',
+        hours: (s && s.hours) || {},
+        closedDates: (s && s.closedDates) || [],
+        categories: (s && s.categories) || [],
+      })),
+      services: (services || []).map(s => ({
+        name: (s && s.name) || '',
+        duration: (s && s.duration) || 0,
+        price: (s && s.price) || 0,
+        category: (s && s.category) || '',
+        photo: (s && s.photo) || null,
+      })),
+      categories: (categories || []).slice(),
+      categoryMessages: cloneJSON(categoryMessages) || {},
+      holidayOverrides: (holidayOverrides || []).slice(),
+      whatsNewItems: cloneJSON(whatsNewItems) || [],
+      busy,
+    };
+  }
+  function publishPublicView(){
+    if (!isOwnerSession()) return Promise.resolve();
+    const view = buildPublicView();
+    const json = JSON.stringify(view);
+    if (json === lastPublishedPublicJson) return Promise.resolve(); // שום דבר לא השתנה — אין מה לכתוב
+    view.savedAt = new Date().toISOString();
+    return PUBLIC_DOC.set(view)
+      .then(() => { lastPublishedPublicJson = json; })
+      .catch(err => { console.error('Public view publish failed:', err); });
   }
   function showSaveErrorBanner(message){
     const existing = document.getElementById('saveErrorBanner');
@@ -12054,6 +12112,7 @@
       pruneExpiredWaitlistEntries();
       rerenderEverything();
       cloudLoadComplete = true;
+      publishPublicView(); // מפרסם את החצי הלא-רגיש; אצל לקוחה זה לא עושה כלום
       console.log('Loaded saved data from the cloud.');
       reportCloudLoadTiming(cloudLoadStartedAt, rawCloudData);
       if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
