@@ -499,6 +499,12 @@
   }
   .mb-client-id-status.matched{background:#EAF3EA; color:#2F6B3A;}
   .mb-client-id-status.new{background:#FBF6E8; color:#7A5E0C;}
+  .mb-latecancel-warn{
+    font-size:13px; font-weight:700; line-height:1.45;
+    border-radius:8px; padding:9px 11px; margin-top:-2px;
+    background:#FBEAEA; color:#8E2B2B; border:1.5px solid #D98A8A;
+  }
+  .mb-latecancel-warn .mb-latecancel-sub{display:block; font-weight:600; font-size:12px; margin-top:3px; opacity:.9;}
   .help-hint{
     display:inline-flex; align-items:center; justify-content:center;
     width:16px; height:16px; border-radius:50%;
@@ -3011,6 +3017,8 @@
         <input type="tel" inputmode="numeric" maxlength="9" id="mbClientId" class="field" placeholder="תעודת זהות — מילוי תז יטען הכל אוטומטית">
         
         <div id="mbClientIdStatus" class="mb-client-id-status" style="display:none;"></div>
+        
+        <div id="mbLateCancelWarn" class="mb-latecancel-warn" style="display:none;"></div>
         <div class="field-row">
           <input type="text" id="mbClientFirstName" class="field" placeholder="שם פרטי">
           <input type="text" id="mbClientLastName" class="field" placeholder="שם משפחה">
@@ -3752,6 +3760,12 @@
       errorEl.style.display = 'block';
       return;
     }
+    const frBlockStatus = getLateCancelStatusForIdentity({ teudatZehut: idDigits, name });
+    if (frBlockStatus.blocked){
+      errorEl.textContent = buildBlockedBookingClientMessage();
+      errorEl.style.display = 'block';
+      return;
+    }
     if (!isValidIsraeliPhone(phone)){
       errorEl.textContent = 'יש להזין מספר טלפון ישראלי תקני.';
       errorEl.style.display = 'block';
@@ -3996,6 +4010,7 @@
       statusEl.style.display = 'none';
       statusEl.className = 'mb-client-id-status';
       statusEl.textContent = '';
+      updateMbLateCancelWarning();
       return;
     }
     const match = clients.find(c => c.teudatZehut === idVal);
@@ -4007,7 +4022,32 @@
       statusEl.className = 'mb-client-id-status new';
       statusEl.textContent = '➕ לקוחה חדשה — לא נמצאה בכרטיסייה, יש למלא את הפרטים למטה';
     }
+    updateMbLateCancelWarning();
   }
+  function updateMbLateCancelWarning(){
+    const warnEl = document.getElementById('mbLateCancelWarn');
+    if (!warnEl) return;
+    const idVal = (document.getElementById('mbClientId')?.value || '').replace(/[^0-9]/g, '');
+    const firstVal = (document.getElementById('mbClientFirstName')?.value || '').trim();
+    const lastVal = (document.getElementById('mbClientLastName')?.value || '').trim();
+    const fullName = (firstVal && lastVal) ? (firstVal + ' ' + lastVal).replace(/\s+/g, ' ').trim() : '';
+    const identity = idVal.length === 9 ? { teudatZehut: idVal, name: fullName } : (fullName ? { name: fullName } : null);
+    const status = identity ? getLateCancelStatusForIdentity(identity) : null;
+    if (!status || !status.blocked){
+      warnEl.style.display = 'none';
+      warnEl.textContent = '';
+      return;
+    }
+    warnEl.textContent = '⛔ ' + buildBlockedBookingAdminWarning(status, (status.client && status.client.name) || fullName);
+    const sub = document.createElement('span');
+    sub.className = 'mb-latecancel-sub';
+    sub.textContent = 'אפשר לקבוע לה בכל זאת — תתבקשי לאשר את זה במפורש בלחיצה על "קביעת התור". לשחרור מלא: כרטסת הלקוחה ← "ביטולים מאוחרים" ← "איפוס מונה".';
+    warnEl.appendChild(sub);
+    warnEl.style.display = 'block';
+  }
+  ['mbClientFirstName', 'mbClientLastName'].forEach(fieldId => {
+    document.getElementById(fieldId)?.addEventListener('input', updateMbLateCancelWarning);
+  });
   document.getElementById('mbClientId')?.addEventListener('input', function(){
     this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
     const phoneInput = document.getElementById('mbClientPhone');
@@ -4317,6 +4357,14 @@
     return match && match.email ? match.email : '';
   }
   function bookWaitlistMatch(w, appt){
+    const wlmBlockStatus = getLateCancelStatusForIdentity({ teudatZehut: w && w.teudatZehut, name: w && w.name });
+    if (wlmBlockStatus.blocked){
+      const wlmName = (wlmBlockStatus.client && wlmBlockStatus.client.name) || (w && w.name) || '';
+      if (!confirm(buildBlockedBookingAdminConfirm(wlmBlockStatus, wlmName))){
+        showAdminToast(buildBlockedBookingAdminWarning(wlmBlockStatus, wlmName) + ' התור לא נקבע.');
+        return false;
+      }
+    }
     const newStart = timeToMinutes(appt.time);
     const newEnd = newStart + (appt.dur || 30);
     const conflict = weekAppointments.some(a => {
@@ -4854,17 +4902,14 @@
       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
         <div style="font-size:13.5px;${blocked ? ' color:#B3261E; font-weight:700;' : ''}">
           ${blocked
-            ? `⛔ חסומה מביטול נוסף באיחור (${count} ביטולים/אי-הגעות מאוחרים)`
+            ? `⛔ חסומה (${count} ביטולים/אי-הגעות מאוחרים) — גם מביטול תור וגם מקביעת תור חדש`
             : `${count} / 2 ביטולים/אי-הגעות מאוחרים (פחות מ-12 שעות לפני התור)`}
         </div>
         ${allEntries.length ? `<button type="button" class="template-btn" id="cpResetLateCancelBtn" style="width:auto; padding:6px 14px; font-size:12.5px;">איפוס מונה</button>` : ''}
       </div>`;
     const resetBtn = statusEl.querySelector('#cpResetLateCancelBtn');
     if (resetBtn){
-      resetBtn.onclick = () => {
-        if (!confirm(`לאפס את מונה הביטולים המאוחרים של ${c.name || 'הלקוחה'}? ההיסטוריה תישאר גלויה, אבל היא לא תהיה יותר חסומה.`)) return;
-        resetLateCancelBlock(c);
-      };
+      resetBtn.onclick = () => resetLateCancelBlock(c);
     }
     if (!allEntries.length){
       historyEl.innerHTML = '<p style="color:var(--panel-text-dim); font-size:13px;">אין ביטולים/אי-הגעות מאוחרים רשומים.</p>';
@@ -4971,6 +5016,12 @@
     if (clientHasOverlappingAppointment(name, dateVal, startMin, endMin, null)){
       errorEl.style.display = 'block';
       errorEl.textContent = `ל${name} כבר יש תור אחר שחופף לשעה הזו — נא לבדוק ביומן לפני שממשיכים.`;
+      return;
+    }
+    const mbBlockStatus = getLateCancelStatusForIdentity({ teudatZehut: idDigits, name });
+    if (mbBlockStatus.blocked && !confirm(buildBlockedBookingAdminConfirm(mbBlockStatus, (mbBlockStatus.client && mbBlockStatus.client.name) || name))){
+      errorEl.style.display = 'block';
+      errorEl.textContent = buildBlockedBookingAdminWarning(mbBlockStatus, (mbBlockStatus.client && mbBlockStatus.client.name) || name) + ' התור לא נקבע.';
       return;
     }
     const manualAppointment = {
@@ -7252,6 +7303,10 @@
     return null;
   }
   async function bookFlexibleRequest(req, match){
+    if (getLateCancelStatusForIdentity({ teudatZehut: req && req.teudatZehut, name: req && req.name }).blocked){
+      console.warn('bookFlexibleRequest: skipped — client is blocked for late cancellations; request stays pending until the owner resets her counter.');
+      return null;
+    }
     const dateObj = match.dateObj;
     const duration = flexReqDuration(req);
     const startMin = timeToMinutes(match.time);
@@ -7413,6 +7468,10 @@
     return null;
   }
   async function bookWaitlistAutoMatch(w, match){
+    if (getLateCancelStatusForIdentity({ teudatZehut: w && w.teudatZehut, name: w && w.name }).blocked){
+      console.warn('bookWaitlistAutoMatch: skipped — client is blocked for late cancellations; entry stays pending until the owner resets her counter.');
+      return null;
+    }
     const dateObj = match.dateObj;
     const svc = services.find(s => s.name === w.service);
     const duration = svc ? (svc.duration || 30) : 30;
@@ -9246,6 +9305,34 @@
     const relevant = lateCancellations.filter(e => lateCancelEntryBelongsTo(e, client, appt) && (!resetAt || (e.cancelledAtIso && e.cancelledAtIso > resetAt)));
     return { key, count: relevant.length, blocked: relevant.length >= 2, client, entries: relevant };
   }
+  function getLateCancelStatusForIdentity(identity){
+    const empty = { count: 0, blocked: false, client: null, entries: [] };
+    const tz = String((identity && identity.teudatZehut) || '').replace(/[^0-9]/g, '') || null;
+    const name = String((identity && identity.name) || '').trim();
+    let client = null;
+    if (tz){
+      client = clients.find(c => c && c.teudatZehut === tz) || null;
+      if (!client) return empty;   // ת"ז לא מוכרת = לקוחה חדשה, ר' כלל (1) למעלה
+    } else if (name){
+      client = clients.find(c => c && c.name === name) || null;
+      if (!client) return empty;
+    } else {
+      return empty;
+    }
+    const probe = { teudatZehut: client.teudatZehut || tz || null, client: client.name || name };
+    const resetAt = client.lateCancelResetAt;
+    const relevant = lateCancellations.filter(e => lateCancelEntryBelongsTo(e, client, probe) && (!resetAt || (e.cancelledAtIso && e.cancelledAtIso > resetAt)));
+    return { count: relevant.length, blocked: relevant.length >= 2, client, entries: relevant };
+  }
+  function buildBlockedBookingClientMessage(){
+    return 'לא ניתן לקבוע תור אונליין — רשומים על שמך שני ביטולים או אי-הגעות בפחות מ-12 שעות לפני התור, שטרם הוסדרו. כדי לקבוע תור נוסף יש ליצור קשר טלפוני עם הסלון ולהסדיר את התשלום על הטיפולים שבוטלו.';
+  }
+  function buildBlockedBookingAdminWarning(status, name){
+    return `${name || 'הלקוחה'} חסומה — רשומים לה ${status.count} ביטולים/אי-הגעות בפחות מ-12 שעות לפני התור, שטרם הוסדרו.`;
+  }
+  function buildBlockedBookingAdminConfirm(status, name){
+    return `⚠️ ${buildBlockedBookingAdminWarning(status, name)}\n\nלפי המדיניות אין לקבוע לה תור נוסף לפני תשלום על הטיפולים שבוטלו.\n\nלקבוע לה את התור בכל זאת?`;
+  }
   function logLateCancellation(appt, type){
     if (!appt) return;
     lateCancellations.push({
@@ -9286,13 +9373,15 @@
     const before = lateCancellations.length;
     const kept = lateCancellations.filter(e => !lateCancelEntryBelongsTo(e, client, null));
     const removed = before - kept.length;
-    if (!confirm(`לאפס את מונה הביטולים המאוחרים של ${client.name || 'הלקוחה'}?\n\n${removed} רשומות ביטול/אי-הגעה מאוחרות יימחקו לגמרי מההיסטוריה שלה, והיא תוכל לבטל תורים כרגיל.`)) return;
+    if (!confirm(`לאפס את מונה הביטולים המאוחרים של ${client.name || 'הלקוחה'}?\n\n${removed} רשומות ביטול/אי-הגעה מאוחרות יימחקו לגמרי מההיסטוריה שלה, והיא תוכל שוב גם לקבוע תורים וגם לבטל תורים כרגיל.`)) return;
     lateCancellations.length = 0;
     kept.forEach(e => lateCancellations.push(e));
     client.lateCancelResetAt = new Date().toISOString();
     if (typeof saveState === 'function') saveState();
     if (typeof showAdminToast === 'function') showAdminToast(`✓ מונה הביטולים המאוחרים של ${client.name || 'הלקוחה'} אופס${removed ? ` (${removed} רשומות נמחקו)` : ''}`);
     if (typeof renderClientProfileOverlay === 'function') renderClientProfileOverlay();
+    if (typeof recheckAllPendingFlexibleRequests === 'function') recheckAllPendingFlexibleRequests();
+    if (typeof recheckAllPendingWaitlist === 'function') recheckAllPendingWaitlist();
   }
   function renderWaitlistAdmin(){
     if (typeof renderWeekCal === 'function') renderWeekCal();
@@ -9370,6 +9459,13 @@
         errorEl.style.display = 'block';
         return;
       }
+    }
+    const wlBlockStatus = getLateCancelStatusForIdentity({ teudatZehut: idDigits, name });
+    if (wlBlockStatus.blocked){
+      alert(buildBlockedBookingClientMessage());
+      const wlBoxBlocked = document.getElementById('waitlistBox');
+      if (wlBoxBlocked) wlBoxBlocked.innerHTML = `<div class="waitlist-prompt">${buildBlockedBookingClientMessage()}</div>`;
+      return;
     }
     const existingClient = clients.find(c => c.teudatZehut === idDigits);
     if (existingClient){
@@ -9640,6 +9736,13 @@
     idErrorEl.style.display = 'none';
     idInput.style.borderColor = '';
     const existingClientPre = clients.find(c => c.teudatZehut === idDigits);
+    const bookingBlockStatus = getLateCancelStatusForIdentity({ teudatZehut: idDigits, name: (existingClientPre && existingClientPre.name) || '' });
+    if (bookingBlockStatus.blocked){
+      alert(buildBlockedBookingClientMessage());
+      const wlBox = document.getElementById('waitlistBox');
+      if (wlBox) wlBox.innerHTML = `<div class="waitlist-prompt">${buildBlockedBookingClientMessage()}</div>`;
+      return;
+    }
     const firstNameInput = document.getElementById('bookingFirstNameInput');
     const lastNameInput = document.getElementById('bookingLastNameInput');
     const nameErrorEl = document.getElementById('bookingNameError');
@@ -9941,6 +10044,12 @@
     });
   }
   function rescheduleAppointment(){
+    const rescheduleAppt = currentBookedAppointment;
+    const rescheduleBlock = rescheduleAppt ? getLateCancelStatusForIdentity({ teudatZehut: rescheduleAppt.teudatZehut, name: rescheduleAppt.client }) : null;
+    if (rescheduleBlock && rescheduleBlock.blocked){
+      alert(buildBlockedBookingClientMessage());
+      return;
+    }
     const apptBeingRescheduled = currentBookedAppointment;
     const waitlistMatches = apptBeingRescheduled ? getWaitlistMatchesForAppointment(apptBeingRescheduled) : [];
     const previousClient = apptBeingRescheduled ? findClientForAppt(apptBeingRescheduled) : null;
