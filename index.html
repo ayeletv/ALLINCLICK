@@ -505,6 +505,23 @@
     background:#FBEAEA; color:#8E2B2B; border:1.5px solid #D98A8A;
   }
   .mb-latecancel-warn .mb-latecancel-sub{display:block; font-weight:600; font-size:12px; margin-top:3px; opacity:.9;}
+  .svc-mix-warning{
+    flex-basis:100%;
+    font-size:12.5px; font-weight:700; line-height:1.5;
+    border-radius:8px; padding:9px 11px; margin-top:6px;
+    background:#FBEAEA; color:#8E2B2B; border:1.5px solid #D98A8A;
+  }
+  .appt-edit-label{font-size:12.5px; font-weight:700; color:var(--panel-text-dim, #6B6259); margin-bottom:6px;}
+  .appt-edit-dur-row{display:flex; align-items:center; gap:8px;}
+  .appt-edit-dur-row .field{width:90px; flex:0 0 auto;}
+  .appt-edit-dur-unit{font-size:13px; color:var(--panel-text-dim, #6B6259);}
+  .appt-edit-step{
+    width:38px; height:38px; flex:0 0 auto;
+    border-radius:10px; border:1.5px solid rgba(155,44,66,0.35);
+    background:rgba(155,44,66,0.08); color:#9B2C42;
+    font-size:20px; font-weight:700; line-height:1; cursor:pointer;
+  }
+  .appt-edit-step:hover{background:rgba(155,44,66,0.16);}
   .help-hint{
     display:inline-flex; align-items:center; justify-content:center;
     width:16px; height:16px; border-radius:50%;
@@ -3106,12 +3123,38 @@
     <div id="apptDetailConfirmedBadge" style="display:none; color:#1c8a4b; background:rgba(28,138,75,0.1); border:1px solid rgba(28,138,75,0.3); border-radius:8px; padding:8px 12px; font-weight:700; text-align:center; margin-bottom:12px;">✓ אושר ע״י הלקוחה</div>
     <div class="appt-detail-card">
       <div class="appt-detail-row"><span class="appt-detail-label">לקוחה</span><span class="appt-detail-value" id="apptDetailClient"></span></div>
+      
+      <div class="appt-detail-row"><span class="appt-detail-label">קטגוריה</span><span class="appt-detail-value" id="apptDetailCategory"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">שירות</span><span class="appt-detail-value" id="apptDetailService"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">תאריך</span><span class="appt-detail-value" id="apptDetailDate"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">שעה</span><span class="appt-detail-value" id="apptDetailTime"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">עובדת</span><span class="appt-detail-value" id="apptDetailStaff"></span></div>
     </div>
+    
+    <div class="appt-detail-card" id="apptEditPanel" style="display:none; margin-top:12px;">
+      <div class="appt-edit-label">משך הטיפול</div>
+      <div class="appt-edit-dur-row">
+        <button type="button" class="appt-edit-step" id="apptEditDurMinus" aria-label="הפחתת 5 דקות">−</button>
+        <input type="number" id="apptEditDur" class="field" min="5" step="5" inputmode="numeric" style="margin:0; text-align:center;">
+        <button type="button" class="appt-edit-step" id="apptEditDurPlus" aria-label="הוספת 5 דקות">+</button>
+        <span class="appt-edit-dur-unit">דקות</span>
+      </div>
+      <div class="appt-edit-label" style="margin-top:14px;">טיפולים בתור</div>
+      <div id="apptEditSvcList" class="mb-svc-chip-row"></div>
+      <div class="appt-edit-label" style="margin-top:12px;">הוספת טיפול</div>
+      <div class="field-row">
+        <select id="apptEditAddCat" class="field" style="margin:0;"></select>
+        <select id="apptEditAddSvc" class="field" style="margin:0;"></select>
+      </div>
+      <button type="button" class="cta ghost" id="apptEditAddBtn" style="margin-top:8px;">+ הוספה לתור</button>
+      <div id="apptEditError" style="display:none; color:var(--wine); font-size:12.5px; margin-top:10px; line-height:1.5;"></div>
+      <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
+        <button type="button" class="cta" id="apptEditSaveBtn" style="flex:1;">שמירת השינויים</button>
+        <button type="button" class="cta ghost" id="apptEditCancelBtn">ביטול</button>
+      </div>
+    </div>
     <div class="appt-detail-actions">
+      <button type="button" class="cta" id="apptDetailEditBtn">✎ עריכת התור</button>
       <button type="button" class="cta" id="apptDetailCancelBtn">ביטול תור</button>
       <button type="button" class="cta appt-detail-client-btn" id="apptDetailClientBtn">לכרטסת הלקוחה</button>
     </div>
@@ -3417,12 +3460,15 @@
     listEl.querySelectorAll('[data-bk-remove-svc]').forEach(btn => {
       btn.onclick = () => bkRemoveService(parseInt(btn.dataset.bkRemoveSvc));
     });
+    appendCategoryMixWarning(listEl, bkSelectedCategories());
   }
   function goToBookingStep2(){
     if (!bkSelectedServices.length){
       alert('יש לבחור לפחות טיפול אחד לפני שממשיכים.');
       return;
     }
+    const mix = describeImpossibleCategoryMix(bkSelectedCategories());
+    if (mix){ alert(mix); return; }
     goToStep(2);
   }
   function mbToggleService(svcIndex){
@@ -3462,6 +3508,7 @@
       listEl.querySelectorAll('[data-remove-svc]').forEach(btn => {
         btn.onclick = () => mbRemoveService(parseInt(btn.dataset.removeSvc));
       });
+      appendCategoryMixWarning(listEl, mbSelectedCategories());
     }
     if (typeof renderMbCategoryGrid === 'function') renderMbCategoryGrid();
   }
@@ -3615,6 +3662,7 @@
       listEl.querySelectorAll('[data-fr-remove-svc]').forEach(btn => {
         btn.onclick = () => frRemoveService(parseInt(btn.dataset.frRemoveSvc));
       });
+      appendCategoryMixWarning(listEl, frSelectedServices.map(sel => services[sel.svcIndex]).filter(Boolean).map(s => s.category));
     }
     renderFrCategoryGrid();
   }
@@ -4528,7 +4576,9 @@
     const confirmedBadge = document.getElementById('apptDetailConfirmedBadge');
     if (confirmedBadge) confirmedBadge.style.display = appt.confirmedByClient ? 'block' : 'none';
     document.getElementById('apptDetailClient').textContent = appt.client || '';
-    document.getElementById('apptDetailService').textContent = appt.service || '';
+    document.getElementById('apptDetailService').textContent = describeApptServices(appt) || '—';
+    const apptDetailCategoryEl = document.getElementById('apptDetailCategory');
+    if (apptDetailCategoryEl) apptDetailCategoryEl.textContent = describeApptCategories(appt) || '—';
     document.getElementById('apptDetailDate').textContent = formatDateDMY(appt.date);
     document.getElementById('apptDetailTime').textContent = appt.time + (appt.dur ? ' (' + appt.dur + ' דק\')' : '');
     document.getElementById('apptDetailStaff').textContent = (staff[appt.staff] && staff[appt.staff].name) || '—';
@@ -4537,8 +4587,227 @@
       const isPastAppt = isApptInThePast(appt);
       apptDetailCancelBtn.style.display = isPastAppt ? 'none' : '';
     }
+    closeApptEditPanel();
+    const editBtn = document.getElementById('apptDetailEditBtn');
+    if (editBtn) editBtn.style.display = isApptInThePast(appt) ? 'none' : '';
     document.getElementById('apptDetailOverlay').classList.add('show');
   }
+  function apptServiceObjects(appt){
+    if (!appt) return [];
+    const names = Array.isArray(appt.services) && appt.services.length
+      ? appt.services.map(s => s && s.name).filter(Boolean)
+      : String(appt.service || '').split('+').map(s => s.trim()).filter(Boolean);
+    return names.map(n => ({ name: n, svc: services.find(s => s && s.name === n) || null }));
+  }
+  function describeApptServices(appt){
+    const objs = apptServiceObjects(appt);
+    if (objs.length) return objs.map(o => o.name).join(' + ');
+    return String(appt && appt.service || '').trim();
+  }
+  function describeRequestServices(r){
+    const names = (r && Array.isArray(r.services) ? r.services : []).map(x => x && x.name).filter(Boolean);
+    if (!names.length) return '';
+    const cats = [];
+    names.forEach(n => {
+      const svc = services.find(x => x && x.name === n);
+      if (svc && svc.category && cats.indexOf(svc.category) === -1) cats.push(svc.category);
+    });
+    return names.join(' + ') + (cats.length ? ' (' + cats.join(' + ') + ')' : '');
+  }
+  function describeApptCategories(appt){
+    const cats = [];
+    apptServiceObjects(appt).forEach(o => {
+      const c = o.svc && o.svc.category;
+      if (c && cats.indexOf(c) === -1) cats.push(c);
+    });
+    return cats.join(' + ');
+  }
+  let apptEditDraft = null;
+  function closeApptEditPanel(){
+    apptEditDraft = null;
+    const panel = document.getElementById('apptEditPanel');
+    if (panel) panel.style.display = 'none';
+    const editBtn = document.getElementById('apptDetailEditBtn');
+    if (editBtn) editBtn.style.display = (apptDetailCurrent && isApptInThePast(apptDetailCurrent)) ? 'none' : '';
+    const errEl = document.getElementById('apptEditError');
+    if (errEl){ errEl.style.display = 'none'; errEl.textContent = ''; }
+  }
+  function openApptEditPanel(){
+    const appt = apptDetailCurrent;
+    if (!appt) return;
+    apptEditDraft = {
+      dur: appt.dur || 30,
+      services: apptServiceObjects(appt).map(o => ({
+        name: o.name,
+        duration: (o.svc && o.svc.duration) || 0,
+        price: (o.svc && o.svc.price) || 0,
+        category: (o.svc && o.svc.category) || '',
+      })),
+    };
+    const durEl = document.getElementById('apptEditDur');
+    if (durEl) durEl.value = apptEditDraft.dur;
+    renderApptEditPanel();
+    const panel = document.getElementById('apptEditPanel');
+    if (panel) panel.style.display = '';
+    const editBtn = document.getElementById('apptDetailEditBtn');
+    if (editBtn) editBtn.style.display = 'none';
+  }
+  function renderApptEditPanel(){
+    if (!apptEditDraft) return;
+    const listEl = document.getElementById('apptEditSvcList');
+    if (listEl){
+      listEl.innerHTML = '';
+      if (!apptEditDraft.services.length){
+        const empty = document.createElement('div');
+        empty.className = 'mb-svc-empty';
+        empty.textContent = 'אין טיפולים רשומים על התור';
+        listEl.appendChild(empty);
+      }
+      apptEditDraft.services.forEach((s, i) => {
+        const chip = document.createElement('div');
+        chip.className = 'mb-svc-chip';
+        const nameEl = document.createElement('span');
+        nameEl.className = 'mb-svc-chip-name';
+        nameEl.textContent = s.name;
+        const metaEl = document.createElement('span');
+        metaEl.className = 'mb-svc-chip-meta';
+        metaEl.textContent = `${s.category || '—'} · ${s.duration} דק' · ${s.price} ש"ח`;
+        const rm = document.createElement('button');
+        rm.type = 'button';
+        rm.className = 'mb-svc-chip-remove';
+        rm.textContent = '✕';
+        rm.title = 'הסרת ' + s.name;
+        rm.onclick = () => {
+          const removed = apptEditDraft.services.splice(i, 1)[0];
+          apptEditDraft.dur = Math.max(15, (apptEditDraft.dur || 0) - (removed.duration || 0));
+          const d = document.getElementById('apptEditDur');
+          if (d) d.value = apptEditDraft.dur;
+          renderApptEditPanel();
+        };
+        chip.appendChild(nameEl); chip.appendChild(metaEl); chip.appendChild(rm);
+        listEl.appendChild(chip);
+      });
+    }
+    const catSel = document.getElementById('apptEditAddCat');
+    if (catSel && !catSel.dataset.filled){
+      catSel.innerHTML = '';
+      const withServices = categories.filter(c => services.some(s => s && s.category === c));
+      withServices.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        catSel.appendChild(o);
+      });
+      catSel.dataset.filled = '1';
+      catSel.onchange = fillApptEditServiceOptions;
+    }
+    fillApptEditServiceOptions();
+  }
+  function fillApptEditServiceOptions(){
+    const catSel = document.getElementById('apptEditAddCat');
+    const svcSel = document.getElementById('apptEditAddSvc');
+    if (!catSel || !svcSel) return;
+    const cat = catSel.value;
+    svcSel.innerHTML = '';
+    services.forEach((s, i) => {
+      if (!s || s.category !== cat) return;
+      const o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = `${s.name} · ${s.duration} דק' · ${s.price} ש"ח`;
+      svcSel.appendChild(o);
+    });
+  }
+  function apptEditShowError(msg){
+    const errEl = document.getElementById('apptEditError');
+    if (!errEl) return;
+    errEl.textContent = msg;
+    errEl.style.display = msg ? 'block' : 'none';
+  }
+  function saveApptEdit(){
+    const appt = apptDetailCurrent;
+    if (!appt || !apptEditDraft) return;
+    const durEl = document.getElementById('apptEditDur');
+    const newDur = parseInt(durEl && durEl.value, 10);
+    if (isNaN(newDur) || newDur < 5){
+      apptEditShowError('משך הטיפול חייב להיות לפחות 5 דקות.');
+      return;
+    }
+    const startMin = timeToMinutes(appt.time);
+    const endMin = startMin + newDur;
+    const clash = weekAppointments.find(a => {
+      if (!a || a.id === appt.id) return false;
+      if (a.date !== appt.date || a.staff !== appt.staff) return false;
+      const s = timeToMinutes(a.time), e = s + (a.dur || 30);
+      return startMin < e && endMin > s;
+    });
+    if (clash){
+      apptEditShowError(`המשך החדש גולש לתור של ${clash.client || 'לקוחה אחרת'} ב-${clash.time}. יש לקצר את המשך, או להזיז קודם את התור השני.`);
+      return;
+    }
+    const dParts = String(appt.date).split('-').map(Number);
+    const apptDateObj = new Date(dParts[0], dParts[1] - 1, dParts[2]);
+    const blocked = (typeof getBlockedRangesForStaff === 'function' ? getBlockedRangesForStaff(apptDateObj, appt.staff) : [])
+      .some(([bs, be]) => startMin < be && endMin > bs);
+    if (blocked){
+      apptEditShowError('המשך החדש גולש לתוך חסימת זמן אישי של העובדת. יש לקצר את המשך, או להסיר קודם את החסימה.');
+      return;
+    }
+    const emp = staff[appt.staff];
+    const dayInfo = emp && emp.hours ? emp.hours[apptDateObj.getDay()] : null;
+    const windows = (emp && dayInfo && typeof getEffectiveDayWindows === 'function') ? getEffectiveDayWindows(dayInfo, apptDateObj) : [];
+    if (windows.length && !windows.some(([s, e]) => startMin >= s && endMin <= e)){
+      apptEditShowError(`המשך החדש חורג משעות העבודה של ${(emp && emp.name) || 'העובדת'} ביום הזה.`);
+      return;
+    }
+    const draftCats = [];
+    apptEditDraft.services.forEach(s => { if (s.category && draftCats.indexOf(s.category) === -1) draftCats.push(s.category); });
+    const unqualified = draftCats.filter(c => !isStaffCapableOf(appt.staff, c));
+    if (unqualified.length){
+      const nm = (emp && emp.name) || 'העובדת';
+      if (!confirm(`⚠️ ${nm} לא מוגדרת כמבצעת ${unqualified.join(' / ')}.\n\nלשמור את השינוי בכל זאת?`)) return;
+    }
+    appt.dur = newDur;
+    appt.services = apptEditDraft.services.map(s => ({ name: s.name, duration: s.duration || 0, price: s.price || 0 }));
+    appt.service = apptEditDraft.services.map(s => s.name).join(' + ');
+    appt.price = apptEditDraft.services.reduce((sum, s) => sum + (s.price || 0), 0);
+    apptEditShowError('');
+    if (typeof saveState === 'function') saveState();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof renderClients === 'function') renderClients();
+    closeApptEditPanel();
+    openApptDetailOverlay(appt); // מציג מיד את הפרטים המעודכנים
+    if (typeof showAdminToast === 'function') showAdminToast('✓ התור עודכן');
+  }
+  document.getElementById('apptDetailEditBtn')?.addEventListener('click', openApptEditPanel);
+  document.getElementById('apptEditCancelBtn')?.addEventListener('click', closeApptEditPanel);
+  document.getElementById('apptEditSaveBtn')?.addEventListener('click', saveApptEdit);
+  document.getElementById('apptEditDurMinus')?.addEventListener('click', () => {
+    const d = document.getElementById('apptEditDur');
+    if (!d) return;
+    const v = parseInt(d.value, 10);
+    d.value = Math.max(5, (isNaN(v) ? 30 : v) - 5);
+    if (apptEditDraft) apptEditDraft.dur = parseInt(d.value, 10);
+  });
+  document.getElementById('apptEditDurPlus')?.addEventListener('click', () => {
+    const d = document.getElementById('apptEditDur');
+    if (!d) return;
+    const v = parseInt(d.value, 10);
+    d.value = (isNaN(v) ? 30 : v) + 5;
+    if (apptEditDraft) apptEditDraft.dur = parseInt(d.value, 10);
+  });
+  document.getElementById('apptEditAddBtn')?.addEventListener('click', () => {
+    if (!apptEditDraft) return;
+    const svcSel = document.getElementById('apptEditAddSvc');
+    const idx = parseInt(svcSel && svcSel.value, 10);
+    const svc = services[idx];
+    if (!svc){ apptEditShowError('לא נבחר טיפול להוספה.'); return; }
+    apptEditDraft.services.push({ name: svc.name, duration: svc.duration || 0, price: svc.price || 0, category: svc.category || '' });
+    const d = document.getElementById('apptEditDur');
+    const cur = parseInt(d && d.value, 10);
+    apptEditDraft.dur = (isNaN(cur) ? 0 : cur) + (svc.duration || 0);
+    if (d) d.value = apptEditDraft.dur;
+    apptEditShowError('');
+    renderApptEditPanel();
+  });
   function isApptInThePast(appt){
     if (!appt || !appt.date || !appt.time) return false;
     const dParts = String(appt.date).split('-').map(Number);
@@ -5010,6 +5279,18 @@
         errorEl.textContent = isOpenAndNotClosed(staffIdx)
           ? 'יש כבר תור חופף לעובדת זו באותו זמן.'
           : 'היום הזה סגור לעובדת זו (יום חופש שבועי או סגירה חד-פעמית).';
+        return;
+      }
+    }
+    const mbUnqualifiedCats = mbSelectedCategories().filter(c => c && !isStaffCapableOf(staffIdx, c));
+    if (mbUnqualifiedCats.length){
+      const mbStaffName = (staff[staffIdx] && staff[staffIdx].name) || 'העובדת שנבחרה';
+      const whoCanDo = mbUnqualifiedCats
+        .map(c => `${c}: ${getCapableStaffIndices(c).map(i => staff[i] && staff[i].name).filter(Boolean).join(', ') || 'אף אחת'}`)
+        .join('\n');
+      if (!confirm(`⚠️ ${mbStaffName} לא מוגדרת כמבצעת ${mbUnqualifiedCats.join(' / ')}.\n\nמי כן מבצעת:\n${whoCanDo}\n\nלקבוע את התור בכל זאת?`)){
+        errorEl.style.display = 'block';
+        errorEl.textContent = `${mbStaffName} לא מבצעת ${mbUnqualifiedCats.join(' / ')} — התור לא נקבע. אפשר לבחור עובדת אחרת, או לעדכן לה את הקטגוריות בהגדרות ← צוות.`;
         return;
       }
     }
@@ -6663,6 +6944,29 @@
   function getCapableStaffIndices(cat){
     return staff.map((_, i) => i).filter(i => isStaffCapableOf(i, cat));
   }
+  function describeImpossibleCategoryMix(cats){
+    const list = (cats || []).filter(Boolean);
+    if (!list.length) return null;
+    if (getCapableStaffIndicesForCats(list).length) return null; // יש מי שמבצעת את הכל — לא זו הבעיה
+    const orphan = list.filter(c => !getCapableStaffIndices(c).length);
+    if (orphan.length){
+      return `אין כרגע עובדת שמבצעת ${orphan.join(' / ')}. אפשר לבחור טיפול אחר או ליצור איתנו קשר.`;
+    }
+    if (list.length > 1){
+      const who = list.map(c => `${c} — ${getCapableStaffIndices(c).map(i => staff[i] && staff[i].name).filter(Boolean).join(', ')}`);
+      return `לא ניתן לקבוע את הטיפולים האלה באותו תור, כי הם מבוצעים על ידי עובדות שונות (${who.join('; ')}). יש לקבוע תור נפרד לכל אחד. אפשר כמובן לשלב כמה טיפולים יחד, כל עוד אותה עובדת מבצעת את כולם.`;
+    }
+    return null;
+  }
+  function appendCategoryMixWarning(listEl, cats){
+    if (!listEl) return;
+    const msg = describeImpossibleCategoryMix(cats);
+    if (!msg) return;
+    const box = document.createElement('div');
+    box.className = 'svc-mix-warning';
+    box.textContent = '⛔ ' + msg;
+    listEl.appendChild(box);
+  }
   function renderStaffPicker(){
     const pickerEl = document.getElementById('staffPicker');
     if (!pickerEl) return;
@@ -7612,22 +7916,39 @@
         const isFlexible = r.mode === 'flexible';
         const block = document.createElement('div');
         block.className = 'sr-block ' + (isFlexible ? 'sr-block-flexible' : 'sr-block-manual');
-        block.innerHTML = `
-          <span class="sr-block-main">
-            <span class="sr-block-name">${r.name || 'ללא שם'}</span>
-            <span class="sr-block-meta">${isFlexible ? '🕓 בקשה גמישה — ⏳ ממתין' : '✎ בקשה כללית'}</span>
-          </span>`;
+        const srSvcText = describeRequestServices(r);
+        block.appendChild((function(){
+          const main = document.createElement('span');
+          main.className = 'sr-block-main';
+          const nameEl = document.createElement('span');
+          nameEl.className = 'sr-block-name';
+          nameEl.textContent = r.name || 'ללא שם';
+          const metaEl = document.createElement('span');
+          metaEl.className = 'sr-block-meta';
+          metaEl.textContent = (isFlexible ? '🕓 ⏳ ממתין' : '✎ בקשה כללית') + (srSvcText ? ' · ' + srSvcText : '');
+          main.appendChild(nameEl); main.appendChild(metaEl);
+          return main;
+        })());
         block.onclick = () => openSpecialRequestDetailOverlay('request', r.id);
         body.appendChild(block);
       });
       waitlistEntries.forEach(w => {
         const block = document.createElement('div');
         block.className = 'sr-block sr-block-waitlist';
-        block.innerHTML = `
-          <span class="sr-block-main">
-            <span class="sr-block-name">${w.name || 'ללא שם'}</span>
-            <span class="sr-block-meta">⏰ ממתינה לשעה קבועה · ${w.requestedTime || ''}</span>
-          </span>`;
+        const wlSvc = w.service || '';
+        const wlCat = (services.find(x => x && x.name === wlSvc) || {}).category || '';
+        block.appendChild((function(){
+          const main = document.createElement('span');
+          main.className = 'sr-block-main';
+          const nameEl = document.createElement('span');
+          nameEl.className = 'sr-block-name';
+          nameEl.textContent = w.name || 'ללא שם';
+          const metaEl = document.createElement('span');
+          metaEl.className = 'sr-block-meta';
+          metaEl.textContent = `⏰ ${w.requestedTime || ''}` + (wlSvc ? ' · ' + wlSvc : '') + (wlCat ? ' (' + wlCat + ')' : '');
+          main.appendChild(nameEl); main.appendChild(metaEl);
+          return main;
+        })());
         block.onclick = () => openSpecialRequestDetailOverlay('waitlist', w.id);
         body.appendChild(block);
       });
@@ -7679,6 +8000,7 @@
         (w.phone ? srDetailRow('טלפון', `<a href="tel:${w.phone.replace(/[^0-9+]/g,'')}">${w.phone}</a>`) : '') +
         (w.email ? srDetailRow('אימייל', w.email) : '') +
         srDetailRow('שירות', w.service || '—') +
+        (function(){ const c = (services.find(x => x && x.name === w.service) || {}).category; return c ? srDetailRow('קטגוריה', c) : ''; })() +
         (w.staffName ? srDetailRow('עובדת', w.staffName) : '') +
         srDetailRow('תאריך מבוקש', dateLabel) +
         srDetailRow('שעה מבוקשת', w.requestedTime || '—') +
@@ -7742,6 +8064,13 @@
     if (isFlexible){
       const svcNames = (r.services || []).map(s => s.name).join(' + ');
       if (svcNames) html += srDetailRow('שירותים', svcNames);
+      const reqCats = [];
+      (r.services || []).forEach(x => {
+        const svc = services.find(y => y && y.name === (x && x.name));
+        const c = (svc && svc.category) || (x && x.category);
+        if (c && reqCats.indexOf(c) === -1) reqCats.push(c);
+      });
+      if (reqCats.length) html += srDetailRow('קטגוריה', reqCats.join(' + '));
       html += srDetailRow('העדפה', summarizeFlexiblePreference(r));
       const isMatched = r.status === 'matched';
       html += srDetailRow('סטטוס', isMatched ? '✓ נמצא תור' : '⏳ ממתין');
@@ -9195,7 +9524,8 @@
       allWindows = allWindows.concat(windows);
     });
     if (!allWindows.length){
-      slotsEl.innerHTML = '<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">אין עובדת מתאימה זמינה ביום זה לטיפול שנבחר.</div>';
+      const mixMsg = describeImpossibleCategoryMix(getBookingCategories());
+      slotsEl.innerHTML = `<div style="grid-column:1/-1; font-size:13px; color:#8A8178;">${mixMsg || 'אין עובדת מתאימה זמינה ביום זה לטיפול שנבחר.'}</div>`;
       return;
     }
     const findFreeStaff = (start, dur) => {
