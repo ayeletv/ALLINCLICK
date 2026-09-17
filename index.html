@@ -2488,9 +2488,14 @@
             <input class="field" id="bookingIdInput" type="tel" inputmode="numeric" maxlength="10" placeholder="תעודת זהות או מספר טלפון">
             
             <div id="bookingTzUpdateBox" style="display:none;">
-              <div class="reminder-choice-notice" style="margin-bottom:6px;">שמחות לראותך! 😉 חסרה לנו תעודת הזהות שלך — נשמח שתשלימי אותה הפעם, ובפעמים הבאות כבר לא נטריד.</div>
+              <div class="reminder-choice-notice" style="margin-bottom:6px;">שמחות לראותך! 😉 חסרים לנו כמה פרטים — נשמח שתשלימי אותם הפעם, ובפעמים הבאות כבר לא נטריד.</div>
               <input class="field" id="bookingTzUpdateInput" type="tel" inputmode="numeric" maxlength="9" placeholder="תעודת זהות">
               <div id="bookingTzUpdateNote" class="reminder-choice-notice" style="display:none;"></div>
+              
+              <div id="bookingTzUpdateEmailWrap" style="display:none;">
+                <input class="field" id="bookingTzUpdateEmail" type="email" placeholder="כתובת אימייל">
+                <div class="reminder-choice-notice" style="margin-top:6px;">כאן נשלח לך תזכורות לתור, ומדי פעם גם פינוק קטן ליום ההולדת 🎁</div>
+              </div>
             </div>
             <div id="bookingIdError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין תעודת זהות תקנית (9 ספרות)</div>
             <div id="bookingWelcomeBack" style="display:none; color:var(--sage); font-size:12px; margin:-4px 0 8px;"></div>
@@ -6718,7 +6723,7 @@
     if (ph) ph.style.display = 'block';
     if (typeof populateDMYPicker === 'function') populateDMYPicker('newClientBirthdayDay', 'newClientBirthdayMonth', 'newClientBirthdayYear', { allowBlank: true, yearsBack: 100, force: true });
     document.getElementById('addClientOverlay')?.classList.add('show');
-    setTimeout(() => document.getElementById('newClientId')?.focus(), 60);
+    setTimeout(() => document.getElementById('newClientId')?.focus({ preventScroll: true }), 60);
   }
   function closeAddClientModal(){
     document.getElementById('addClientOverlay')?.classList.remove('show');
@@ -9934,13 +9939,23 @@
   function clientNeedsTeudatZehut(client){
     return !!client && !isPlausibleTeudatZehut(client.teudatZehut);
   }
+  function firstTimeEmailFieldShown(){
+    const box = document.getElementById('bookingTzUpdateBox');
+    const wrap = document.getElementById('bookingTzUpdateEmailWrap');
+    return !!(box && wrap && box.style.display !== 'none' && wrap.style.display !== 'none');
+  }
   function refreshBookingTzPrompt(){
     const box = document.getElementById('bookingTzUpdateBox');
     if (!box) return;
     const raw = (document.getElementById('bookingIdInput')?.value || '');
     const resolved = resolveClientByIdOrPhone(raw);
-    const show = !!resolved.client && clientNeedsTeudatZehut(resolved.client);
+    const needsEmail = !!resolved.client && !String(resolved.client.email || '').trim();
+    const show = !!resolved.client && (clientNeedsTeudatZehut(resolved.client) || needsEmail);
     box.style.display = show ? 'block' : 'none';
+    const tzWrapField = document.getElementById('bookingTzUpdateInput');
+    if (tzWrapField) tzWrapField.style.display = (resolved.client && clientNeedsTeudatZehut(resolved.client)) ? '' : 'none';
+    const emailWrap = document.getElementById('bookingTzUpdateEmailWrap');
+    if (emailWrap) emailWrap.style.display = needsEmail ? 'block' : 'none';
     if (!show){
       const inp = document.getElementById('bookingTzUpdateInput');
       if (inp) inp.value = '';
@@ -10215,6 +10230,11 @@
       }
       existingClientPre.teudatZehut = tzUpdateDigits;
     }
+    const firstTimeEmailInput = document.getElementById('bookingTzUpdateEmail');
+    if (existingClientPre && firstTimeEmailInput && firstTimeEmailFieldShown()){
+      const typedEmail = firstTimeEmailInput.value.trim();
+      if (typedEmail && !String(existingClientPre.email || '').trim()) existingClientPre.email = typedEmail;
+    }
     const idDigits = (existingClientPre && existingClientPre.teudatZehut)
       || (idResolved.typedAsTz ? typedDigits : '');
     const bookingBlockStatus = getLateCancelStatusForIdentity({ teudatZehut: idDigits, name: (existingClientPre && existingClientPre.name) || '' });
@@ -10341,9 +10361,11 @@
       const reminderEmailEl = document.getElementById('reminderEmailInput');
       const regEl = document.getElementById('newClientRegistration');
       const isNewRegistration = regEl && regEl.style.display !== 'none';
-      const providedEmail = isNewRegistration
+      const firstTimeEmailEl = document.getElementById('bookingTzUpdateEmail');
+      const firstTimeEmail = (firstTimeEmailEl && firstTimeEmailFieldShown()) ? firstTimeEmailEl.value.trim() : '';
+      const providedEmail = firstTimeEmail || (isNewRegistration
         ? ((ftpEmailEl && ftpEmailEl.value.trim()) || '')
-        : ((reminderEmailEl && reminderEmailEl.value.trim()) || '');
+        : ((reminderEmailEl && reminderEmailEl.value.trim()) || ''));
       if (!providedEmail){
         if (isNewRegistration){
           document.getElementById('ftpEmailError').style.display = 'block';
