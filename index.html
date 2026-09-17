@@ -3892,11 +3892,13 @@
     resultEl.innerHTML = '<div class="status-dot">בודקת אם יש תור מתאים כרגע…</div>';
     resultEl.style.display = 'block';
     attemptMatchFlexibleRequest(req).then(matched => {
-      if (matched){
-        const emp = staff[req.matchedStaff];
+      const currentReq = specialRequests.find(r => r && r.id === req.id) || req;
+      const reallyMatched = matched || currentReq.status === 'matched';
+      if (reallyMatched){
+        const emp = staff[currentReq.matchedStaff];
         resultEl.innerHTML = `
           <div class="status-dot">✓ נמצא ונקבע תור מתאים!</div>
-          <div class="appt-meta">${formatDateDMY(req.matchedDate)}, ${req.matchedTime}${emp ? ' · אצל ' + emp.name : ''}</div>
+          <div class="appt-meta">${formatDateDMY(currentReq.matchedDate)}, ${currentReq.matchedTime}${emp ? ' · אצל ' + emp.name : ''}</div>
           <p style="font-size:12.5px; color:#8A8178; margin-top:8px;">אישור נשלח גם למייל שלך.</p>
           <button class="template-btn" style="width:100%; margin-top:10px;" onclick="closeFlexibleRequestOverlay()">סגירה</button>`;
       } else {
@@ -4493,7 +4495,22 @@
     document.getElementById('apptDetailDate').textContent = formatDateDMY(appt.date);
     document.getElementById('apptDetailTime').textContent = appt.time + (appt.dur ? ' (' + appt.dur + ' דק\')' : '');
     document.getElementById('apptDetailStaff').textContent = (staff[appt.staff] && staff[appt.staff].name) || '—';
+    const apptDetailCancelBtn = document.getElementById('apptDetailCancelBtn');
+    if (apptDetailCancelBtn){
+      const isPastAppt = isApptInThePast(appt);
+      apptDetailCancelBtn.style.display = isPastAppt ? 'none' : '';
+    }
     document.getElementById('apptDetailOverlay').classList.add('show');
+  }
+  function isApptInThePast(appt){
+    if (!appt || !appt.date || !appt.time) return false;
+    const dParts = String(appt.date).split('-').map(Number);
+    const tParts = String(appt.time).split(':').map(Number);
+    if (dParts.length !== 3 || tParts.length < 2) return false;
+    if (dParts.some(isNaN) || isNaN(tParts[0]) || isNaN(tParts[1])) return false;
+    const end = new Date(dParts[0], dParts[1] - 1, dParts[2], tParts[0], tParts[1]);
+    end.setMinutes(end.getMinutes() + (appt.dur || 30));
+    return end.getTime() < Date.now();
   }
   function closeApptDetailOverlay(){
     document.getElementById('apptDetailOverlay').classList.remove('show');
@@ -9263,9 +9280,15 @@
   }
   function resetLateCancelBlock(client){
     if (!client) return;
+    const before = lateCancellations.length;
+    const kept = lateCancellations.filter(e => !lateCancelEntryBelongsTo(e, client, null));
+    const removed = before - kept.length;
+    if (!confirm(`לאפס את מונה הביטולים המאוחרים של ${client.name || 'הלקוחה'}?\n\n${removed} רשומות ביטול/אי-הגעה מאוחרות יימחקו לגמרי מההיסטוריה שלה, והיא תוכל לבטל תורים כרגיל.`)) return;
+    lateCancellations.length = 0;
+    kept.forEach(e => lateCancellations.push(e));
     client.lateCancelResetAt = new Date().toISOString();
     if (typeof saveState === 'function') saveState();
-    if (typeof showAdminToast === 'function') showAdminToast(`✓ מונה הביטולים המאוחרים של ${client.name || 'הלקוחה'} אופס בהצלחה`);
+    if (typeof showAdminToast === 'function') showAdminToast(`✓ מונה הביטולים המאוחרים של ${client.name || 'הלקוחה'} אופס${removed ? ` (${removed} רשומות נמחקו)` : ''}`);
     if (typeof renderClientProfileOverlay === 'function') renderClientProfileOverlay();
   }
   function renderWaitlistAdmin(){
