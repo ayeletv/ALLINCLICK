@@ -1608,6 +1608,19 @@
     font-size:14px;
   }
   .client-add-row input::placeholder{color:var(--panel-text-dim);}
+  #addClientOverlay .myday-sheet{overflow-x:hidden;}
+  #addClientOverlay .client-add-row{flex-direction:column; align-items:stretch; gap:10px; flex-wrap:nowrap;}
+  #addClientOverlay .client-add-row input{flex:0 0 auto; width:100%; min-width:0; box-sizing:border-box;}
+  #addClientOverlay .client-add-row .brand-logo-upload{align-self:center; margin-bottom:2px;}
+  #addClientOverlay .dmy-date-picker{width:100%;}
+  #addClientOverlay .dmy-date-picker select{flex:1 1 0; min-width:0;}
+  #addClientOverlay .add-client-actions{display:flex; gap:10px; margin-top:6px;}
+  #addClientOverlay .add-client-actions .cta{
+    flex:1 1 0; margin-top:0; padding:12px 10px;
+    font-size:14.5px; font-weight:700; border-radius:12px;
+  }
+  #addClientOverlay .add-client-actions .cta.ghost{flex:0 0 38%;}
+  #addClientOverlay .myday-actions button{padding:6px 12px; font-size:12.5px;}
   .client-add-row .cta{flex:0 0 auto; padding:11px 24px;}
   .dmy-date-picker{
     display:flex;
@@ -1685,8 +1698,12 @@
     transition:background 0.2s ease, color 0.2s ease;
   }
   .cal-day-head .heb-date{font-size:8.5px; color:var(--panel-text-dim); opacity:0.75;}
-  .cal-day-head.cal-day-today{background:rgba(124,148,115,0.20);}
-  .cal-day-head.cal-day-today .cal-day-name, .cal-day-head.cal-day-today .cal-day-num{color:var(--sage);}
+  .cal-day-head.cal-day-today{
+    background:#E3EBDF;
+    border-bottom:3px solid var(--sage);
+  }
+  .cal-day-head.cal-day-today .cal-day-name{color:#4A6141; font-weight:700;}
+  .cal-day-head.cal-day-today .cal-day-num{color:#3D5436; font-weight:800;}
   .cal-day-body{position:relative;}
   .cal-day-head.day-closed{background:rgba(155,44,66,0.07);}
   .cal-day-head.day-closed .cal-day-name, .cal-day-head.day-closed .cal-day-num{color:var(--wine);}
@@ -2651,7 +2668,7 @@
                 <button type="button" onclick="closeAddClientModal()">✕ סגירה</button>
               </div>
             </div>
-        <div class="client-add-row" style="flex-direction:column; align-items:stretch;">
+        <div class="client-add-row">
           <div class="brand-logo-upload small" id="clientPhotoUpload" onclick="document.getElementById('clientPhotoFile').click()">
             <span id="clientPhotoPlaceholder">+ תמונה</span>
             <img id="clientPhotoPreview" style="display:none;">
@@ -2670,9 +2687,9 @@
             <select id="newClientBirthdayMonth" aria-label="חודש לידה"></select>
             <select id="newClientBirthdayYear" aria-label="שנת לידה"></select>
           </div>
-          <div style="display:flex; gap:8px; margin-top:4px;">
-            <button class="cta" style="flex:1; margin-top:0;" onclick="addClient()">💾 שמירה</button>
-            <button type="button" class="cta ghost" style="margin-top:0;" onclick="closeAddClientModal()">חזרה</button>
+          <div class="add-client-actions">
+            <button class="cta" onclick="addClient()">שמירה</button>
+            <button type="button" class="cta ghost" onclick="closeAddClientModal()">חזרה</button>
           </div>
         </div>
           </div>
