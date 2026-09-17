@@ -382,11 +382,11 @@
     display:none;
     margin-top:12px;
     padding:10px 12px;
-    background:#FBF6E8;
-    border:1.5px solid #E8CE7A;
+    background:#FDF4DC;
+    border:1.5px solid #D9B84A;
     border-radius:10px;
-    font-size:12.5px;
-    color:#7A6320;
+    font-size:13px;
+    color:#5C4708;
     line-height:1.6;
   }
   .billing-notice.show{display:block;}
@@ -498,7 +498,7 @@
     padding:6px 10px; margin-top:-4px;
   }
   .mb-client-id-status.matched{background:#EAF3EA; color:#2F6B3A;}
-  .mb-client-id-status.new{background:#FBF6E8; color:#7A5E0C;}
+  .mb-client-id-status.new{background:#FDF4DC; color:#5C4708;}
   .mb-latecancel-warn{
     font-size:13px; font-weight:700; line-height:1.45;
     border-radius:8px; padding:9px 11px; margin-top:-2px;
@@ -644,13 +644,13 @@
     cursor:pointer;
   }
   .first-time-perks{
-    background:#FBF6E8;
-    border:1.5px solid #E8CE7A;
+    background:#FDF4DC;
+    border:1.5px solid #D9B84A;
     border-radius:12px;
     padding:14px;
     margin-bottom:14px;
   }
-  .ftp-title{font-size:13px; color:#7A6320; margin-bottom:10px; line-height:1.5;}
+  .ftp-title{font-size:13px; color:#5C4708; margin-bottom:10px; line-height:1.5;}
   .first-time-perks .field{margin-bottom:8px;}
   .first-time-perks .field:last-child{margin-bottom:0;}
   .reminder-choice{
@@ -666,9 +666,9 @@
   .reminder-choice input[type="radio"]{width:auto; margin:0;}
   .reminder-choice input[type="checkbox"]{width:auto; margin:0;}
   .reminder-choice-notice{
-    font-size:12px; font-weight:600; color:var(--gold-soft, #C9A227);
-    background:rgba(201,162,39,0.12); border:1px solid rgba(201,162,39,0.35);
-    border-radius:10px; padding:7px 10px; margin:2px 0 8px; line-height:1.5;
+    font-size:13px; font-weight:600; color:#5C4708;
+    background:#FDF4DC; border:1.5px solid #D9B84A;
+    border-radius:10px; padding:9px 11px; margin:2px 0 8px; line-height:1.55;
   }
   .confirm-msg{
     display:none;
@@ -684,12 +684,12 @@
   .confirm-msg.show{display:flex;}
   .waitlist-box{margin-bottom:16px;}
   .waitlist-prompt{
-    border:1.5px solid #E8CE7A;
-    background:#FBF6E8;
+    border:1.5px solid #D9B84A;
+    background:#FDF4DC;
     border-radius:12px;
     padding:12px 14px;
     font-size:13px;
-    color:#7A6320;
+    color:#5C4708;
   }
   .waitlist-prompt button{
     margin-top:8px;
@@ -2877,7 +2877,7 @@
   <span class="brand">הכל בקליק</span> — ניהול תורים, לקוחות וצוות במקום אחד
   <div style="margin-top:10px;"><a href="#" onclick="openLoginOverlayDirect(); return false;" style="color:var(--ivory-dim); font-size:11px; text-decoration:underline;">כניסת בעלת עסק</a></div>
   
-  <div style="margin-top:6px; font-size:9px; color:rgba(245,238,228,0.25); letter-spacing:0.03em;">גרסה: 09.10-רזרבת-ביטחון-מוגדלת-ליומן-v44</div>
+  <div style="display:none;" data-build="17.09-v45-blocked-booking"></div>
 </footer>
 
 <div id="saveStatusIndicator" style="position:fixed; bottom:16px; inset-inline-start:16px; background:rgba(20,16,20,0.9); color:#F5EEE4; font-size:12.5px; padding:7px 16px; border-radius:999px; z-index:999998; display:none; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.3);"></div>
@@ -9432,7 +9432,7 @@
         <input type="tel" id="wlPhone" class="field" placeholder="050-0000000">
         <input type="email" id="wlEmail" class="field" placeholder="אימייל (כדי שנוכל להודיע לך אם יתפנה מקום)">
         <div id="wlError" style="display:none; color:var(--wine); font-size:12px; margin-bottom:6px;">יש למלא תעודת זהות (9 ספרות), שם פרטי, שם משפחה, טלפון ואימייל תקינים</div>
-        <div><button onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
+        <div><button data-primary onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
       </div>`;
     wireIdentityAutofill({ idId: 'wlId', firstId: 'wlFirstName', lastId: 'wlLastName', phoneId: 'wlPhone', emailId: 'wlEmail' });
     scrollWaitlistBoxIntoView();
@@ -9878,7 +9878,8 @@
       const fmt = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
       const targetDateStr = fmt(bookingSelectedDate);
       const currentSvcName = svc ? svc.name : '';
-      const sameDaySameSvcConflict = weekAppointments.find(a => a.client === existingClient.name && a.date === targetDateStr && a.service === currentSvcName);
+      const futureApptsForClient = weekAppointments.filter(a => a && a.client === existingClient.name && !isApptInThePast(a));
+      const sameDaySameSvcConflict = futureApptsForClient.find(a => a.date === targetDateStr && a.service === currentSvcName);
       if (sameDaySameSvcConflict && sameDaySameSvcConflict.time === selectedSlot){
         document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">כבר קיים לך תור זהה בדיוק באותה שעה. יש לבחור שעה אחרת.</div>`;
         return;
@@ -9887,7 +9888,7 @@
         const proceed = confirm(`שימי לב: יש לך כבר תור ל${sameDaySameSvcConflict.service} באותו יום (${sameDaySameSvcConflict.time}). להמשיך ולקבוע תור נוסף?`);
         if (!proceed) return;
       }
-      const sameDayOtherSvcConflict = weekAppointments.find(a => a.client === existingClient.name && a.date === targetDateStr);
+      const sameDayOtherSvcConflict = futureApptsForClient.find(a => a.date === targetDateStr);
       if (sameDayOtherSvcConflict && (!sameDaySameSvcConflict || sameDayOtherSvcConflict.id !== sameDaySameSvcConflict.id)){
         const proceed = confirm(`שימי לב: יש לך כבר תור נוסף באותו יום (${sameDayOtherSvcConflict.time}). להמשיך ולקבוע גם את התור הזה?`);
         if (!proceed) return;
@@ -9896,7 +9897,7 @@
       prevDate.setDate(prevDate.getDate() - 1);
       const nextDate = new Date(bookingSelectedDate);
       nextDate.setDate(nextDate.getDate() + 1);
-      const adjacentConflict = weekAppointments.find(a => a.client === existingClient.name && (a.date === fmt(prevDate) || a.date === fmt(nextDate)));
+      const adjacentConflict = futureApptsForClient.find(a => a.date === fmt(prevDate) || a.date === fmt(nextDate));
       if (adjacentConflict){
         const proceed = confirm(`שימי לב: יש לך כבר תור נוסף ל${adjacentConflict.service} בתאריך ${formatDateDMY(adjacentConflict.date)} (${adjacentConflict.time}). להמשיך ולקבוע גם את התור הזה?`);
         if (!proceed) return;
@@ -10441,9 +10442,9 @@
     if (!target || target.tagName !== 'INPUT') return;
     const submittableTypes = ['text', 'tel', 'email', 'password', 'number', 'search', 'url', ''];
     if (submittableTypes.indexOf(target.type) === -1) return;
-    const scope = target.closest('.booking-step.active, .mb-wizard-step.active, #loginOverlay, #flexibleRequestOverlay, .client-add-row, .custom-tpl-form');
+    const scope = target.closest('.waitlist-prompt, .booking-step.active, .mb-wizard-step.active, .client-add-row, .custom-tpl-form, .myday-sheet, #loginOverlay, #flexibleRequestOverlay, #personalTimeOverlay');
     if (!scope) return;
-    const btn = scope.querySelector('button.cta:not([disabled])');
+    const btn = scope.querySelector('button.cta:not([disabled]), button[data-primary]:not([disabled])');
     if (!btn || btn.offsetParent === null) return; // offsetParent===null => לא גלוי/לא ברנדור כרגע, לא ללחוץ על כפתור מוסתר
     e.preventDefault();
     btn.click();
