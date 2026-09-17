@@ -2641,9 +2641,12 @@
             <img id="clientPhotoPreview" style="display:none;">
           </div>
           <input type="file" id="clientPhotoFile" accept="image/*" style="display:none;" onchange="handleClientPhotoUpload(event)">
+          
+          <input type="tel" inputmode="numeric" maxlength="9" id="newClientId" placeholder="תעודת זהות (חובה)">
           <input type="text" id="newClientName" placeholder="שם הלקוחה">
           <input type="text" id="newClientPhone" placeholder="050-0000000">
           <input type="email" id="newClientEmail" placeholder="אימייל">
+          <div id="newClientError" style="display:none; flex-basis:100%; color:var(--wine); font-size:12.5px; line-height:1.5;"></div>
           
           <div class="mini-field-label" style="margin-bottom:-4px;">🎂 יום הולדת</div>
           <div class="dmy-date-picker" id="newClientBirthdayWrap">
@@ -5217,9 +5220,9 @@
       errorEl.textContent = 'מספר הטלפון שהוזן לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567) או להשאיר את השדה ריק.';
       return;
     }
-    if (idDigits && idDigits.length !== 9){
+    if (!/^\d{9}$/.test(idDigits)){
       errorEl.style.display = 'block';
-      errorEl.textContent = 'תעודת הזהות שהוזנה לא תקינה — צריכה להיות 9 ספרות, או להשאיר את השדה ריק.';
+      errorEl.textContent = 'יש להזין תעודת זהות תקינה (9 ספרות) — אי אפשר לקבוע תור בלעדיה.';
       return;
     }
     errorEl.style.display = 'none';
@@ -6667,18 +6670,39 @@
     const nameEl = document.getElementById('newClientName');
     const phoneEl = document.getElementById('newClientPhone');
     const emailEl = document.getElementById('newClientEmail');
+    const idEl = document.getElementById('newClientId');
+    const errEl = document.getElementById('newClientError');
+    const showErr = (msg, focusEl) => {
+      if (errEl){ errEl.textContent = msg; errEl.style.display = msg ? 'block' : 'none'; }
+      if (focusEl){ focusEl.style.borderColor = 'var(--wine)'; focusEl.focus(); }
+    };
+    showErr('');
+    if (idEl) idEl.style.borderColor = '';
+    nameEl.style.borderColor = '';
     const name = nameEl.value.trim();
-    if (!name) return;
+    if (!name){ showErr('יש להזין שם לקוחה.', nameEl); return; }
+    const idDigits = ((idEl && idEl.value) || '').replace(/[^0-9]/g, '');
+    if (!/^\d{9}$/.test(idDigits)){
+      showErr('יש להזין תעודת זהות תקינה (9 ספרות) — אי אפשר להוסיף לקוחה בלעדיה.', idEl);
+      return;
+    }
+    const dupe = clients.find(c => c && c.teudatZehut === idDigits);
+    if (dupe){
+      showErr(`תעודת הזהות הזו כבר קיימת בכרטיסייה — ${dupe.name || 'לקוחה קיימת'}. אין צורך להוסיף אותה שוב.`, idEl);
+      return;
+    }
     if (phoneEl.value.trim() && !isValidIsraeliPhone(phoneEl.value)){
       phoneEl.style.borderColor = 'var(--wine)';
       phoneEl.title = 'מספר טלפון לא תקין';
-      phoneEl.focus();
+      showErr('מספר הטלפון לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567), או להשאיר ריק.', phoneEl);
       return;
     }
     phoneEl.style.borderColor = '';
     const birthdayVal = readDMYPicker('newClientBirthdayDay', 'newClientBirthdayMonth', 'newClientBirthdayYear');
-    clients.push({ name, phone: phoneEl.value.trim(), email: emailEl.value.trim(), photo: newClientPhoto, visits: 0, daysSinceVisit: null, note: "", birthday: birthdayVal, followUps: [], photos: [] });
+    clients.push({ name, teudatZehut: idDigits, phone: phoneEl.value.trim(), email: emailEl.value.trim(), photo: newClientPhoto, visits: 0, daysSinceVisit: null, note: "", birthday: birthdayVal, followUps: [], photos: [] });
+    if (typeof saveState === 'function') saveState();
     nameEl.value = ''; phoneEl.value = ''; emailEl.value = '';
+    if (idEl) idEl.value = '';
     populateDMYPicker('newClientBirthdayDay', 'newClientBirthdayMonth', 'newClientBirthdayYear', { allowBlank: true, yearsBack: 100, force: true });
     newClientPhoto = null;
     document.getElementById('clientPhotoPreview').style.display = 'none';
