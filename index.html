@@ -3845,6 +3845,24 @@
       errorEl.style.display = 'block';
       return;
     }
+    const frFeasibilityProbe = {
+      services: svcObjs.map(s => ({ name: s.name, duration: s.duration || 0, price: s.price || 0, category: s.category })),
+      preference,
+      preferredStaffIdx: frPreferredStaffIdx,
+    };
+    const frImpossible = findFlexibleRequestImpossibility(frFeasibilityProbe, frRangeFrom, frRangeTo);
+    if (frImpossible){
+      if (frImpossible.reason === 'time-window'){
+        const frOpenHours = describeOpenHoursForFlexRequest(frFeasibilityProbe, frRangeFrom, frRangeTo);
+        errorEl.textContent = frOpenHours
+          ? `בטווח שבחרת אין שעות עבודה שמתאימות לבקשה — בימים האלה עובדים ${frOpenHours}. כדאי לבחור טווח שעות אחר, או ימים/תאריכים אחרים.`
+          : 'בטווח שבחרת אין שעות עבודה שמתאימות לבקשה — כדאי לבחור טווח שעות אחר, או ימים/תאריכים אחרים.';
+      } else {
+        errorEl.textContent = frImpossible.message;
+      }
+      errorEl.style.display = 'block';
+      return;
+    }
     const req = {
       id: 'sr_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
       mode: 'flexible',
@@ -4818,10 +4836,9 @@
     const statusEl = document.getElementById('cpLateCancelStatus');
     const historyEl = document.getElementById('cpLateCancelHistory');
     if (!c || !statusEl || !historyEl) return;
-    const key = getLateCancelKey(c);
     const resetAt = c.lateCancelResetAt;
     const allEntries = lateCancellations
-      .filter(e => e && getLateCancelKey(e) === key)
+      .filter(e => lateCancelEntryBelongsTo(e, c, null))
       .slice()
       .sort((a, b) => new Date(b.cancelledAtIso || 0) - new Date(a.cancelledAtIso || 0));
     const countedEntries = allEntries.filter(e => !resetAt || (e.cancelledAtIso && e.cancelledAtIso > resetAt));
@@ -7009,11 +7026,11 @@
         const dur = a.dur || 30;
         return { a, start, dur, end: start + dur, col: 0, colCount: 1 };
       });
-      const minGapMinutesForFullHeight = (quarterHeight / hourBandHeight) * 60;
+      const minReadableMinutes = (quarterHeight / hourBandHeight) * 60;
       let cluster = [], clusterEnd = -Infinity;
       const clusters = [];
       apptLayout.forEach(item => {
-        if (cluster.length && item.start >= clusterEnd + minGapMinutesForFullHeight){
+        if (cluster.length && item.start >= clusterEnd){
           clusters.push(cluster);
           cluster = [];
           clusterEnd = -Infinity;
@@ -7023,30 +7040,33 @@
       });
       if (cluster.length) clusters.push(cluster);
       clusters.forEach(clusterItems => {
-        const columnEnds = []; // columnEnds[i] = end time of the last appointment placed in column i so far
+        const columnEnds = []; // columnEnds[i] = סוף התור האחרון שהונח בעמודה i
         clusterItems.forEach(item => {
-          let col = columnEnds.findIndex(end => item.start >= end + minGapMinutesForFullHeight);
+          let col = columnEnds.findIndex(end => item.start >= end);
           if (col === -1){ col = columnEnds.length; columnEnds.push(item.end); }
           else columnEnds[col] = item.end;
           item.col = col;
         });
         clusterItems.forEach(item => { item.colCount = columnEnds.length; });
       });
-      const singleColumnByStart = apptLayout.filter(item => item.colCount === 1).sort((x, y) => x.start - y.start);
-      singleColumnByStart.forEach((item, i) => {
-        const next = singleColumnByStart[i + 1];
-        item.nextSingleStart = next ? next.start : null;
+      const quarterMinutes = (quarterHeight / hourBandHeight) * 60;
+      const columnCursorBottom = {};
+      apptLayout.forEach(item => {
+        const snappedStart = Math.floor(item.start / quarterMinutes) * quarterMinutes;
+        const snappedTopPx = ((snappedStart - calStartHour * 60) / 60) * hourBandHeight;
+        const prevBottom = columnCursorBottom[item.col];
+        const topPx = (prevBottom == null) ? snappedTopPx : Math.max(snappedTopPx, prevBottom);
+        const heightPx = Math.max(quarterHeight, (item.dur / 60) * hourBandHeight);
+        item.layoutTopPx = topPx;
+        item.layoutHeightPx = heightPx;
+        columnCursorBottom[item.col] = topPx + heightPx;
       });
       apptLayout.forEach(item => {
         const { a, start, dur, col, colCount } = item;
         const hourIdx = Math.floor(start / 60) - calStartHour;
         if (hourIdx < 0 || hourIdx >= (calEndHour - calStartHour)) return;
-        const topPx = ((start - calStartHour * 60) / 60) * hourBandHeight;
-        let heightPx = Math.max(quarterHeight, (dur / 60) * hourBandHeight);
-        if (colCount === 1 && item.nextSingleStart != null){
-          const nextTopPx = ((item.nextSingleStart - calStartHour * 60) / 60) * hourBandHeight;
-          heightPx = Math.min(heightPx, Math.max(4, nextTopPx - topPx));
-        }
+        const topPx = item.layoutTopPx;
+        const heightPx = item.layoutHeightPx;
         const block = document.createElement('div');
         block.className = 'cal-appt';
         block.dataset.apptId = a.id || '';
@@ -8681,6 +8701,86 @@
       return isDateClosedForStaff(idx, dateObj);
     });
   }
+  function findFlexibleRequestImpossibility(reqLike, rangeFrom, rangeTo){
+    const pref = (reqLike && reqLike.preference) || {};
+    const [winStart, winEnd] = flexReqTimeWindow(reqLike);
+    const duration = flexReqDuration(reqLike);
+    const cats = flexReqCategories(reqLike);
+    const days = Array.isArray(pref.days) ? pref.days : [];
+    const capableIndices = (typeof reqLike.preferredStaffIdx === 'number' && reqLike.preferredStaffIdx !== null)
+      ? [reqLike.preferredStaffIdx]
+      : (cats.length ? getCapableStaffIndicesForCats(cats) : staff.map((_, i) => i));
+    const liveIndices = capableIndices.filter(i => staff[i] && !staff[i].deleted);
+    if (!liveIndices.length){
+      return { reason: 'no-staff', message: 'אין כרגע עובדת שמבצעת את הטיפול/ים שנבחרו — כדאי ליצור קשר עם העסק.' };
+    }
+    const cursor = new Date(rangeFrom);
+    let guard = 0;
+    let sawOpenCandidateDay = false;
+    while (cursor <= rangeTo && guard < 400){
+      if (days.length === 0 || days.includes(cursor.getDay())){
+        const dow = cursor.getDay();
+        for (const staffIdx of liveIndices){
+          const s = staff[staffIdx];
+          const dayInfo = s && s.hours && s.hours[dow];
+          if (!dayInfo || !dayInfo.open) continue;
+          if (isDateClosedForStaff(staffIdx, cursor)) continue;
+          sawOpenCandidateDay = true;
+          const rawRanges = (Array.isArray(dayInfo.ranges) && dayInfo.ranges.length)
+            ? dayInfo.ranges
+            : (dayInfo.from && dayInfo.to ? [{ from: dayInfo.from, to: dayInfo.to }] : []);
+          for (const r of rawRanges){
+            const openStart = timeToMinutes(r.from);
+            const openEnd = timeToMinutes(r.to);
+            if (!(openStart < openEnd)) continue;
+            const earliestStart = Math.max(openStart, winStart);
+            const latestStart = Math.min(openEnd - duration, winEnd);
+            if (earliestStart <= latestStart) return null; // אפשרי — יש רגע אחד לפחות
+          }
+        }
+      }
+      cursor.setDate(cursor.getDate() + 1);
+      guard++;
+    }
+    if (!sawOpenCandidateDay){
+      return { reason: 'all-closed', message: 'טווח התאריכים שבחרת חופף רק לימים שהעסק סגור בהם — יש לבחור טווח אחר.' };
+    }
+    return { reason: 'time-window', message: '' }; // ההודעה נבנית אצל הקורא, עם שעות העבודה בפועל
+  }
+  function describeOpenHoursForFlexRequest(reqLike, rangeFrom, rangeTo){
+    const pref = (reqLike && reqLike.preference) || {};
+    const days = Array.isArray(pref.days) ? pref.days : [];
+    const cats = flexReqCategories(reqLike);
+    const capableIndices = (typeof reqLike.preferredStaffIdx === 'number' && reqLike.preferredStaffIdx !== null)
+      ? [reqLike.preferredStaffIdx]
+      : (cats.length ? getCapableStaffIndicesForCats(cats) : staff.map((_, i) => i));
+    const liveIndices = capableIndices.filter(i => staff[i] && !staff[i].deleted);
+    const found = [];
+    const cursor = new Date(rangeFrom);
+    let guard = 0;
+    while (cursor <= rangeTo && guard < 400){
+      if (days.length === 0 || days.includes(cursor.getDay())){
+        const dow = cursor.getDay();
+        liveIndices.forEach(staffIdx => {
+          const s = staff[staffIdx];
+          const dayInfo = s && s.hours && s.hours[dow];
+          if (!dayInfo || !dayInfo.open) return;
+          if (isDateClosedForStaff(staffIdx, cursor)) return;
+          const rawRanges = (Array.isArray(dayInfo.ranges) && dayInfo.ranges.length)
+            ? dayInfo.ranges
+            : (dayInfo.from && dayInfo.to ? [{ from: dayInfo.from, to: dayInfo.to }] : []);
+          rawRanges.forEach(r => {
+            if (!r || !r.from || !r.to) return;
+            const label = `${r.from}-${r.to}`;
+            if (found.indexOf(label) === -1) found.push(label);
+          });
+        });
+      }
+      cursor.setDate(cursor.getDate() + 1);
+      guard++;
+    }
+    return found.slice(0, 4).join(', ');
+  }
   function hasAnySlotForStaff(cellDate, staffIdx){
     const svc = getBookingSvc();
     const dow = cellDate.getDay();
@@ -9111,12 +9211,19 @@
     const hoursUntil = (apptDateTime.getTime() - Date.now()) / 3600000;
     return hoursUntil < 12;
   }
+  function lateCancelEntryBelongsTo(entry, clientRecord, appt){
+    if (!entry) return false;
+    const tz = (clientRecord && clientRecord.teudatZehut) || (appt && appt.teudatZehut) || null;
+    if (tz && entry.teudatZehut) return entry.teudatZehut === tz;
+    const name = (clientRecord && clientRecord.name) || (appt && appt.client) || '';
+    return !!name && entry.client === name;
+  }
   function getLateCancelStatusForAppt(appt){
     const key = getLateCancelKey(appt);
     const client = findClientForAppt(appt);
     if (!key) return { key: null, count: 0, blocked: false, client };
     const resetAt = client && client.lateCancelResetAt;
-    const relevant = lateCancellations.filter(e => e && getLateCancelKey(e) === key && (!resetAt || (e.cancelledAtIso && e.cancelledAtIso > resetAt)));
+    const relevant = lateCancellations.filter(e => lateCancelEntryBelongsTo(e, client, appt) && (!resetAt || (e.cancelledAtIso && e.cancelledAtIso > resetAt)));
     return { key, count: relevant.length, blocked: relevant.length >= 2, client, entries: relevant };
   }
   function logLateCancellation(appt, type){
