@@ -4296,7 +4296,17 @@
       dateFrom: document.getElementById('frDateFrom').value || null,
       dateTo: document.getElementById('frDateTo').value || null
     };
-    if (timeOfDay === 'custom' && timeFromVal && timeToVal){
+    if (timeOfDay === 'custom'){
+      if (!timeFromVal || !timeToVal){
+        errorEl.textContent = 'בטווח שעות מותאם אישית יש למלא גם שעת התחלה וגם שעת סיום.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (!(timeToMinutes(timeToVal) > timeToMinutes(timeFromVal))){
+        errorEl.textContent = 'שעת הסיום חייבת להיות אחרי שעת ההתחלה.';
+        errorEl.style.display = 'block';
+        return;
+      }
       preference.timeFrom = timeFromVal;
       preference.timeTo = timeToVal;
     } else {
