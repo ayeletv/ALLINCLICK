@@ -9120,7 +9120,13 @@
     if (typeof renderStaffPicker === 'function') renderStaffPicker();
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
     if (typeof renderMiniCal === 'function') renderMiniCal();
-    if (typeof CLOUD_DOC !== 'undefined' && CLOUD_DOC){
+    if (runningOnPublicData){
+      refreshPublicDataQuietly().then(ok => {
+        if (!ok) return;
+        if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+        if (typeof renderMiniCal === 'function') renderMiniCal();
+      });
+    } else if (typeof CLOUD_DOC !== 'undefined' && CLOUD_DOC){
       CLOUD_DOC.get().then(doc => {
         if (doc.exists && doc.data().staff){
           staff = doc.data().staff;
@@ -10946,12 +10952,19 @@
     const confirmBtnOrigText = confirmBtnEl ? confirmBtnEl.textContent : '';
     if (confirmBtnEl){ confirmBtnEl.disabled = true; confirmBtnEl.textContent = 'בודקת זמינות...'; }
     try {
-      const freshDoc = await CLOUD_DOC.get();
-      if (freshDoc.exists && freshDoc.data().weekAppointments){
-        weekAppointments = freshDoc.data().weekAppointments;
-      }
-      if (freshDoc.exists && freshDoc.data().staff){
-        staff = freshDoc.data().staff;
+      if (runningOnPublicData){
+        await Promise.race([
+          refreshPublicDataQuietly(),
+          new Promise(resolve => setTimeout(resolve, 3000)),
+        ]);
+      } else {
+        const freshDoc = await CLOUD_DOC.get();
+        if (freshDoc.exists && freshDoc.data().weekAppointments){
+          weekAppointments = freshDoc.data().weekAppointments;
+        }
+        if (freshDoc.exists && freshDoc.data().staff){
+          staff = freshDoc.data().staff;
+        }
       }
     } catch (e) {
       console.error('Availability re-check failed, proceeding with last-known data:', e);
@@ -11121,6 +11134,7 @@
       note: '',
       reminderChannels: reminderChannels
     };
+    let serverSentNotifications = false;
     if (bookingGoesThroughServer()){
       let apiResult = null;
       if (confirmBtnEl){ confirmBtnEl.disabled = true; confirmBtnEl.textContent = 'קובעת את התור...'; }
@@ -11133,6 +11147,7 @@
           email: customerEmail || '',
           reminderChannels,
           appointment: currentBookedAppointment,
+          siteUrl: getSiteUrl(),
         });
       } catch (err) {
         console.error('Booking through the server failed — falling back to a direct write:', err);
@@ -11151,6 +11166,7 @@
       currentBookedAppointment = apiResult.appointment;
       weekAppointments.push(currentBookedAppointment);
       if (apiResult.__fallback && typeof saveState === 'function') saveState();
+      serverSentNotifications = !apiResult.__fallback;
     } else {
       weekAppointments.push(currentBookedAppointment);
       if (typeof saveState === 'function') saveState();
@@ -11187,19 +11203,21 @@
       if (typeof renderWeekCal === 'function') renderWeekCal();
       if (typeof renderMiniCal === 'function') renderMiniCal();
       if (typeof renderClients === 'function') renderClients();
-      if (customerEmail){
-        const dateLabel = bookingSelectedDate.getDate() + ' ב' + hebrewMonths[bookingSelectedDate.getMonth()];
-        sendEmail(
-          customerEmail,
-          'התור שלך אושר',
-          getAppointmentEmailText(clientNameVal, svc ? svc.name : 'שירות', dateLabel, selectedSlot, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:', idDigits, phoneVal)
+      if (!serverSentNotifications){
+        if (customerEmail && customerEmail.trim()){
+          const dateLabel = bookingSelectedDate.getDate() + ' ב' + hebrewMonths[bookingSelectedDate.getMonth()];
+          sendEmail(
+            customerEmail,
+            'התור שלך אושר',
+            getAppointmentEmailText(clientNameVal, svc ? svc.name : 'שירות', dateLabel, selectedSlot, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:', idDigits, phoneVal)
+          );
+        }
+        const smsDateLabel = bookingSelectedDate.getDate() + '/' + (bookingSelectedDate.getMonth() + 1);
+        queueApptSms(
+          currentBookedAppointment,
+          getShortApptSmsText('confirmed', svc ? svc.name : 'שירות', smsDateLabel, selectedSlot)
         );
       }
-      const smsDateLabel = bookingSelectedDate.getDate() + '/' + (bookingSelectedDate.getMonth() + 1);
-      queueApptSms(
-        currentBookedAppointment,
-        getShortApptSmsText('confirmed', svc ? svc.name : 'שירות', smsDateLabel, selectedSlot)
-      );
     } catch (e) {
       console.error('confirmBooking: post-confirmation refresh/notify failed (appointment itself was saved fine):', e);
     }
@@ -13092,6 +13110,23 @@
     lateCancellations = [];
     cancellationLog = [];
   }
+  function refreshPublicDataQuietly(){
+    if (!runningOnPublicData) return Promise.resolve(false);
+    const identified = (weekAppointments || []).filter(a => a && a.teudatZehut);
+    return PUBLIC_DOC.get().then(doc => {
+      const d = doc.exists ? doc.data() : null;
+      if (!d || !Array.isArray(d.staff) || !d.staff.length) return false;
+      applyPublicData(d);
+      identified.forEach(a => {
+        const pos = weekAppointments.findIndex(x => x && x.id === a.id);
+        if (pos === -1) weekAppointments.push(a); else weekAppointments[pos] = a;
+      });
+      return true;
+    }).catch(err => {
+      console.error('Refreshing the public data failed — continuing with what we have:', err);
+      return false;
+    });
+  }
   function loadPublicData(){
     return PUBLIC_DOC.get().then(doc => {
       const data = doc.exists ? doc.data() : null;
@@ -13177,6 +13212,10 @@
   document.addEventListener('visibilitychange', () => {
     if (document.hidden || !cloudLoadComplete) return;
     if (pendingSaveCount > 0) return;
+    if (!isOwnerSession()){
+      refreshPublicDataQuietly().then(ok => { if (ok) rerenderEverything(); });
+      return;
+    }
     CLOUD_DOC.get().then(doc => {
       if (!doc.exists) return;
       const rawCloudData = doc.data();
