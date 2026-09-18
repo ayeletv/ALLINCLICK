@@ -2548,20 +2548,22 @@
     fontPromise.then(reveal);
     setTimeout(reveal, 1500); // absolute safety net — never leave the hero invisible
 
-    var brandingSettlePromise = (window.__brandingReady && window.__brandingReady.then)
-      ? window.__brandingReady
-      : new Promise(function(resolve){ setTimeout(resolve, 1500); });
-    Promise.race([
-      brandingSettlePromise,
-      new Promise(function(resolve){ setTimeout(resolve, 3000); })
-    ]).then(function(){
+    function promoteTaglineIfNoBizName(){
       var bizNameEl = document.getElementById('heroBizName');
       var platformEl = document.getElementById('heroPlatformLine');
       if (!bizNameEl || !platformEl) return;
-      if (!bizNameEl.classList.contains('biz-name-visible') && !window.__heroBizNameWillShow){
-        platformEl.classList.add('primary');
-      }
-    });
+      if (bizNameEl.classList.contains('biz-name-visible') || window.__heroBizNameWillShow) return;
+      platformEl.classList.add('primary');
+    }
+    window.__promoteTaglineIfNoBizName = promoteTaglineIfNoBizName;
+    var brandingSettlePromise = (window.__brandingReady && window.__brandingReady.then)
+      ? window.__brandingReady
+      : new Promise(function(resolve){ setTimeout(resolve, 1500); });
+    brandingSettlePromise.then(promoteTaglineIfNoBizName);
+    setTimeout(function(){
+      if (typeof cloudLoadComplete !== 'undefined' && !cloudLoadComplete) return;
+      promoteTaglineIfNoBizName();
+    }, 8000);
   })();
 </script>
 <section class="stage">
@@ -3412,13 +3414,18 @@
       <textarea id="frNote" class="client-note" style="min-height:50px;" placeholder="הערה נוספת (אופציונלי) — כל דבר שלא נכנס לשדות למעלה"></textarea>
       <div class="label" style="margin-top:6px;">פרטי קשר</div>
       <input type="tel" inputmode="numeric" maxlength="9" id="frId" class="field" placeholder="תעודת זהות">
-      <div class="field-row">
-        <input type="text" id="frFirstName" class="field" placeholder="שם פרטי">
-        <input type="text" id="frLastName" class="field" placeholder="שם משפחה">
+      <div id="frWelcomeBack" style="display:none; color:var(--sage); font-size:12px; margin:-4px 0 0;"></div>
+      <div id="frContactDetails" style="display:none; flex-direction:column; gap:10px;">
+        <div class="field-row">
+          <input type="text" id="frFirstName" class="field" placeholder="שם פרטי">
+          <input type="text" id="frLastName" class="field" placeholder="שם משפחה">
+        </div>
+        <input type="tel" id="frPhone" class="field" placeholder="050-0000000">
       </div>
-      <input type="tel" id="frPhone" class="field" placeholder="050-0000000">
-      <input type="email" id="frEmail" class="field" placeholder="אימייל">
-      
+      <div id="frEmailWrap" style="display:none;">
+        <input type="email" id="frEmail" class="field" placeholder="אימייל">
+      </div>
+
       <div class="label" style="margin-top:6px;">איך תרצי לקבל תזכורת? (אפשר לבחור יותר מאחת)</div>
       <div class="reminder-choice" id="frReminderChoice">
         <label><input type="checkbox" name="frReminderChannel" value="sms" checked> SMS</label>
@@ -4150,6 +4157,8 @@
     if (toEl.value && toEl.value < minForTo) toEl.value = '';
   });
   wireIdentityAutofill({ idId: 'frId', firstId: 'frFirstName', lastId: 'frLastName', phoneId: 'frPhone', emailId: 'frEmail' });
+  document.getElementById('frId')?.addEventListener('focus', function(){ warmClientApi(); });
+  document.getElementById('frId')?.addEventListener('input', function(){ frLookupIdentity(); });
   function openFlexibleRequestOverlay(){
     frSelectedServices = (typeof bkSelectedServices !== 'undefined' && bkSelectedServices.length)
       ? bkSelectedServices.map(sel => ({ svcIndex: sel.svcIndex }))
@@ -4187,6 +4196,10 @@
     splitNameIntoFields('', 'frFirstName', 'frLastName');
     document.getElementById('frPhone').value = '';
     document.getElementById('frEmail').value = '';
+    frServerIdentity = null;
+    frIdentitySeq++;
+    applyFrIdentity();
+    warmClientApi();
     document.querySelectorAll('input[name="frReminderChannel"]').forEach(cb => { cb.checked = (cb.value === 'sms'); });
     document.getElementById('frError').style.display = 'none';
     document.getElementById('frFormWrap').style.display = 'flex';
@@ -4207,6 +4220,7 @@
     const phone = document.getElementById('frPhone').value.trim();
     const emailInput = document.getElementById('frEmail');
     const existingClient = idDigits ? clients.find(c => c.teudatZehut === idDigits) : null;
+    const frKnown = frKnownClient();
     const email = emailInput.value.trim() || (existingClient && existingClient.email) || '';
     if (!svcObjs.length){
       errorEl.textContent = 'יש לבחור לפחות טיפול אחד.';
@@ -4218,7 +4232,7 @@
       errorEl.style.display = 'block';
       return;
     }
-    if (!firstNameOk || !lastNameOk){
+    if (!frKnown && (!firstNameOk || !lastNameOk)){
       errorEl.textContent = 'יש להזין שם פרטי ושם משפחה.';
       errorEl.style.display = 'block';
       return;
@@ -4229,12 +4243,12 @@
       errorEl.style.display = 'block';
       return;
     }
-    if (!isValidIsraeliPhone(phone)){
+    if (!frKnown && !isValidIsraeliPhone(phone)){
       errorEl.textContent = 'יש להזין מספר טלפון ישראלי תקני.';
       errorEl.style.display = 'block';
       return;
     }
-    if (!email){
+    if (!email && !(frKnown && frKnown.hasEmail)){
       errorEl.textContent = 'יש להזין כתובת אימייל כדי שנוכל לעדכן אותך כשיימצא תור מתאים.';
       errorEl.style.display = 'block';
       return;
@@ -10701,6 +10715,36 @@
   });
   let serverIdentity = null;       // { id, found, firstName, hasTz, hasEmail, blocked }
   let serverIdentityTimer = null;
+  let serverIdentitySeq = 0;       // כדי שתשובה ישנה שאיחרה לא תדרוס תשובה חדשה
+  const serverIdentityCache = {};  // תשובות שכבר קיבלנו — הקלדה חוזרת לא שואלת שוב
+  let clientApiWarmed = false;
+  function warmClientApi(){
+    if (clientApiWarmed || !runningOnPublicData) return;
+    clientApiWarmed = true;
+    try { fetch(CLIENT_API_URL, { method: 'GET', mode: 'no-cors' }).catch(() => {}); }
+    catch (e) { /* אין שום דבר לעשות כאן, וגם אין צורך */ }
+  }
+  const SERVER_IDENTITY_TTL_MS = 120000;
+  function cachedServerIdentity(digits){
+    const hit = serverIdentityCache[digits];
+    if (!hit) return null;
+    if ((Date.now() - hit.__at) > SERVER_IDENTITY_TTL_MS){ delete serverIdentityCache[digits]; return null; }
+    return hit;
+  }
+  function fetchServerIdentity(digits){
+    const hit = cachedServerIdentity(digits);
+    if (hit) return Promise.resolve(hit);
+    return callClientApi('lookup', { id: digits })
+      .then(res => {
+        const r = Object.assign({ id: digits, __at: Date.now() }, res || {});
+        serverIdentityCache[digits] = r;
+        return r;
+      })
+      .catch(err => {
+        console.error('Identifying through the server failed:', err);
+        return null;
+      });
+  }
   function clearServerIdentity(){ serverIdentity = null; }
   function applyServerIdentityToBookingForm(){
     const welcomeEl = document.getElementById('bookingWelcomeBack');
@@ -10711,6 +10755,7 @@
     const known = serverIdentity && serverIdentity.found;
     if (known){
       welcomeEl.style.display = 'block';
+      welcomeEl.style.color = 'var(--sage)';   // חוזרים מהאפור של "רגע, בודקת..."
       welcomeEl.textContent = `✓ ברוכה שובך, ${serverIdentity.firstName || ''}! אין צורך למלא פרטים נוספים.`;
       regEl.style.display = 'none';
       if (nameRow) nameRow.style.display = 'none';
@@ -10725,21 +10770,105 @@
     if (typeof updateReminderEmailVisibility === 'function') updateReminderEmailVisibility();
     if (typeof refreshBookingTzPrompt === 'function') refreshBookingTzPrompt();
   }
+  let serverIdentityCheckingTimer = null;
+  function showIdentityChecking(){
+    const welcomeEl = document.getElementById('bookingWelcomeBack');
+    if (!welcomeEl) return;
+    welcomeEl.style.display = 'block';
+    welcomeEl.style.color = '#8A8178';
+    welcomeEl.textContent = 'רגע, בודקת...';
+  }
   function lookupIdentityOnServer(raw){
     clearTimeout(serverIdentityTimer);
+    clearTimeout(serverIdentityCheckingTimer);
     const digits = String(raw || '').replace(/[^0-9]/g, '');
     if (digits.length < 9){ clearServerIdentity(); applyServerIdentityToBookingForm(); return; }
-    serverIdentityTimer = setTimeout(async () => {
-      try {
-        const res = await callClientApi('lookup', { id: digits });
-        serverIdentity = Object.assign({ id: digits }, res || {});
-      } catch (err) {
-        console.error('Identifying through the server failed:', err);
-        serverIdentity = null;
-      }
+    const cachedHit = cachedServerIdentity(digits);
+    if (cachedHit){
+      serverIdentity = cachedHit;
+      serverIdentitySeq++;
       applyServerIdentityToBookingForm();
-    }, 400);
+      return;
+    }
+    const mySeq = ++serverIdentitySeq;
+    serverIdentityCheckingTimer = setTimeout(showIdentityChecking, 350);
+    serverIdentityTimer = setTimeout(async () => {
+      const result = await fetchServerIdentity(digits);
+      if (mySeq !== serverIdentitySeq) return;
+      clearTimeout(serverIdentityCheckingTimer);
+      serverIdentity = result;
+      applyServerIdentityToBookingForm();
+    }, 120);
   }
+
+  /* ---- אותו זיהוי, במסך "בקשה כללית / זמן גמיש" ---- */
+  let frServerIdentity = null;
+  let frIdentityTimer = null;
+  let frIdentitySeq = 0;
+  let frIdentityCheckingTimer = null;
+  function frKnownClient(){
+    const digits = ((document.getElementById('frId') || {}).value || '').replace(/[^0-9]/g, '');
+    if (digits.length !== 9) return null;
+    if (runningOnPublicData){
+      return (frServerIdentity && frServerIdentity.found && frServerIdentity.id === digits) ? frServerIdentity : null;
+    }
+    const c = (clients || []).find(x => x && x.teudatZehut === digits);
+    if (!c) return null;
+    return { found: true, id: digits, firstName: (c.name || '').trim().split(/\s+/)[0] || '', hasEmail: !!c.email, hasPhone: !!c.phone, blocked: false };
+  }
+  function applyFrIdentity(){
+    const welcomeEl = document.getElementById('frWelcomeBack');
+    const detailsEl = document.getElementById('frContactDetails');
+    const emailWrap = document.getElementById('frEmailWrap');
+    if (!welcomeEl || !detailsEl || !emailWrap) return;
+    const digits = ((document.getElementById('frId') || {}).value || '').replace(/[^0-9]/g, '');
+    const known = frKnownClient();
+    if (known){
+      welcomeEl.style.display = 'block';
+      welcomeEl.style.color = 'var(--sage)';
+      welcomeEl.textContent = `✓ ברוכה שובך, ${known.firstName || ''}! אין צורך למלא פרטים נוספים.`;
+      detailsEl.style.display = 'none';
+      emailWrap.style.display = known.hasEmail ? 'none' : 'block';
+      return;
+    }
+    welcomeEl.style.display = 'none';
+    detailsEl.style.display = digits.length === 9 ? 'flex' : 'none';
+    emailWrap.style.display = digits.length === 9 ? 'block' : 'none';
+  }
+  function frLookupIdentity(){
+    clearTimeout(frIdentityTimer);
+    clearTimeout(frIdentityCheckingTimer);
+    const digits = ((document.getElementById('frId') || {}).value || '').replace(/[^0-9]/g, '');
+    if (!runningOnPublicData || digits.length !== 9){
+      frServerIdentity = null;
+      frIdentitySeq++;
+      applyFrIdentity();
+      return;
+    }
+    const frCachedHit = cachedServerIdentity(digits);
+    if (frCachedHit){
+      frServerIdentity = frCachedHit;
+      frIdentitySeq++;
+      applyFrIdentity();
+      return;
+    }
+    const mySeq = ++frIdentitySeq;
+    frIdentityCheckingTimer = setTimeout(() => {
+      const welcomeEl = document.getElementById('frWelcomeBack');
+      if (!welcomeEl) return;
+      welcomeEl.style.display = 'block';
+      welcomeEl.style.color = '#8A8178';
+      welcomeEl.textContent = 'רגע, בודקת...';
+    }, 350);
+    frIdentityTimer = setTimeout(async () => {
+      const result = await fetchServerIdentity(digits);
+      if (mySeq !== frIdentitySeq) return;
+      clearTimeout(frIdentityCheckingTimer);
+      frServerIdentity = result;
+      applyFrIdentity();
+    }, 120);
+  }
+  document.getElementById('bookingIdInput').addEventListener('focus', function(){ warmClientApi(); });
   document.getElementById('bookingIdInput').addEventListener('input', function(){
     this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
     const digits = this.value;
@@ -11281,6 +11410,7 @@
     document.querySelectorAll('.step-dot').forEach(d => {
       d.classList.toggle('active', parseInt(d.dataset.step) === n);
     });
+    if (n === 4) warmClientApi();
   }
   async function rescheduleAppointment(){
     const rescheduleAppt = currentBookedAppointment;
@@ -11382,6 +11512,7 @@
     document.getElementById('lookupId').value = '';
     document.getElementById('lookupResult').innerHTML = '';
     document.getElementById('apptLookupOverlay').classList.add('show');
+    warmClientApi();
   }
   function closeApptLookup(){
     document.getElementById('apptLookupOverlay').classList.remove('show');
@@ -11413,7 +11544,9 @@
         resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצא תור עתידי עבור הפרטים שהוזנו. אפשר לנסות את הפרטים האחרים, או ליצור איתנו קשר.</p>';
         return;
       }
-      const mine = res.appointments.map(a => ({
+      const sortedFromServer = res.appointments.slice().sort((a, b) =>
+        String((a.date || '') + 'T' + (a.time || '')).localeCompare(String((b.date || '') + 'T' + (b.time || ''))));
+      const mine = sortedFromServer.map(a => ({
         id: a.id, day: null, date: a.date, time: a.time, dur: a.dur,
         client: res.firstName || '', teudatZehut: digits.length === 9 ? digits : null,
         service: a.service, services: [], price: a.price || 0,
@@ -12647,6 +12780,7 @@
         name: (branding && branding.name) || '',
         logo: (branding && branding.logo) || null,
         phone: (branding && branding.phone) || '',
+        whatsapp: (branding && branding.whatsapp) || '',
         address: (branding && branding.address) || '',
       },
       staff: (staff || []).map(s => ({
@@ -13081,7 +13215,7 @@
   let runningOnPublicData = false;
   function applyPublicData(data){
     runningOnPublicData = true;
-    if (data.branding) branding = Object.assign({ name: '', logo: null, phone: '', address: '' }, data.branding);
+    if (data.branding) branding = Object.assign({ name: '', logo: null, phone: '', whatsapp: '', address: '' }, data.branding);
     if (Array.isArray(data.staff)){
       staff = data.staff;
       staff.forEach(s => {
@@ -13463,10 +13597,35 @@
   function onCalActionsMenuChange(sel){
     const action = sel.value;
     sel.value = '';
-    if (action === 'refresh') refreshCalendarView();
+    if (action === 'refresh') refreshCalendarFromCloud();
     else if (action === 'myday') openMyDayView();
     else if (action === 'add') openManualBookingModal();
     else if (action === 'logout') doLogout();
+  }
+  let calendarRefreshInFlight = false;
+  function refreshCalendarFromCloud(){
+    refreshCalendarView();
+    if (!isOwnerSession() || calendarRefreshInFlight) return Promise.resolve(false);
+    calendarRefreshInFlight = true;
+    if (typeof showSaveStatus === 'function') showSaveStatus('מרעננת...');
+    return CLOUD_DOC.get().then(doc => {
+      if (!doc.exists) return false;
+      const rawCloudData = doc.data();
+      if (typeof backfillMissingListIds === 'function') backfillMissingListIds(rawCloudData);
+      lastLoadedSnapshot = cloneJSON(rawCloudData);
+      applyCloudData(rawCloudData);
+      if (typeof pruneExpiredWaitlistEntries === 'function') pruneExpiredWaitlistEntries();
+      rerenderEverything();
+      refreshCalendarView();
+      return true;
+    }).catch(err => {
+      console.error('Refreshing the calendar from the cloud failed:', err);
+      return false;
+    }).then(ok => {
+      calendarRefreshInFlight = false;
+      if (typeof showSaveStatus === 'function') showSaveStatus(ok ? 'מעודכן ✓' : 'לא הצלחנו לרענן', 1800);
+      return ok;
+    });
   }
   function refreshCalendarView(){
     if (typeof renderOverviewStats === 'function') renderOverviewStats();
