@@ -10663,9 +10663,59 @@
     phoneId: 'bookingPhoneInput', emailId: 'ftpEmail',
     skipIdListener: true, notifyIdOnFill: true,
   });
+  let serverIdentity = null;       // { id, found, firstName, hasTz, hasEmail, blocked }
+  let serverIdentityTimer = null;
+  function clearServerIdentity(){ serverIdentity = null; }
+  function applyServerIdentityToBookingForm(){
+    const welcomeEl = document.getElementById('bookingWelcomeBack');
+    const regEl = document.getElementById('newClientRegistration');
+    const nameRow = document.getElementById('bookingNameRow');
+    const phoneInput = document.getElementById('bookingPhoneInput');
+    if (!welcomeEl || !regEl) return;
+    const known = serverIdentity && serverIdentity.found;
+    if (known){
+      welcomeEl.style.display = 'block';
+      welcomeEl.textContent = `✓ ברוכה שובך, ${serverIdentity.firstName || ''}! אין צורך למלא פרטים נוספים.`;
+      regEl.style.display = 'none';
+      if (nameRow) nameRow.style.display = 'none';
+      if (phoneInput) phoneInput.style.display = 'none';
+    } else {
+      welcomeEl.style.display = 'none';
+      if (nameRow) nameRow.style.display = '';
+      if (phoneInput) phoneInput.style.display = '';
+      const digits = (document.getElementById('bookingIdInput')?.value || '').replace(/[^0-9]/g, '');
+      regEl.style.display = digits.length === 9 ? 'block' : 'none';
+    }
+    if (typeof updateReminderEmailVisibility === 'function') updateReminderEmailVisibility();
+    if (typeof refreshBookingTzPrompt === 'function') refreshBookingTzPrompt();
+  }
+  function lookupIdentityOnServer(raw){
+    clearTimeout(serverIdentityTimer);
+    const digits = String(raw || '').replace(/[^0-9]/g, '');
+    if (digits.length < 9){ clearServerIdentity(); applyServerIdentityToBookingForm(); return; }
+    serverIdentityTimer = setTimeout(async () => {
+      try {
+        const res = await callClientApi('lookup', { id: digits });
+        serverIdentity = Object.assign({ id: digits }, res || {});
+      } catch (err) {
+        console.error('Identifying through the server failed:', err);
+        serverIdentity = null;
+      }
+      applyServerIdentityToBookingForm();
+    }, 400);
+  }
   document.getElementById('bookingIdInput').addEventListener('input', function(){
     this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
     const digits = this.value;
+    if (runningOnPublicData){
+      splitNameIntoFields('', 'bookingFirstNameInput', 'bookingLastNameInput');
+      const ph = document.getElementById('bookingPhoneInput');
+      if (ph) ph.value = '';
+      document.getElementById('bookingIdError').style.display = 'none';
+      this.style.borderColor = '';
+      lookupIdentityOnServer(digits);
+      return;
+    }
     document.getElementById('bookingIdError').style.display = 'none';
     this.style.borderColor = '';
     const welcomeEl = document.getElementById('bookingWelcomeBack');
@@ -10780,7 +10830,22 @@
     }
     idErrorEl.style.display = 'none';
     idInput.style.borderColor = '';
-    const existingClientPre = idResolved.client;
+    let existingClientPre = idResolved.client;
+    if (!existingClientPre && runningOnPublicData && serverIdentity && serverIdentity.found){
+      if (serverIdentity.blocked){
+        alert(buildBlockedBookingClientMessage());
+        const wlBoxBlocked = document.getElementById('waitlistBox');
+        if (wlBoxBlocked) wlBoxBlocked.innerHTML = `<div class="waitlist-prompt">${buildBlockedBookingClientMessage()}</div>`;
+        return;
+      }
+      existingClientPre = {
+        name: serverIdentity.firstName || '',
+        teudatZehut: serverIdentity.hasTz && idResolved.typedAsTz ? typedDigits : null,
+        phone: serverIdentity.hasPhone ? ' ' : '',
+        email: serverIdentity.hasEmail ? ' ' : '',
+        fromServer: true,
+      };
+    }
     const tzUpdateInput = document.getElementById('bookingTzUpdateInput');
     const tzUpdateDigits = ((tzUpdateInput && tzUpdateInput.value) || '').replace(/[^0-9]/g, '');
     if (existingClientPre && clientNeedsTeudatZehut(existingClientPre) && !tzUpdateDigits){
@@ -10919,7 +10984,8 @@
     const emp = staff[resolvedStaffIndex];
     const clientNameVal = combineNameFields('bookingFirstNameInput', 'bookingLastNameInput') || 'לקוחה';
     const dayKey = weekdayKeys[bookingSelectedDate.getDay()];
-    const existingClient = clients.find(c => c.teudatZehut === idDigits);
+    const existingClient = clients.find(c => c.teudatZehut === idDigits)
+      || ((runningOnPublicData && existingClientPre && existingClientPre.fromServer) ? existingClientPre : null);
     const existingClientNameForOverlap = existingClient ? existingClient.name : clientNameVal;
     if (clientHasOverlappingAppointment(existingClientNameForOverlap, dateKeyForSlot, slotStartMin, slotEndMin, null)){
       if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
@@ -11286,6 +11352,30 @@
     }
     resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">מחפשת...</p>';
     const lookupDiagStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    if (runningOnPublicData){
+      let res = null;
+      try {
+        res = await callClientApi('myAppointments', { id: digits });
+      } catch (err) {
+        console.error('Looking up appointments through the server failed:', err);
+        resultEl.innerHTML = '<p style="color:var(--wine); font-size:13px;">לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.</p>';
+        return;
+      }
+      if (!res || !res.found || !(res.appointments || []).length){
+        resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצא תור עתידי עבור הפרטים שהוזנו. אפשר לנסות את הפרטים האחרים, או ליצור איתנו קשר.</p>';
+        return;
+      }
+      const mine = res.appointments.map(a => ({
+        id: a.id, day: null, date: a.date, time: a.time, dur: a.dur,
+        client: res.firstName || '', teudatZehut: digits.length === 9 ? digits : null,
+        service: a.service, services: [], price: a.price || 0,
+        staff: staff.findIndex(s => s && s.name === a.staffName),
+        status: a.status || 'pending', note: '',
+      }));
+      mine.forEach(a => { if (!weekAppointments.some(x => x && x.id === a.id)) weekAppointments.push(a); });
+      renderLookedUpAppointment(mine);
+      return;
+    }
     try {
       const freshDoc = await Promise.race([
         CLOUD_DOC.get(),
@@ -12350,6 +12440,10 @@
   }
   function saveState(opts){
     const silent = !!(opts && opts.silent);
+    if (runningOnPublicData){
+      console.warn('saveState was called while running on public data — refused.');
+      return Promise.resolve();
+    }
     if (!cloudLoadComplete || !lastLoadedSnapshot) return Promise.resolve();
     const nowIso = new Date().toISOString();
     const simpleFields = {
@@ -12902,9 +12996,73 @@
     badge.appendChild(textEl);
     document.body.appendChild(badge);
   }
+  let runningOnPublicData = false;
+  function applyPublicData(data){
+    runningOnPublicData = true;
+    if (data.branding) branding = Object.assign({ name: '', logo: null, phone: '', address: '' }, data.branding);
+    if (Array.isArray(data.staff)){
+      staff = data.staff;
+      staff.forEach(s => {
+        if (!s) return;
+        if (!s.hours || typeof s.hours !== 'object') s.hours = {};
+        for (let dow = 0; dow < 7; dow++){ if (!s.hours[dow]) s.hours[dow] = { open: false, ranges: [] }; }
+      });
+    }
+    if (Array.isArray(data.services)) services = data.services;
+    if (Array.isArray(data.categories)) categories = data.categories;
+    if (data.categoryMessages && typeof data.categoryMessages === 'object') categoryMessages = data.categoryMessages;
+    if (Array.isArray(data.holidayOverrides)) holidayOverrides = data.holidayOverrides.slice();
+    if (Array.isArray(data.whatsNewItems)) whatsNewItems = data.whatsNewItems;
+    if (data.about && typeof data.about === 'object') aboutMe = Object.assign({ photo: null, text: '' }, data.about);
+    if (Array.isArray(data.recommendations)) recommendations = data.recommendations.slice();
+    const busy = Array.isArray(data.busy) ? data.busy : [];
+    weekAppointments = busy.filter(b => b && b.kind !== 'block').map(b => ({
+      id: b.id, day: null, date: b.date, time: b.time, dur: b.dur || 30,
+      client: '', teudatZehut: null, service: '', services: [], price: 0,
+      staff: b.staff, status: 'pending', note: '',
+    }));
+    personalBlocks = busy.filter(b => b && b.kind === 'block').map(b => ({
+      id: b.id, date: b.date, time: b.time, duration: b.dur || 15, staff: b.staff, reason: '',
+    }));
+    clients = [];
+    waitlist = [];
+    specialRequests = [];
+    lateCancellations = [];
+    cancellationLog = [];
+  }
+  function loadPublicData(){
+    return PUBLIC_DOC.get().then(doc => {
+      const data = doc.exists ? doc.data() : null;
+      if (!data || !Array.isArray(data.staff) || !data.staff.length){
+        console.warn('publicView is missing or empty — falling back to the full document.');
+        return false;
+      }
+      applyPublicData(data);
+      return true;
+    });
+  }
   function loadCloudData(){
     const cloudLoadStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
-    CLOUD_DOC.get().then(doc => {
+    if (!isOwnerSession()){
+      return loadPublicData().then(loaded => {
+        if (!loaded) return loadPrivateCloudData(cloudLoadStartedAt); // נפילה לאחור
+        cloudLoadComplete = true;
+        lastLoadedSnapshot = null;   // אין מה לשמור מכאן, ולכן גם אין ממה למזג
+        rerenderEverything();
+        if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
+        handleAppointmentLookupFromUrl();
+        handleWaitlistCancelFromUrl();
+        if (typeof window.__resolveBrandingReady === 'function') window.__resolveBrandingReady();
+      }).catch(err => {
+        console.error('Public data load failed — falling back to the full document:', err);
+        return loadPrivateCloudData(cloudLoadStartedAt);
+      });
+    }
+    return loadPrivateCloudData(cloudLoadStartedAt);
+  }
+  function loadPrivateCloudData(cloudLoadStartedAt){
+    runningOnPublicData = false;
+    return CLOUD_DOC.get().then(doc => {
       hideCloudErrorBanner();
       cloudLoadRetryCount = 0;
       if (!doc.exists){
@@ -13185,6 +13343,7 @@
         closeLoginOverlay();
         document.getElementById('loginEmail').value = '';
         document.getElementById('loginPassword').value = '';
+        if (typeof loadCloudData === 'function') loadCloudData();
         if (pendingBusinessBtn && !document.body.classList.contains('admin-mode')){
           showPanel('business', pendingBusinessBtn);
         }
@@ -13220,6 +13379,7 @@
   function doLogout(){
     auth.signOut().then(() => {
       auth.signInAnonymously().catch(err => console.error('Re-sign-in after logout failed:', err));
+      if (typeof loadCloudData === 'function') setTimeout(loadCloudData, 0);
       sensitiveAccessUnlocked = false;
       try { sessionStorage.removeItem('appAdminViewState'); } catch (e) {}
       document.querySelectorAll('.switcher button')[0].click();
