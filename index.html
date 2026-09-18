@@ -12652,6 +12652,8 @@
       staff: (staff || []).map(s => ({
         name: (s && s.name) || '',
         role: (s && s.role) || '',
+        photo: (s && s.photo) || null,
+        deleted: !!(s && s.deleted),
         hours: (s && s.hours) || {},
         closedDates: (s && s.closedDates) || [],
         categories: (s && s.categories) || [],
