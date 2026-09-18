@@ -1608,6 +1608,15 @@
     font-size:14px;
   }
   .client-add-row input::placeholder{color:var(--panel-text-dim);}
+  /* רקע בהיר יותר (17.09.2026, דיווחה: "הוא צובע את כל התואר בשחור"). שאר
+     החלונות במערכת פותחים מסך כהה מאוד (85% שחור), וזה מתאים להם כי הם
+     מסכים שלמים; כאן זה טופס קצר, וכיסוי כזה הרגיש כמו נפילה של האתר. */
+  /* ===== "קצת עלינו" — שלושה טאבים ללקוחה (18.09.2026) ===== */
+  /* תיקון (18.09.2026, דיווחה: "המלל של מי אנחנו נראה ממש בהיר"). היא צדקה,
+     והסיבה הייתה גרועה מזה: העמוד שהלקוחה רואה יושב על רקע כהה
+     (--ink), ואני צבעתי את הטקסט בכהה — יחס ניגודיות 1.54:1, כלומר
+     בקושי נראה בכלל. כל הבלוק הזה נכתב מחדש לרקע שהוא באמת יושב עליו,
+     באותם צבעים שכל שאר המסך של הלקוחה משתמש בהם. */
   .about-switcher{
     display:flex; gap:5px; justify-content:center;
     margin:0 auto 22px; max-width:440px;
@@ -1642,6 +1651,7 @@
     white-space:pre-wrap; text-align:center;
   }
   .about-empty{font-size:14px; color:var(--ivory-dim); padding:24px 8px; text-align:center;}
+  /* ההמלצות — ריבועים, לא רשימה. אחד מתחת לשני על מסך צר, שניים ברוחב מלא. */
   .rec-list{
     display:grid; gap:14px;
     grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
@@ -1673,6 +1683,7 @@
   .rec-prompt-intro{font-size:14.5px; line-height:1.7; color:#3A3430;}
   .rec-prompt-count{font-size:11.5px; color:#8A8178; text-align:left; margin-top:-4px;}
   .rec-prompt-sheet textarea.field{min-height:92px;}
+  /* ניהול ההמלצות בהגדרות */
   .rec-admin-row{
     display:flex; align-items:flex-start; gap:10px;
     padding:11px 12px; border-radius:10px;
@@ -1682,6 +1693,8 @@
   }
   .rec-admin-row .rec-admin-body{flex:1; min-width:0;}
   .rec-admin-row .rec-admin-meta{font-size:11.5px; color:var(--panel-text-dim); margin-top:3px;}
+  /* גובה מוגבל (18.09.2026, דיווחה: "כמה המלצות אותי תראה בהגדרות, זה די
+     ממלא את המסך"). ברירת המחדל מציגה רק את החמש שמוצגות באתר. */
   #recAdminList{max-height:300px; overflow-y:auto; padding-inline-end:4px;}
   .rec-admin-del{
     flex-shrink:0; background:none; cursor:pointer;
@@ -1692,6 +1705,9 @@
     .about-switcher button{font-size:12.5px; padding:8px 4px;}
     .about-photo{width:124px; height:124px;}
   }
+  /* ===== ההגדרות, מסודרות לפי נושאים (18.09.2026, ביקשה: "ההגדרות של
+     מנהלת די מבולבל ועמוס, תסדר לפי נושאים"). כל נושא נפתח ונסגר, כך
+     שהמסך מראה בכל רגע רק את מה שעובדים עליו. ===== */
   .settings-intro{font-size:12.5px; color:var(--panel-text-dim); margin-bottom:14px;}
   .settings-section{
     border:1px solid rgba(var(--panel-line-rgb),0.18);
@@ -1725,6 +1741,9 @@
     .settings-section-body{padding:15px 13px 18px;}
   }
   .myday-overlay.add-modal-overlay{background:rgba(60,40,50,0.45);}
+  /* עיצוב אחיד לכל חלונות ההוספה (18.09.2026, ביקשה: "שיהיה אותו עיצוב
+     כמו של הוספת תור"). החלון של הוספת תור ידנית הוא הרפרנס: גיליון לבן,
+     שדות ממוסגרים ברוחב מלא, וכפתור ראשי אחד למטה. */
   .myday-sheet.add-modal{
     max-width:460px; padding:22px;
     overflow-x:hidden;
@@ -1738,6 +1757,8 @@
   .add-modal .add-modal-label{font-size:12.5px; color:#8A8178; margin:2px 0 -4px;}
   .add-modal .brand-logo-upload{align-self:center; margin-bottom:2px;}
   .add-modal .dmy-date-picker{width:100%;}
+  /* אותם שדות בדיוק כמו בשאר החלון — בלי זה נראה בתוך החלון הלבן
+     ריבוע כהה אחד באמצע, וזו בדיוק אי-האחידות שהפריעה לה. */
   .add-modal .dmy-date-picker select{
     flex:1 1 0; min-width:0; width:auto;
     border:1.5px solid #E4DACB;
@@ -2713,14 +2734,17 @@
       </div>
     </div>
     <div class="add-modal-body">
-      <div class="rec-prompt-intro" id="recPromptIntro"></div>
-      <textarea id="recPromptText" class="field" maxlength="280" placeholder="כמה מילים משלך…"></textarea>
-      <div class="rec-prompt-count"><span id="recPromptCount">0</span>/280</div>
-      <div id="recPromptError" class="add-modal-error"></div>
-      <div class="add-modal-actions">
-        <button class="cta" onclick="submitRecommendation()">שליחה</button>
-        <button type="button" class="cta ghost" onclick="closeRecPrompt()">דילוג</button>
+      <div id="recPromptForm">
+        <div class="rec-prompt-intro" id="recPromptIntro"></div>
+        <textarea id="recPromptText" class="field" maxlength="280" placeholder="כמה מילים משלך…"></textarea>
+        <div class="rec-prompt-count"><span id="recPromptCount">0</span>/280</div>
+        <div id="recPromptError" class="add-modal-error"></div>
+        <div class="add-modal-actions">
+          <button class="cta" onclick="submitRecommendation()">שליחה</button>
+          <button type="button" class="cta ghost" onclick="closeRecPrompt()">דילוג</button>
+        </div>
       </div>
+      <div id="recPromptThanks" class="waitlist-confirmed" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -3174,7 +3198,13 @@
     <div id="clientArrivalContent"></div>
   </div>
 </div>
-
+<!-- חלון "הוספת לקוחה" (17.09.2026). הוא היה עד עכשיו בתוך אזור הלקוחות,
+     והיא דיווחה שהוא "צובע את כל התואר בשחור" ושכשהיא גוללת למטה הריבוע
+     יושב באמצע במקום מול העיניים. הסיבה: אלמנט עם position:fixed מפסיק
+     להיות ממוקם ביחס למסך ברגע שיש מעליו בהיררכיה אב עם transform/filter —
+     אז הוא הפך בפועל לממוקם בתוך אזור הלקוחות, ונגלל יחד איתו. לכן הוא יושב
+     עכשיו כאן, ברמה העליונה, בדיוק כמו כל שאר החלונות שכן עובדים נכון
+     (#apptLookupOverlay, #personalTimeOverlay). -->
 <div id="addClientOverlay" class="myday-overlay add-modal-overlay">
   <div class="myday-sheet add-modal">
     <div class="myday-header">
@@ -11373,6 +11403,8 @@
         status: a.status || 'pending', note: '',
       }));
       mine.forEach(a => { if (!weekAppointments.some(x => x && x.id === a.id)) weekAppointments.push(a); });
+      resultEl.innerHTML = '';
+      closeApptLookup();
       renderLookedUpAppointment(mine);
       return;
     }
@@ -11698,6 +11730,10 @@
   function openRecPrompt(identity, firstName){
     if (!identity) return;
     recPromptIdentity = identity;
+    const formEl = document.getElementById('recPromptForm');
+    const thanksEl = document.getElementById('recPromptThanks');
+    if (formEl) formEl.style.display = '';
+    if (thanksEl) thanksEl.style.display = 'none';
     const intro = document.getElementById('recPromptIntro');
     if (intro){
       intro.textContent = (firstName ? firstName + ', ' : '') + 'אם חזרת — כנראה את משלנו 😉 יש לך מילה או שתיים עלינו? נשמח שיראו אותן באתר.';
@@ -11731,12 +11767,20 @@
       addModalShowError('recPromptError', (res && res.error) || 'לא הצלחנו לשלוח כרגע.');
       return;
     }
-    if (res.recommendation){
+    if (runningOnPublicData && Array.isArray(res.recommendations)){
+      recommendations = res.recommendations.map(r => Object.assign({}, r, { approved: true }));
+      renderRecommendations();
+    } else if (res.recommendation){
       recommendations.push(Object.assign({}, res.recommendation, { createdAt: new Date().toISOString(), approved: true }));
       renderRecommendations();
     }
-    const sheet = document.querySelector('#recPromptOverlay .add-modal-body');
-    if (sheet) sheet.innerHTML = '<div class="waitlist-confirmed">💛 &nbsp;תודה! המילים שלך עלו לאתר.</div>';
+    const formEl = document.getElementById('recPromptForm');
+    const thanksEl = document.getElementById('recPromptThanks');
+    if (formEl) formEl.style.display = 'none';
+    if (thanksEl){
+      thanksEl.textContent = res.replaced ? '💛  תודה! עדכנו את מה שכתבת.' : '💛  תודה! המילים שלך עלו לאתר.';
+      thanksEl.style.display = 'block';
+    }
     setTimeout(closeRecPrompt, 2200);
   }
   document.getElementById('recPromptText')?.addEventListener('input', (e) => {
@@ -12534,6 +12578,17 @@
     return body;
   }
   function bookingGoesThroughServer(){ return !isOwnerSession(); }
+  /**
+   * ביטול תור דרך השרת. יש באתר שלוש דרכים שבהן לקוחה מבטלת תור — ממסך
+   * "התור שלי", ממסך "יש לך תור קיים?", ובשינוי מועד (שמבטל וקובע מחדש).
+   * כולן עוברות מכאן, כי בפעם הראשונה חיברתי רק אחת מהן והשתיים האחרות
+   * המשיכו לכתוב ישירות בשקט. (18.09.2026, התגלה בלוגים של השרת: היו שני
+   * POST במקום שלושה.)
+   *
+   * מחזיר: { ok, error, late, fallback, direct }
+   *   direct   — רותי מחוברת, אין מה לשלוח לשרת
+   *   fallback — השרת לא נענה; צריך לבצע את הביטול מקומית כמו קודם
+   */
   async function cancelApptViaServer(appt){
     if (!bookingGoesThroughServer() || !appt) return { ok: true, direct: true };
     try {
@@ -13046,6 +13101,8 @@
     if (!isOwnerSession()){
       return loadPublicData().then(loaded => {
         if (!loaded) return loadPrivateCloudData(cloudLoadStartedAt); // נפילה לאחור
+        hideCloudErrorBanner();
+        cloudLoadRetryCount = 0;
         cloudLoadComplete = true;
         lastLoadedSnapshot = null;   // אין מה לשמור מכאן, ולכן גם אין ממה למזג
         rerenderEverything();
@@ -13377,12 +13434,14 @@
     if (typeof renderMiniCal === 'function') renderMiniCal();
   }
   function doLogout(){
-    auth.signOut().then(() => {
-      auth.signInAnonymously().catch(err => console.error('Re-sign-in after logout failed:', err));
-      if (typeof loadCloudData === 'function') setTimeout(loadCloudData, 0);
+    return auth.signOut().then(() => {
       sensitiveAccessUnlocked = false;
       try { sessionStorage.removeItem('appAdminViewState'); } catch (e) {}
-      document.querySelectorAll('.switcher button')[0].click();
+      const firstSwitcher = document.querySelectorAll('.switcher button')[0];
+      if (firstSwitcher) firstSwitcher.click();
+      return auth.signInAnonymously()
+        .catch(err => { console.error('Re-sign-in after logout failed:', err); })
+        .then(() => { if (typeof loadCloudData === 'function') return loadCloudData(); });
     });
   }
   function doChangePassword(){
