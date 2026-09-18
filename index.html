@@ -3400,10 +3400,13 @@
         <label><input type="radio" name="frTimeOfDay" value="evening"> ערב</label>
         <label><input type="radio" name="frTimeOfDay" value="custom"> טווח מותאם אישית</label>
       </div>
-      <div id="frCustomTimeWrap" style="display:none; gap:10px; align-items:center;">
-        <input type="time" id="frTimeFrom" class="field" style="margin:0;">
-        <span>עד</span>
-        <input type="time" id="frTimeTo" class="field" style="margin:0;">
+      <div id="frCustomTimeWrap" style="display:none; flex-direction:column; gap:6px;">
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="time" id="frTimeFrom" class="field" style="margin:0;">
+          <span>עד</span>
+          <input type="time" id="frTimeTo" class="field" style="margin:0;">
+        </div>
+        <div id="frTimeEcho" class="reminder-choice-notice" style="display:none;"></div>
       </div>
       <div class="label" style="margin-top:6px;">טווח תאריכים (לא חובה — ברירת המחדל 30 הימים הקרובים)</div>
       <div style="display:flex; gap:10px; align-items:center;">
@@ -4157,6 +4160,28 @@
     if (toEl.value && toEl.value < minForTo) toEl.value = '';
   });
   wireIdentityAutofill({ idId: 'frId', firstId: 'frFirstName', lastId: 'frLastName', phoneId: 'frPhone', emailId: 'frEmail' });
+  function updateFrTimeEcho(){
+    const echo = document.getElementById('frTimeEcho');
+    if (!echo) return;
+    const from = (document.getElementById('frTimeFrom') || {}).value || '';
+    const to = (document.getElementById('frTimeTo') || {}).value || '';
+    if (!from && !to){ echo.style.display = 'none'; echo.textContent = ''; return; }
+    const partOfDay = (t) => {
+      const h = parseInt(String(t).split(':')[0], 10);
+      if (isNaN(h)) return '';
+      if (h < 12) return ' בבוקר';
+      if (h < 17) return ' בצהריים';
+      if (h < 21) return ' בערב';
+      return ' בלילה';
+    };
+    const label = (t) => t ? (t + partOfDay(t)) : '—';
+    echo.style.display = 'block';
+    echo.textContent = 'נבחר: מ-' + label(from) + ' עד ' + label(to);
+  }
+  document.getElementById('frTimeFrom')?.addEventListener('input', updateFrTimeEcho);
+  document.getElementById('frTimeTo')?.addEventListener('input', updateFrTimeEcho);
+  document.getElementById('frTimeFrom')?.addEventListener('change', updateFrTimeEcho);
+  document.getElementById('frTimeTo')?.addEventListener('change', updateFrTimeEcho);
   document.getElementById('frId')?.addEventListener('focus', function(){ warmClientApi(); });
   document.getElementById('frId')?.addEventListener('input', function(){ frLookupIdentity(); });
   function openFlexibleRequestOverlay(){
@@ -4186,6 +4211,7 @@
     if (anyRadio) anyRadio.checked = true;
     document.getElementById('frTimeFrom').value = '';
     document.getElementById('frTimeTo').value = '';
+    if (typeof updateFrTimeEcho === 'function') updateFrTimeEcho();
     const frTodayStr = formatDateKey(todayMidnight);
     document.getElementById('frDateFrom').min = frTodayStr;
     document.getElementById('frDateFrom').value = '';
