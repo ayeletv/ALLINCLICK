@@ -3921,7 +3921,7 @@
   function closeFlexibleRequestOverlay(){
     document.getElementById('flexibleRequestOverlay').classList.remove('show');
   }
-  function submitFlexibleRequest(){
+  async function submitFlexibleRequest(){
     const errorEl = document.getElementById('frError');
     const svcObjs = frSelectedServiceObjs();
     const idDigits = (document.getElementById('frId').value || '').replace(/[^0-9]/g, '');
@@ -4068,15 +4068,40 @@
       status: 'pending',
       createdAt: new Date().toISOString()
     };
-    specialRequests.push(req);
-    if (existingClient){
-      if (!existingClient.email) existingClient.email = email;
-      if (!existingClient.phone) existingClient.phone = phone;
+    if (bookingGoesThroughServer()){
+      let res = null;
+      try {
+        res = await callClientApi('specialRequest', {
+          id: idDigits || phone, name, phone, email, teudatZehut: idDigits,
+          request: {
+            kind: 'flexible', mode: req.mode,
+            services: req.services, preference: req.preference,
+            text: req.note || '',
+          },
+        });
+      } catch (err) {
+        console.error('Special request through the server failed — falling back to a direct write:', err);
+        res = { ok: true, __fallback: true };
+      }
+      if (!res || !res.ok){
+        errorEl.textContent = (res && res.error) || 'לא הצלחנו לשלוח את הבקשה. נא לנסות שוב.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (res.request && res.request.id) req.id = res.request.id;
+      specialRequests.push(req);
+      if (res.__fallback && typeof saveState === 'function') saveState();
     } else {
-      clients.push({ name, phone, teudatZehut: idDigits, email, photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
+      specialRequests.push(req);
+      if (existingClient){
+        if (!existingClient.email) existingClient.email = email;
+        if (!existingClient.phone) existingClient.phone = phone;
+      } else {
+        clients.push({ name, phone, teudatZehut: idDigits, email, photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
+      }
+      if (typeof saveState === 'function') saveState();
     }
     if (typeof renderClients === 'function') renderClients();
-    if (typeof saveState === 'function') saveState();
     const resultEl = document.getElementById('frResultWrap');
     document.getElementById('frFormWrap').style.display = 'none';
     resultEl.innerHTML = '<div class="status-dot">בודקת אם יש תור מתאים כרגע…</div>';
@@ -10008,7 +10033,7 @@
     wireIdentityAutofill({ idId: 'wlId', firstId: 'wlFirstName', lastId: 'wlLastName', phoneId: 'wlPhone', emailId: 'wlEmail' });
     scrollWaitlistBoxIntoView();
   }
-  function joinWaitlist(time, presetName, presetPhone, presetId, presetEmail){
+  async function joinWaitlist(time, presetName, presetPhone, presetId, presetEmail){
     let name, phone, idDigits, email;
     if (presetName !== undefined && presetPhone !== undefined && presetId !== undefined && presetEmail !== undefined){
       name = presetName;
@@ -10048,7 +10073,7 @@
     const svc = getBookingSvc();
     const emp = selectedStaffIndex === 'any' ? null : staff[selectedStaffIndex];
     const dateStr = bookingSelectedDate.getFullYear() + '-' + String(bookingSelectedDate.getMonth()+1).padStart(2,'0') + '-' + String(bookingSelectedDate.getDate()).padStart(2,'0');
-    waitlist.push({
+    const wlEntry = {
       id: 'wl_' + Date.now() + '_' + Math.floor(Math.random()*10000),
       name, phone, teudatZehut: idDigits, email: (existingClient && existingClient.email) || email,
       service: svc ? svc.name : '',
@@ -10056,10 +10081,31 @@
       date: dateStr,
       requestedTime: time,
       status: 'pending'
-    });
+    };
+    if (bookingGoesThroughServer()){
+      let res = null;
+      try {
+        res = await callClientApi('waitlist', {
+          id: idDigits || phone, name, phone, email, teudatZehut: idDigits,
+          entry: { date: dateStr, requestedTime: time, service: svc ? svc.name : '' },
+        });
+      } catch (err) {
+        console.error('Waitlist through the server failed — falling back to a direct write:', err);
+        res = { ok: true, entry: wlEntry, __fallback: true };
+      }
+      if (!res || !res.ok){
+        document.getElementById('waitlistBox').innerHTML =
+          `<div class="waitlist-prompt">${(res && res.error) || 'לא הצלחנו לרשום אותך לרשימת ההמתנה. נא לנסות שוב.'}</div>`;
+        return;
+      }
+      waitlist.push(res.entry || wlEntry);
+      if (res.__fallback && typeof saveState === 'function') saveState();
+    } else {
+      waitlist.push(wlEntry);
+      if (typeof saveState === 'function') saveState();
+    }
     if (typeof renderClients === 'function') renderClients();
     if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
-    if (typeof saveState === 'function') saveState();
     document.getElementById('waitlistBox').innerHTML = `
       <div class="waitlist-confirmed">✓ &nbsp;נרשמת לרשימת ההמתנה ל-${time}. נעדכן אותך אם יתפנה מקום.</div>`;
   }
@@ -10581,6 +10627,16 @@
       clients.push({ name: clientNameVal, phone: phoneVal.trim(), teudatZehut: idDigits, email: finalEmail, photo: null, visits: isTodayOrPastBooking ? 1 : 0, daysSinceVisit: isTodayOrPastBooking ? 0 : null, note: '', birthday: ftpBirthday, reminderChannelPref: reminderChannels });
       customerEmail = finalEmail;
     }
+    const locallyAddedClient = existingClient ? null : clients[clients.length - 1];
+    const visitsBefore = existingClient ? existingClient.visits : null;
+    const undoLocalClientChanges = () => {
+      if (locallyAddedClient){
+        const i = clients.indexOf(locallyAddedClient);
+        if (i !== -1) clients.splice(i, 1);
+      } else if (existingClient){
+        existingClient.visits = visitsBefore;
+      }
+    };
     currentBookedAppointment = {
       id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000),
       day: dayKey,
@@ -10597,8 +10653,40 @@
       note: '',
       reminderChannels: reminderChannels
     };
-    weekAppointments.push(currentBookedAppointment);
-    if (typeof saveState === 'function') saveState();
+    if (bookingGoesThroughServer()){
+      let apiResult = null;
+      if (confirmBtnEl){ confirmBtnEl.disabled = true; confirmBtnEl.textContent = 'קובעת את התור...'; }
+      try {
+        apiResult = await callClientApi('book', {
+          id: idInput.value,
+          teudatZehut: idDigits || tzUpdateDigits || '',
+          name: clientNameVal,
+          phone: phoneVal,
+          email: customerEmail || '',
+          reminderChannels,
+          appointment: currentBookedAppointment,
+        });
+      } catch (err) {
+        console.error('Booking through the server failed — falling back to a direct write:', err);
+        apiResult = { ok: true, appointment: currentBookedAppointment, __fallback: true };
+      }
+      if (confirmBtnEl){ confirmBtnEl.disabled = false; confirmBtnEl.textContent = confirmBtnOrigText || 'אישור תור'; }
+      if (!apiResult || !apiResult.ok){
+        const msg = (apiResult && apiResult.error) || 'התור לא נקבע. נא לנסות שוב.';
+        if (apiResult && apiResult.slotTaken && typeof renderAvailableSlots === 'function') renderAvailableSlots();
+        const wlBox = document.getElementById('waitlistBox');
+        if (wlBox) wlBox.innerHTML = `<div class="waitlist-prompt">${msg}</div>`;
+        undoLocalClientChanges();
+        currentBookedAppointment = null;
+        return;
+      }
+      currentBookedAppointment = apiResult.appointment;
+      weekAppointments.push(currentBookedAppointment);
+      if (apiResult.__fallback && typeof saveState === 'function') saveState();
+    } else {
+      weekAppointments.push(currentBookedAppointment);
+      if (typeof saveState === 'function') saveState();
+    }
     let gcalUrl = '#';
     try { gcalUrl = buildGoogleCalendarUrl(bookingSelectedDate, selectedSlot, svc ? (svc.duration || 30) : 30, svc ? svc.name : 'תור', emp ? emp.name : ''); } catch(e){ console.error('Calendar link build failed:', e); }
     let icsUrl = '#';
@@ -10681,7 +10769,7 @@
     return 'data:text/calendar;charset=utf-8,' + encodeURIComponent(lines.join('\r\n'));
   }
   let currentBookedAppointment = null;
-  function removeCurrentBookedAppointment(){
+  function removeCurrentBookedAppointment(opts){
     if (!currentBookedAppointment) return;
     const idx = currentBookedAppointment.id
       ? weekAppointments.findIndex(a => a.id === currentBookedAppointment.id)
@@ -10690,7 +10778,7 @@
     currentBookedAppointment = null;
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderMiniCal === 'function') renderMiniCal();
-    if (typeof saveState === 'function') saveState();
+    if (!(opts && opts.skipSave) && typeof saveState === 'function') saveState();
   }
   function goToStep(n){
     document.querySelectorAll('.booking-step').forEach(s => s.classList.remove('active'));
@@ -10745,7 +10833,7 @@
     if (typeof showCategoryGrid === 'function') showCategoryGrid();
     if (typeof renderMiniCal === 'function') renderMiniCal();
   }
-  function cancelAppointment(){
+  async function cancelAppointment(){
     const apptBeingCancelled = currentBookedAppointment;
     const lateStatus = apptBeingCancelled && isLateCancellationAttempt(apptBeingCancelled) ? getLateCancelStatusForAppt(apptBeingCancelled) : null;
     if (lateStatus && lateStatus.blocked){
@@ -10755,13 +10843,38 @@
       return;
     }
     const waitlistMatches = apptBeingCancelled ? getWaitlistMatchesForAppointment(apptBeingCancelled) : [];
-    logCancellation(apptBeingCancelled);
-    if (lateStatus){
-      logLateCancellation(apptBeingCancelled, 'cancel');
-      const updatedStatus = getLateCancelStatusForAppt(apptBeingCancelled);
-      if (updatedStatus.count === 2) sendLateCancelAdminAlert(apptBeingCancelled, 2, false);
+    if (bookingGoesThroughServer() && apptBeingCancelled){
+      let res = null;
+      try {
+        res = await callClientApi('cancel', {
+          id: apptBeingCancelled.teudatZehut || '',
+          apptId: apptBeingCancelled.id,
+        });
+      } catch (err) {
+        console.error('Cancelling through the server failed — falling back to a direct cancellation:', err);
+        res = { ok: true, __fallback: true };
+      }
+      if (!res || !res.ok){
+        alert((res && res.error) || 'לא הצלחנו לבטל את התור. נא לנסות שוב או ליצור איתנו קשר.');
+        return;
+      }
+      if (res.__fallback){
+        logCancellation(apptBeingCancelled);
+        if (lateStatus) logLateCancellation(apptBeingCancelled, 'cancel');
+      } else if (res.late && lateStatus){
+        const updatedStatus = getLateCancelStatusForAppt(apptBeingCancelled);
+        if (updatedStatus.count + 1 === 2) sendLateCancelAdminAlert(apptBeingCancelled, 2, false);
+      }
+      removeCurrentBookedAppointment({ skipSave: !res.__fallback });
+    } else {
+      logCancellation(apptBeingCancelled);
+      if (lateStatus){
+        logLateCancellation(apptBeingCancelled, 'cancel');
+        const updatedStatus = getLateCancelStatusForAppt(apptBeingCancelled);
+        if (updatedStatus.count === 2) sendLateCancelAdminAlert(apptBeingCancelled, 2, false);
+      }
+      removeCurrentBookedAppointment();
     }
-    removeCurrentBookedAppointment();
     if (apptBeingCancelled){
       const client = findClientForAppt(apptBeingCancelled);
       if (client && client.email){
@@ -11796,6 +11909,19 @@
   }
   const PUBLIC_DOC = db.collection('publicView').doc('default');
   let lastPublishedPublicJson = null;
+  const CLIENT_API_URL = 'https://client-api-737599524118.me-west1.run.app';
+  async function callClientApi(action, payload){
+    const res = await fetch(CLIENT_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ action }, payload || {})),
+    });
+    let body = null;
+    try { body = await res.json(); } catch (e) { body = null; }
+    if (!body) throw new Error('שגיאת תקשורת מול השרת. נא לנסות שוב.');
+    return body;
+  }
+  function bookingGoesThroughServer(){ return !isOwnerSession(); }
   function isOwnerSession(){
     const u = auth && auth.currentUser;
     return !!(u && !u.isAnonymous);
