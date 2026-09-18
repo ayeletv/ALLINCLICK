@@ -1609,17 +1609,18 @@
   }
   .client-add-row input::placeholder{color:var(--panel-text-dim);}
   .about-switcher{
-    display:flex; gap:6px; justify-content:center;
-    margin:0 auto 20px; max-width:440px;
-    background:rgba(20,16,20,0.04); border-radius:14px; padding:5px;
+    display:flex; gap:5px; justify-content:center;
+    margin:0 auto 22px; max-width:440px;
+    background:var(--ink-2); border:1px solid rgba(245,238,228,0.15);
+    border-radius:999px; padding:5px;
   }
   .about-switcher button{
     flex:1 1 0; border:none; background:none; cursor:pointer;
-    font-family:'Heebo'; font-size:13.5px; color:#6E6660;
-    padding:9px 6px; border-radius:10px; white-space:nowrap;
+    font-family:'Heebo'; font-size:13px; font-weight:500; color:var(--ivory-dim);
+    padding:10px 6px; border-radius:999px; white-space:nowrap;
     transition:background 0.2s ease, color 0.2s ease;
   }
-  .about-switcher button.active{background:#fff; color:var(--wine); font-weight:600; box-shadow:0 1px 4px rgba(20,16,20,0.08);}
+  .about-switcher button.active{background:var(--wine); color:var(--ivory); font-weight:600;}
   .about-tab{display:none;}
   .about-tab.active{display:block; animation:fadeUp 0.3s ease forwards;}
   .about-who-wrap{
@@ -1629,18 +1630,18 @@
   .about-photo{
     width:150px; height:150px; border-radius:50%;
     overflow:hidden; flex-shrink:0;
-    background:#F3ECE0;
-    border:3px solid #fff;
-    box-shadow:0 6px 22px rgba(20,16,20,0.16);
+    background:var(--ink-2);
+    border:3px solid rgba(245,238,228,0.9);
+    box-shadow:0 8px 28px rgba(0,0,0,0.45);
     display:flex; align-items:center; justify-content:center;
   }
   .about-photo img{width:100%; height:100%; object-fit:cover; display:block;}
   .about-photo.is-empty{display:none;}
   .about-text{
-    font-size:15px; line-height:1.85; color:#3A3430;
+    font-size:15.5px; line-height:1.9; color:var(--ivory);
     white-space:pre-wrap; text-align:center;
   }
-  .about-empty{font-size:14px; color:#8A8178; padding:24px 8px; text-align:center;}
+  .about-empty{font-size:14px; color:var(--ivory-dim); padding:24px 8px; text-align:center;}
   .rec-list{
     display:grid; gap:14px;
     grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
@@ -1651,7 +1652,7 @@
     border:1.5px solid #EFE6D8;
     border-radius:16px;
     padding:18px 18px 14px;
-    box-shadow:0 2px 10px rgba(20,16,20,0.05);
+    box-shadow:0 6px 20px rgba(0,0,0,0.3);
     display:flex; flex-direction:column; gap:12px;
   }
   .rec-card-quote{
@@ -1681,6 +1682,7 @@
   }
   .rec-admin-row .rec-admin-body{flex:1; min-width:0;}
   .rec-admin-row .rec-admin-meta{font-size:11.5px; color:var(--panel-text-dim); margin-top:3px;}
+  #recAdminList{max-height:300px; overflow-y:auto; padding-inline-end:4px;}
   .rec-admin-del{
     flex-shrink:0; background:none; cursor:pointer;
     border:1px solid rgba(155,44,66,0.45); color:var(--wine);
@@ -2650,15 +2652,15 @@
   </div>
   <div id="panel-hours" class="panel">
     <div class="about-switcher">
-      <button class="active" data-about-tab="hours" onclick="showAboutTab('hours', this)">שעות פעילות</button>
-      <button data-about-tab="who" onclick="showAboutTab('who', this)">מי אנחנו?</button>
+      <button class="active" data-about-tab="who" onclick="showAboutTab('who', this)">מי אנחנו?</button>
+      <button data-about-tab="hours" onclick="showAboutTab('hours', this)">שעות פעילות</button>
       <button data-about-tab="recs" onclick="showAboutTab('recs', this)">לקוחות ממליצות</button>
     </div>
-    <div id="about-hours" class="about-tab active">
+    <div id="about-hours" class="about-tab">
       <div class="label" style="text-align:center; margin-bottom:14px;">שעות הפעילות שלנו</div>
       <div class="new-grid" id="hoursOverviewList"></div>
     </div>
-    <div id="about-who" class="about-tab">
+    <div id="about-who" class="about-tab active">
       <div class="about-who-wrap">
         <div class="about-photo" id="aboutPhotoWrap"><img id="aboutPhotoImg" alt=""></div>
         <div class="about-text" id="aboutTextBody"></div>
@@ -2953,7 +2955,10 @@
 
       <div class="label" style="margin:28px 0 10px;">המלצות של לקוחות<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">לקוחה מקבלת הצעה לכתוב מילה טובה מיד אחרי שהיא קובעת תור. ההמלצה עולה לאתר מיד, וחמש האחרונות מוצגות בטאב "קצת עלינו" ← "לקוחות ממליצות". אפשר למחוק המלצה בודדת, או את כולן.</span></span></div>
       <div id="recAdminList"></div>
-      <button type="button" class="template-btn" style="margin-top:8px; color:var(--wine); border-color:rgba(155,44,66,0.4);" onclick="deleteAllRecommendations()">🗑 מחיקת כל ההמלצות</button>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+        <button type="button" class="template-btn" id="recAdminToggleBtn" style="display:none;" onclick="toggleRecAdminExpanded()"></button>
+        <button type="button" class="template-btn" style="color:var(--wine); border-color:rgba(155,44,66,0.4);" onclick="deleteAllRecommendations()">🗑 מחיקת כל ההמלצות</button>
+      </div>
       <div class="label" style="margin:28px 0 10px;">גיבויים</div>
       <div style="font-size:13.5px; font-weight:700; color:var(--wine); background:rgba(155,44,66,0.1); border:1px solid rgba(155,44,66,0.35); border-radius:10px; padding:10px 14px; margin-bottom:10px; max-width:480px;">
         ⚠️ אזור למקרי חירום בלבד — לא לגעת בלי סיבה! שחזור גיבוי מוחק ומחליף את כל הנתונים הנוכחיים (לקוחות, תורים, שירותים וכו').
@@ -6322,12 +6327,30 @@
     const ta = document.getElementById('aboutTextInput');
     if (ta && document.activeElement !== ta) ta.value = (aboutMe && aboutMe.text) || '';
   }
+  let recAdminExpanded = false;
+  const REC_ADMIN_COLLAPSED_COUNT = 5;
+  function toggleRecAdminExpanded(){
+    recAdminExpanded = !recAdminExpanded;
+    renderRecAdminList();
+  }
   function renderRecAdminList(){
     const listEl = document.getElementById('recAdminList');
     if (!listEl) return;
     listEl.innerHTML = '';
     const all = (recommendations || []).slice()
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    const toggleBtn = document.getElementById('recAdminToggleBtn');
+    if (toggleBtn){
+      const hidden = Math.max(0, all.length - REC_ADMIN_COLLAPSED_COUNT);
+      if (hidden){
+        toggleBtn.style.display = '';
+        toggleBtn.textContent = recAdminExpanded
+          ? '▲ הצגת החמש המוצגות בלבד'
+          : `▼ הצגת כל ${all.length} ההמלצות (עוד ${hidden})`;
+      } else {
+        toggleBtn.style.display = 'none';
+      }
+    }
     if (!all.length){
       const empty = document.createElement('div');
       empty.style.cssText = 'font-size:13px; color:var(--panel-text-dim);';
@@ -6335,7 +6358,8 @@
       listEl.appendChild(empty);
       return;
     }
-    all.forEach((r, i) => {
+    const shown = recAdminExpanded ? all : all.slice(0, REC_ADMIN_COLLAPSED_COUNT);
+    shown.forEach((r, i) => {
       const row = document.createElement('div');
       row.className = 'rec-admin-row';
       const body = document.createElement('div');
