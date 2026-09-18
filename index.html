@@ -4403,6 +4403,8 @@
             kind: 'flexible', mode: req.mode,
             services: req.services, preference: req.preference,
             text: req.note || '',
+            preferredStaffIdx: req.preferredStaffIdx,
+            reminderChannels: req.reminderChannels,
           },
         });
       } catch (err) {
@@ -8275,6 +8277,7 @@
   function tryFindFlexibleSlot(req){
     const duration = flexReqDuration(req);
     const cats = flexReqCategories(req);
+    if (!cats.length) return null;
     let capableIndices = getCapableStaffIndicesForCats(cats);
     if (req && req.preferredStaffIdx != null && capableIndices.includes(req.preferredStaffIdx)){
       capableIndices = [req.preferredStaffIdx];
@@ -10451,6 +10454,24 @@
     const ftpEmailEl = document.getElementById('ftpEmail');
     const reminderEmailEl = document.getElementById('reminderEmailInput');
     const knownEmail = (knownClient && knownClient.email) || (ftpEmailEl && ftpEmailEl.value.trim()) || (reminderEmailEl && reminderEmailEl.value.trim()) || '';
+    const srvKnown = runningOnPublicData && serverIdentity && serverIdentity.found
+      && serverIdentity.id === knownId && knownId.length === 9;
+    if (srvKnown){
+      boxEl.innerHTML = `
+        <div class="waitlist-prompt">
+          השעה ${time} לא זמינה — ${reason || 'תפוסה כרגע.'}
+          <div style="margin:8px 0; font-size:13px;">מצטרפים בשם <b class="wl-known-name"></b> — הפרטים שלך כבר אצלנו.</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="wl-join-known-btn">הצטרפות לרשימת המתנה</button>
+            <button type="button" class="wl-not-me-btn" style="background:none; border:1px solid rgba(245,238,228,.2); color:var(--ivory-dim);">אלו לא הפרטים שלי</button>
+          </div>
+        </div>`;
+      boxEl.querySelector('.wl-known-name').textContent = serverIdentity.firstName || '';
+      boxEl.querySelector('.wl-join-known-btn').onclick = () => joinWaitlist(time, serverIdentity.firstName || '', '', knownId, '');
+      boxEl.querySelector('.wl-not-me-btn').onclick = () => showWaitlistPromptManual(time, reason);
+      scrollWaitlistBoxIntoView();
+      return;
+    }
     if (knownName && isValidIsraeliPhone(knownPhone) && knownId.length === 9 && knownEmail){
       boxEl.innerHTML = `
         <div class="waitlist-prompt">
@@ -10547,7 +10568,7 @@
       try {
         res = await callClientApi('waitlist', {
           id: idDigits || phone, name, phone, email, teudatZehut: idDigits,
-          entry: { date: dateStr, requestedTime: time, service: svc ? svc.name : '' },
+          entry: { date: dateStr, requestedTime: time, service: svc ? svc.name : '', staffName: wlEntry.staffName || '' },
         });
       } catch (err) {
         console.error('Waitlist through the server failed:', err);
@@ -10807,8 +10828,16 @@
       const digits = (document.getElementById('bookingIdInput')?.value || '').replace(/[^0-9]/g, '');
       regEl.style.display = digits.length === 9 ? 'block' : 'none';
     }
+    if (known && Array.isArray(serverIdentity.reminderChannels) && serverIdentity.reminderChannels.length
+        && typeof applyReminderChannelPref === 'function'){
+      applyReminderChannelPref(serverIdentity.reminderChannels);
+    }
     if (typeof updateReminderEmailVisibility === 'function') updateReminderEmailVisibility();
     if (typeof refreshBookingTzPrompt === 'function') refreshBookingTzPrompt();
+    const reminderEmailEl = document.getElementById('reminderEmailInput');
+    if (runningOnPublicData && reminderEmailEl){
+      if (known && !serverIdentity.hasEmail) reminderEmailEl.style.display = 'block';
+    }
   }
   let serverIdentityCheckingTimer = null;
   function showIdentityChecking(){
@@ -11199,7 +11228,7 @@
     const existingClient = clients.find(c => c.teudatZehut === idDigits)
       || ((runningOnPublicData && existingClientPre && existingClientPre.fromServer) ? existingClientPre : null);
     const existingClientNameForOverlap = existingClient ? existingClient.name : clientNameVal;
-    if (clientHasOverlappingAppointment(existingClientNameForOverlap, dateKeyForSlot, slotStartMin, slotEndMin, null)){
+    if (!runningOnPublicData && clientHasOverlappingAppointment(existingClientNameForOverlap, dateKeyForSlot, slotStartMin, slotEndMin, null)){
       if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
       document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">כבר קיים תור על שמך שחופף לשעה הזו. אם זו טעות, אפשר לבדוק ב"התור שלי" או ליצור איתנו קשר.</div>`;
       return;
@@ -11225,7 +11254,7 @@
         return;
       }
     }
-    if (existingClient){
+    if (existingClient && !runningOnPublicData){
       const fmt = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
       const targetDateStr = fmt(bookingSelectedDate);
       const currentSvcName = svc ? svc.name : '';
@@ -11394,7 +11423,10 @@
     }
     if (bookingGoesThroughServer() && existingClient && idDigits){
       setTimeout(() => {
-        try { openRecPrompt(idDigits, firstNameOfFull(clientNameVal)); }
+        const recName = (runningOnPublicData && serverIdentity && serverIdentity.found && serverIdentity.firstName)
+          ? serverIdentity.firstName
+          : firstNameOfFull(clientNameVal);
+        try { openRecPrompt(idDigits, recName); }
         catch (e) { console.error('Opening the recommendation prompt failed:', e); }
       }, 1200);
     }
@@ -11479,6 +11511,12 @@
       if (phoneEl) phoneEl.value = previousClient.phone || '';
       const idEl = document.getElementById('bookingIdInput');
       if (idEl){ idEl.value = previousClient.teudatZehut || ''; idEl.dispatchEvent(new Event('input')); }
+    } else if (runningOnPublicData){
+      const idEl3 = document.getElementById('bookingIdInput');
+      const keepId3 = (apptBeingRescheduled && apptBeingRescheduled.teudatZehut) || lastIdentifiedLookupId || '';
+      if (idEl3 && keepId3){ idEl3.value = keepId3; idEl3.dispatchEvent(new Event('input')); }
+      const wlBoxR = document.getElementById('waitlistBox');
+      if (wlBoxR) wlBoxR.innerHTML = '<div class="waitlist-prompt">התור הקודם בוטל. נא לבחור עכשיו את המועד החדש — עד שתבחרי, אין לך תור.</div>';
     }
     goToStep(1);
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
@@ -11497,6 +11535,10 @@
       if (phone) phone.value = previousClient.phone || '';
       const idEl = document.getElementById('bookingIdInput');
       if (idEl){ idEl.value = previousClient.teudatZehut || ''; idEl.dispatchEvent(new Event('input')); }
+    } else if (runningOnPublicData){
+      const idEl2 = document.getElementById('bookingIdInput');
+      const keepId = (previousAppointment && previousAppointment.teudatZehut) || lastIdentifiedLookupId || '';
+      if (idEl2 && keepId){ idEl2.value = keepId; idEl2.dispatchEvent(new Event('input')); }
     }
     goToStep(1);
     if (typeof showCategoryGrid === 'function') showCategoryGrid();
@@ -11720,7 +11762,11 @@
         serverDidIt = true;
         appt.confirmedAt = res.confirmedAt || new Date().toISOString();
       } else {
-        console.error('Confirming through the server did not succeed — falling back to a direct write:', res && res.error);
+        console.error('Confirming through the server did not succeed:', res && res.error);
+        if (runningOnPublicData){
+          alert('לא הצלחנו לרשום את האישור כרגע. נא לנסות שוב בעוד רגע.');
+          return;
+        }
       }
     }
     appt.confirmedByClient = true;
@@ -13090,6 +13136,10 @@
       const params = new URLSearchParams(window.location.search);
       const wlId = params.get('cancelWaitlist');
       if (!wlId) return;
+      if (runningOnPublicData){
+        alert('כדי לצאת מרשימת ההמתנה נא ליצור איתנו קשר — נסיר אותך מיד.');
+        return;
+      }
       const idx = waitlist.findIndex(w => w && w.id === wlId);
       if (idx === -1){
         alert('בקשת ההמתנה הזו כבר לא קיימת (אולי כבר בוטלה, או שכבר נקבע לך תור).');
