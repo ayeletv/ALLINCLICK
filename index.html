@@ -4406,8 +4406,10 @@
           },
         });
       } catch (err) {
-        console.error('Special request through the server failed — falling back to a direct write:', err);
-        res = { ok: true, __fallback: true };
+        console.error('Special request through the server failed:', err);
+        res = runningOnPublicData
+          ? { ok: false, error: 'לא הצלחנו לשלוח את הבקשה כרגע. נא לנסות שוב בעוד רגע, או ליצור איתנו קשר.' }
+          : { ok: true, __fallback: true };
       }
       if (!res || !res.ok){
         errorEl.textContent = (res && res.error) || 'לא הצלחנו לשלוח את הבקשה. נא לנסות שוב.';
@@ -8461,7 +8463,7 @@
       candidateStaffIndices = idx !== -1 ? [idx] : [];
     } else {
       const cats = svc && svc.category ? [svc.category] : [];
-      candidateStaffIndices = cats.length ? getCapableStaffIndicesForCats(cats) : staff.map((_, i) => i);
+      candidateStaffIndices = cats.length ? getCapableStaffIndicesForCats(cats) : [];
     }
     for (const staffIdx of candidateStaffIndices){
       const emp = staff[staffIdx];
@@ -9827,7 +9829,7 @@
     const days = Array.isArray(pref.days) ? pref.days : [];
     const capableIndices = (typeof reqLike.preferredStaffIdx === 'number' && reqLike.preferredStaffIdx !== null)
       ? [reqLike.preferredStaffIdx]
-      : (cats.length ? getCapableStaffIndicesForCats(cats) : staff.map((_, i) => i));
+      : (cats.length ? getCapableStaffIndicesForCats(cats) : []);
     const liveIndices = capableIndices.filter(i => staff[i] && !staff[i].deleted);
     if (!liveIndices.length){
       return { reason: 'no-staff', message: 'אין כרגע עובדת שמבצעת את הטיפול/ים שנבחרו — כדאי ליצור קשר עם העסק.' };
@@ -9871,7 +9873,7 @@
     const cats = flexReqCategories(reqLike);
     const capableIndices = (typeof reqLike.preferredStaffIdx === 'number' && reqLike.preferredStaffIdx !== null)
       ? [reqLike.preferredStaffIdx]
-      : (cats.length ? getCapableStaffIndicesForCats(cats) : staff.map((_, i) => i));
+      : (cats.length ? getCapableStaffIndicesForCats(cats) : []);
     const liveIndices = capableIndices.filter(i => staff[i] && !staff[i].deleted);
     const found = [];
     const cursor = new Date(rangeFrom);
@@ -10548,8 +10550,10 @@
           entry: { date: dateStr, requestedTime: time, service: svc ? svc.name : '' },
         });
       } catch (err) {
-        console.error('Waitlist through the server failed — falling back to a direct write:', err);
-        res = { ok: true, entry: wlEntry, __fallback: true };
+        console.error('Waitlist through the server failed:', err);
+        res = runningOnPublicData
+          ? { ok: false, error: 'לא הצלחנו לרשום אותך לרשימת ההמתנה כרגע. נא לנסות שוב בעוד רגע.' }
+          : { ok: true, entry: wlEntry, __fallback: true };
       }
       if (!res || !res.ok){
         document.getElementById('waitlistBox').innerHTML =
@@ -11315,8 +11319,10 @@
           siteUrl: getSiteUrl(),
         });
       } catch (err) {
-        console.error('Booking through the server failed — falling back to a direct write:', err);
-        apiResult = { ok: true, appointment: currentBookedAppointment, __fallback: true };
+        console.error('Booking through the server failed:', err);
+        apiResult = runningOnPublicData
+          ? { ok: false, error: 'לא הצלחנו לקבוע את התור כרגע. נא לנסות שוב בעוד רגע — התור עדיין לא נקבע.' }
+          : { ok: true, appointment: currentBookedAppointment, __fallback: true };
       }
       if (confirmBtnEl){ confirmBtnEl.disabled = false; confirmBtnEl.textContent = confirmBtnOrigText || 'אישור תור'; }
       if (!apiResult || !apiResult.ok){
@@ -12793,7 +12799,10 @@
       if (!res || !res.ok) return { ok: false, error: (res && res.error) || 'לא הצלחנו לבטל את התור. נא לנסות שוב או ליצור איתנו קשר.' };
       return { ok: true, late: !!res.late };
     } catch (err) {
-      console.error('Cancelling through the server failed — falling back to a direct cancellation:', err);
+      console.error('Cancelling through the server failed:', err);
+      if (runningOnPublicData){
+        return { ok: false, error: 'לא הצלחנו לבטל את התור כרגע. נא לנסות שוב בעוד רגע, או ליצור איתנו קשר — התור עדיין קיים.' };
+      }
       return { ok: true, fallback: true };
     }
   }
