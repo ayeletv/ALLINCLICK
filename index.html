@@ -1608,6 +1608,88 @@
     font-size:14px;
   }
   .client-add-row input::placeholder{color:var(--panel-text-dim);}
+  .about-switcher{
+    display:flex; gap:6px; justify-content:center;
+    margin:0 auto 20px; max-width:440px;
+    background:rgba(20,16,20,0.04); border-radius:14px; padding:5px;
+  }
+  .about-switcher button{
+    flex:1 1 0; border:none; background:none; cursor:pointer;
+    font-family:'Heebo'; font-size:13.5px; color:#6E6660;
+    padding:9px 6px; border-radius:10px; white-space:nowrap;
+    transition:background 0.2s ease, color 0.2s ease;
+  }
+  .about-switcher button.active{background:#fff; color:var(--wine); font-weight:600; box-shadow:0 1px 4px rgba(20,16,20,0.08);}
+  .about-tab{display:none;}
+  .about-tab.active{display:block; animation:fadeUp 0.3s ease forwards;}
+  .about-who-wrap{
+    max-width:520px; margin:0 auto; text-align:center;
+    display:flex; flex-direction:column; align-items:center; gap:18px;
+  }
+  .about-photo{
+    width:150px; height:150px; border-radius:50%;
+    overflow:hidden; flex-shrink:0;
+    background:#F3ECE0;
+    border:3px solid #fff;
+    box-shadow:0 6px 22px rgba(20,16,20,0.16);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .about-photo img{width:100%; height:100%; object-fit:cover; display:block;}
+  .about-photo.is-empty{display:none;}
+  .about-text{
+    font-size:15px; line-height:1.85; color:#3A3430;
+    white-space:pre-wrap; text-align:center;
+  }
+  .about-empty{font-size:14px; color:#8A8178; padding:24px 8px; text-align:center;}
+  .rec-list{
+    display:grid; gap:14px;
+    grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+    max-width:760px; margin:0 auto;
+  }
+  .rec-card{
+    background:#fff;
+    border:1.5px solid #EFE6D8;
+    border-radius:16px;
+    padding:18px 18px 14px;
+    box-shadow:0 2px 10px rgba(20,16,20,0.05);
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .rec-card-quote{
+    font-size:15px; line-height:1.7; color:#2E2A27;
+    position:relative; padding-top:2px;
+  }
+  .rec-card-quote::before{
+    content:'”'; font-family:'Suez One'; font-size:34px; line-height:0.6;
+    color:var(--gold); display:block; margin-bottom:6px;
+  }
+  .rec-card-by{
+    font-size:12.5px; color:#8A8178;
+    display:flex; align-items:center; gap:7px;
+    border-top:1px solid #F3ECE0; padding-top:10px; margin-top:auto;
+  }
+  .rec-card-by b{color:var(--wine); font-weight:600; font-size:13px;}
+  .rec-prompt-sheet{max-width:420px;}
+  .rec-prompt-intro{font-size:14.5px; line-height:1.7; color:#3A3430;}
+  .rec-prompt-count{font-size:11.5px; color:#8A8178; text-align:left; margin-top:-4px;}
+  .rec-prompt-sheet textarea.field{min-height:92px;}
+  .rec-admin-row{
+    display:flex; align-items:flex-start; gap:10px;
+    padding:11px 12px; border-radius:10px;
+    background:var(--panel-card-bg);
+    border:1px solid rgba(var(--panel-line-rgb),0.15);
+    margin-bottom:8px; font-size:13px; line-height:1.6;
+  }
+  .rec-admin-row .rec-admin-body{flex:1; min-width:0;}
+  .rec-admin-row .rec-admin-meta{font-size:11.5px; color:var(--panel-text-dim); margin-top:3px;}
+  .rec-admin-del{
+    flex-shrink:0; background:none; cursor:pointer;
+    border:1px solid rgba(155,44,66,0.45); color:var(--wine);
+    border-radius:8px; font-size:12px; padding:4px 9px;
+  }
+  @media (max-width:480px){
+    .about-switcher button{font-size:12.5px; padding:8px 4px;}
+    .about-photo{width:124px; height:124px;}
+  }
   .myday-overlay.add-modal-overlay{background:rgba(60,40,50,0.45);}
   .myday-sheet.add-modal{
     max-width:460px; padding:22px;
@@ -2431,7 +2513,7 @@
   <div class="switcher">
     <button class="active" id="bookingTabBtn" onclick="showPanel('customer', this)"><i class="ti ti-calendar-event"></i> קביעת תור</button>
     <button onclick="showPanel('whatsnew', this)"><i class="ti ti-sparkles"></i> פינוקים חדשים 🎁</button>
-    <button onclick="showPanel('hours', this)"><i class="ti ti-clock"></i> שעות פעילות</button>
+    <button onclick="showPanel('hours', this)"><i class="ti ti-heart"></i> קצת עלינו</button>
     <button id="businessTabBtn" onclick="handleBusinessTabClick(this)" style="display:none;"><i class="ti ti-briefcase"></i> ניהול העסק</button>
   </div>
   <div id="panel-customer" class="panel active">
@@ -2567,9 +2649,47 @@
     <div class="new-grid" id="whatsNewList"></div>
   </div>
   <div id="panel-hours" class="panel">
-    <div class="label" style="text-align:center; margin-bottom:14px;">שעות הפעילות שלנו</div>
-    <div class="new-grid" id="hoursOverviewList"></div>
+    <div class="about-switcher">
+      <button class="active" data-about-tab="hours" onclick="showAboutTab('hours', this)">שעות פעילות</button>
+      <button data-about-tab="who" onclick="showAboutTab('who', this)">מי אנחנו?</button>
+      <button data-about-tab="recs" onclick="showAboutTab('recs', this)">לקוחות ממליצות</button>
+    </div>
+    <div id="about-hours" class="about-tab active">
+      <div class="label" style="text-align:center; margin-bottom:14px;">שעות הפעילות שלנו</div>
+      <div class="new-grid" id="hoursOverviewList"></div>
+    </div>
+    <div id="about-who" class="about-tab">
+      <div class="about-who-wrap">
+        <div class="about-photo" id="aboutPhotoWrap"><img id="aboutPhotoImg" alt=""></div>
+        <div class="about-text" id="aboutTextBody"></div>
+      </div>
+    </div>
+    <div id="about-recs" class="about-tab">
+      <div class="label" style="text-align:center; margin-bottom:14px;">מה הלקוחות שלנו אומרות</div>
+      <div class="rec-list" id="recList"></div>
+    </div>
   </div>
+
+<div id="recPromptOverlay" class="myday-overlay add-modal-overlay">
+  <div class="myday-sheet add-modal rec-prompt-sheet">
+    <div class="myday-header">
+      <h3>מילה טובה? 😉</h3>
+      <div class="myday-actions">
+        <button type="button" onclick="closeRecPrompt()">✕ לא עכשיו</button>
+      </div>
+    </div>
+    <div class="add-modal-body">
+      <div class="rec-prompt-intro" id="recPromptIntro"></div>
+      <textarea id="recPromptText" class="field" maxlength="280" placeholder="כמה מילים משלך…"></textarea>
+      <div class="rec-prompt-count"><span id="recPromptCount">0</span>/280</div>
+      <div id="recPromptError" class="add-modal-error"></div>
+      <div class="add-modal-actions">
+        <button class="cta" onclick="submitRecommendation()">שליחה</button>
+        <button type="button" class="cta ghost" onclick="closeRecPrompt()">דילוג</button>
+      </div>
+    </div>
+  </div>
+</div>
   <div id="panel-business" class="panel">
     
     
@@ -2815,6 +2935,25 @@
       </div>
       <div class="label" style="margin:22px 0 10px;">כך זה ייראה ללקוחה</div>
       <div class="brand-preview" id="brandPreview"></div>
+
+      <div class="label" style="margin:28px 0 10px;">"מי אנחנו?" — התמונה והמלל שהלקוחות רואות<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">מופיע ללקוחה בטאב "קצת עלינו" ← "מי אנחנו?". התמונה מוצגת בעיגול, אז עדיף תמונה שהפנים בה במרכז. אם אין תמונה — היא פשוט לא תוצג, ורק המלל יופיע.</span></span></div>
+      <div class="brand-editor">
+        <div class="brand-logo-upload" id="aboutPhotoUpload" onclick="document.getElementById('aboutPhotoFile').click()" style="border-radius:50%;">
+          <span id="aboutPhotoPlaceholder">+ תמונה</span>
+          <img id="aboutPhotoPreview" style="display:none; border-radius:50%;">
+        </div>
+        <input type="file" id="aboutPhotoFile" accept="image/*" style="display:none;" onchange="handleAboutPhotoUpload(event)">
+        <div style="flex:1; min-width:200px;">
+          <div class="label" style="margin-bottom:6px;">מה לכתוב על עצמך</div>
+          <textarea id="aboutTextInput" class="client-note" style="min-height:120px; margin:0;" placeholder="למשל: היי, אני רותי. עשרים שנה שאני עושה קוסמטיקה, ואני מאמינה שטיפול טוב מתחיל בהקשבה..." oninput="updateAboutText()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ הטקסט נשמר בהצלחה')"></textarea>
+          <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:5px;">שורות ריקות נשמרות כמו שהן, אז אפשר לחלק לפסקאות.</div>
+          <button type="button" class="template-btn" style="margin-top:10px;" onclick="removeAboutPhoto()">🗑 הסרת התמונה</button>
+        </div>
+      </div>
+
+      <div class="label" style="margin:28px 0 10px;">המלצות של לקוחות<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">לקוחה מקבלת הצעה לכתוב מילה טובה מיד אחרי שהיא קובעת תור. ההמלצה עולה לאתר מיד, וחמש האחרונות מוצגות בטאב "קצת עלינו" ← "לקוחות ממליצות". אפשר למחוק המלצה בודדת, או את כולן.</span></span></div>
+      <div id="recAdminList"></div>
+      <button type="button" class="template-btn" style="margin-top:8px; color:var(--wine); border-color:rgba(155,44,66,0.4);" onclick="deleteAllRecommendations()">🗑 מחיקת כל ההמלצות</button>
       <div class="label" style="margin:28px 0 10px;">גיבויים</div>
       <div style="font-size:13.5px; font-weight:700; color:var(--wine); background:rgba(155,44,66,0.1); border:1px solid rgba(155,44,66,0.35); border-radius:10px; padding:10px 14px; margin-bottom:10px; max-width:480px;">
         ⚠️ אזור למקרי חירום בלבד — לא לגעת בלי סיבה! שחזור גיבוי מוחק ומחליף את כל הנתונים הנוכחיים (לקוחות, תורים, שירותים וכו').
@@ -6144,6 +6283,100 @@
       renderBranding();
       if (typeof saveState === 'function') saveState();
     }, { maxDim: 500, mime: 'image/png', storageFolder: 'public/branding' });
+  }
+  function handleAboutPhotoUpload(event){
+    const file = event.target.files[0];
+    if (!file) return;
+    readImageCompressed(file, (dataUrl) => {
+      aboutMe.photo = dataUrl;
+      renderAboutSettings();
+      renderAboutWho();
+      if (typeof saveState === 'function') saveState();
+      if (typeof showAdminToast === 'function') showAdminToast('✓ התמונה נשמרה בהצלחה');
+    }, { maxDim: 600, mime: 'image/jpeg', storageFolder: 'public/about' });
+  }
+  function removeAboutPhoto(){
+    if (!aboutMe.photo){
+      if (typeof showAdminToast === 'function') showAdminToast('אין תמונה להסרה');
+      return;
+    }
+    if (!confirm('להסיר את התמונה מ"מי אנחנו?"')) return;
+    aboutMe.photo = null;
+    renderAboutSettings();
+    renderAboutWho();
+    if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ התמונה הוסרה');
+  }
+  function updateAboutText(){
+    const el = document.getElementById('aboutTextInput');
+    aboutMe.text = el ? el.value : '';
+    renderAboutWho();
+  }
+  function renderAboutSettings(){
+    const prev = document.getElementById('aboutPhotoPreview');
+    const ph = document.getElementById('aboutPhotoPlaceholder');
+    if (prev && ph){
+      if (aboutMe.photo){ prev.src = aboutMe.photo; prev.style.display = 'block'; ph.style.display = 'none'; }
+      else { prev.removeAttribute('src'); prev.style.display = 'none'; ph.style.display = 'block'; }
+    }
+    const ta = document.getElementById('aboutTextInput');
+    if (ta && document.activeElement !== ta) ta.value = (aboutMe && aboutMe.text) || '';
+  }
+  function renderRecAdminList(){
+    const listEl = document.getElementById('recAdminList');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    const all = (recommendations || []).slice()
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    if (!all.length){
+      const empty = document.createElement('div');
+      empty.style.cssText = 'font-size:13px; color:var(--panel-text-dim);';
+      empty.textContent = 'עוד לא נכתבו המלצות.';
+      listEl.appendChild(empty);
+      return;
+    }
+    all.forEach((r, i) => {
+      const row = document.createElement('div');
+      row.className = 'rec-admin-row';
+      const body = document.createElement('div');
+      body.className = 'rec-admin-body';
+      const txt = document.createElement('div');
+      txt.textContent = r.text || '';
+      const meta = document.createElement('div');
+      meta.className = 'rec-admin-meta';
+      meta.textContent = (r.firstName || 'לקוחה') + ' · ' + (r.date || '') + (i < 5 ? ' · מוצגת באתר' : ' · לא מוצגת (מעל 5)');
+      body.appendChild(txt); body.appendChild(meta);
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'rec-admin-del';
+      del.textContent = '✕ מחיקה';
+      del.onclick = () => deleteRecommendation(r.id);
+      row.appendChild(body); row.appendChild(del);
+      listEl.appendChild(row);
+    });
+  }
+  function deleteRecommendation(id){
+    const idx = (recommendations || []).findIndex(r => r && r.id === id);
+    if (idx === -1) return;
+    const r = recommendations[idx];
+    if (!confirm(`למחוק את ההמלצה של ${r.firstName || 'הלקוחה'}?\n\n"${r.text}"`)) return;
+    recommendations.splice(idx, 1);
+    renderRecAdminList();
+    renderRecommendations();
+    if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ ההמלצה נמחקה');
+  }
+  function deleteAllRecommendations(){
+    if (!(recommendations || []).length){
+      if (typeof showAdminToast === 'function') showAdminToast('אין המלצות למחיקה');
+      return;
+    }
+    if (!confirm(`למחוק את כל ${recommendations.length} ההמלצות?\n\nזו פעולה שלא ניתן לבטל.`)) return;
+    recommendations.length = 0;
+    renderRecAdminList();
+    renderRecommendations();
+    if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ כל ההמלצות נמחקו');
   }
   function onHeroIconTap(){
     const badgeEl = document.querySelector('#heroBizNameIcon .hero-name-icon-badge');
@@ -10735,6 +10968,15 @@
     } catch (e) {
       console.error('confirmBooking: post-confirmation refresh/notify failed (appointment itself was saved fine):', e);
     }
+    if (bookingGoesThroughServer() && existingClient && idDigits){
+      setTimeout(() => {
+        try { openRecPrompt(idDigits, firstNameOfFull(clientNameVal)); }
+        catch (e) { console.error('Opening the recommendation prompt failed:', e); }
+      }, 1200);
+    }
+  }
+  function firstNameOfFull(fullName){
+    return String(fullName || '').trim().split(/\s+/)[0] || '';
   }
   function buildGoogleCalendarUrl(date, timeStr, durationMin, title, staffName){
     const [h, m] = timeStr.split(':').map(Number);
@@ -10787,7 +11029,7 @@
       d.classList.toggle('active', parseInt(d.dataset.step) === n);
     });
   }
-  function rescheduleAppointment(){
+  async function rescheduleAppointment(){
     const rescheduleAppt = currentBookedAppointment;
     const rescheduleBlock = rescheduleAppt ? getLateCancelStatusForIdentity({ teudatZehut: rescheduleAppt.teudatZehut, name: rescheduleAppt.client }) : null;
     if (rescheduleBlock && rescheduleBlock.blocked){
@@ -10797,7 +11039,9 @@
     const apptBeingRescheduled = currentBookedAppointment;
     const waitlistMatches = apptBeingRescheduled ? getWaitlistMatchesForAppointment(apptBeingRescheduled) : [];
     const previousClient = apptBeingRescheduled ? findClientForAppt(apptBeingRescheduled) : null;
-    removeCurrentBookedAppointment();
+    const srvCancel = await cancelApptViaServer(apptBeingRescheduled);
+    if (!srvCancel.ok){ alert(srvCancel.error); return; }
+    removeCurrentBookedAppointment({ skipSave: !srvCancel.direct && !srvCancel.fallback });
     if (waitlistMatches.length && typeof renderWaitlistMatchAlert === 'function'){
       const freshRescheduleMatches = filterStillPendingWaitlistMatches(waitlistMatches);
       if (freshRescheduleMatches.length) renderWaitlistMatchAlert(freshRescheduleMatches, apptBeingRescheduled);
@@ -10843,30 +11087,9 @@
       return;
     }
     const waitlistMatches = apptBeingCancelled ? getWaitlistMatchesForAppointment(apptBeingCancelled) : [];
-    if (bookingGoesThroughServer() && apptBeingCancelled){
-      let res = null;
-      try {
-        res = await callClientApi('cancel', {
-          id: apptBeingCancelled.teudatZehut || '',
-          apptId: apptBeingCancelled.id,
-        });
-      } catch (err) {
-        console.error('Cancelling through the server failed — falling back to a direct cancellation:', err);
-        res = { ok: true, __fallback: true };
-      }
-      if (!res || !res.ok){
-        alert((res && res.error) || 'לא הצלחנו לבטל את התור. נא לנסות שוב או ליצור איתנו קשר.');
-        return;
-      }
-      if (res.__fallback){
-        logCancellation(apptBeingCancelled);
-        if (lateStatus) logLateCancellation(apptBeingCancelled, 'cancel');
-      } else if (res.late && lateStatus){
-        const updatedStatus = getLateCancelStatusForAppt(apptBeingCancelled);
-        if (updatedStatus.count + 1 === 2) sendLateCancelAdminAlert(apptBeingCancelled, 2, false);
-      }
-      removeCurrentBookedAppointment({ skipSave: !res.__fallback });
-    } else {
+    const srvCancel = await cancelApptViaServer(apptBeingCancelled);
+    if (!srvCancel.ok){ alert(srvCancel.error); return; }
+    if (srvCancel.direct || srvCancel.fallback){
       logCancellation(apptBeingCancelled);
       if (lateStatus){
         logLateCancellation(apptBeingCancelled, 'cancel');
@@ -10874,6 +11097,12 @@
         if (updatedStatus.count === 2) sendLateCancelAdminAlert(apptBeingCancelled, 2, false);
       }
       removeCurrentBookedAppointment();
+    } else {
+      if (srvCancel.late && lateStatus){
+        const updatedStatus = getLateCancelStatusForAppt(apptBeingCancelled);
+        if (updatedStatus.count + 1 === 2) sendLateCancelAdminAlert(apptBeingCancelled, 2, false);
+      }
+      removeCurrentBookedAppointment({ skipSave: true });
     }
     if (apptBeingCancelled){
       const client = findClientForAppt(apptBeingCancelled);
@@ -11013,14 +11242,30 @@
     if (!listAppt.id) return listAppt; // רשומה ישנה בלי id — אין לפי מה למצוא מחדש, ממשיכים עם מה שיש
     return weekAppointments.find(a => a.id === listAppt.id) || listAppt;
   }
-  function confirmListedAppointment(idx){
+  async function confirmListedAppointment(idx){
     const listAppt = lookedUpAppointmentsList[idx];
     if (!listAppt) return;
     const appt = resolveCurrentAppt(listAppt);
+    let serverDidIt = false;
+    if (bookingGoesThroughServer()){
+      let res = null;
+      try {
+        res = await callClientApi('confirm', { id: appt.teudatZehut || '', apptId: appt.id });
+      } catch (err) {
+        console.error('Confirming through the server failed — falling back to a direct write:', err);
+        res = null;
+      }
+      if (res && res.ok){
+        serverDidIt = true;
+        appt.confirmedAt = res.confirmedAt || new Date().toISOString();
+      } else {
+        console.error('Confirming through the server did not succeed — falling back to a direct write:', res && res.error);
+      }
+    }
     appt.confirmedByClient = true;
-    appt.confirmedAt = new Date().toISOString();
+    if (!appt.confirmedAt) appt.confirmedAt = new Date().toISOString();
     lookedUpAppointmentsList[idx] = appt;
-    if (typeof saveState === 'function') saveState();
+    if (!serverDidIt && typeof saveState === 'function') saveState();
     renderLookedUpAppointment(lookedUpAppointmentsList);
   }
   function rescheduleListedAppointment(idx){
@@ -11028,7 +11273,7 @@
     lookedUpAppointmentsList = [];
     rescheduleAppointment();
   }
-  function cancelListedAppointment(idx){
+  async function cancelListedAppointment(idx){
     const listAppt = lookedUpAppointmentsList[idx];
     if (!listAppt) return;
     const appt = resolveCurrentAppt(listAppt);
@@ -11040,17 +11285,25 @@
       return;
     }
     const waitlistMatches = getWaitlistMatchesForAppointment(appt);
-    logCancellation(appt);
-    if (lateStatus){
-      logLateCancellation(appt, 'cancel');
+    const srvCancel = await cancelApptViaServer(appt);
+    if (!srvCancel.ok){ alert(srvCancel.error); return; }
+    const serverDidIt = !srvCancel.direct && !srvCancel.fallback;
+    if (!serverDidIt){
+      logCancellation(appt);
+      if (lateStatus){
+        logLateCancellation(appt, 'cancel');
+        const updatedStatus = getLateCancelStatusForAppt(appt);
+        if (updatedStatus.count === 2) sendLateCancelAdminAlert(appt, 2, false);
+      }
+    } else if (srvCancel.late && lateStatus){
       const updatedStatus = getLateCancelStatusForAppt(appt);
-      if (updatedStatus.count === 2) sendLateCancelAdminAlert(appt, 2, false);
+      if (updatedStatus.count + 1 === 2) sendLateCancelAdminAlert(appt, 2, false);
     }
     const pos = appt.id ? weekAppointments.findIndex(a => a.id === appt.id) : weekAppointments.indexOf(appt);
     if (pos !== -1) weekAppointments.splice(pos, 1);
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderMiniCal === 'function') renderMiniCal();
-    if (typeof saveState === 'function') saveState();
+    if (!serverDidIt && typeof saveState === 'function') saveState();
     try {
       const client = findClientForAppt(appt);
       if (client && client.email){
@@ -11143,6 +11396,124 @@
     setTimeout(showNextArrivalInQueue, 400);
   }
   setInterval(checkForArrivingClient, 20000);
+  let aboutMe = { photo: null, text: '' };
+  let recommendations = [];
+  function showAboutTab(name, btn){
+    document.querySelectorAll('#panel-hours .about-tab').forEach(t => t.classList.remove('active'));
+    const target = document.getElementById('about-' + name);
+    if (target) target.classList.add('active');
+    document.querySelectorAll('.about-switcher button').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    else {
+      const fallback = document.querySelector('.about-switcher button[data-about-tab="' + name + '"]');
+      if (fallback) fallback.classList.add('active');
+    }
+    if (name === 'recs') renderRecommendations();
+    if (name === 'who') renderAboutWho();
+  }
+  function renderAboutWho(){
+    const wrap = document.getElementById('aboutPhotoWrap');
+    const img = document.getElementById('aboutPhotoImg');
+    const body = document.getElementById('aboutTextBody');
+    if (!wrap || !img || !body) return;
+    const photo = (aboutMe && aboutMe.photo) || null;
+    if (photo){ img.src = photo; wrap.classList.remove('is-empty'); }
+    else { img.removeAttribute('src'); wrap.classList.add('is-empty'); }
+    const text = ((aboutMe && aboutMe.text) || '').trim();
+    if (text){ body.textContent = text; body.className = 'about-text'; }
+    else {
+      body.textContent = 'בקרוב נספר לך קצת עלינו 💛';
+      body.className = 'about-empty';
+    }
+  }
+  function visibleRecommendations(){
+    return (recommendations || [])
+      .filter(r => r && r.text && r.approved !== false)
+      .slice()
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+      .slice(0, 5);
+  }
+  function renderRecommendations(){
+    const listEl = document.getElementById('recList');
+    if (!listEl) return;
+    const recs = visibleRecommendations();
+    listEl.innerHTML = '';
+    if (!recs.length){
+      const empty = document.createElement('div');
+      empty.className = 'about-empty';
+      empty.textContent = 'עוד לא נכתבו כאן המלצות. אם היית אצלנו — נשמח למילה שלך אחרי התור הבא 💛';
+      listEl.appendChild(empty);
+      return;
+    }
+    recs.forEach(r => {
+      const card = document.createElement('div');
+      card.className = 'rec-card';
+      const quote = document.createElement('div');
+      quote.className = 'rec-card-quote';
+      quote.textContent = r.text;               // textContent, לא innerHTML — טקסט שלקוחה כתבה
+      const by = document.createElement('div');
+      by.className = 'rec-card-by';
+      const who = document.createElement('b');
+      who.textContent = r.firstName || 'לקוחה';
+      by.appendChild(who);
+      if (r.date){
+        const when = document.createElement('span');
+        when.textContent = '· ' + r.date;
+        by.appendChild(when);
+      }
+      card.appendChild(quote); card.appendChild(by);
+      listEl.appendChild(card);
+    });
+  }
+  let recPromptIdentity = null;
+  function openRecPrompt(identity, firstName){
+    if (!identity) return;
+    recPromptIdentity = identity;
+    const intro = document.getElementById('recPromptIntro');
+    if (intro){
+      intro.textContent = (firstName ? firstName + ', ' : '') + 'אם חזרת — כנראה את משלנו 😉 יש לך מילה או שתיים עלינו? נשמח שיראו אותן באתר.';
+    }
+    const ta = document.getElementById('recPromptText');
+    if (ta) ta.value = '';
+    const cnt = document.getElementById('recPromptCount');
+    if (cnt) cnt.textContent = '0';
+    addModalShowError('recPromptError', '');
+    document.getElementById('recPromptOverlay')?.classList.add('show');
+    setTimeout(() => ta && ta.focus({ preventScroll: true }), 80);
+  }
+  function closeRecPrompt(){
+    document.getElementById('recPromptOverlay')?.classList.remove('show');
+    recPromptIdentity = null;
+  }
+  async function submitRecommendation(){
+    const ta = document.getElementById('recPromptText');
+    const text = ((ta && ta.value) || '').trim();
+    if (!text){ addModalShowError('recPromptError', 'אפשר לכתוב משפט אחד, זה מספיק 🙂', ta); return; }
+    addModalShowError('recPromptError', '');
+    let res = null;
+    try {
+      res = await callClientApi('recommend', { id: recPromptIdentity, text });
+    } catch (err) {
+      console.error('Sending a recommendation failed:', err);
+      addModalShowError('recPromptError', 'לא הצלחנו לשלוח כרגע. נא לנסות שוב.');
+      return;
+    }
+    if (!res || !res.ok){
+      addModalShowError('recPromptError', (res && res.error) || 'לא הצלחנו לשלוח כרגע.');
+      return;
+    }
+    if (res.recommendation){
+      recommendations.push(Object.assign({}, res.recommendation, { createdAt: new Date().toISOString(), approved: true }));
+      renderRecommendations();
+    }
+    const sheet = document.querySelector('#recPromptOverlay .add-modal-body');
+    if (sheet) sheet.innerHTML = '<div class="waitlist-confirmed">💛 &nbsp;תודה! המילים שלך עלו לאתר.</div>';
+    setTimeout(closeRecPrompt, 2200);
+  }
+  document.getElementById('recPromptText')?.addEventListener('input', (e) => {
+    const cnt = document.getElementById('recPromptCount');
+    if (cnt) cnt.textContent = String((e.target.value || '').length);
+  });
   function showPanel(name, btn){
     const __spStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -11839,7 +12210,8 @@
       branding, customTemplates, staff,
       categories, services, whatsNewItems, invAlertEmail, inventory,
       ownerAccessCode, gatedTabsConfig, personalBlocks, specialRequests,
-      categoryMessages, holidayOverrides
+      categoryMessages, holidayOverrides,
+      about: aboutMe, recommendations
     };
     pendingSaveCount++;
     return db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
@@ -11922,6 +12294,20 @@
     return body;
   }
   function bookingGoesThroughServer(){ return !isOwnerSession(); }
+  async function cancelApptViaServer(appt){
+    if (!bookingGoesThroughServer() || !appt) return { ok: true, direct: true };
+    try {
+      const res = await callClientApi('cancel', {
+        id: appt.teudatZehut || '',
+        apptId: appt.id,
+      });
+      if (!res || !res.ok) return { ok: false, error: (res && res.error) || 'לא הצלחנו לבטל את התור. נא לנסות שוב או ליצור איתנו קשר.' };
+      return { ok: true, late: !!res.late };
+    } catch (err) {
+      console.error('Cancelling through the server failed — falling back to a direct cancellation:', err);
+      return { ok: true, fallback: true };
+    }
+  }
   function isOwnerSession(){
     const u = auth && auth.currentUser;
     return !!(u && !u.isAnonymous);
@@ -11961,6 +12347,10 @@
       categoryMessages: cloneJSON(categoryMessages) || {},
       holidayOverrides: (holidayOverrides || []).slice(),
       whatsNewItems: cloneJSON(whatsNewItems) || [],
+      recommendations: visibleRecommendations().map(r => ({
+        firstName: r.firstName || '', text: r.text, date: r.date || '',
+      })),
+      about: { photo: (aboutMe && aboutMe.photo) || null, text: (aboutMe && aboutMe.text) || '' },
       busy,
     };
   }
@@ -12085,6 +12475,8 @@
     if (data.lateCancellations) lateCancellations = data.lateCancellations;
     if (data.personalBlocks) personalBlocks = data.personalBlocks;
     if (data.specialRequests) specialRequests = data.specialRequests;
+    if (data.about && typeof data.about === 'object') aboutMe = Object.assign({ photo: null, text: '' }, data.about);
+    if (Array.isArray(data.recommendations)) recommendations = data.recommendations.slice();
     if (typeof data.ownerAccessCode === 'string') ownerAccessCode = data.ownerAccessCode;
     if (data.gatedTabsConfig && typeof data.gatedTabsConfig === 'object'){
       gatedTabsConfig = Object.assign({}, gatedTabsConfig, data.gatedTabsConfig);
@@ -12110,6 +12502,10 @@
       ['renderHoursStaffPicker', isAdminActive && typeof renderHoursStaffPicker === 'function' ? renderHoursStaffPicker : null],
       ['renderHoursEditor', isAdminActive && typeof renderHoursEditor === 'function' ? renderHoursEditor : null],
       ['renderHoursOverview', typeof renderHoursOverview === 'function' ? renderHoursOverview : null],
+      ['renderAboutWho', typeof renderAboutWho === 'function' ? renderAboutWho : null],
+      ['renderRecommendations', typeof renderRecommendations === 'function' ? renderRecommendations : null],
+      ['renderAboutSettings', isAdminActive && typeof renderAboutSettings === 'function' ? renderAboutSettings : null],
+      ['renderRecAdminList', isAdminActive && typeof renderRecAdminList === 'function' ? renderRecAdminList : null],
       ['renderReports', isAdminActive && typeof renderReports === 'function' ? () => renderReports('week') : null],
       ['renderOverviewDayView', isAdminActive && typeof renderOverviewDayView === 'function' ? renderOverviewDayView : null],
       ['renderOverviewMonthCal', isAdminActive && typeof renderOverviewMonthCal === 'function' ? renderOverviewMonthCal : null],
@@ -12405,8 +12801,11 @@
   } else {
     loadCloudData();
   }
-  setInterval(() => { if (!document.hidden) saveState({ silent: true }); }, 4000);
-  window.addEventListener('beforeunload', saveState);
+  setInterval(() => {
+    if (!isOwnerSession()) return;
+    if (!document.hidden) saveState({ silent: true });
+  }, 4000);
+  window.addEventListener('beforeunload', () => { if (isOwnerSession()) saveState(); });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden || !cloudLoadComplete) return;
     if (pendingSaveCount > 0) return;
