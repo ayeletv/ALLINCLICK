@@ -11401,8 +11401,14 @@
         service: a.service, services: [], price: a.price || 0,
         staff: staff.findIndex(s => s && s.name === a.staffName),
         status: a.status || 'pending', note: '',
+        confirmedByClient: !!a.confirmedByClient,
+        confirmedAt: a.confirmedAt || null,
       }));
-      mine.forEach(a => { if (!weekAppointments.some(x => x && x.id === a.id)) weekAppointments.push(a); });
+      mine.forEach(a => {
+        const pos = weekAppointments.findIndex(x => x && x.id === a.id);
+        if (pos === -1) weekAppointments.push(a); else weekAppointments[pos] = a;
+      });
+      lastIdentifiedLookupId = digits;
       resultEl.innerHTML = '';
       closeApptLookup();
       renderLookedUpAppointment(mine);
@@ -11459,6 +11465,7 @@
     }
   }
   let lookedUpAppointmentsList = [];
+  let lastIdentifiedLookupId = '';
   function renderLookedUpAppointment(apptOrList){
     const list = Array.isArray(apptOrList) ? apptOrList : [apptOrList];
     lookedUpAppointmentsList = list;
@@ -11511,7 +11518,7 @@
     if (bookingGoesThroughServer()){
       let res = null;
       try {
-        res = await callClientApi('confirm', { id: appt.teudatZehut || '', apptId: appt.id });
+        res = await callClientApi('confirm', { id: appt.teudatZehut || lastIdentifiedLookupId || '', apptId: appt.id });
       } catch (err) {
         console.error('Confirming through the server failed — falling back to a direct write:', err);
         res = null;
@@ -12593,7 +12600,7 @@
     if (!bookingGoesThroughServer() || !appt) return { ok: true, direct: true };
     try {
       const res = await callClientApi('cancel', {
-        id: appt.teudatZehut || '',
+        id: appt.teudatZehut || lastIdentifiedLookupId || '',
         apptId: appt.id,
       });
       if (!res || !res.ok) return { ok: false, error: (res && res.error) || 'לא הצלחנו לבטל את התור. נא לנסות שוב או ליצור איתנו קשר.' };
