@@ -11082,7 +11082,11 @@
     }
     const tzUpdateInput = document.getElementById('bookingTzUpdateInput');
     const tzUpdateDigits = ((tzUpdateInput && tzUpdateInput.value) || '').replace(/[^0-9]/g, '');
-    if (existingClientPre && clientNeedsTeudatZehut(existingClientPre) && !tzUpdateDigits){
+    const fromServerKnown = runningOnPublicData && existingClientPre && existingClientPre.fromServer;
+    const needsTeudatZehut = fromServerKnown
+      ? !(serverIdentity && serverIdentity.hasTz)
+      : clientNeedsTeudatZehut(existingClientPre);
+    if (existingClientPre && needsTeudatZehut && !tzUpdateDigits){
       idErrorEl.style.display = 'block';
       idErrorEl.textContent = 'כדי להמשיך יש להשלים את תעודת הזהות — זה חד-פעמי, ובפעמים הבאות לא נבקש שוב.';
       const tzBox = document.getElementById('bookingTzUpdateBox');
@@ -11090,7 +11094,7 @@
       if (tzUpdateInput) tzUpdateInput.focus();
       return;
     }
-    if (existingClientPre && tzUpdateDigits && clientNeedsTeudatZehut(existingClientPre)){
+    if (existingClientPre && tzUpdateDigits && needsTeudatZehut){
       const clashTz = clients.find(c => c && c !== existingClientPre && c.teudatZehut === tzUpdateDigits);
       if (clashTz){
         idErrorEl.style.display = 'block';
@@ -11421,12 +11425,13 @@
     } catch (e) {
       console.error('confirmBooking: post-confirmation refresh/notify failed (appointment itself was saved fine):', e);
     }
-    if (bookingGoesThroughServer() && existingClient && idDigits){
+    const recIdentity = idDigits || typedDigits;
+    if (bookingGoesThroughServer() && existingClient && recIdentity){
       setTimeout(() => {
         const recName = (runningOnPublicData && serverIdentity && serverIdentity.found && serverIdentity.firstName)
           ? serverIdentity.firstName
           : firstNameOfFull(clientNameVal);
-        try { openRecPrompt(idDigits, recName); }
+        try { openRecPrompt(recIdentity, recName); }
         catch (e) { console.error('Opening the recommendation prompt failed:', e); }
       }, 1200);
     }
