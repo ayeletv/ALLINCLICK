@@ -1608,15 +1608,6 @@
     font-size:14px;
   }
   .client-add-row input::placeholder{color:var(--panel-text-dim);}
-  /* רקע בהיר יותר (17.09.2026, דיווחה: "הוא צובע את כל התואר בשחור"). שאר
-     החלונות במערכת פותחים מסך כהה מאוד (85% שחור), וזה מתאים להם כי הם
-     מסכים שלמים; כאן זה טופס קצר, וכיסוי כזה הרגיש כמו נפילה של האתר. */
-  /* ===== "קצת עלינו" — שלושה טאבים ללקוחה (18.09.2026) ===== */
-  /* תיקון (18.09.2026, דיווחה: "המלל של מי אנחנו נראה ממש בהיר"). היא צדקה,
-     והסיבה הייתה גרועה מזה: העמוד שהלקוחה רואה יושב על רקע כהה
-     (--ink), ואני צבעתי את הטקסט בכהה — יחס ניגודיות 1.54:1, כלומר
-     בקושי נראה בכלל. כל הבלוק הזה נכתב מחדש לרקע שהוא באמת יושב עליו,
-     באותם צבעים שכל שאר המסך של הלקוחה משתמש בהם. */
   .about-switcher{
     display:flex; gap:5px; justify-content:center;
     margin:0 auto 22px; max-width:440px;
@@ -1651,7 +1642,6 @@
     white-space:pre-wrap; text-align:center;
   }
   .about-empty{font-size:14px; color:var(--ivory-dim); padding:24px 8px; text-align:center;}
-  /* ההמלצות — ריבועים, לא רשימה. אחד מתחת לשני על מסך צר, שניים ברוחב מלא. */
   .rec-list{
     display:grid; gap:14px;
     grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
@@ -1683,7 +1673,6 @@
   .rec-prompt-intro{font-size:14.5px; line-height:1.7; color:#3A3430;}
   .rec-prompt-count{font-size:11.5px; color:#8A8178; text-align:left; margin-top:-4px;}
   .rec-prompt-sheet textarea.field{min-height:92px;}
-  /* ניהול ההמלצות בהגדרות */
   .rec-admin-row{
     display:flex; align-items:flex-start; gap:10px;
     padding:11px 12px; border-radius:10px;
@@ -1693,8 +1682,6 @@
   }
   .rec-admin-row .rec-admin-body{flex:1; min-width:0;}
   .rec-admin-row .rec-admin-meta{font-size:11.5px; color:var(--panel-text-dim); margin-top:3px;}
-  /* גובה מוגבל (18.09.2026, דיווחה: "כמה המלצות אותי תראה בהגדרות, זה די
-     ממלא את המסך"). ברירת המחדל מציגה רק את החמש שמוצגות באתר. */
   #recAdminList{max-height:300px; overflow-y:auto; padding-inline-end:4px;}
   .rec-admin-del{
     flex-shrink:0; background:none; cursor:pointer;
@@ -1705,9 +1692,6 @@
     .about-switcher button{font-size:12.5px; padding:8px 4px;}
     .about-photo{width:124px; height:124px;}
   }
-  /* ===== ההגדרות, מסודרות לפי נושאים (18.09.2026, ביקשה: "ההגדרות של
-     מנהלת די מבולבל ועמוס, תסדר לפי נושאים"). כל נושא נפתח ונסגר, כך
-     שהמסך מראה בכל רגע רק את מה שעובדים עליו. ===== */
   .settings-intro{font-size:12.5px; color:var(--panel-text-dim); margin-bottom:14px;}
   .settings-section{
     border:1px solid rgba(var(--panel-line-rgb),0.18);
@@ -1741,9 +1725,6 @@
     .settings-section-body{padding:15px 13px 18px;}
   }
   .myday-overlay.add-modal-overlay{background:rgba(60,40,50,0.45);}
-  /* עיצוב אחיד לכל חלונות ההוספה (18.09.2026, ביקשה: "שיהיה אותו עיצוב
-     כמו של הוספת תור"). החלון של הוספת תור ידנית הוא הרפרנס: גיליון לבן,
-     שדות ממוסגרים ברוחב מלא, וכפתור ראשי אחד למטה. */
   .myday-sheet.add-modal{
     max-width:460px; padding:22px;
     overflow-x:hidden;
@@ -1757,8 +1738,6 @@
   .add-modal .add-modal-label{font-size:12.5px; color:#8A8178; margin:2px 0 -4px;}
   .add-modal .brand-logo-upload{align-self:center; margin-bottom:2px;}
   .add-modal .dmy-date-picker{width:100%;}
-  /* אותם שדות בדיוק כמו בשאר החלון — בלי זה נראה בתוך החלון הלבן
-     ריבוע כהה אחד באמצע, וזו בדיוק אי-האחידות שהפריעה לה. */
   .add-modal .dmy-date-picker select{
     flex:1 1 0; min-width:0; width:auto;
     border:1.5px solid #E4DACB;
@@ -3200,13 +3179,7 @@
     <div id="clientArrivalContent"></div>
   </div>
 </div>
-<!-- חלון "הוספת לקוחה" (17.09.2026). הוא היה עד עכשיו בתוך אזור הלקוחות,
-     והיא דיווחה שהוא "צובע את כל התואר בשחור" ושכשהיא גוללת למטה הריבוע
-     יושב באמצע במקום מול העיניים. הסיבה: אלמנט עם position:fixed מפסיק
-     להיות ממוקם ביחס למסך ברגע שיש מעליו בהיררכיה אב עם transform/filter —
-     אז הוא הפך בפועל לממוקם בתוך אזור הלקוחות, ונגלל יחד איתו. לכן הוא יושב
-     עכשיו כאן, ברמה העליונה, בדיוק כמו כל שאר החלונות שכן עובדים נכון
-     (#apptLookupOverlay, #personalTimeOverlay). -->
+
 <div id="addClientOverlay" class="myday-overlay add-modal-overlay">
   <div class="myday-sheet add-modal">
     <div class="myday-header">
@@ -10870,7 +10843,6 @@
     }, 120);
   }
 
-  /* ---- אותו זיהוי, במסך "בקשה כללית / זמן גמיש" ---- */
   let frServerIdentity = null;
   let frIdentityTimer = null;
   let frIdentitySeq = 0;
@@ -12685,7 +12657,36 @@
     if (typeof showAdminToast === 'function') showAdminToast('✓ המוצר נוסף למלאי בהצלחה');
   }
   let cloudLoadComplete = false;
-  const CLOUD_DOC = db.collection('business').doc('default');
+  const BIZ_BY_DOMAIN = {
+    'rutizolberg.com': 'default',
+    'allinklik.web.app': 'default',
+    'allinklik.firebaseapp.com': 'default',
+  };
+  const BIZ_LOCAL_HOSTS = ['', 'localhost', '127.0.0.1', 'null'];
+  let bizUnknownHost = '';
+  const BIZ_ID_PATTERN = /^[a-z0-9_-]{1,40}$/;
+  function bizIdForAddress(hostname, search){
+    const host = String(hostname || '').toLowerCase().replace(/^www\./, '');
+    if (BIZ_BY_DOMAIN[host]) return BIZ_BY_DOMAIN[host];
+    if (BIZ_LOCAL_HOSTS.indexOf(host) !== -1){
+      let fromQuery = '';
+      try { fromQuery = new URLSearchParams(search || '').get('biz') || ''; } catch (e) {}
+      if (BIZ_ID_PATTERN.test(fromQuery)) return fromQuery;
+      return 'default';
+    }
+    return '';
+  }
+  function resolveBizId(){
+    let host = '', search = '';
+    try { host = location.hostname; search = location.search; } catch (e) {}
+    const id = bizIdForAddress(host, search);
+    if (!id) bizUnknownHost = String(host || '').toLowerCase().replace(/^www\./, '');
+    return id;
+  }
+  window.__bizIdForAddress = bizIdForAddress;
+  let BIZ_ID = resolveBizId();
+  window.__BIZ_ID = BIZ_ID;
+  let CLOUD_DOC = db.collection('business').doc(BIZ_ID || '__unconfigured__');
   let lastBackupDateKey = '';
   let lastLoadedSnapshot = null;
   let pendingSaveCount = 0;
@@ -12814,14 +12815,33 @@
         : '⚠ השינוי האחרון לא נשמר בעננן. נא לבדוק את החיבור לאינטרנט ולנסות שוב — לא לרענן את הדף בינתיים, אחרת השינוי יאבד.');
     }).finally(() => { pendingSaveCount--; });
   }
-  const PUBLIC_DOC = db.collection('publicView').doc('default');
+  let PUBLIC_DOC = db.collection('publicView').doc(BIZ_ID || '__unconfigured__');
+  function pointDocsAtBusiness(){
+    CLOUD_DOC = db.collection('business').doc(BIZ_ID || '__unconfigured__');
+    PUBLIC_DOC = db.collection('publicView').doc(BIZ_ID || '__unconfigured__');
+    window.__BIZ_ID = BIZ_ID;
+  }
+  function resolveBizIdFromCloud(){
+    const host = bizUnknownHost;
+    if (!host) return Promise.resolve(false);
+    return db.collection('domains').doc(host).get().then(doc => {
+      const mapped = (doc.exists && doc.data()) ? String(doc.data().bizId || '') : '';
+      if (!BIZ_ID_PATTERN.test(mapped)) return false;
+      BIZ_ID = mapped;
+      pointDocsAtBusiness();
+      return true;
+    }).catch(err => {
+      console.error('Reading the domain mapping failed:', err);
+      return false;
+    });
+  }
   let lastPublishedPublicJson = null;
   const CLIENT_API_URL = 'https://client-api-737599524118.me-west1.run.app';
   async function callClientApi(action, payload){
     const res = await fetch(CLIENT_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ action }, payload || {})),
+      body: JSON.stringify(Object.assign({ action }, payload || {}, { bizId: BIZ_ID })),
     });
     let body = null;
     try { body = await res.json(); } catch (e) { body = null; }
@@ -12829,17 +12849,6 @@
     return body;
   }
   function bookingGoesThroughServer(){ return !isOwnerSession(); }
-  /**
-   * ביטול תור דרך השרת. יש באתר שלוש דרכים שבהן לקוחה מבטלת תור — ממסך
-   * "התור שלי", ממסך "יש לך תור קיים?", ובשינוי מועד (שמבטל וקובע מחדש).
-   * כולן עוברות מכאן, כי בפעם הראשונה חיברתי רק אחת מהן והשתיים האחרות
-   * המשיכו לכתוב ישירות בשקט. (18.09.2026, התגלה בלוגים של השרת: היו שני
-   * POST במקום שלושה.)
-   *
-   * מחזיר: { ok, error, late, fallback, direct }
-   *   direct   — רותי מחוברת, אין מה לשלוח לשרת
-   *   fallback — השרת לא נענה; צריך לבצע את הביטול מקומית כמו קודם
-   */
   async function cancelApptViaServer(appt){
     if (!bookingGoesThroughServer() || !appt) return { ok: true, direct: true };
     try {
@@ -12857,9 +12866,54 @@
       return { ok: true, fallback: true };
     }
   }
+  let ownerBizId = null;        // מזהה העסק של המשתמשת המחוברת, כפי שנקרא מהמיפוי
+  let ownerBizIdForEmail = '';  // עבור איזה מייל הוא נקרא, כדי לא לקרוא שוב בכל בדיקה
+  let ownerMappingFailed = false;
+  function forgetOwnerBusiness(){
+    ownerBizId = null;
+    ownerBizIdForEmail = '';
+    ownerMappingFailed = false;
+  }
+  function resolveOwnerBusiness(){
+    const u = auth && auth.currentUser;
+    if (!u || u.isAnonymous || !u.email){
+      forgetOwnerBusiness();
+      return Promise.resolve(null);
+    }
+    const email = String(u.email).trim().toLowerCase();
+    if (ownerBizIdForEmail === email) return Promise.resolve(ownerBizId);
+    return db.collection('owners').doc(email).get().then(doc => {
+      const mapped = (doc.exists && doc.data()) ? doc.data().bizId : null;
+      ownerBizId = mapped ? String(mapped) : null;
+      ownerBizIdForEmail = email;
+      ownerMappingFailed = false;
+      return ownerBizId;
+    }).catch(err => {
+      console.error('Reading the owner mapping failed:', err);
+      ownerBizId = null;
+      ownerBizIdForEmail = '';
+      ownerMappingFailed = true;
+      return null;
+    });
+  }
+  function showOwnerMappingErrorBanner(){
+    if (document.getElementById('ownerMappingBanner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'ownerMappingBanner';
+    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#9B2C42; color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
+    banner.textContent = '⚠ לא הצלחנו לאמת את ההרשאות שלך מול הענן. נא לרענן את הדף.';
+    document.body.prepend(banner);
+  }
+  function hideOwnerMappingErrorBanner(){
+    const banner = document.getElementById('ownerMappingBanner');
+    if (banner) banner.remove();
+  }
+  window.__resolveOwnerBusiness = resolveOwnerBusiness;
+  window.__forgetOwnerBusiness = forgetOwnerBusiness;
   function isOwnerSession(){
     const u = auth && auth.currentUser;
-    return !!(u && !u.isAnonymous);
+    if (!u || u.isAnonymous) return false;
+    return !!BIZ_ID && ownerBizId === BIZ_ID;
   }
   function buildPublicView(){
     const busy = [];
@@ -13374,11 +13428,29 @@
       return true;
     });
   }
+  function showUnconfiguredAddressBanner(){
+    if (document.getElementById('bizUnconfiguredBanner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'bizUnconfiguredBanner';
+    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#9B2C42; color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
+    banner.textContent = '⚠ הכתובת הזו עדיין לא מחוברת לעסק. נא לפנות למי שהקימה עבורך את האתר.';
+    document.body.prepend(banner);
+  }
   function loadCloudData(){
+    if (!BIZ_ID){
+      return resolveBizIdFromCloud().then(found => {
+        if (found) return loadCloudData();
+        console.error('This address is not mapped to any business:', bizUnknownHost);
+        cloudLoadComplete = true;
+        showUnconfiguredAddressBanner();
+        if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
+        if (typeof window.__resolveBrandingReady === 'function') window.__resolveBrandingReady();
+      });
+    }
     const cloudLoadStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
     if (!isOwnerSession()){
       return loadPublicData().then(loaded => {
-        if (!loaded) return loadPrivateCloudData(cloudLoadStartedAt); // נפילה לאחור
+        if (!loaded) return retryPublicLoadLater();
         hideCloudErrorBanner();
         cloudLoadRetryCount = 0;
         cloudLoadComplete = true;
@@ -13389,11 +13461,17 @@
         handleWaitlistCancelFromUrl();
         if (typeof window.__resolveBrandingReady === 'function') window.__resolveBrandingReady();
       }).catch(err => {
-        console.error('Public data load failed — falling back to the full document:', err);
-        return loadPrivateCloudData(cloudLoadStartedAt);
+        console.error('Public data load failed:', err);
+        return retryPublicLoadLater();
       });
     }
     return loadPrivateCloudData(cloudLoadStartedAt);
+  }
+  function retryPublicLoadLater(){
+    showCloudErrorBanner();
+    cloudLoadRetryCount++;
+    const delay = Math.min(30000, 3000 * cloudLoadRetryCount);
+    setTimeout(loadCloudData, delay);
   }
   function loadPrivateCloudData(cloudLoadStartedAt){
     runningOnPublicData = false;
@@ -13512,13 +13590,37 @@
   let isLoggedIn = false;
   let pendingBusinessBtn = null;
   auth.onAuthStateChanged(user => {
-    isLoggedIn = !!user && !user.isAnonymous;
-    if (typeof scheduleNextRemoteUpdatePoll === 'function') scheduleNextRemoteUpdatePoll();
-    const btn = document.getElementById('businessTabBtn');
-    if (btn) btn.style.display = isLoggedIn ? '' : 'none';
-    const bookingBtn = document.getElementById('bookingTabBtn');
-    if (bookingBtn) bookingBtn.style.display = isLoggedIn ? 'none' : '';
-    if (typeof attemptRestoreAdminView === 'function') attemptRestoreAdminView();
+    const applyOwnerUi = () => {
+      isLoggedIn = isOwnerSession();
+      if (typeof scheduleNextRemoteUpdatePoll === 'function') scheduleNextRemoteUpdatePoll();
+      const btn = document.getElementById('businessTabBtn');
+      if (btn) btn.style.display = isLoggedIn ? '' : 'none';
+      const bookingBtn = document.getElementById('bookingTabBtn');
+      if (bookingBtn) bookingBtn.style.display = isLoggedIn ? 'none' : '';
+      if (typeof attemptRestoreAdminView === 'function') attemptRestoreAdminView();
+    };
+    if (!user || user.isAnonymous){
+      forgetOwnerBusiness();
+      hideOwnerMappingErrorBanner();
+      applyOwnerUi();
+      return;
+    }
+    let mappingAttempt = 0;
+    const tryResolve = () => resolveOwnerBusiness().then(() => {
+      applyOwnerUi();
+      const stillHere = auth.currentUser && !auth.currentUser.isAnonymous;
+      if (!ownerMappingFailed || !stillHere){
+        hideOwnerMappingErrorBanner();
+        return;
+      }
+      if (mappingAttempt < 3){
+        mappingAttempt++;
+        setTimeout(tryResolve, 2000 * mappingAttempt);
+        return;
+      }
+      showOwnerMappingErrorBanner();
+    });
+    tryResolve();
   });
   function handleBusinessTabClick(btn){
     if (isLoggedIn){
@@ -13678,15 +13780,27 @@
             });
           });
         }
-        restoreBtn();
-        closeLoginOverlay();
-        document.getElementById('loginEmail').value = '';
-        document.getElementById('loginPassword').value = '';
-        if (typeof loadCloudData === 'function') loadCloudData();
-        if (pendingBusinessBtn && !document.body.classList.contains('admin-mode')){
-          showPanel('business', pendingBusinessBtn);
-        }
-        pendingBusinessBtn = null;
+        return resolveOwnerBusiness().then(mappedBizId => {
+          if (!isOwnerSession()){
+            restoreBtn();
+            errorEl.style.display = 'block';
+            errorEl.textContent = mappedBizId
+              ? 'החשבון הזה שייך לעסק אחר. יש להתחבר דרך הכתובת של אותו עסק.'
+              : 'החשבון הזה אינו מוגדר כבעלים של העסק הזה.';
+            return auth.signOut()
+              .then(() => auth.signInAnonymously())
+              .catch(err => { console.error('Signing out an account that does not own this business failed:', err); });
+          }
+          restoreBtn();
+          closeLoginOverlay();
+          document.getElementById('loginEmail').value = '';
+          document.getElementById('loginPassword').value = '';
+          if (typeof loadCloudData === 'function') loadCloudData();
+          if (pendingBusinessBtn && !document.body.classList.contains('admin-mode')){
+            showPanel('business', pendingBusinessBtn);
+          }
+          pendingBusinessBtn = null;
+        });
       })
       .catch(err => {
         restoreBtn();
@@ -13742,6 +13856,7 @@
   }
   function doLogout(){
     return auth.signOut().then(() => {
+      forgetOwnerBusiness();
       sensitiveAccessUnlocked = false;
       try { sessionStorage.removeItem('appAdminViewState'); } catch (e) {}
       const firstSwitcher = document.querySelectorAll('.switcher button')[0];
