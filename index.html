@@ -11476,16 +11476,19 @@
   }
   function getShortApptSmsText(kind, service, dateLabel, time){
     if (kind === 'cancelled') return `התור לטיפול ${service} ביום ${dateLabel} בשעה ${time} בוטל.`;
-    const addressLine = (branding && branding.address && branding.address.trim()) ? ` כתובתנו: ${branding.address.trim()}` : '';
-    return `התור נקבע בהצלחה. לטיפול ${service} ביום ${dateLabel} בשעה ${time}.${addressLine}`;
+    const addr = (branding && branding.address && branding.address.trim()) ? `, ${branding.address.trim()}` : '';
+    return `התור נקבע: ${service} ${dateLabel} ${time}${addr}.`;
   }
   const SMS_FUNCTION_URL = 'https://sendqueuedsms-737599524118.me-west1.run.app';
   const SMS_APP_KEY = 'rz-sms-9f3k2m8x-2026';
   function queueApptSms(appt, message){
     try {
       if (!appt) return;
-      if (!Array.isArray(appt.reminderChannels) || !appt.reminderChannels.includes('sms')) return;
+      const onAppt = (Array.isArray(appt.reminderChannels) && appt.reminderChannels.length) ? appt.reminderChannels : null;
       const client = findClientForAppt(appt);
+      const onClient = (client && Array.isArray(client.reminderChannelPref) && client.reminderChannelPref.length) ? client.reminderChannelPref : null;
+      const channels = onAppt || onClient;
+      if (channels && channels.indexOf('sms') === -1) return;
       if (!client || !client.phone) return;
       fetch(SMS_FUNCTION_URL, {
         method: 'POST',
