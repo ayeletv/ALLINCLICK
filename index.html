@@ -909,20 +909,30 @@
     border-color:var(--gold);
     color:var(--ink);
   }
-  .cal-appt.cal-appt-tiny{ padding:0 4px; min-height:0; overflow:hidden; display:block; }
+  .cal-appt.cal-appt-tiny{ padding:0 5px; min-height:0; overflow:hidden; justify-content:center; align-items:flex-start; }
   .cal-appt.cal-appt-wrap .cal-appt-name{
     white-space:normal; overflow-wrap:anywhere; word-break:break-word;
     font-size:10px; line-height:1.15; text-overflow:clip; max-height:100%;
   }
   .cal-appt.cal-appt-tiny .cal-appt-name{
     font-size:7.5px; line-height:1; font-weight:600;
-    display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    display:block; width:100%; text-align:center;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .hours-time-picker-colwrap{ display:flex; flex-direction:column; align-items:center; gap:6px; }
   .hours-time-picker-collbl{
     font-size:12px; font-weight:700; letter-spacing:.04em;
     color:var(--panel-text-dim, #8A8178); text-align:center;
   }
+  .svc-availability{
+    font-family:'Heebo'; font-size:11.5px; font-weight:600; cursor:pointer;
+    border:1px solid rgba(62,92,54,.45); background:rgba(62,92,54,.12); color:#3E5C36;
+    border-radius:999px; padding:3px 10px; margin-inline-end:8px;
+  }
+  .svc-availability.off{ border-color:rgba(155,44,66,.45); background:rgba(155,44,66,.12); color:#9B2C42; }
+  .svc-manage-row-off{ opacity:.62; }
+  .svc-card-off{ opacity:.55; filter:grayscale(1); }
+  .svc-off-tag{ font-size:11px; color:#9B2C42; font-weight:600; }
   .biz-topbar{
     display:none;
     position:fixed; top:var(--top-banner-h, 0px); left:0; right:0; z-index:910;
@@ -3152,7 +3162,9 @@
         </div>
         <div id="svcManageCatServicesView" style="display:none;">
           <button type="button" class="cat-back-btn" onclick="showSvcManageCategoryGrid()">‹ חזרה לקטגוריות</button>
-          <div class="label" id="svcManageCatLabel" style="margin:6px 0;"></div>
+          <div class="label" id="svcManageCatLabel" style="margin:6px 0;">
+            <span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">ליד כל טיפול יש כפתור "זמין". כל טיפול חדש נפתח זמין. לחיצה עליו הופכת אותו ל"כבוי": הטיפול נעלם מרשימת הטיפולים שהלקוחות רואות באתר, ואי אפשר לקבוע אותו אונליין — אבל הוא אינו נמחק, וכל הפרטים וההיסטוריה שלו נשמרים. לחיצה נוספת מחזירה אותו. שימושי למשל בערב חג, כשרוצים לאפשר רק טיפולים קצרים. בקביעת תור ידנית מהיומן הטיפול עדיין מופיע, מסומן באפור, ותישאלי אם להמשיך — כדי שאפשר יהיה לקבוע אותו ללקוחה שהתקשרה.</span></span>
+          </div>
           <div class="svc-manage-list" id="svcManageList"></div>
         </div>
       </div>
@@ -4006,6 +4018,10 @@
   }
   function mbToggleService(svcIndex){
     const existingIdx = mbSelectedServices.findIndex(sel => sel.svcIndex === svcIndex);
+    if (existingIdx === -1 && !isServiceAvailable(services[svcIndex])){
+      const name = (services[svcIndex] || {}).name || 'הטיפול';
+      if (!confirm('שימי לב: "' + name + '" סומן כלא זמין לתקופה זו, ולכן לקוחות אינן יכולות לקבוע אותו באתר.\n\nלהמשיך ולקבוע אותו בכל זאת?')) return;
+    }
     if (existingIdx !== -1) mbSelectedServices.splice(existingIdx, 1);
     else mbSelectedServices.push({ svcIndex });
     mbSelectedServicesChanged();
@@ -4103,8 +4119,9 @@
     }
     chipsEl.innerHTML = top.map(o => {
       const s = services[o.svcIndex];
-      return `<button type="button" class="mb-quickpick-chip" onclick="mbToggleService(${o.svcIndex})">`
-        + `<span class="mb-quickpick-chip-name">${s.name}</span>`
+      const off = !isServiceAvailable(s);
+      return `<button type="button" class="mb-quickpick-chip${off ? ' svc-card-off' : ''}" onclick="mbToggleService(${o.svcIndex})">`
+        + `<span class="mb-quickpick-chip-name">${s.name}${off ? ' <span class="svc-off-tag">לא זמין</span>' : ''}</span>`
         + `<span class="mb-quickpick-chip-meta">${s.price} ש"ח · ${s.duration} דק'</span>`
         + `</button>`;
     }).join('');
@@ -4136,9 +4153,10 @@
     services.forEach((s, i) => {
       if (s.category !== cat) return;
       const selected = mbSelectedServices.some(sel => sel.svcIndex === i);
+      const off = !isServiceAvailable(s);
       const el = document.createElement('div');
-      el.className = 'svc-card' + (selected ? ' selected' : '');
-      el.innerHTML = `<span>${selected ? '✓ ' : ''}${s.name}</span><span>${s.price} ש"ח · ${s.duration} דק'</span>`;
+      el.className = 'svc-card' + (selected ? ' selected' : '') + (off ? ' svc-card-off' : '');
+      el.innerHTML = `<span>${selected ? '✓ ' : ''}${s.name}${off ? ' <span class="svc-off-tag">לא זמין</span>' : ''}</span><span>${s.price} ש"ח · ${s.duration} דק'</span>`;
       el.onclick = () => mbToggleService(i);
       listEl.appendChild(el);
     });
@@ -8639,13 +8657,13 @@
         if (pendingCalHighlightApptId && a.id === pendingCalHighlightApptId) block.classList.add('cal-appt-highlight');
         if (a.confirmedByClient) block.classList.add('cal-appt-confirmed');
         block.style.top = (topPx + 2) + 'px';
-        block.style.height = (heightPx - 5) + 'px';
+        block.style.height = (heightPx - 3) + 'px';
         const colWidthPct = 100 / colCount;
         block.style.insetInlineStart = `calc(${col * colWidthPct}% + 3px)`;
         block.style.insetInlineEnd = `calc(${(colCount - col - 1) * colWidthPct}% + 3px)`;
         block.style.background = staffColors[a.staff % staffColors.length];
         block.title = `${a.client} · ${a.service} · ${a.time} (${dur} דק') — לחיצה לצפייה בפרטי התור`;
-        const blockHeightPx = heightPx - 5;
+        const blockHeightPx = heightPx - 3;
         if (blockHeightPx < 22) block.classList.add('cal-appt-tiny');
         else if (blockHeightPx >= 26) block.classList.add('cal-appt-wrap');
         block.innerHTML = (blockHeightPx >= 34)
@@ -9630,13 +9648,27 @@
     if (typeof showAdminToast === 'function') showAdminToast('✓ הקטגוריה נוספה בהצלחה');
   }
   const catTilePalette = ['#9B2C42', '#C9A227', '#3F6B5C', '#B5654B', '#5B7C99', '#8B5FA3'];
+  function isServiceAvailable(svc){
+    return !svc || svc.available !== false;
+  }
+  function availableServicesOf(cat){
+    return services.filter(s => s && s.category === cat && isServiceAvailable(s));
+  }
+  function setServiceAvailability(idx, available){
+    const svc = services[idx];
+    if (!svc) return;
+    svc.available = !!available;
+    if (typeof renderServices === 'function') renderServices();
+    if (typeof saveState === 'function') saveState();
+  }
+  window.__isServiceAvailable = isServiceAvailable;
   function renderCategoryGrid(){
     const gridEl = document.getElementById('catGrid');
     if (!gridEl) return;
     gridEl.innerHTML = '';
     let colorIdx = 0;
     categories.forEach(cat => {
-      const catServices = services.filter(s => s.category === cat);
+      const catServices = availableServicesOf(cat);
       if (!catServices.length) return;
       const tile = document.createElement('div');
       tile.className = 'cat-tile';
@@ -9690,6 +9722,7 @@
     custList.innerHTML = '';
     services.forEach((s, i) => {
       if (s.category !== cat) return;
+      if (!isServiceAvailable(s)) return;   // כבוי — לא מוצג ללקוחה
       const selected = bkSelectedServices.some(sel => sel.svcIndex === i);
       const el = document.createElement('div');
       el.className = 'svc-card' + (selected ? ' selected' : '');
@@ -9807,7 +9840,9 @@
       const row = document.createElement('div');
       row.className = 'svc-manage-row';
       const photoHtml = s.photo ? `<img src="${s.photo}" style="width:28px; height:28px; border-radius:6px; object-fit:cover; margin-inline-end:8px; vertical-align:middle;">` : '';
-      row.innerHTML = `<span>${photoHtml}${s.name}</span><span><span class="price">${s.price} ש"ח · ${s.duration} דק'</span><button class="svc-del" onclick="removeService(${i})" aria-label="מחיקת שירות">✕</button></span>`;
+      const on = isServiceAvailable(s);
+      if (!on) row.classList.add('svc-manage-row-off');
+      row.innerHTML = `<span>${photoHtml}${s.name}${on ? '' : ' <span class="svc-off-tag">לא זמין</span>'}</span><span><span class="price">${s.price} ש"ח · ${s.duration} דק'</span><button type="button" class="svc-availability${on ? '' : ' off'}" onclick="setServiceAvailability(${i}, ${on ? 'false' : 'true'})" title="${on ? 'כיבוי — הטיפול לא יוצג ללקוחות' : 'הדלקה — הטיפול יוצג שוב ללקוחות'}" aria-label="${on ? 'כיבוי הטיפול' : 'הדלקת הטיפול'}">${on ? 'זמין' : 'כבוי'}</button><button class="svc-del" onclick="removeService(${i})" aria-label="מחיקת שירות">✕</button></span>`;
       manageList.appendChild(row);
     });
   }
@@ -13507,7 +13542,7 @@
         closedDates: (s && s.closedDates) || [],
         categories: (s && s.categories) || [],
       })),
-      services: (services || []).map(s => ({
+      services: (services || []).filter(s => isServiceAvailable(s)).map(s => ({
         name: (s && s.name) || '',
         duration: (s && s.duration) || 0,
         price: (s && s.price) || 0,
