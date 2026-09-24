@@ -3031,6 +3031,8 @@
         <div class="settings-section-body">
           <div style="font-size:12.5px; color:var(--panel-text-dim); max-width:480px; line-height:1.7; margin-bottom:12px;">הקמת עסק חדש יוצרת בבת אחת את כל מה שנדרש: מסמך העסק, הדף הציבורי, חשבון ההתחברות של בעלת הסלון, ושיוך הדומיין. הקטע הזה מוצג רק לחשבון שמתחזק את המערכת.</div>
           <button class="template-btn" style="width:fit-content;" onclick="openNewBusinessWizard()">➕ הקמת עסק חדש</button>
+          
+          <button class="template-btn" style="width:fit-content; margin-top:10px;" onclick="openAttachDomainDialog()">🌐 חיבור דומיין לעסק קיים</button>
         </div>
       </div>
       <div class="settings-section" data-settings-section="security">
@@ -3741,6 +3743,32 @@
       <div id="nbProgress" style="display:none; padding:10px; background:rgba(0,0,0,.04); border-radius:10px;"></div>
       <div id="nbResult" style="display:none; padding:10px; background:rgba(62,92,54,.10); border-radius:10px;"></div>
       <button class="cta" id="nbCreateBtn" onclick="createNewBusiness()">הקמת העסק</button>
+    </div>
+  </div>
+</div>
+
+<div id="attachDomainOverlay" class="myday-overlay">
+  <div class="myday-sheet">
+    <div class="myday-header">
+      <h3>חיבור דומיין לעסק קיים</h3>
+      <div class="myday-actions">
+        <button onclick="closeAttachDomainDialog()">✕ סגירה</button>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div style="font-size:12.5px; color:var(--panel-text-dim); line-height:1.7;">לעסק שהוקם בלי דומיין. אחרי החיבור כאן נשאר לחבר את הדומיין עצמו ב-Firebase Hosting — בלי זה הכתובת לא תיפתח.</div>
+      <div>
+        <div class="label" style="margin-bottom:5px;">מזהה העסק</div>
+        <input type="text" id="adBizId" class="field" placeholder="salon-shira">
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:5px;">הדומיין</div>
+        <input type="text" id="adDomain" class="field" placeholder="salonshira.co.il">
+      </div>
+      <div id="adError" style="display:none; color:var(--wine); font-size:13px;"></div>
+      <div id="adProgress" style="display:none; padding:10px; background:rgba(0,0,0,.04); border-radius:10px;"></div>
+      <div id="adResult" style="display:none; padding:10px; background:rgba(62,92,54,.10); border-radius:10px; font-size:13px; line-height:1.7;"></div>
+      <button class="cta" id="adSubmitBtn" onclick="attachDomainToBusiness()">חיבור הדומיין</button>
     </div>
   </div>
 </div>
@@ -6860,6 +6888,110 @@
     } finally {
       nbInFlight = false;
       if (btn){ btn.disabled = false; btn.textContent = 'הקמת העסק'; }
+    }
+  }
+
+  let adInFlight = false;
+  function adLog(text, kind){
+    const box = document.getElementById('adProgress');
+    if (!box) return;
+    box.style.display = 'block';
+    const line = document.createElement('div');
+    line.style.cssText = 'font-size:12.5px; line-height:1.7;' + (kind === 'bad' ? ' color:#9B2C42;' : (kind === 'good' ? ' color:#3E5C36;' : ''));
+    line.textContent = (kind === 'bad' ? '✗ ' : (kind === 'good' ? '✓ ' : '• ')) + text;
+    box.appendChild(line);
+  }
+  function adShowError(msg){
+    const err = document.getElementById('adError');
+    if (!err) return;
+    err.style.display = 'block';
+    err.textContent = msg;
+  }
+  function openAttachDomainDialog(){
+    ['adBizId', 'adDomain'].forEach(function(id){
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    const prog = document.getElementById('adProgress');
+    if (prog){ prog.innerHTML = ''; prog.style.display = 'none'; }
+    const res = document.getElementById('adResult');
+    if (res){ res.innerHTML = ''; res.style.display = 'none'; }
+    const err = document.getElementById('adError');
+    if (err){ err.style.display = 'none'; err.textContent = ''; }
+    document.getElementById('attachDomainOverlay').classList.add('show');
+    const first = document.getElementById('adBizId');
+    if (first) setTimeout(function(){ first.focus(); }, 60);
+  }
+  function closeAttachDomainDialog(){
+    document.getElementById('attachDomainOverlay').classList.remove('show');
+  }
+  async function attachDomainToBusiness(){
+    if (adInFlight) return;
+    const bizId = document.getElementById('adBizId').value.trim().toLowerCase();
+    const domain = normaliseDomain(document.getElementById('adDomain').value);
+    const err = document.getElementById('adError');
+    if (err){ err.style.display = 'none'; err.textContent = ''; }
+    const res = document.getElementById('adResult');
+    if (res){ res.innerHTML = ''; res.style.display = 'none'; }
+    const prog = document.getElementById('adProgress');
+    if (prog) prog.innerHTML = '';
+
+    if (!BIZ_ID_PATTERN.test(bizId)) return adShowError('מזהה העסק אינו תקין.');
+    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) return adShowError('הדומיין אינו נראה תקין. לדוגמה: salonb.co.il או shira.amanet.co.il');
+
+    adInFlight = true;
+    const btn = document.getElementById('adSubmitBtn');
+    if (btn){ btn.disabled = true; btn.textContent = 'מחברת...'; }
+    try {
+      adLog('בודקת שהעסק קיים');
+      const bizSnap = await db.collection('business').doc(bizId).get();
+      if (!bizSnap.exists){ adLog('לא נמצא עסק עם המזהה הזה', 'bad'); throw new Error('לא נמצא עסק עם המזהה הזה.'); }
+      adLog('העסק נמצא', 'good');
+
+      adLog('בודקת שהדומיין פנוי');
+      const domSnap = await db.collection('domains').doc(domain).get();
+      if (domSnap.exists && (domSnap.data() || {}).bizId !== bizId){
+        adLog('הדומיין כבר משויך לעסק אחר', 'bad');
+        throw new Error('הדומיין כבר משויך לעסק אחר (' + ((domSnap.data() || {}).bizId || '?') + ').');
+      }
+      adLog(domSnap.exists ? 'כבר משויך לעסק הזה — ממשיכה' : 'פנוי', 'good');
+
+      adLog('רושמת את המיפוי');
+      await db.collection('domains').doc(domain).set({ bizId: bizId });
+      adLog('המיפוי נרשם', 'good');
+
+      let siteUrlUpdated = false, siteUrlError = '';
+      try {
+        adLog('מעדכנת את כתובת האתר במסמך העסק');
+        await db.collection('business').doc(bizId).set({ siteUrl: 'https://' + domain + '/' }, { merge: true });
+        siteUrlUpdated = true;
+        adLog('הכתובת עודכנה', 'good');
+      } catch (e){
+        siteUrlError = (e && (e.code || e.message)) || 'שגיאה';
+        adLog('עדכון הכתובת נכשל: ' + siteUrlError, 'bad');
+      }
+
+      if (res){
+        res.style.display = 'block';
+        res.innerHTML = '';
+        const t = document.createElement('div');
+        t.style.cssText = 'font-weight:600;';
+        t.textContent = siteUrlUpdated ? 'הדומיין חובר לעסק.' : 'המיפוי נרשם — אבל כתובת האתר לא עודכנה.';
+        const a = document.createElement('a');
+        a.href = 'https://' + domain + '/'; a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = 'https://' + domain + '/';
+        a.style.cssText = 'display:block; word-break:break-all; margin-top:4px;';
+        const note = document.createElement('div');
+        note.style.cssText = 'margin-top:8px;';
+        note.textContent = siteUrlUpdated
+          ? 'נשאר לחבר את הדומיין ב-Firebase Hosting. עד שזה נעשה הכתובת לא תיפתח בכלל.'
+          : 'האתר ייפתח בכתובת הזו אחרי חיבור ב-Firebase Hosting, אבל הקישורים שיישלחו ללקוחות עדיין יובילו לכתובת הקודמת. צריך לעדכן את השדה siteUrl במסמך העסק (' + siteUrlError + ').';
+        res.appendChild(t); res.appendChild(a); res.appendChild(note);
+      }
+    } catch (e){
+      adShowError((e && e.message) || 'החיבור נכשל.');
+    } finally {
+      adInFlight = false;
+      if (btn){ btn.disabled = false; btn.textContent = 'חיבור הדומיין'; }
     }
   }
 
@@ -13201,6 +13333,7 @@
       return false;
     });
   }
+  window.__resolveBizIdFromCloud = resolveBizIdFromCloud;
   let lastPublishedPublicJson = null;
   const CLIENT_API_URL = 'https://client-api-737599524118.me-west1.run.app';
   async function callClientApi(action, payload){
