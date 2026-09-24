@@ -909,6 +909,7 @@
     border-color:var(--gold);
     color:var(--ink);
   }
+  .cal-appt.cal-appt-tiny{ padding:0; min-height:0; overflow:hidden; }
   .biz-topbar{
     display:none;
     position:fixed; top:var(--top-banner-h, 0px); left:0; right:0; z-index:910;
@@ -8578,14 +8579,13 @@
         });
         clusterItems.forEach(item => { item.colCount = columnEnds.length; });
       });
-      const quarterMinutes = (quarterHeight / hourBandHeight) * 60;
+      const MIN_APPT_BLOCK_PX = 7;
       const columnCursorBottom = {};
       apptLayout.forEach(item => {
-        const snappedStart = Math.floor(item.start / quarterMinutes) * quarterMinutes;
-        const snappedTopPx = ((snappedStart - calStartHour * 60) / 60) * hourBandHeight;
+        const trueTopPx = ((item.start - calStartHour * 60) / 60) * hourBandHeight;
         const prevBottom = columnCursorBottom[item.col];
-        const topPx = (prevBottom == null) ? snappedTopPx : Math.max(snappedTopPx, prevBottom);
-        const heightPx = Math.max(quarterHeight, (item.dur / 60) * hourBandHeight);
+        const topPx = (prevBottom == null) ? trueTopPx : Math.max(trueTopPx, prevBottom);
+        const heightPx = Math.max(MIN_APPT_BLOCK_PX, (item.dur / 60) * hourBandHeight);
         item.layoutTopPx = topPx;
         item.layoutHeightPx = heightPx;
         columnCursorBottom[item.col] = topPx + heightPx;
@@ -8609,9 +8609,12 @@
         block.style.background = staffColors[a.staff % staffColors.length];
         block.title = `${a.client} · ${a.service} · ${a.time} (${dur} דק') — לחיצה לצפייה בפרטי התור`;
         const blockHeightPx = heightPx - 3;
-        block.innerHTML = (blockHeightPx >= 34)
-          ? `<span class="cal-appt-name">${a.client}</span><span class="cal-appt-meta">${a.time.slice(0,5)} · ${a.service}</span>`
-          : `<span class="cal-appt-name">${a.client}</span>`;
+        if (blockHeightPx < 14) block.classList.add('cal-appt-tiny');
+        block.innerHTML = (blockHeightPx < 14)
+          ? ''
+          : (blockHeightPx >= 34)
+            ? `<span class="cal-appt-name">${a.client}</span><span class="cal-appt-meta">${a.time.slice(0,5)} · ${a.service}</span>`
+            : `<span class="cal-appt-name">${a.client}</span>`;
         block.onclick = (e) => {
           e.stopPropagation();
           openApptDetailOverlay(a);
