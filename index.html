@@ -6771,7 +6771,7 @@
       waitlist: [], specialRequests: [], lateCancellations: [], cancellationLog: [],
       inventory: [], whatsNewItems: [], holidayOverrides: [], recommendations: [],
       about: { photo: null, text: '' },
-      customTemplates: {},
+      customTemplates: [],
       invAlertEmail: opts.ownerEmail,
       ownerAccessCode: '',
       gatedTabsConfig: { clients: true, staff: true, servicesgroup: true, inventory: true, settings: true, reports: true },
@@ -13555,7 +13555,8 @@
   function applyCloudData(data){
     if (data.branding) branding = data.branding;
     if (data.clients) clients = data.clients;
-    if (data.customTemplates) customTemplates = data.customTemplates;
+    if (Array.isArray(data.customTemplates)) customTemplates = data.customTemplates;
+    else if (data.customTemplates) console.warn('customTemplates arrived in an unexpected shape and was ignored:', data.customTemplates);
     if (data.staff) staff = data.staff;
     if (Array.isArray(staff)){
       staff.forEach(s => {
@@ -13619,10 +13620,16 @@
     const __reNow = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
     const __reStart = __reNow();
     const __reBreakdown = [];
+    window.__renderErrors = [];
     __reCalls.forEach(([name, fn]) => {
       if (!fn) return;
       const t0 = __reNow();
-      fn();
+      try {
+        fn();
+      } catch (e) {
+        window.__renderErrors.push({ name, message: (e && e.message) || String(e) });
+        console.error('Rendering "' + name + '" failed — the rest of the screen was drawn anyway:', e);
+      }
       __reBreakdown.push({ name, ms: Math.round((__reNow() - t0) * 10) / 10 });
     });
     __reBreakdown.sort((a, b) => b.ms - a.ms);
