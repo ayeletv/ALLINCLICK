@@ -911,7 +911,7 @@
   }
   .biz-topbar{
     display:none;
-    position:fixed; top:0; left:0; right:0; z-index:910;
+    position:fixed; top:var(--top-banner-h, 0px); left:0; right:0; z-index:910;
     background:linear-gradient(120deg, var(--wine) 0%, var(--wine-deep) 100%);
     border-bottom:1px solid rgba(232,206,122,0.35);
     box-shadow:0 4px 18px rgba(10,8,9,0.3);
@@ -13673,10 +13673,12 @@
     banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#9B2C42; color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
     banner.textContent = '⚠ אין כרגע חיבור לענן — שינויים לא יישמרו עד שהחיבור יחזור. מומלץ לרענן את הדף.';
     document.body.prepend(banner);
+    syncTopBannerOffset();
   }
   function hideCloudErrorBanner(){
     const banner = document.getElementById('cloudErrorBanner');
     if (banner) banner.remove();
+    syncTopBannerOffset();
   }
   let autoLookupFromUrlDone = false;
   function handleAppointmentLookupFromUrl(){
@@ -13939,6 +13941,13 @@
       return 'fail';
     });
   }
+  function syncTopBannerOffset(){
+    const banner = document.getElementById('cloudErrorBanner')
+      || document.getElementById('bizNotReadyBanner')
+      || document.getElementById('bizUnconfiguredBanner');
+    const h = banner ? Math.round(banner.getBoundingClientRect().height) : 0;
+    document.documentElement.style.setProperty('--top-banner-h', h + 'px');
+  }
   function showBizNotReadyBanner(){
     if (document.getElementById('bizNotReadyBanner')) return;
     const banner = document.createElement('div');
@@ -13946,10 +13955,12 @@
     banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#8A6D3B; color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
     banner.textContent = 'האתר הזה עדיין בהקמה ולא ניתן לקבוע בו תור. נא ליצור קשר עם הסלון.';
     document.body.prepend(banner);
+    syncTopBannerOffset();
   }
   function hideBizNotReadyBanner(){
     const banner = document.getElementById('bizNotReadyBanner');
     if (banner) banner.remove();
+    syncTopBannerOffset();
   }
   function showUnconfiguredAddressBanner(){
     if (document.getElementById('bizUnconfiguredBanner')) return;
@@ -13958,6 +13969,7 @@
     banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#9B2C42; color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
     banner.textContent = '⚠ הכתובת הזו עדיין לא מחוברת לעסק. נא לפנות למי שהקימה עבורך את האתר.';
     document.body.prepend(banner);
+    syncTopBannerOffset();
   }
   function loadCloudData(){
     if (!BIZ_ID){
@@ -14011,6 +14023,7 @@
     runningOnPublicData = false;
     return CLOUD_DOC.get().then(doc => {
       hideCloudErrorBanner();
+      hideBizNotReadyBanner();
       cloudLoadRetryCount = 0;
       if (!doc.exists){
         console.log('No saved data yet in the cloud — using demo starter data.');
