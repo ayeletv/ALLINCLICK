@@ -3753,12 +3753,13 @@
         <button onclick="closeLoginOverlay()">✕ סגירה</button>
       </div>
     </div>
-    <div style="display:flex; flex-direction:column; gap:10px;">
-      <input type="email" id="loginEmail" class="field" placeholder="אימייל">
-      <input type="password" id="loginPassword" class="field" placeholder="סיסמה">
+    
+    <form id="loginForm" onsubmit="return false;" style="display:flex; flex-direction:column; gap:10px;">
+      <input type="email" id="loginEmail" class="field" placeholder="אימייל" name="email" autocomplete="username">
+      <input type="password" id="loginPassword" class="field" placeholder="סיסמה" name="password" autocomplete="current-password">
       <div id="loginError" style="display:none; color:var(--wine); font-size:13px;"></div>
-      <button class="cta" id="loginSubmitBtn" onclick="doLogin()">התחברות</button>
-    </div>
+      <button type="button" class="cta" id="loginSubmitBtn" onclick="doLogin()">התחברות</button>
+    </form>
   </div>
 </div>
 
@@ -6813,7 +6814,9 @@
         }
       }
 
-      const siteUrl = domain ? ('https://' + domain + '/') : 'https://allinklik.web.app/';
+      let liveHost = 'rutizolberg.com';
+      try { liveHost = String(location.hostname || liveHost).replace(/^www\./, ''); } catch (e) {}
+      const siteUrl = domain ? ('https://' + domain + '/') : ('https://' + liveHost + '/');
       nbLog('יוצרת את מסמך העסק');
       await db.collection('business').doc(bizId).set(blankBusinessDoc({ name, siteUrl, smsSender, campaign, ownerEmail }));
       nbLog('מסמך העסק נוצר', 'good');
@@ -6832,15 +6835,15 @@
         nbLog('הדומיין מופה', 'good');
       }
 
-      const link = domain ? ('https://' + domain + '/') : ('https://allinklik.web.app/?biz=' + bizId);
+      const link = domain ? ('https://' + domain + '/') : ('https://' + liveHost + '/?biz=' + bizId);
       nbLog('הכול מוכן.', 'good');
       const linkBox = document.getElementById('nbResult');
       if (linkBox){
         linkBox.style.display = 'block';
         linkBox.innerHTML = '';
         const t = document.createElement('div');
-        t.style.cssText = 'font-size:13px; line-height:1.7;';
-        t.textContent = 'הקישור לעסק:';
+        t.style.cssText = 'font-size:13px; line-height:1.7; font-weight:600;';
+        t.textContent = domain ? 'הכתובת של העסק:' : 'קישור זמני לבדיקה בלבד — לא לתת לבעלת הסלון:';
         const a = document.createElement('a');
         a.href = link; a.target = '_blank'; a.rel = 'noopener';
         a.textContent = link;
@@ -6849,7 +6852,7 @@
         note.style.cssText = 'font-size:12.5px; line-height:1.7; margin-top:8px;';
         note.textContent = domain
           ? 'נשאר לחבר את הדומיין ב-Firebase Hosting, ולפתוח קמפיין ב-Inforu אם רוצים שיחות תזכורת.'
-          : 'לא הוגדר דומיין, ולכן הקישור הוא כתובת תצוגה מקדימה. אפשר להוסיף דומיין בהמשך.';
+          : 'לעסק הזה עדיין אין דומיין, ולכן הקישור עובר דרך הדומיין של עסק אחר — הוא עובד רק עבורך ועבור בעלת העסק, ואין לתת אותו ללקוחות. כדי לתת לסלון כתובת משלו: להוסיף כאן דומיין (או תת-דומיין), ולחבר אותו ב-Firebase Hosting.';
         linkBox.appendChild(t); linkBox.appendChild(a); linkBox.appendChild(note);
       }
     } catch (err){
@@ -13034,6 +13037,18 @@
     if (!id) bizUnknownHost = String(host || '').toLowerCase().replace(/^www\./, '');
     return id;
   }
+  function maySwitchToBiz(wanted){
+    if (!wanted) return false;
+    return wanted === ownerBizId || isPlatformAdmin();
+  }
+  window.__maySwitchToBiz = maySwitchToBiz;
+  function requestedBizIdFromUrl(){
+    try {
+      const q = new URLSearchParams(location.search).get('biz') || '';
+      return BIZ_ID_PATTERN.test(q) ? q : '';
+    } catch (e) { return ''; }
+  }
+  window.__requestedBizIdFromUrl = requestedBizIdFromUrl;
   window.__bizIdForAddress = bizIdForAddress;
   let BIZ_ID = resolveBizId();
   window.__BIZ_ID = BIZ_ID;
@@ -13959,6 +13974,14 @@
     }
     let mappingAttempt = 0;
     const tryResolve = () => resolveOwnerBusiness().then(() => {
+      const wanted = requestedBizIdFromUrl();
+      if (wanted && wanted !== BIZ_ID && maySwitchToBiz(wanted)){
+        BIZ_ID = wanted;
+        pointDocsAtBusiness();
+        applyOwnerUi();
+        if (typeof loadCloudData === 'function') loadCloudData();
+        return;
+      }
       applyOwnerUi();
       const stillHere = auth.currentUser && !auth.currentUser.isAnonymous;
       if (!ownerMappingFailed || !stillHere){
@@ -13974,6 +13997,21 @@
     });
     tryResolve();
   });
+  const LOGIN_EMAIL_MEMORY_KEY = 'appLastOwnerEmail';
+  function rememberOwnerLoginEmail(email){
+    const mail = String(email || '').trim();
+    if (!mail) return;
+    try { localStorage.setItem(LOGIN_EMAIL_MEMORY_KEY, mail); } catch (e) { /* גלישה פרטית — פשוט לא נזכר */ }
+  }
+  function rememberedOwnerLoginEmail(){
+    try { return localStorage.getItem(LOGIN_EMAIL_MEMORY_KEY) || ''; } catch (e) { return ''; }
+  }
+  function prefillRememberedLoginEmail(){
+    const field = document.getElementById('loginEmail');
+    if (!field || field.value) return;   // מה שכבר הוקלד קודם לזכרון
+    const mail = rememberedOwnerLoginEmail();
+    if (mail) field.value = mail;
+  }
   function handleBusinessTabClick(btn){
     if (isLoggedIn){
       showPanel('business', btn);
@@ -13981,6 +14019,7 @@
     }
     pendingBusinessBtn = btn;
     document.getElementById('loginError').style.display = 'none';
+    prefillRememberedLoginEmail();
     document.getElementById('loginOverlay').classList.add('show');
   }
   function openLoginOverlayDirect(){
@@ -13990,6 +14029,7 @@
     }
     pendingBusinessBtn = document.getElementById('businessTabBtn');
     document.getElementById('loginError').style.display = 'none';
+    prefillRememberedLoginEmail();
     document.getElementById('loginOverlay').classList.add('show');
   }
   function closeLoginOverlay(){
@@ -14145,6 +14185,7 @@
           }
           restoreBtn();
           closeLoginOverlay();
+          rememberOwnerLoginEmail(document.getElementById('loginEmail').value);
           document.getElementById('loginEmail').value = '';
           document.getElementById('loginPassword').value = '';
           if (typeof loadCloudData === 'function') loadCloudData();
