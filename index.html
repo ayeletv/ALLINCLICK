@@ -2994,6 +2994,8 @@
         <div class="settings-section-body">
           <div style="max-width:480px;"><div class="label" style="margin:12px 0 6px;">שם השולח בהודעות SMS<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">זה מה שיופיע כ"שולח" בתזכורות ה-SMS שהלקוחות מקבלות. חייב להיות עד 11 תווים באנגלית ו/או מספרים בלבד, בלי רווחים ובלי עברית (מגבלה של ספק ה-SMS) — לדוגמה SalonRuti. אם נשאר ריק, תזכורות ה-SMS לא יישלחו.</span></span></div>
           <input type="text" id="bizSmsSenderInput" class="field-dark" placeholder="לדוגמה: SalonRuti" maxlength="11" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSmsSenderFieldOnBlur(this)">
+          <div class="label" style="margin:12px 0 6px;">מספר קמפיין השיחה הקולית<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">מספר הקמפיין ב-Inforu שדרכו יוצאת שיחת התזכורת ("הקש 1 לאישור, הקש 2 לביטול"). הוא גם מה שמאפשר למערכת לדעת לאיזה עסק שייכת ההקשה שחוזרת מהשיחה. אם נשאר ריק, תישלח דרך הקמפיין שהוגדר מלכתחילה.</span></span></div>
+          <input type="text" id="bizIvrCampaignInput" class="field-dark" placeholder="לדוגמה: 1642873" maxlength="20" inputmode="numeric" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ מספר הקמפיין נשמר')">
           <div class="label" style="margin:12px 0 6px;">מייל המנהלת (לקבלת התראות)<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">לכתובת הזו נשלחות התראות על מלאי נמוך, והיא מוצעת כברירת מחדל כששולחים דוח למייל — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות כאן.</span></span></div>
           <input type="email" id="invAlertEmail" class="field-dark" placeholder="you@example.com" oninput="updateInvAlertEmail()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ כתובת המייל להתראות נשמרה בהצלחה')">
           <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:4px;">לכתובת הזו מגיעות התראות מלאי נמוך, והיא מוצעת כברירת מחדל בשליחת דוחות למייל (בטאב "דוחות") — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות את זה כאן.</div>
@@ -6363,6 +6365,12 @@
       const sanitizedSender = smsSenderInputEl.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 11);
       if (sanitizedSender !== smsSenderInputEl.value) smsSenderInputEl.value = sanitizedSender;
       branding.smsSenderId = sanitizedSender;
+    }
+    const ivrInputEl = document.getElementById('bizIvrCampaignInput');
+    if (ivrInputEl){
+      const sanitizedIvr = ivrInputEl.value.replace(/[^0-9]/g, '').slice(0, 20);
+      if (sanitizedIvr !== ivrInputEl.value) ivrInputEl.value = sanitizedIvr;
+      branding.inforuIvrCampaignId = sanitizedIvr;
     } else {
       branding.smsSenderId = '';
     }
@@ -6670,6 +6678,8 @@
     if (addressInputEl2 && document.activeElement !== addressInputEl2) addressInputEl2.value = branding.address || '';
     const smsSenderInputEl2 = document.getElementById('bizSmsSenderInput');
     if (smsSenderInputEl2 && document.activeElement !== smsSenderInputEl2) smsSenderInputEl2.value = branding.smsSenderId || '';
+    const ivrInputEl2 = document.getElementById('bizIvrCampaignInput');
+    if (ivrInputEl2 && document.activeElement !== ivrInputEl2) ivrInputEl2.value = branding.inforuIvrCampaignId || '';
     const invEmailInputEl = document.getElementById('invAlertEmail');
     if (invEmailInputEl && document.activeElement !== invEmailInputEl) invEmailInputEl.value = invAlertEmail || '';
     const ownerCodeInputEl = document.getElementById('ownerAccessCodeInput');
@@ -12659,16 +12669,18 @@
   let cloudLoadComplete = false;
   const BIZ_BY_DOMAIN = {
     'rutizolberg.com': 'default',
-    'allinklik.web.app': 'default',
-    'allinklik.firebaseapp.com': 'default',
   };
   const BIZ_LOCAL_HOSTS = ['', 'localhost', '127.0.0.1', 'null'];
+  function isPreviewHost(host){
+    return host === 'allinklik.web.app' || host === 'allinklik.firebaseapp.com'
+      || /\.web\.app$/.test(host) || /\.firebaseapp\.com$/.test(host);
+  }
   let bizUnknownHost = '';
   const BIZ_ID_PATTERN = /^[a-z0-9_-]{1,40}$/;
   function bizIdForAddress(hostname, search){
     const host = String(hostname || '').toLowerCase().replace(/^www\./, '');
     if (BIZ_BY_DOMAIN[host]) return BIZ_BY_DOMAIN[host];
-    if (BIZ_LOCAL_HOSTS.indexOf(host) !== -1){
+    if (BIZ_LOCAL_HOSTS.indexOf(host) !== -1 || isPreviewHost(host)){
       let fromQuery = '';
       try { fromQuery = new URLSearchParams(search || '').get('biz') || ''; } catch (e) {}
       if (BIZ_ID_PATTERN.test(fromQuery)) return fromQuery;
