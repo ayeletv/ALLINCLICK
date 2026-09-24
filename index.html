@@ -13679,6 +13679,7 @@
       const params = new URLSearchParams(window.location.search);
       const idOrPhone = params.get('lookupId') || params.get('lookupPhone');
       if (!idOrPhone) return;
+      if (typeof openApptLookup === 'function') openApptLookup();
       const lookupInput = document.getElementById('lookupId');
       if (lookupInput) lookupInput.value = idOrPhone;
       if (typeof searchMyAppointment === 'function') searchMyAppointment();
