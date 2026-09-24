@@ -1885,14 +1885,17 @@
     background:repeating-linear-gradient(135deg, rgba(90,30,42,0.07) 0px, rgba(90,30,42,0.07) 10px, transparent 10px, transparent 20px);
     cursor:not-allowed;
   }
-  .cal-hour-line{border-top:1px solid rgba(var(--panel-line-rgb),0.32); box-sizing:border-box;}
+  .cal-hour-line{
+    border-top:1px solid rgba(var(--panel-line-rgb),0.42); box-sizing:border-box;
+    position:relative; z-index:4; pointer-events:none;
+  }
   .cal-half-line{position:absolute; inset-inline:0; border-top:1px dashed rgba(var(--panel-line-rgb),0.22);}
   .cal-quarter-line{position:absolute; inset-inline:0; border-top:1px dotted rgba(var(--panel-line-rgb),0.18);}
   .cal-appt{
     position:absolute;
-    inset-inline:3px;
+    inset-inline:2px;
     border:0 solid rgba(28,23,25,0.45);
-    border-radius:7px;
+    border-radius:3px;
     padding:3px 7px;
     font-size:10.5px;
     line-height:1;
@@ -8669,8 +8672,8 @@
         if (item.joinedTop) block.classList.add('cal-appt-joined-top');
         if (item.joinedBottom) block.classList.add('cal-appt-joined-bottom');
         const colWidthPct = 100 / colCount;
-        block.style.insetInlineStart = `calc(${col * colWidthPct}% + 3px)`;
-        block.style.insetInlineEnd = `calc(${(colCount - col - 1) * colWidthPct}% + 3px)`;
+        block.style.insetInlineStart = `calc(${col * colWidthPct}% + 2px)`;
+        block.style.insetInlineEnd = `calc(${(colCount - col - 1) * colWidthPct}% + 2px)`;
         block.style.background = staffColors[a.staff % staffColors.length];
         block.title = `${a.client} · ${a.service} · ${a.time} (${dur} דק') — לחיצה לצפייה בפרטי התור`;
         const blockHeightPx = heightPx;
