@@ -3022,6 +3022,17 @@
           <div id="holidayOverridesList" style="font-size:13.5px; color:var(--panel-text-dim);"></div></div>
         </div>
       </div>
+      <div class="settings-section" data-settings-section="platform" id="platformSection" style="display:none;">
+        <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
+          <span class="settings-section-title">🏢 ניהול עסקים</span>
+          <span class="settings-section-sub">הקמת עסק חדש במערכת</span>
+          <span class="settings-section-chevron">▾</span>
+        </button>
+        <div class="settings-section-body">
+          <div style="font-size:12.5px; color:var(--panel-text-dim); max-width:480px; line-height:1.7; margin-bottom:12px;">הקמת עסק חדש יוצרת בבת אחת את כל מה שנדרש: מסמך העסק, הדף הציבורי, חשבון ההתחברות של בעלת הסלון, ושיוך הדומיין. הקטע הזה מוצג רק לחשבון שמתחזק את המערכת.</div>
+          <button class="template-btn" style="width:fit-content;" onclick="openNewBusinessWizard()">➕ הקמת עסק חדש</button>
+        </div>
+      </div>
       <div class="settings-section" data-settings-section="security">
         <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
           <span class="settings-section-title">🔒 אבטחה וגישה</span>
@@ -3688,6 +3699,52 @@
   <img id="cpPhotoLightboxImg" src="" alt="תמונת לקוחה מוגדלת">
 </div>
 <div id="adminToast" class="admin-toast" role="status" aria-live="polite"></div>
+<div id="newBusinessOverlay" class="myday-overlay">
+  <div class="myday-sheet">
+    <div class="myday-header">
+      <h3>הקמת עסק חדש</h3>
+      <div class="myday-actions">
+        <button onclick="closeNewBusinessWizard()">✕ סגירה</button>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div>
+        <div class="label" style="margin-bottom:5px;">שם העסק</div>
+        <input type="text" id="nbName" class="field" placeholder="לדוגמה: סלון שירה" oninput="nbNameChanged()">
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:5px;">מזהה העסק (אנגלית, בלי רווחים)</div>
+        <input type="text" id="nbId" class="field" placeholder="salon-shira" oninput="this.dataset.touched='1'">
+        <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:4px;">מזהה פנימי שלא ניתן לשנות אחר כך. מוצע אוטומטית מהשם.</div>
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:5px;">דומיין (אפשר להשאיר ריק ולהוסיף אחר כך)</div>
+        <input type="text" id="nbDomain" class="field" placeholder="salonshira.co.il">
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:5px;">מייל בעלת העסק</div>
+        <input type="email" id="nbOwnerEmail" class="field" placeholder="shira@example.com" autocomplete="off">
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:5px;">סיסמה זמנית (היא תחליף אותה בעצמה)</div>
+        <input type="text" id="nbOwnerPassword" class="field" placeholder="לפחות שישה תווים" autocomplete="off">
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:5px;">שם השולח ב-SMS (עד 11 תווים באנגלית)</div>
+        <input type="text" id="nbSmsSender" class="field" placeholder="SalonShira" maxlength="11">
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:5px;">מספר קמפיין השיחה ב-Inforu (אפשר ריק)</div>
+        <input type="text" id="nbCampaign" class="field" placeholder="1642873" inputmode="numeric">
+      </div>
+      <div id="nbError" style="display:none; color:var(--wine); font-size:13px;"></div>
+      <div id="nbProgress" style="display:none; padding:10px; background:rgba(0,0,0,.04); border-radius:10px;"></div>
+      <div id="nbResult" style="display:none; padding:10px; background:rgba(62,92,54,.10); border-radius:10px;"></div>
+      <button class="cta" id="nbCreateBtn" onclick="createNewBusiness()">הקמת העסק</button>
+    </div>
+  </div>
+</div>
+
 <div id="loginOverlay" class="myday-overlay">
   <div class="myday-sheet">
     <div class="myday-header">
@@ -6600,6 +6657,209 @@
       }, 900);
     }
   }
+  function isPlatformAdmin(){
+    const u = auth && auth.currentUser;
+    return !!(u && !u.isAnonymous && String(u.email || '').trim().toLowerCase() === PLATFORM_ADMIN_EMAIL);
+  }
+  function applyPlatformAdminUi(){
+    const sec = document.getElementById('platformSection');
+    if (sec) sec.style.display = isPlatformAdmin() ? '' : 'none';
+  }
+  window.__applyPlatformAdminUi = applyPlatformAdminUi;
+
+  function normaliseDomain(raw){
+    let d = String(raw || '').trim().toLowerCase();
+    d = d.replace(/^https?:\/\//, '').replace(/^www\./, '');
+    d = d.split('/')[0].split('?')[0].split('#')[0];
+    return d;
+  }
+  const HEB_TRANSLIT = {
+    'א': '', 'ב': 'b', 'ג': 'g', 'ד': 'd', 'ה': 'h', 'ו': 'o', 'ז': 'z', 'ח': 'ch',
+    'ט': 't', 'י': 'i', 'כ': 'k', 'ך': 'k', 'ל': 'l', 'מ': 'm', 'ם': 'm', 'נ': 'n',
+    'ן': 'n', 'ס': 's', 'ע': '', 'פ': 'p', 'ף': 'f', 'צ': 'tz', 'ץ': 'tz', 'ק': 'k',
+    'ר': 'r', 'ש': 'sh', 'ת': 't',
+  };
+  function suggestBizId(name){
+    const words = String(name || '').trim().split(/\s+/).map(function(word){
+      let out = '';
+      const chars = word.split('');
+      chars.forEach(function(ch, i){
+        if (ch === 'ה' && i === chars.length - 1 && chars.length > 1){ out += 'a'; return; }
+        if (Object.prototype.hasOwnProperty.call(HEB_TRANSLIT, ch)){ out += HEB_TRANSLIT[ch]; return; }
+        if (/[a-zA-Z0-9]/.test(ch)){ out += ch.toLowerCase(); return; }
+      });
+      return out;
+    }).filter(Boolean);
+    return words.join('-').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+  }
+  window.__suggestBizId = suggestBizId;
+  function nbLog(text, kind){
+    const box = document.getElementById('nbProgress');
+    if (!box) return;
+    box.style.display = 'block';
+    const line = document.createElement('div');
+    line.style.cssText = 'font-size:12.5px; line-height:1.7;' + (kind === 'bad' ? ' color:#9B2C42;' : (kind === 'good' ? ' color:#3E5C36;' : ''));
+    line.textContent = (kind === 'bad' ? '✗ ' : (kind === 'good' ? '✓ ' : '• ')) + text;
+    box.appendChild(line);
+  }
+  function openNewBusinessWizard(){
+    ['nbName', 'nbId', 'nbDomain', 'nbOwnerEmail', 'nbOwnerPassword', 'nbSmsSender', 'nbCampaign'].forEach(function(id){
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    const prog = document.getElementById('nbProgress');
+    if (prog){ prog.innerHTML = ''; prog.style.display = 'none'; }
+    const err = document.getElementById('nbError');
+    if (err){ err.style.display = 'none'; err.textContent = ''; }
+    document.getElementById('newBusinessOverlay').classList.add('show');
+    const nameEl = document.getElementById('nbName');
+    if (nameEl) setTimeout(function(){ nameEl.focus(); }, 60);
+  }
+  function closeNewBusinessWizard(){
+    document.getElementById('newBusinessOverlay').classList.remove('show');
+  }
+  function nbNameChanged(){
+    const idEl = document.getElementById('nbId');
+    if (!idEl || idEl.dataset.touched === '1') return;
+    idEl.value = suggestBizId(document.getElementById('nbName').value);
+  }
+  function nbShowError(msg){
+    const err = document.getElementById('nbError');
+    if (!err) return;
+    err.style.display = 'block';
+    err.textContent = msg;
+  }
+  function blankBusinessDoc(opts){
+    return {
+      siteUrl: opts.siteUrl,
+      branding: {
+        name: opts.name, logo: null, phone: '', whatsapp: '', address: '',
+        smsSenderId: opts.smsSender || '',
+        inforuIvrCampaignId: opts.campaign || '',
+        maintainerEmail: PLATFORM_ADMIN_EMAIL,
+      },
+      staff: [], services: [], categories: [], categoryMessages: {},
+      clients: [], weekAppointments: [], personalBlocks: [],
+      waitlist: [], specialRequests: [], lateCancellations: [], cancellationLog: [],
+      inventory: [], whatsNewItems: [], holidayOverrides: [], recommendations: [],
+      about: { photo: null, text: '' },
+      customTemplates: {},
+      invAlertEmail: opts.ownerEmail,
+      ownerAccessCode: '',
+      gatedTabsConfig: { clients: true, staff: true, servicesgroup: true, inventory: true, settings: true, reports: true },
+      savedAt: new Date().toISOString(),
+    };
+  }
+  function blankPublicDoc(opts){
+    return {
+      branding: { name: opts.name, logo: null, phone: '', whatsapp: '', address: '' },
+      staff: [], services: [], categories: [], categoryMessages: {},
+      holidayOverrides: [], whatsNewItems: [], recommendations: [],
+      about: { photo: null, text: '' },
+      busy: [],
+      savedAt: new Date().toISOString(),
+    };
+  }
+  let nbInFlight = false;
+  async function createNewBusiness(){
+    if (nbInFlight) return;
+    const name = document.getElementById('nbName').value.trim();
+    const bizId = document.getElementById('nbId').value.trim().toLowerCase();
+    const domain = normaliseDomain(document.getElementById('nbDomain').value);
+    const ownerEmail = document.getElementById('nbOwnerEmail').value.trim().toLowerCase();
+    const ownerPassword = document.getElementById('nbOwnerPassword').value;
+    const smsSender = document.getElementById('nbSmsSender').value.trim();
+    const campaign = document.getElementById('nbCampaign').value.replace(/[^0-9]/g, '');
+    nbShowError('');
+    document.getElementById('nbError').style.display = 'none';
+
+    if (!name) return nbShowError('יש למלא את שם העסק.');
+    if (!/^[a-z0-9_-]{1,40}$/.test(bizId)) return nbShowError('מזהה העסק יכול להכיל אותיות אנגליות קטנות, ספרות, מקף וקו תחתון בלבד.');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ownerEmail)) return nbShowError('כתובת המייל של בעלת העסק אינה תקינה.');
+    if (String(ownerPassword).length < 6) return nbShowError('הסיסמה הזמנית חייבת להיות באורך שש תווים לפחות.');
+    if (domain && !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) return nbShowError('הדומיין אינו נראה תקין. לדוגמה: salonb.co.il');
+
+    nbInFlight = true;
+    const btn = document.getElementById('nbCreateBtn');
+    if (btn){ btn.disabled = true; btn.textContent = 'מקימה...'; }
+    const prog = document.getElementById('nbProgress');
+    if (prog) prog.innerHTML = '';
+
+    try {
+      nbLog('בודקת שהמזהה, המייל והדומיין פנויים');
+      const bizSnap = await db.collection('business').doc(bizId).get();
+      if (bizSnap.exists){ nbLog('כבר קיים עסק עם המזהה הזה', 'bad'); throw new Error('מזהה העסק כבר תפוס.'); }
+      const ownerSnap = await db.collection('owners').doc(ownerEmail).get();
+      if (ownerSnap.exists){ nbLog('המייל הזה כבר משויך לעסק אחר', 'bad'); throw new Error('המייל כבר משויך לעסק אחר.'); }
+      if (domain){
+        const domSnap = await db.collection('domains').doc(domain).get();
+        if (domSnap.exists){ nbLog('הדומיין כבר משויך לעסק אחר', 'bad'); throw new Error('הדומיין כבר משויך לעסק אחר.'); }
+      }
+      nbLog('פנוי', 'good');
+
+      nbLog('יוצרת את חשבון ההתחברות של בעלת העסק');
+      if (!sensVerifyApp) sensVerifyApp = firebase.initializeApp(firebaseConfig, 'settings-verify');
+      const vAuth = sensVerifyApp.auth();
+      try {
+        await vAuth.createUserWithEmailAndPassword(ownerEmail, ownerPassword);
+        await vAuth.signOut().catch(function(){});
+        nbLog('החשבון נוצר', 'good');
+      } catch (e){
+        const code = (e && e.code) || '';
+        if (code === 'auth/email-already-in-use'){
+          nbLog('כבר קיים חשבון עם המייל הזה — ממשיכה בלי ליצור אותו מחדש');
+        } else {
+          nbLog('יצירת החשבון נכשלה: ' + code, 'bad');
+          throw new Error('לא ניתן היה ליצור את חשבון ההתחברות (' + code + ').');
+        }
+      }
+
+      const siteUrl = domain ? ('https://' + domain + '/') : 'https://allinklik.web.app/';
+      nbLog('יוצרת את מסמך העסק');
+      await db.collection('business').doc(bizId).set(blankBusinessDoc({ name, siteUrl, smsSender, campaign, ownerEmail }));
+      nbLog('מסמך העסק נוצר', 'good');
+
+      nbLog('יוצרת את המסמך הציבורי');
+      await db.collection('publicView').doc(bizId).set(blankPublicDoc({ name }));
+      nbLog('המסמך הציבורי נוצר', 'good');
+
+      nbLog('משייכת את בעלת העסק');
+      await db.collection('owners').doc(ownerEmail).set({ bizId: bizId });
+      nbLog('השיוך נוצר', 'good');
+
+      if (domain){
+        nbLog('ממפה את הדומיין');
+        await db.collection('domains').doc(domain).set({ bizId: bizId });
+        nbLog('הדומיין מופה', 'good');
+      }
+
+      const link = domain ? ('https://' + domain + '/') : ('https://allinklik.web.app/?biz=' + bizId);
+      nbLog('הכול מוכן.', 'good');
+      const linkBox = document.getElementById('nbResult');
+      if (linkBox){
+        linkBox.style.display = 'block';
+        linkBox.innerHTML = '';
+        const t = document.createElement('div');
+        t.style.cssText = 'font-size:13px; line-height:1.7;';
+        t.textContent = 'הקישור לעסק:';
+        const a = document.createElement('a');
+        a.href = link; a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = link;
+        a.style.cssText = 'display:block; word-break:break-all; font-size:13px; margin-top:4px;';
+        const note = document.createElement('div');
+        note.style.cssText = 'font-size:12.5px; line-height:1.7; margin-top:8px;';
+        note.textContent = domain
+          ? 'נשאר לחבר את הדומיין ב-Firebase Hosting, ולפתוח קמפיין ב-Inforu אם רוצים שיחות תזכורת.'
+          : 'לא הוגדר דומיין, ולכן הקישור הוא כתובת תצוגה מקדימה. אפשר להוסיף דומיין בהמשך.';
+        linkBox.appendChild(t); linkBox.appendChild(a); linkBox.appendChild(note);
+      }
+    } catch (err){
+      nbShowError((err && err.message) || 'ההקמה נכשלה.');
+    } finally {
+      nbInFlight = false;
+      if (btn){ btn.disabled = false; btn.textContent = 'הקמת העסק'; }
+    }
+  }
+
   let sensitiveSettingsUnlocked = false;
   function maintainerEmailOf(){
     return String((typeof branding !== 'undefined' && branding && branding.maintainerEmail) || '').trim().toLowerCase();
@@ -6677,7 +6937,7 @@
       if (document.body.classList.contains('admin-mode')) return;
       const target = document.querySelector('.switcher');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 1300);
+    }, 2000);
   }
   function revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, name, skipFontWait){
     const alreadyShown = heroBizNameEl.classList.contains('biz-name-visible');
@@ -12748,6 +13008,7 @@
   const BIZ_BY_DOMAIN = {
     'rutizolberg.com': 'default',
   };
+  const PLATFORM_ADMIN_EMAIL = 'agor678@gmail.com';
   const BIZ_LOCAL_HOSTS = ['', 'localhost', '127.0.0.1', 'null'];
   function isPreviewHost(host){
     return host === 'allinklik.web.app' || host === 'allinklik.firebaseapp.com'
@@ -13687,6 +13948,7 @@
       if (btn) btn.style.display = isLoggedIn ? '' : 'none';
       const bookingBtn = document.getElementById('bookingTabBtn');
       if (bookingBtn) bookingBtn.style.display = isLoggedIn ? 'none' : '';
+      if (typeof applyPlatformAdminUi === 'function') applyPlatformAdminUi();
       if (typeof attemptRestoreAdminView === 'function') attemptRestoreAdminView();
     };
     if (!user || user.isAnonymous){
