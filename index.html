@@ -3756,7 +3756,7 @@
       </div>
     </div>
     <div style="display:flex; flex-direction:column; gap:10px;">
-      <div style="font-size:12.5px; color:var(--panel-text-dim); line-height:1.7;">לעסק שהוקם בלי דומיין. אחרי החיבור כאן נשאר לחבר את הדומיין עצמו ב-Firebase Hosting — בלי זה הכתובת לא תיפתח.</div>
+      <div style="font-size:12.5px; color:var(--panel-text-dim); line-height:1.7;">לעסק שהוקם בלי דומיין. אחרי החיבור כאן נשאר לחבר את הדומיין עצמו אצל שירות האחסון של האתר — בלי זה הכתובת לא תיפתח.</div>
       <div>
         <div class="label" style="margin-bottom:5px;">מזהה העסק</div>
         <input type="text" id="adBizId" class="field" placeholder="salon-shira">
@@ -6879,8 +6879,8 @@
         const note = document.createElement('div');
         note.style.cssText = 'font-size:12.5px; line-height:1.7; margin-top:8px;';
         note.textContent = domain
-          ? 'נשאר לחבר את הדומיין ב-Firebase Hosting, ולפתוח קמפיין ב-Inforu אם רוצים שיחות תזכורת.'
-          : 'לעסק הזה עדיין אין דומיין, ולכן הקישור עובר דרך הדומיין של עסק אחר — הוא עובד רק עבורך ועבור בעלת העסק, ואין לתת אותו ללקוחות. כדי לתת לסלון כתובת משלו: להוסיף כאן דומיין (או תת-דומיין), ולחבר אותו ב-Firebase Hosting.';
+          ? 'נשאר לחבר את הדומיין אצל שירות האחסון של האתר, ולפתוח קמפיין ב-Inforu אם רוצים שיחות תזכורת.'
+          : 'לעסק הזה עדיין אין דומיין, ולכן הקישור עובר דרך הדומיין של עסק אחר — הוא עובד רק עבורך ועבור בעלת העסק, ואין לתת אותו ללקוחות. כדי לתת לסלון כתובת משלו: להוסיף כאן דומיין (או תת-דומיין), ולחבר אותו אצל שירות האחסון של האתר.';
         linkBox.appendChild(t); linkBox.appendChild(a); linkBox.appendChild(note);
       }
     } catch (err){
@@ -6983,8 +6983,8 @@
         const note = document.createElement('div');
         note.style.cssText = 'margin-top:8px;';
         note.textContent = siteUrlUpdated
-          ? 'נשאר לחבר את הדומיין ב-Firebase Hosting. עד שזה נעשה הכתובת לא תיפתח בכלל.'
-          : 'האתר ייפתח בכתובת הזו אחרי חיבור ב-Firebase Hosting, אבל הקישורים שיישלחו ללקוחות עדיין יובילו לכתובת הקודמת. צריך לעדכן את השדה siteUrl במסמך העסק (' + siteUrlError + ').';
+          ? 'אם הדומיין עדיין לא חובר אצל שירות האחסון של האתר — צריך לעשות גם את זה, אחרת הכתובת לא תיפתח.'
+          : 'האתר ייפתח בכתובת הזו אחרי חיבור אצל שירות האחסון, אבל הקישורים שיישלחו ללקוחות עדיין יובילו לכתובת הקודמת. צריך לעדכן את השדה siteUrl במסמך העסק (' + siteUrlError + ').';
         res.appendChild(t); res.appendChild(a); res.appendChild(note);
       }
     } catch (e){
@@ -13920,13 +13920,29 @@
   function loadPublicData(){
     return PUBLIC_DOC.get().then(doc => {
       const data = doc.exists ? doc.data() : null;
-      if (!data || !Array.isArray(data.staff) || !data.staff.length){
-        console.warn('publicView is missing or empty — falling back to the full document.');
-        return false;
+      if (!data) return 'empty';
+      if (!Array.isArray(data.staff) || !data.staff.length){
+        applyPublicData(data);
+        return 'empty';
       }
       applyPublicData(data);
-      return true;
+      return 'ok';
+    }).catch(err => {
+      console.error('Reading the public document failed:', err);
+      return 'fail';
     });
+  }
+  function showBizNotReadyBanner(){
+    if (document.getElementById('bizNotReadyBanner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'bizNotReadyBanner';
+    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#8A6D3B; color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
+    banner.textContent = 'האתר הזה עדיין בהקמה ולא ניתן לקבוע בו תור. נא ליצור קשר עם הסלון.';
+    document.body.prepend(banner);
+  }
+  function hideBizNotReadyBanner(){
+    const banner = document.getElementById('bizNotReadyBanner');
+    if (banner) banner.remove();
   }
   function showUnconfiguredAddressBanner(){
     if (document.getElementById('bizUnconfiguredBanner')) return;
@@ -13950,7 +13966,18 @@
     const cloudLoadStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
     if (!isOwnerSession()){
       return loadPublicData().then(loaded => {
-        if (!loaded) return retryPublicLoadLater();
+        if (loaded === 'fail') return retryPublicLoadLater();
+        if (loaded === 'empty'){
+          hideCloudErrorBanner();
+          cloudLoadRetryCount = 0;
+          cloudLoadComplete = true;
+          showBizNotReadyBanner();
+          rerenderEverything();
+          if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
+          if (typeof window.__resolveBrandingReady === 'function') window.__resolveBrandingReady();
+          return;
+        }
+        hideBizNotReadyBanner();
         hideCloudErrorBanner();
         cloudLoadRetryCount = 0;
         cloudLoadComplete = true;
