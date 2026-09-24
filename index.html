@@ -1891,7 +1891,7 @@
   .cal-appt{
     position:absolute;
     inset-inline:3px;
-    border:1px solid rgba(255,255,255,0.62);
+    border:0 solid rgba(28,23,25,0.45);
     border-radius:7px;
     padding:3px 7px;
     font-size:10.5px;
@@ -1904,7 +1904,7 @@
     overflow:hidden;
     color:#1C1719;
     cursor:pointer;
-    box-shadow:0 0 0 1px rgba(28,23,25,0.12);
+    box-shadow:inset 0 0 0 1px rgba(28,23,25,0.16);
   }
   .cal-appt b{font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .cal-appt-name{font-weight:700; font-size:12px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;}
@@ -2093,6 +2093,13 @@
   @keyframes calApptHighlightFade{
     0%{ box-shadow:0 0 0 3px var(--panel-gold); z-index:5; }
     100%{ box-shadow:0 0 0 3px transparent; }
+  }
+  .cal-appt.cal-appt-joined-top{
+    border-top-width:1px;
+    border-top-left-radius:0; border-top-right-radius:0;
+  }
+  .cal-appt.cal-appt-joined-bottom{
+    border-bottom-left-radius:0; border-bottom-right-radius:0;
   }
   .cal-appt.cal-appt-highlight{ animation:calApptHighlightFade 2s ease forwards; }
   .cal-appt.cal-appt-confirmed{ box-shadow:inset 0 0 0 2px #2E8B57; }
@@ -3219,7 +3226,8 @@
   <div style="display:none;" data-build="17.09-v45-blocked-booking"></div>
 </footer>
 
-<div id="saveStatusIndicator" style="position:fixed; bottom:16px; inset-inline-start:16px; background:rgba(20,16,20,0.9); color:#F5EEE4; font-size:12.5px; padding:7px 16px; border-radius:999px; z-index:999998; display:none; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.3);"></div>
+
+<div id="saveStatusIndicator" style="position:fixed; bottom:84px; inset-inline-end:16px; background:rgba(20,16,20,0.92); color:#F5EEE4; font-size:13.5px; font-weight:600; padding:9px 18px; border-radius:999px; z-index:999998; display:none; direction:rtl; box-shadow:0 2px 12px rgba(0,0,0,.35);"></div>
 <div id="myDayOverlay" class="myday-overlay">
   <div class="myday-sheet">
     <div class="myday-header no-print">
@@ -4738,25 +4746,10 @@
     renderMbQuickPick(match ? match.name : null);
   });
   document.getElementById('mbClientPhone')?.addEventListener('input', function(){
-    const digits = this.value.replace(/[^0-9]/g, '');
-    const nameInput = document.getElementById('mbClientFirstName');
     const idInput = document.getElementById('mbClientId');
-    const emailInput = document.getElementById('mbClientEmail');
-    const noteInput = document.getElementById('mbClientNote');
-    const match = digits.length >= 9 ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === digits) : null;
-    if (match){
-      mbLockClientName(match.name);
-      if (idInput && match.teudatZehut) idInput.value = match.teudatZehut;
-      if (emailInput) emailInput.value = match.email || '';
-      if (noteInput) noteInput.value = match.note || '';
-    } else if (nameInput && nameInput.readOnly){
-      mbUnlockClientName(true);
-      if (emailInput) emailInput.value = '';
-      if (noteInput) noteInput.value = '';
-    }
     if (typeof updateMbClientIdStatus === 'function') updateMbClientIdStatus();
     const idMatch = clients.find(c => c.teudatZehut === (idInput?.value || ''));
-    renderMbQuickPick((match && match.name) || (idMatch && idMatch.name) || null);
+    renderMbQuickPick(idMatch ? idMatch.name : null);
   });
   function closeManualBookingModal(){
     document.getElementById('manualBookingOverlay').classList.remove('show');
@@ -8470,6 +8463,7 @@
     return allClosed ? { reason } : null;
   }
   function renderWeekCal(){
+    refreshTodayMidnight();
     const __rwcDiagStart = Array.isArray(panelRenderCallLog) ? (typeof performance !== 'undefined' ? performance.now() : Date.now()) : null;
     const calEl = document.getElementById('weekCal');
     if (!calEl) return;
@@ -8635,16 +8629,29 @@
         });
         clusterItems.forEach(item => { item.colCount = columnEnds.length; });
       });
-      const MIN_APPT_BLOCK_PX = 12;
-      const columnCursorBottom = {};
-      apptLayout.forEach(item => {
-        const trueTopPx = ((item.start - calStartHour * 60) / 60) * hourBandHeight;
-        const prevBottom = columnCursorBottom[item.col];
-        const topPx = (prevBottom == null) ? trueTopPx : Math.max(trueTopPx, prevBottom);
-        const heightPx = Math.max(MIN_APPT_BLOCK_PX, (item.dur / 60) * hourBandHeight);
-        item.layoutTopPx = topPx;
-        item.layoutHeightPx = heightPx;
-        columnCursorBottom[item.col] = topPx + heightPx;
+      const MIN_APPT_BLOCK_PX = 4;
+      const ADJACENCY_EPSILON_PX = 1.5;
+      const byColumn = {};
+      apptLayout.forEach(item => { (byColumn[item.col] = byColumn[item.col] || []).push(item); });
+      Object.keys(byColumn).forEach(colKey => {
+        const list = byColumn[colKey].slice().sort((x, y) => x.start - y.start);
+        list.forEach((item, i) => {
+          const topPx = ((item.start - calStartHour * 60) / 60) * hourBandHeight;
+          const heightPx = Math.max(MIN_APPT_BLOCK_PX, (item.dur / 60) * hourBandHeight);
+          item.layoutTopPx = topPx;
+          item.layoutHeightPx = heightPx;
+          const prev = list[i - 1];
+          const next = list[i + 1];
+          if (prev){
+            const prevBottom = ((prev.start - calStartHour * 60) / 60) * hourBandHeight
+              + Math.max(MIN_APPT_BLOCK_PX, (prev.dur / 60) * hourBandHeight);
+            if (Math.abs(prevBottom - topPx) <= ADJACENCY_EPSILON_PX) item.joinedTop = true;
+          }
+          if (next){
+            const nextTop = ((next.start - calStartHour * 60) / 60) * hourBandHeight;
+            if (Math.abs(nextTop - (topPx + heightPx)) <= ADJACENCY_EPSILON_PX) item.joinedBottom = true;
+          }
+        });
       });
       apptLayout.forEach(item => {
         const { a, start, dur, col, colCount } = item;
@@ -8657,14 +8664,16 @@
         block.dataset.apptId = a.id || '';
         if (pendingCalHighlightApptId && a.id === pendingCalHighlightApptId) block.classList.add('cal-appt-highlight');
         if (a.confirmedByClient) block.classList.add('cal-appt-confirmed');
-        block.style.top = (topPx + 2) + 'px';
-        block.style.height = (heightPx - 3) + 'px';
+        block.style.top = topPx + 'px';
+        block.style.height = heightPx + 'px';
+        if (item.joinedTop) block.classList.add('cal-appt-joined-top');
+        if (item.joinedBottom) block.classList.add('cal-appt-joined-bottom');
         const colWidthPct = 100 / colCount;
         block.style.insetInlineStart = `calc(${col * colWidthPct}% + 3px)`;
         block.style.insetInlineEnd = `calc(${(colCount - col - 1) * colWidthPct}% + 3px)`;
         block.style.background = staffColors[a.staff % staffColors.length];
         block.title = `${a.client} · ${a.service} · ${a.time} (${dur} דק') — לחיצה לצפייה בפרטי התור`;
-        const blockHeightPx = heightPx - 3;
+        const blockHeightPx = heightPx;
         if (blockHeightPx < 22) block.classList.add('cal-appt-tiny');
         else if (blockHeightPx >= 26) block.classList.add('cal-appt-wrap');
         block.innerHTML = (blockHeightPx >= 34)
@@ -10148,6 +10157,27 @@
   }
   renderHoursOverview();
   const todayMidnight = new Date(nowReal.getFullYear(), nowReal.getMonth(), nowReal.getDate());
+  function refreshTodayMidnight(){
+    try {
+      const n = new Date();
+      if (todayMidnight.getFullYear() === n.getFullYear()
+        && todayMidnight.getMonth() === n.getMonth()
+        && todayMidnight.getDate() === n.getDate()) return false;
+      todayMidnight.setFullYear(n.getFullYear(), n.getMonth(), n.getDate());
+      todayMidnight.setHours(0, 0, 0, 0);
+      return true;
+    } catch (e) { return false; }
+  }
+  window.__refreshTodayMidnight = refreshTodayMidnight;
+  if (typeof document !== 'undefined'){
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && refreshTodayMidnight()){
+        if (typeof renderMiniCal === 'function') renderMiniCal();
+        if (typeof renderMbCal === 'function') renderMbCal();
+        if (typeof renderWeekCal === 'function') renderWeekCal();
+      }
+    });
+  }
   let bookingSelectedDate = new Date(todayMidnight);
   let calViewYear = todayMidnight.getFullYear();
   let calViewMonth = todayMidnight.getMonth();
@@ -10465,6 +10495,7 @@
     return hasAnySlotForStaff(cellDate, selectedStaffIndex);
   }
   function renderMiniCal(){
+    refreshTodayMidnight();
     const gridEl = document.getElementById('miniCalGrid');
     const titleEl = document.getElementById('miniCalTitle');
     const prevBtn = document.getElementById('calPrevBtn');
@@ -10595,6 +10626,7 @@
     return getCapableStaffIndicesForCats(cats).some(idx => mbHasAnySlotForStaff(cellDate, idx, duration));
   }
   function renderMbCal(){
+    refreshTodayMidnight();
     const gridEl = document.getElementById('mbCalGrid');
     const titleEl = document.getElementById('mbCalTitle');
     const prevBtn = document.getElementById('mbCalPrevBtn');
@@ -10651,6 +10683,7 @@
   }
   let slotStaffAssignment = {};
   function renderAvailableSlots(){
+    refreshTodayMidnight();
     slotStaffAssignment = {};
     if (selectedStaffIndex === 'any') return renderAvailableSlotsAny();
     slotsEl.innerHTML = '';
@@ -11155,8 +11188,9 @@
     if (!digits) return out;
     const byTz = clients.find(c => c && c.teudatZehut === digits);
     if (byTz){ out.client = byTz; out.matchedBy = 'tz'; return out; }
-    const byPhone = clients.find(c => c && (c.phone || '').replace(/[^0-9]/g, '') === digits);
-    if (byPhone){ out.client = byPhone; out.matchedBy = 'phone'; return out; }
+    const phoneMatches = clients.filter(c => c && (c.phone || '').replace(/[^0-9]/g, '') === digits);
+    if (phoneMatches.length === 1){ out.client = phoneMatches[0]; out.matchedBy = 'phone'; return out; }
+    if (phoneMatches.length > 1) out.ambiguousPhone = true;
     return out;
   }
   function weakTeudatZehutNote(digits){
@@ -11250,19 +11284,6 @@
       } finally { identityAutofillBusy = false; }
     });
 
-    if (phoneEl) phoneEl.addEventListener('input', function(){
-      if (identityAutofillBusy) return;
-      identityAutofillBusy = true;
-      try {
-        const digits = this.value.replace(/[^0-9]/g, '');
-        if (!digits.length){
-          clearAllButSelf(this);
-        } else if (digits.length >= 9){
-          const m = findClientByPhoneDigits(digits);
-          if (m){ fillFrom(m); notifyId(); }
-        }
-      } finally { identityAutofillBusy = false; }
-    });
 
     [firstEl, lastEl].forEach(nameEl => {
       if (!nameEl) return;
@@ -13338,9 +13359,13 @@
     const silent = !!(opts && opts.silent);
     if (runningOnPublicData){
       console.warn('saveState was called while running on public data — refused.');
+      if (!silent) showSaveStatus('⚠ לא נשמר — צריך להתחבר מחדש', 6000, 'bad');
       return Promise.resolve();
     }
-    if (!cloudLoadComplete || !lastLoadedSnapshot) return Promise.resolve();
+    if (!cloudLoadComplete || !lastLoadedSnapshot){
+      if (!silent) showSaveStatus('⚠ עוד לא נשמר — הדף עדיין נטען', 6000, 'bad');
+      return Promise.resolve();
+    }
     const nowIso = new Date().toISOString();
     const simpleFields = {
       branding, customTemplates, staff,
@@ -13384,8 +13409,8 @@
       tx.set(CLOUD_DOC, payload, { merge: true });
       return payload;
     })).then(committedPayload => {
-      if (!committedPayload) { hideSaveStatus(); return; }
-      if (!silent) showSaveStatus('נשמר ✓', 1800);
+      if (!committedPayload) { if (!silent) showSaveStatus('נשמר ✓', 1800); else hideSaveStatus(); return; }
+      if (!silent) showSaveStatus('נשמר ✓', 2600);
       weekAppointments = committedPayload.weekAppointments;
       waitlist = committedPayload.waitlist;
       clients = committedPayload.clients;
@@ -13585,10 +13610,11 @@
     banner.appendChild(closeBtn);
     document.body.prepend(banner);
   }
-  function showSaveStatus(text, autoHideMs){
+  function showSaveStatus(text, autoHideMs, tone){
     const el = document.getElementById('saveStatusIndicator');
     if (!el) return;
     el.textContent = text;
+    el.style.background = (tone === 'bad') ? 'rgba(155,44,66,0.96)' : 'rgba(20,16,20,0.92)';
     el.style.display = 'block';
     clearTimeout(window.__saveStatusTimer);
     if (autoHideMs){
@@ -14171,7 +14197,15 @@
     if (!isOwnerSession()) return;
     if (!document.hidden) saveState({ silent: true });
   }, 4000);
-  window.addEventListener('beforeunload', () => { if (isOwnerSession()) saveState(); });
+  window.addEventListener('beforeunload', (e) => {
+    if (!isOwnerSession()) return;
+    saveState();
+    if (pendingSaveCount > 0){
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    }
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden || !cloudLoadComplete) return;
     if (pendingSaveCount > 0) return;
