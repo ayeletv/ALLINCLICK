@@ -11009,7 +11009,7 @@
       fetch(SMS_FUNCTION_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-App-Key': SMS_APP_KEY },
-        body: JSON.stringify({ phone: client.phone, message: message })
+        body: JSON.stringify({ phone: client.phone, message: message, bizId: BIZ_ID })
       }).catch(e => console.error('SMS send request failed (appointment itself is unaffected):', e));
     } catch (e) {
       console.error('queueApptSms failed (appointment itself is unaffected):', e);
