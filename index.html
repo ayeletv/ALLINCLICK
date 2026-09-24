@@ -915,7 +915,7 @@
     font-size:10px; line-height:1.15; text-overflow:clip; max-height:100%;
   }
   .cal-appt.cal-appt-tiny .cal-appt-name{
-    font-size:8.5px; line-height:1.05; font-weight:600;
+    font-size:7.5px; line-height:1; font-weight:600;
     display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .hours-time-picker-colwrap{ display:flex; flex-direction:column; align-items:center; gap:6px; }
@@ -2084,7 +2084,8 @@
     100%{ box-shadow:0 0 0 3px transparent; }
   }
   .cal-appt.cal-appt-highlight{ animation:calApptHighlightFade 2s ease forwards; }
-  .cal-appt.cal-appt-confirmed{ box-shadow:0 0 0 2px #2E8B57; }
+  .cal-appt.cal-appt-confirmed{ box-shadow:inset 0 0 0 2px #2E8B57; }
+  .cal-appt.cal-appt-confirmed.cal-appt-tiny{ box-shadow:inset 0 0 0 1px #2E8B57; }
   .myday-filter{display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:13px; color:#8A8178;}
   .myday-filter select{
     background:#F3ECE0; border:none; border-radius:8px;
@@ -2720,6 +2721,22 @@
     </div>
   </div>
 
+<div id="lateCancelNoticeOverlay" class="myday-overlay add-modal-overlay">
+  <div class="myday-sheet add-modal">
+    <div class="myday-header">
+      <h3 id="lateCancelNoticeTitle">שימי לב</h3>
+      <div class="myday-actions">
+        <button type="button" onclick="closeLateCancelNotice()">✕ סגירה</button>
+      </div>
+    </div>
+    <div class="add-modal-body">
+      <div id="lateCancelNoticeText" style="font-size:14px; line-height:1.75;"></div>
+      <div class="add-modal-actions">
+        <button class="cta" onclick="closeLateCancelNotice()">הבנתי</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="recPromptOverlay" class="myday-overlay add-modal-overlay">
   <div class="myday-sheet add-modal rec-prompt-sheet">
     <div class="myday-header">
@@ -8622,13 +8639,13 @@
         if (pendingCalHighlightApptId && a.id === pendingCalHighlightApptId) block.classList.add('cal-appt-highlight');
         if (a.confirmedByClient) block.classList.add('cal-appt-confirmed');
         block.style.top = (topPx + 2) + 'px';
-        block.style.height = (heightPx - 3) + 'px';
+        block.style.height = (heightPx - 5) + 'px';
         const colWidthPct = 100 / colCount;
         block.style.insetInlineStart = `calc(${col * colWidthPct}% + 3px)`;
         block.style.insetInlineEnd = `calc(${(colCount - col - 1) * colWidthPct}% + 3px)`;
         block.style.background = staffColors[a.staff % staffColors.length];
         block.title = `${a.client} · ${a.service} · ${a.time} (${dur} דק') — לחיצה לצפייה בפרטי התור`;
-        const blockHeightPx = heightPx - 3;
+        const blockHeightPx = heightPx - 5;
         if (blockHeightPx < 22) block.classList.add('cal-appt-tiny');
         else if (blockHeightPx >= 26) block.classList.add('cal-appt-wrap');
         block.innerHTML = (blockHeightPx >= 34)
@@ -10832,6 +10849,24 @@
     const name = (clientRecord && clientRecord.name) || (appt && appt.client) || '';
     return !!name && entry.client === name;
   }
+  let lateCancelNoticeCount = 0;
+  function openLateCancelNotice(countAfterThis){
+    const overlay = document.getElementById('lateCancelNoticeOverlay');
+    const titleEl = document.getElementById('lateCancelNoticeTitle');
+    const textEl = document.getElementById('lateCancelNoticeText');
+    if (!overlay || !textEl) return;
+    const blocked = countAfterThis >= 2;
+    if (titleEl) titleEl.textContent = blocked ? 'שימי לב — ביטול שני באיחור' : 'שימי לב';
+    textEl.textContent = blocked
+      ? 'זהו הביטול השני שלך בפחות מ-12 שעות לפני התור. מעכשיו לא ניתן לקבוע או לבטל תור דרך האתר — נא ליצור איתנו קשר ישירות, ונשמח לסדר.'
+      : 'התור בוטל בפחות מ-12 שעות לפני המועד. הפעם זה בסדר גמור ולא חויבת — אבל ביטול נוסף בפחות מ-12 שעות כבר יחויב, ולא יתאפשר לקבוע תור דרך האתר. נשמח שתעדכני אותנו מוקדם ככל שאפשר.';
+    overlay.classList.add('show');
+  }
+  function closeLateCancelNotice(){
+    const overlay = document.getElementById('lateCancelNoticeOverlay');
+    if (overlay) overlay.classList.remove('show');
+  }
+  window.__openLateCancelNotice = openLateCancelNotice;
   function getLateCancelStatusForAppt(appt){
     const key = getLateCancelKey(appt);
     const client = findClientForAppt(appt);
@@ -12045,15 +12080,19 @@
         logLateCancellation(apptBeingCancelled, 'cancel');
         const updatedStatus = getLateCancelStatusForAppt(apptBeingCancelled);
         if (updatedStatus.count === 2) sendLateCancelAdminAlert(apptBeingCancelled, 2, false);
+        lateCancelNoticeCount = updatedStatus.count;
       }
       removeCurrentBookedAppointment();
     } else {
       if (srvCancel.late && lateStatus){
         const updatedStatus = getLateCancelStatusForAppt(apptBeingCancelled);
         if (updatedStatus.count + 1 === 2) sendLateCancelAdminAlert(apptBeingCancelled, 2, false);
+        lateCancelNoticeCount = updatedStatus.count + 1;
       }
       removeCurrentBookedAppointment({ skipSave: true });
     }
+    if (lateCancelNoticeCount && !isOwnerSession()) openLateCancelNotice(lateCancelNoticeCount);
+    lateCancelNoticeCount = 0;
     if (apptBeingCancelled){
       const client = findClientForAppt(apptBeingCancelled);
       if (client && client.email){
@@ -12285,10 +12324,14 @@
         const updatedStatus = getLateCancelStatusForAppt(appt);
         if (updatedStatus.count === 2) sendLateCancelAdminAlert(appt, 2, false);
       }
+      if (lateStatus) lateCancelNoticeCount = getLateCancelStatusForAppt(appt).count;
     } else if (srvCancel.late && lateStatus){
       const updatedStatus = getLateCancelStatusForAppt(appt);
       if (updatedStatus.count + 1 === 2) sendLateCancelAdminAlert(appt, 2, false);
+      lateCancelNoticeCount = updatedStatus.count + 1;
     }
+    if (lateCancelNoticeCount && !isOwnerSession()) openLateCancelNotice(lateCancelNoticeCount);
+    lateCancelNoticeCount = 0;
     const pos = appt.id ? weekAppointments.findIndex(a => a.id === appt.id) : weekAppointments.indexOf(appt);
     if (pos !== -1) weekAppointments.splice(pos, 1);
     if (typeof renderWeekCal === 'function') renderWeekCal();
