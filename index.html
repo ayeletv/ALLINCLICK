@@ -6470,8 +6470,6 @@
     const maintainerInputEl = document.getElementById('bizMaintainerEmailInput');
     if (maintainerInputEl){
       branding.maintainerEmail = maintainerInputEl.value.trim();
-    } else {
-      branding.smsSenderId = '';
     }
     renderBranding();
     if (typeof renderServices === 'function') renderServices();
