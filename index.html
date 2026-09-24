@@ -909,7 +909,20 @@
     border-color:var(--gold);
     color:var(--ink);
   }
-  .cal-appt.cal-appt-tiny{ padding:0; min-height:0; overflow:hidden; }
+  .cal-appt.cal-appt-tiny{ padding:0 4px; min-height:0; overflow:hidden; display:block; }
+  .cal-appt.cal-appt-wrap .cal-appt-name{
+    white-space:normal; overflow-wrap:anywhere; word-break:break-word;
+    font-size:10px; line-height:1.15; text-overflow:clip; max-height:100%;
+  }
+  .cal-appt.cal-appt-tiny .cal-appt-name{
+    font-size:8.5px; line-height:1.05; font-weight:600;
+    display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .hours-time-picker-colwrap{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .hours-time-picker-collbl{
+    font-size:12px; font-weight:700; letter-spacing:.04em;
+    color:var(--panel-text-dim, #8A8178); text-align:center;
+  }
   .biz-topbar{
     display:none;
     position:fixed; top:var(--top-banner-h, 0px); left:0; right:0; z-index:910;
@@ -3800,10 +3813,17 @@
         <button type="button" onclick="closeHoursTimePicker()">✕ סגירה</button>
       </div>
     </div>
+    
     <div class="hours-time-picker-cols">
-      <div class="hours-time-picker-col" id="hoursTimePickerHourCol" role="listbox" aria-label="שעה"></div>
+      <div class="hours-time-picker-colwrap">
+        <div class="hours-time-picker-collbl">שעה</div>
+        <div class="hours-time-picker-col" id="hoursTimePickerHourCol" role="listbox" aria-label="שעה"></div>
+      </div>
       <div class="hours-time-picker-colon">:</div>
-      <div class="hours-time-picker-col" id="hoursTimePickerMinCol" role="listbox" aria-label="דקות"></div>
+      <div class="hours-time-picker-colwrap">
+        <div class="hours-time-picker-collbl">דקות</div>
+        <div class="hours-time-picker-col" id="hoursTimePickerMinCol" role="listbox" aria-label="דקות"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -4546,8 +4566,8 @@
     const suggestedSvcIdx = opts.serviceIndex !== undefined
       ? opts.serviceIndex
       : mostFrequentServiceIndexFor(opts.clientName);
-    const finalSvcIdx = suggestedSvcIdx !== null && suggestedSvcIdx !== undefined ? suggestedSvcIdx : 0;
-    mbSelectedServices = services[finalSvcIdx] ? [{ svcIndex: finalSvcIdx }] : [];
+    const hasSuggestion = suggestedSvcIdx !== null && suggestedSvcIdx !== undefined && !!services[suggestedSvcIdx];
+    mbSelectedServices = hasSuggestion ? [{ svcIndex: suggestedSvcIdx }] : [];
     mbDurationManuallySet = false;
     renderMbSelectedServicesUI();
     const durInput = document.getElementById('mbDuration');
@@ -8579,7 +8599,7 @@
         });
         clusterItems.forEach(item => { item.colCount = columnEnds.length; });
       });
-      const MIN_APPT_BLOCK_PX = 7;
+      const MIN_APPT_BLOCK_PX = 12;
       const columnCursorBottom = {};
       apptLayout.forEach(item => {
         const trueTopPx = ((item.start - calStartHour * 60) / 60) * hourBandHeight;
@@ -8609,12 +8629,11 @@
         block.style.background = staffColors[a.staff % staffColors.length];
         block.title = `${a.client} · ${a.service} · ${a.time} (${dur} דק') — לחיצה לצפייה בפרטי התור`;
         const blockHeightPx = heightPx - 3;
-        if (blockHeightPx < 14) block.classList.add('cal-appt-tiny');
-        block.innerHTML = (blockHeightPx < 14)
-          ? ''
-          : (blockHeightPx >= 34)
-            ? `<span class="cal-appt-name">${a.client}</span><span class="cal-appt-meta">${a.time.slice(0,5)} · ${a.service}</span>`
-            : `<span class="cal-appt-name">${a.client}</span>`;
+        if (blockHeightPx < 22) block.classList.add('cal-appt-tiny');
+        else if (blockHeightPx >= 26) block.classList.add('cal-appt-wrap');
+        block.innerHTML = (blockHeightPx >= 34)
+          ? `<span class="cal-appt-name">${a.client}</span><span class="cal-appt-meta">${a.time.slice(0,5)} · ${a.service}</span>`
+          : `<span class="cal-appt-name">${a.client}</span>`;
         block.onclick = (e) => {
           e.stopPropagation();
           openApptDetailOverlay(a);
