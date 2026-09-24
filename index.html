@@ -2992,12 +2992,21 @@
           <span class="settings-section-chevron">▾</span>
         </button>
         <div class="settings-section-body">
+          <div id="sensitiveSettingsLockBox" style="display:none; max-width:480px; background:rgba(155,44,66,.08); border:1px solid rgba(155,44,66,.25); border-radius:12px; padding:14px; margin:12px 0;">
+            <div style="font-size:13.5px; line-height:1.6;">🔒 ההגדרות האלה נעולות. שינוי בטעות באחת מהן עלול להשבית את ההודעות והתזכורות לכל הלקוחות, ולכן הפתיחה דורשת את המייל והסיסמה של מי שאחראית עליהן.</div>
+            <input type="email" id="sensUnlockEmail" class="field-dark" placeholder="מייל" autocomplete="off" style="margin-top:10px;">
+            <input type="password" id="sensUnlockPassword" class="field-dark" placeholder="סיסמה" autocomplete="off" style="margin-top:8px;">
+            <div id="sensUnlockError" style="display:none; color:#9B2C42; font-size:12.5px; margin-top:6px;"></div>
+            <button type="button" class="btn" id="sensUnlockBtn" style="margin-top:10px;" onclick="unlockSensitiveSettings()">פתיחה</button>
+          </div>
           <div style="max-width:480px;"><div class="label" style="margin:12px 0 6px;">שם השולח בהודעות SMS<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">זה מה שיופיע כ"שולח" בתזכורות ה-SMS שהלקוחות מקבלות. חייב להיות עד 11 תווים באנגלית ו/או מספרים בלבד, בלי רווחים ובלי עברית (מגבלה של ספק ה-SMS) — לדוגמה SalonRuti. אם נשאר ריק, תזכורות ה-SMS לא יישלחו.</span></span></div>
           <input type="text" id="bizSmsSenderInput" class="field-dark" placeholder="לדוגמה: SalonRuti" maxlength="11" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSmsSenderFieldOnBlur(this)">
           <div class="label" style="margin:12px 0 6px;">מספר קמפיין השיחה הקולית<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">מספר הקמפיין ב-Inforu שדרכו יוצאת שיחת התזכורת ("הקש 1 לאישור, הקש 2 לביטול"). הוא גם מה שמאפשר למערכת לדעת לאיזה עסק שייכת ההקשה שחוזרת מהשיחה. אם נשאר ריק, תישלח דרך הקמפיין שהוגדר מלכתחילה.</span></span></div>
           <input type="text" id="bizIvrCampaignInput" class="field-dark" placeholder="לדוגמה: 1642873" maxlength="20" inputmode="numeric" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ מספר הקמפיין נשמר')">
           <div class="label" style="margin:12px 0 6px;">מייל המנהלת (לקבלת התראות)<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">לכתובת הזו נשלחות התראות על מלאי נמוך, והיא מוצעת כברירת מחדל כששולחים דוח למייל — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות כאן.</span></span></div>
           <input type="email" id="invAlertEmail" class="field-dark" placeholder="you@example.com" oninput="updateInvAlertEmail()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ כתובת המייל להתראות נשמרה בהצלחה')">
+          <div class="label" style="margin:12px 0 6px;">מייל האחראית על ההגדרות האלה<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">כל עוד השדה הזה ריק, הקטע פתוח לעריכה לכל מי שמנהלת את היומן. ברגע שתמלאי כאן מייל של חשבון קיים, הקטע יינעל, ופתיחתו תדרוש את המייל והסיסמה של אותו חשבון. אם תשכחי — אפשר לנקות את השדה מהקונסול.</span></span></div>
+          <input type="email" id="bizMaintainerEmailInput" class="field-dark" placeholder="you@example.com" autocomplete="off" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ מייל האחראית נשמר — הקטע יינעל ברענון הבא')">
           <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:4px;">לכתובת הזו מגיעות התראות מלאי נמוך, והיא מוצעת כברירת מחדל בשליחת דוחות למייל (בטאב "דוחות") — אפשר לשנות לכתובת אחרת בכל שליחה בודדת בלי לשנות את זה כאן.</div>
           </div>
         </div>
@@ -6371,6 +6380,10 @@
       const sanitizedIvr = ivrInputEl.value.replace(/[^0-9]/g, '').slice(0, 20);
       if (sanitizedIvr !== ivrInputEl.value) ivrInputEl.value = sanitizedIvr;
       branding.inforuIvrCampaignId = sanitizedIvr;
+    }
+    const maintainerInputEl = document.getElementById('bizMaintainerEmailInput');
+    if (maintainerInputEl){
+      branding.maintainerEmail = maintainerInputEl.value.trim();
     } else {
       branding.smsSenderId = '';
     }
@@ -6587,6 +6600,68 @@
       }, 900);
     }
   }
+  let sensitiveSettingsUnlocked = false;
+  function maintainerEmailOf(){
+    return String((typeof branding !== 'undefined' && branding && branding.maintainerEmail) || '').trim().toLowerCase();
+  }
+  function sensitiveSettingsLocked(){
+    return !!maintainerEmailOf() && !sensitiveSettingsUnlocked;
+  }
+  const SENSITIVE_SETTING_IDS = ['bizSmsSenderInput', 'bizIvrCampaignInput', 'invAlertEmail', 'bizMaintainerEmailInput'];
+  function applySensitiveSettingsLock(){
+    const locked = sensitiveSettingsLocked();
+    const box = document.getElementById('sensitiveSettingsLockBox');
+    if (box) box.style.display = locked ? 'block' : 'none';
+    SENSITIVE_SETTING_IDS.forEach(function(id){
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.disabled = locked;
+      el.style.opacity = locked ? '0.55' : '';
+    });
+  }
+  let sensVerifyApp = null;
+  async function verifyMaintainerCredentials(email, password){
+    const wanted = maintainerEmailOf();
+    if (!wanted) return { ok: true };
+    if (String(email || '').trim().toLowerCase() !== wanted){
+      return { ok: false, error: 'המייל הזה אינו החשבון שאחראי על ההגדרות האלה.' };
+    }
+    try {
+      if (!sensVerifyApp) sensVerifyApp = firebase.initializeApp(firebaseConfig, 'settings-verify');
+      const vAuth = sensVerifyApp.auth();
+      await vAuth.signInWithEmailAndPassword(String(email).trim(), password);
+      await vAuth.signOut().catch(function(){});
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: 'המייל או הסיסמה אינם נכונים.' };
+    }
+  }
+  async function unlockSensitiveSettings(){
+    const emailEl = document.getElementById('sensUnlockEmail');
+    const passEl = document.getElementById('sensUnlockPassword');
+    const errEl = document.getElementById('sensUnlockError');
+    const btnEl = document.getElementById('sensUnlockBtn');
+    if (errEl){ errEl.style.display = 'none'; errEl.textContent = ''; }
+    const email = emailEl ? emailEl.value : '';
+    const password = passEl ? passEl.value : '';
+    if (!email || !password){
+      if (errEl){ errEl.style.display = 'block'; errEl.textContent = 'יש למלא מייל וסיסמה.'; }
+      return;
+    }
+    if (btnEl){ btnEl.disabled = true; btnEl.textContent = 'בודקת...'; }
+    const res = await verifyMaintainerCredentials(email, password);
+    if (btnEl){ btnEl.disabled = false; btnEl.textContent = 'פתיחה'; }
+    if (!res.ok){
+      if (errEl){ errEl.style.display = 'block'; errEl.textContent = res.error; }
+      return;
+    }
+    sensitiveSettingsUnlocked = true;
+    if (passEl) passEl.value = '';
+    applySensitiveSettingsLock();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ ההגדרות נפתחו לעריכה');
+  }
+  window.__applySensitiveSettingsLock = applySensitiveSettingsLock;
+
   function scheduleAutoScrollToBooking(){
     if (window.__autoScrollToBookingTimer) clearTimeout(window.__autoScrollToBookingTimer);
     if (window.__autoScrollUserScrolledHandler) window.removeEventListener('scroll', window.__autoScrollUserScrolledHandler);
@@ -6602,7 +6677,7 @@
       if (document.body.classList.contains('admin-mode')) return;
       const target = document.querySelector('.switcher');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 2000);
+    }, 700);
   }
   function revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, name, skipFontWait){
     const alreadyShown = heroBizNameEl.classList.contains('biz-name-visible');
@@ -6680,6 +6755,9 @@
     if (smsSenderInputEl2 && document.activeElement !== smsSenderInputEl2) smsSenderInputEl2.value = branding.smsSenderId || '';
     const ivrInputEl2 = document.getElementById('bizIvrCampaignInput');
     if (ivrInputEl2 && document.activeElement !== ivrInputEl2) ivrInputEl2.value = branding.inforuIvrCampaignId || '';
+    const maintainerInputEl2 = document.getElementById('bizMaintainerEmailInput');
+    if (maintainerInputEl2 && document.activeElement !== maintainerInputEl2) maintainerInputEl2.value = branding.maintainerEmail || '';
+    if (typeof applySensitiveSettingsLock === 'function') applySensitiveSettingsLock();
     const invEmailInputEl = document.getElementById('invAlertEmail');
     if (invEmailInputEl && document.activeElement !== invEmailInputEl) invEmailInputEl.value = invAlertEmail || '';
     const ownerCodeInputEl = document.getElementById('ownerAccessCodeInput');
@@ -13870,6 +13948,7 @@
     return auth.signOut().then(() => {
       forgetOwnerBusiness();
       sensitiveAccessUnlocked = false;
+      sensitiveSettingsUnlocked = false;
       try { sessionStorage.removeItem('appAdminViewState'); } catch (e) {}
       const firstSwitcher = document.querySelectorAll('.switcher button')[0];
       if (firstSwitcher) firstSwitcher.click();
