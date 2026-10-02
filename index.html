@@ -3658,8 +3658,12 @@
       </div>
     </div>
     <div style="display:flex; flex-direction:column; gap:10px;">
+      <div id="slotChoiceBlockedNote" style="display:none; font-size:13px; color:var(--panel-text-dim); line-height:1.6; text-align:center;"></div>
       <button type="button" class="cta" id="slotChoiceBookBtn">📅 קביעת תור ללקוחה</button>
       <button type="button" class="cta" id="slotChoiceBlockBtn" style="background:var(--wine-deep);">🚫 חסימת זמן אישי</button>
+      
+      <button type="button" class="cta" id="slotChoiceOpenBtn" style="background:var(--sage, #5E7856);">🕓 פתיחת שעות חסומות</button>
+      <button type="button" class="mini-btn" id="slotChoiceReleaseBtn" style="display:none;">↩ שחרור היום מהחסימה</button>
     </div>
   </div>
 </div>
@@ -3697,6 +3701,45 @@
     </div>
     <div class="appt-detail-actions">
       <button type="button" class="cta" onclick="submitPersonalTime()">שמירה</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="openHoursOverlay" class="appt-detail-overlay">
+  <div class="appt-detail-topbar">
+    <button type="button" class="appt-detail-back" onclick="closeOpenHoursOverlay()" aria-label="חזרה ליומן">→ חזרה</button>
+    <span class="appt-detail-topbar-title">פתיחת שעות חסומות</span>
+  </div>
+  <div class="appt-detail-body">
+    <div class="appt-detail-card" style="display:flex; flex-direction:column; gap:14px; padding:18px 24px;">
+      <div style="font-size:13px; color:var(--panel-text-dim); line-height:1.65;">
+        פותח את השעות האלה <b>בתאריך הזה בלבד</b>, גם אם העובדת אינה עובדת בהן בדרך כלל. השעות הקבועות של אותו יום בשבוע לא משתנות.
+      </div>
+      <div>
+        <span class="detail-field-label">תאריך</span>
+        <div class="appt-detail-value" id="ohDateLabel" style="font-size:16px;"></div>
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:130px;">
+          <span class="detail-field-label">שעת התחלה</span>
+          <input type="time" id="ohStartTime" class="field" step="900" style="margin:0;">
+        </div>
+        <div style="flex:1; min-width:130px;">
+          <span class="detail-field-label">שעת סיום</span>
+          <input type="time" id="ohEndTime" class="field" step="900" style="margin:0;">
+        </div>
+      </div>
+      <div>
+        <span class="detail-field-label">עובדת</span>
+        <select id="ohStaff" class="field" style="margin:0;"></select>
+      </div>
+      <div id="ohExisting" style="display:none; font-size:13.5px; background:#F3ECE0; border-radius:8px; padding:10px 12px;"></div>
+      <div id="ohError" style="display:none; color:var(--wine); font-size:13px;"></div>
+    </div>
+    <div class="appt-detail-actions">
+      <button type="button" class="cta" onclick="submitOpenHours()">שמירה</button>
+      <button type="button" class="mini-btn" id="ohRemoveBtn" style="display:none;" onclick="removeOpenHours()">↩ ביטול הפתיחה</button>
     </div>
   </div>
 </div>
@@ -4789,6 +4832,20 @@
   let slotChoicePending = null;
   function openSlotChoiceOverlay(opts){
     slotChoicePending = opts || {};
+    const blocked = !!slotChoicePending.blocked;
+    const bookBtn = document.getElementById('slotChoiceBookBtn');
+    const blockBtn = document.getElementById('slotChoiceBlockBtn');
+    const releaseBtn = document.getElementById('slotChoiceReleaseBtn');
+    const note = document.getElementById('slotChoiceBlockedNote');
+    if (bookBtn) bookBtn.style.display = blocked ? 'none' : 'block';
+    if (blockBtn) blockBtn.style.display = blocked ? 'none' : 'block';
+    if (releaseBtn) releaseBtn.style.display = slotChoicePending.canRelease ? 'block' : 'none';
+    if (note){
+      note.style.display = blocked ? 'block' : 'none';
+      note.textContent = blocked
+        ? ((slotChoicePending.time ? 'השעה ' + slotChoicePending.time : 'השעה הזו') + ' אינה בשעות העבודה של התאריך הזה.')
+        : '';
+    }
     document.getElementById('slotChoiceOverlay').classList.add('show');
   }
   function closeSlotChoiceOverlay(){
@@ -4803,6 +4860,18 @@
     const opts = slotChoicePending || {};
     closeSlotChoiceOverlay();
     openPersonalTimeOverlay(opts);
+  });
+  document.getElementById('slotChoiceOpenBtn')?.addEventListener('click', () => {
+    const opts = slotChoicePending || {};
+    closeSlotChoiceOverlay();
+    openOpenHoursOverlay(opts);
+  });
+  document.getElementById('slotChoiceReleaseBtn')?.addEventListener('click', () => {
+    const opts = slotChoicePending || {};
+    closeSlotChoiceOverlay();
+    if (opts.date && typeof releaseCalendarBlockForDate === 'function'){
+      releaseCalendarBlockForDate(formatDateKey(opts.date), opts.date);
+    }
   });
   let personalTimeCurrent = null; // { date:'YYYY-MM-DD' } while the page is open
   function renderPtStaffOptions(){
@@ -4869,6 +4938,116 @@
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
     if (typeof saveState === 'function') saveState();
   }
+  let openHoursCurrent = null; // { date:'YYYY-MM-DD' } כל עוד המסך פתוח
+  function renderOhStaffOptions(){
+    const sel = document.getElementById('ohStaff');
+    if (!sel) return;
+    let html = '<option value="all">כל הצוות</option>';
+    staff.forEach((s, i) => { if (!s.deleted) html += `<option value="${i}">${s.name}</option>`; });
+    sel.innerHTML = html;
+  }
+  function ohStaffIndices(val){
+    if (val === 'all') return staff.map((s, i) => i).filter(i => staff[i] && !staff[i].deleted);
+    const n = parseInt(val);
+    return isNaN(n) ? [] : [n];
+  }
+  function refreshOhExisting(){
+    const box = document.getElementById('ohExisting');
+    const removeBtn = document.getElementById('ohRemoveBtn');
+    const sel = document.getElementById('ohStaff');
+    if (!box || !sel || !openHoursCurrent) return;
+    const key = openHoursCurrent.date;
+    const lines = [];
+    ohStaffIndices(sel.value).forEach(i => {
+      const e = getOpenDateEntry(i, key);
+      if (e) lines.push(((staff[i] && staff[i].name) || 'עובדת') + ': ' + e.from + '–' + e.to);
+    });
+    if (lines.length){
+      box.style.display = 'block';
+      box.textContent = 'כרגע פתוח חד-פעמית — ' + lines.join(' · ');
+      if (removeBtn) removeBtn.style.display = 'block';
+    } else {
+      box.style.display = 'none';
+      if (removeBtn) removeBtn.style.display = 'none';
+    }
+  }
+  function openOpenHoursOverlay(opts){
+    opts = opts || {};
+    const dateObj = opts.date || new Date();
+    const dateKey = formatDateKey(dateObj);
+    openHoursCurrent = { date: dateKey };
+    document.getElementById('ohDateLabel').textContent =
+      days[dateObj.getDay()].name + ', ' + formatDateDMY(dateKey);
+    const startTime = opts.time || '17:00';
+    document.getElementById('ohStartTime').value = startTime;
+    const endMinutes = Math.min(timeToMinutes(startTime) + 60, 23 * 60 + 45);
+    document.getElementById('ohEndTime').value = minutesToTimeGlobal(endMinutes);
+    document.getElementById('ohError').style.display = 'none';
+    renderOhStaffOptions();
+    const sel = document.getElementById('ohStaff');
+    const wanted = (opts.staff !== undefined && opts.staff !== null) ? String(opts.staff) : 'all';
+    sel.value = Array.from(sel.options).some(o => o.value === wanted) ? wanted : 'all';
+    sel.onchange = refreshOhExisting;
+    const idxs = ohStaffIndices(sel.value);
+    const existing = idxs.length === 1 ? getOpenDateEntry(idxs[0], dateKey) : null;
+    if (existing){
+      document.getElementById('ohStartTime').value = existing.from;
+      document.getElementById('ohEndTime').value = existing.to;
+    }
+    refreshOhExisting();
+    document.getElementById('openHoursOverlay').classList.add('show');
+  }
+  function closeOpenHoursOverlay(){
+    const o = document.getElementById('openHoursOverlay');
+    if (o) o.classList.remove('show');
+    openHoursCurrent = null;
+  }
+  async function applyOpenDatesChange(toast){
+    if (typeof saveState === 'function') await saveState();
+    if (typeof publishPublicView === 'function') publishPublicView();
+    if (typeof rerenderEverything === 'function') rerenderEverything();
+    else {
+      if (typeof renderWeekCal === 'function') renderWeekCal();
+      if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+    }
+    if (typeof showAdminToast === 'function') showAdminToast(toast);
+    if (typeof recheckAllPendingFlexibleRequests === 'function') await recheckAllPendingFlexibleRequests();
+    if (typeof recheckAllPendingWaitlist === 'function') await recheckAllPendingWaitlist();
+  }
+  async function submitOpenHours(){
+    if (!openHoursCurrent) return;
+    const from = document.getElementById('ohStartTime').value;
+    const to = document.getElementById('ohEndTime').value;
+    const errorEl = document.getElementById('ohError');
+    const fail = (m) => { errorEl.style.display = 'block'; errorEl.textContent = m; };
+    if (!from || !to) return fail('יש למלא שעת התחלה ושעת סיום.');
+    if (timeToMinutes(from) >= timeToMinutes(to)) return fail('שעת הסיום חייבת להיות אחרי שעת ההתחלה.');
+    const idxs = ohStaffIndices(document.getElementById('ohStaff').value);
+    if (!idxs.length) return fail('צריך לבחור עובדת.');
+    errorEl.style.display = 'none';
+    const key = openHoursCurrent.date;
+    idxs.forEach(i => {
+      const s = staff[i];
+      if (!s) return;
+      if (!Array.isArray(s.openDates)) s.openDates = [];
+      if (!Array.isArray(s.closedDates)) s.closedDates = [];
+      s.openDates = s.openDates.filter(e => !(e && e.date === key));
+      s.closedDates = s.closedDates.filter(e => (typeof e === 'string' ? e : (e && e.date)) !== key);
+      s.openDates.push({ date: key, from: from, to: to });
+    });
+    closeOpenHoursOverlay();
+    await applyOpenDatesChange('✓ נפתחו שעות ' + from + '–' + to + ' לתאריך הזה');
+  }
+  async function removeOpenHours(){
+    if (!openHoursCurrent) return;
+    const key = openHoursCurrent.date;
+    ohStaffIndices(document.getElementById('ohStaff').value).forEach(i => {
+      const s = staff[i];
+      if (s && Array.isArray(s.openDates)) s.openDates = s.openDates.filter(e => !(e && e.date === key));
+    });
+    closeOpenHoursOverlay();
+    await applyOpenDatesChange('✓ הפתיחה בוטלה — היום חזר לשעות הקבועות');
+  }
   function renderManualBookingSlots(){
     const dateVal = document.getElementById('mbDate')?.value;
     const staffValRaw = document.getElementById('mbStaff')?.value;
@@ -4917,7 +5096,7 @@
       let allWindows = [];
       capableIndices.forEach(idx => {
         const emp = staff[idx];
-        const dayInfo = emp && emp.hours ? emp.hours[dateObj.getDay()] : null;
+        const dayInfo = dayInfoForDate(idx, dateObj);
         if (!emp || isDateClosedForStaff(idx, dateObj)) return;
         const windows = getEffectiveDayWindows(dayInfo, dateObj);
         if (!windows.length) return;
@@ -4950,7 +5129,7 @@
       });
     } else {
       const emp = staff[staffIdx];
-      const dayInfo = emp && emp.hours ? emp.hours[dateObj.getDay()] : null;
+      const dayInfo = dayInfoForDate(staffIdx, dateObj);
       if (!emp || !dayInfo || !dayInfo.open || isDateClosedForStaff(staffIdx, dateObj)){
         if (hint) hint.textContent = 'אין שעות פעילות/זמינות לעובדת זו ביום שנבחר.';
         return;
@@ -8310,6 +8489,23 @@
     return days;
   }
   weekDays = computeWeekDays();
+  function wireWeekSwipe(el){
+    if (!el || el.__swipeWired) return;
+    el.__swipeWired = true;
+    let x0 = null, y0 = null;
+    el.addEventListener('touchstart', (e) => {
+      if (!e.touches || e.touches.length !== 1){ x0 = null; return; }
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    }, { passive: true });
+    el.addEventListener('touchend', (e) => {
+      if (x0 === null || !e.changedTouches || !e.changedTouches.length) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      const dy = e.changedTouches[0].clientY - y0;
+      x0 = null;
+      if (Math.abs(dx) < 60 || Math.abs(dx) <= Math.abs(dy)) return;
+      shiftWeek(dx < 0 ? 1 : -1);
+    }, { passive: true });
+  }
   function shiftWeek(delta){
     weekOffset += delta;
     weekDays = computeWeekDays();
@@ -8457,9 +8653,10 @@
     let reason = '';
     indices.forEach(idx => {
       const s = staff[idx];
-      const dayInfo = s && s.hours && s.hours[dow];
+      const dayInfo = dayInfoForDate(idx, dateObj);
       const weeklyClosed = !dayInfo || !dayInfo.open;
-      const oneOff = getClosedDateEntry(idx, formatDateKey(dateObj));
+      const __key = formatDateKey(dateObj);
+      const oneOff = getOpenDateEntry(idx, __key) ? null : getClosedDateEntry(idx, __key);
       if (!weeklyClosed && !oneOff) allClosed = false;
       if (oneOff && oneOff.reason && !reason) reason = oneOff.reason;
     });
@@ -8516,17 +8713,11 @@
         const canRelease = !isPastDay;
         body.style.cursor = canRelease ? 'pointer' : 'not-allowed';
         body.title = (closedInfo.reason ? `סגור — ${closedInfo.reason}` : 'סגור')
-          + (canRelease ? ' (לחיצה כדי לשחרר את היום מהחסימה)' : '');
+          + (canRelease ? ' (לחיצה כדי לשחרר את היום או לפתוח בו שעות)' : '');
         const label = document.createElement('div');
         label.className = 'cal-day-closed-label';
         label.textContent = closedInfo.reason ? `סגור — ${closedInfo.reason}` : 'סגור';
         body.appendChild(label);
-        if (canRelease){
-          body.addEventListener('click', (e) => {
-            if (e.target.closest('.cal-appt')) return;
-            releaseCalendarBlockForDate(formatDateKey(day.fullDate), day.fullDate);
-          });
-        }
       } else if (isPastDay){
         body.style.cursor = 'default';
         body.title = 'תאריך שעבר — אי אפשר לקבוע תור. אפשר ללחוץ על תור קיים כדי לראות את הפרטים שלו.';
@@ -8537,7 +8728,7 @@
       let blockedBands = [];
       if (!closedInfo && selectedStaffFilter !== 'all'){
         const s = staff[selectedStaffFilter];
-        const dayInfo = s && s.hours && s.hours[day.fullDate.getDay()];
+        const dayInfo = dayInfoForDate(selectedStaffFilter, day.fullDate);
         if (dayInfo && dayInfo.open){
           const rawRanges = (Array.isArray(dayInfo.ranges) && dayInfo.ranges.length)
             ? dayInfo.ranges
@@ -8557,7 +8748,6 @@
         }
       }
       body.onclick = (e) => {
-        if (closedInfo) return;
         if (e.target.closest('.cal-appt')) return;
         if (isPastDay){
           if (typeof showAdminToast === 'function') showAdminToast('⛔ לא ניתן לקבוע תור בתאריך שעבר');
@@ -8568,12 +8758,16 @@
         const rawMinutes = calStartHour * 60 + (offsetY / hourBandHeight) * 60;
         const snappedMinutes = Math.round(rawMinutes / 15) * 15;
         const clampedMinutes = Math.min(Math.max(snappedMinutes, calStartHour * 60), calEndHour * 60);
-        if (blockedBands.some(([bs, be]) => clampedMinutes >= bs && clampedMinutes < be)){
-          if (typeof showAdminToast === 'function') showAdminToast('⛔ מחוץ לשעות העבודה בתאריך זה');
-          return;
-        }
+        const outOfHours = !!closedInfo
+          || blockedBands.some(([bs, be]) => clampedMinutes >= bs && clampedMinutes < be);
         const timeStr = minutesToTimeGlobal(clampedMinutes);
-        openSlotChoiceOverlay({ date: day.fullDate, time: timeStr, staff: selectedStaffFilter !== 'all' ? selectedStaffFilter : null });
+        openSlotChoiceOverlay({
+          date: day.fullDate,
+          time: timeStr,
+          staff: selectedStaffFilter !== 'all' ? selectedStaffFilter : null,
+          blocked: outOfHours,
+          canRelease: !!closedInfo
+        });
       };
       for (let h = calStartHour; h < calEndHour; h++){
         const line = document.createElement('div');
@@ -8725,6 +8919,7 @@
     });
     calFragment.appendChild(renderSpecialRequestsColumn((calEndHour - calStartHour) * hourBandHeight));
     calEl.appendChild(calFragment);
+    wireWeekSwipe(document.getElementById('weekCalWrap'));
     renderOverviewStats();
     if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
     if (__rwcDiagStart !== null && Array.isArray(panelRenderCallLog)){
@@ -8823,7 +9018,7 @@
       if (!days.includes(dow)) continue;
       for (const staffIdx of capableIndices){
         const emp = staff[staffIdx];
-        const dayInfo = emp && emp.hours ? emp.hours[dow] : null;
+        const dayInfo = dayInfoForDate(staffIdx, d);
         if (!emp || !dayInfo || !dayInfo.open) continue;
         if (isDateClosedForStaff(staffIdx, d)) continue;
         const windows = getEffectiveDayWindows(dayInfo, d)
@@ -8994,7 +9189,7 @@
     }
     for (const staffIdx of candidateStaffIndices){
       const emp = staff[staffIdx];
-      const dayInfo = emp && emp.hours ? emp.hours[dow] : null;
+      const dayInfo = dayInfoForDate(staffIdx, dateObj);
       if (!emp || !dayInfo || !dayInfo.open) continue;
       if (isDateClosedForStaff(staffIdx, dateObj)) continue;
       const windows = getEffectiveDayWindows(dayInfo, dateObj);
@@ -9416,7 +9611,7 @@
     const todayDateObj = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     staff.forEach((s, idx) => {
       if (s.deleted) return;
-      const hoursToday = s.hours && s.hours[dow];
+      const hoursToday = dayInfoForDate(idx, todayDateObj);
       if (!hoursToday || !hoursToday.open) return;
       const windows = mergeWindows(getEffectiveDayWindows(hoursToday, todayDateObj));
       const busy = weekAppointments
@@ -10152,7 +10347,15 @@
     }).join('');
     wrap.innerHTML = `
       <div class="hours-staff-tabs" id="hoursStaffTabs">${tabsHtml}</div>
-      <div class="hours-staff-detail" id="hoursStaffDetail"></div>`;
+      <div class="hours-staff-detail" id="hoursStaffDetail"></div>
+      ${(branding && branding.address || '').trim() ? `
+      <div class="new-card" style="margin-top:14px;">
+        <div class="new-icon"><i class="ti ti-map-pin"></i></div>
+        <div class="new-body">
+          <h4>כתובתנו</h4>
+          <p>${branding.address}</p>
+        </div>
+      </div>` : ''}`;
     wrap.querySelectorAll('.hours-staff-tab').forEach(btn => {
       btn.onclick = () => selectHoursOverviewStaff(parseInt(btn.dataset.staffIdx, 10));
     });
@@ -10322,7 +10525,7 @@
       : dateStr;
 
     if (!holidayName && !manualBlocks.length){
-      alert(`היום הזה (${dateLabel}) סגור לפי שעות העבודה הקבועות שלך, לא בגלל חסימה חד-פעמית.\n\nכדי לפתוח אותו צריך לשנות את שעות העבודה של אותו יום בשבוע — בהגדרות → שעות עבודה.`);
+      alert(`היום הזה (${dateLabel}) סגור לפי שעות העבודה הקבועות שלך, לא בגלל חסימה חד-פעמית.\n\nכדי לפתוח אותו רק הפעם — לחיצה על השעה הרצויה ביומן, ואז "🕓 פתיחת שעות חסומות".\n\nכדי לשנות אותו בכל שבוע — הגדרות → שעות עבודה.`);
       return;
     }
 
@@ -10349,8 +10552,27 @@
     if (typeof showAdminToast === 'function') showAdminToast(`✓ ${dateLabel} שוחרר מהחסימה`);
     if (typeof recheckAllPendingFlexibleRequests === 'function') await recheckAllPendingFlexibleRequests();
   }
+  function getOpenDateEntry(staffIdx, dateStr){
+    const s = staff[staffIdx];
+    if (!s || !Array.isArray(s.openDates)) return null;
+    for (let i = 0; i < s.openDates.length; i++){
+      const e = s.openDates[i];
+      if (e && e.date === dateStr && e.from && e.to) return e;
+    }
+    return null;
+  }
+  function dayInfoForDate(staffIdx, dateObj){
+    const s = staff[staffIdx];
+    const base = (s && s.hours) ? s.hours[dateObj.getDay()] : null;
+    if (!s) return base;
+    const key = formatDateKey(dateObj);
+    const open = getOpenDateEntry(staffIdx, key);
+    if (open) return { open: true, from: open.from, to: open.to, ranges: [{ from: open.from, to: open.to }] };
+    return base;
+  }
   function isDateClosedForStaff(staffIdx, date){
     const dateStr = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    if (getOpenDateEntry(staffIdx, dateStr)) return false;
     return !!getClosedDateEntry(staffIdx, dateStr);
   }
   function getEffectiveDayWindows(dayInfo, dateObj){
@@ -10381,7 +10603,7 @@
     if (!indices.length) return true;
     const dow = dateObj.getDay();
     return indices.every(idx => {
-      const dayInfo = staff[idx].hours && staff[idx].hours[dow];
+      const dayInfo = dayInfoForDate(idx, dateObj);
       if (!dayInfo || !dayInfo.open) return true;
       return isDateClosedForStaff(idx, dateObj);
     });
@@ -10407,7 +10629,7 @@
         const dow = cursor.getDay();
         for (const staffIdx of liveIndices){
           const s = staff[staffIdx];
-          const dayInfo = s && s.hours && s.hours[dow];
+          const dayInfo = dayInfoForDate(staffIdx, cursor);
           if (!dayInfo || !dayInfo.open) continue;
           if (isDateClosedForStaff(staffIdx, cursor)) continue;
           sawOpenCandidateDay = true;
@@ -10448,7 +10670,7 @@
         const dow = cursor.getDay();
         liveIndices.forEach(staffIdx => {
           const s = staff[staffIdx];
-          const dayInfo = s && s.hours && s.hours[dow];
+          const dayInfo = dayInfoForDate(staffIdx, cursor);
           if (!dayInfo || !dayInfo.open) return;
           if (isDateClosedForStaff(staffIdx, cursor)) return;
           const rawRanges = (Array.isArray(dayInfo.ranges) && dayInfo.ranges.length)
@@ -10469,7 +10691,7 @@
   function hasAnySlotForStaff(cellDate, staffIdx){
     const svc = getBookingSvc();
     const dow = cellDate.getDay();
-    const dayInfo = staff[staffIdx] && staff[staffIdx].hours[dow];
+    const dayInfo = dayInfoForDate(staffIdx, cellDate);
     if (!svc || !dayInfo || !dayInfo.open) return false;
     if (isDateClosedForStaff(staffIdx, cellDate)) return false;
     const duration = svc.duration || 30;
@@ -10519,8 +10741,8 @@
       const dow = cellDate.getDay();
       const isPast = cellDate < todayMidnight;
       const isClosedDay = selectedStaffIndex === 'any'
-        ? getCapableStaffIndicesForCats(getBookingCategories()).every(idx => !(staff[idx] && staff[idx].hours[dow] && staff[idx].hours[dow].open) || isDateClosedForStaff(idx, cellDate))
-        : !(staff[selectedStaffIndex] && staff[selectedStaffIndex].hours[dow] && staff[selectedStaffIndex].hours[dow].open) || isDateClosedForStaff(selectedStaffIndex, cellDate);
+        ? getCapableStaffIndicesForCats(getBookingCategories()).every(idx => { const di = dayInfoForDate(idx, cellDate); return !(di && di.open) || isDateClosedForStaff(idx, cellDate); })
+        : (function(){ const di = dayInfoForDate(selectedStaffIndex, cellDate); return !(di && di.open) || isDateClosedForStaff(selectedStaffIndex, cellDate); })();
       const noSlots = !isPast && !isClosedDay && !hasAnySlot(cellDate);
       const cell = document.createElement('div');
       cell.className = 'cal-day-cell';
@@ -10608,7 +10830,7 @@
   function mbHasAnySlotForStaff(cellDate, staffIdx, duration){
     const emp = staff[staffIdx];
     const dow = cellDate.getDay();
-    const dayInfo = emp && emp.hours ? emp.hours[dow] : null;
+    const dayInfo = dayInfoForDate(staffIdx, cellDate);
     if (!emp || !dayInfo || !dayInfo.open) return false;
     if (isDateClosedForStaff(staffIdx, cellDate)) return false;
     const windows = getEffectiveDayWindows(dayInfo, cellDate);
@@ -10656,8 +10878,8 @@
       const dow = cellDate.getDay();
       const isPast = cellDate < todayMidnight;
       const isClosedDay = isAny
-        ? getCapableStaffIndicesForCats(mbCats).every(idx => !(staff[idx] && staff[idx].hours[dow] && staff[idx].hours[dow].open) || isDateClosedForStaff(idx, cellDate))
-        : !emp || !(emp.hours && emp.hours[dow] && emp.hours[dow].open) || isDateClosedForStaff(mbSelectedStaffIndex, cellDate);
+        ? getCapableStaffIndicesForCats(mbCats).every(idx => { const di = dayInfoForDate(idx, cellDate); return !(di && di.open) || isDateClosedForStaff(idx, cellDate); })
+        : (function(){ const di = dayInfoForDate(mbSelectedStaffIndex, cellDate); return !emp || !(di && di.open) || isDateClosedForStaff(mbSelectedStaffIndex, cellDate); })();
       const noSlots = !isPast && !isClosedDay && !(isAny ? mbHasAnySlotAny(cellDate, mbCats, duration) : mbHasAnySlotForStaff(cellDate, mbSelectedStaffIndex, duration));
       const cell = document.createElement('div');
       cell.className = 'cal-day-cell';
@@ -10695,7 +10917,7 @@
     selectedSlot = null;
     const svc = getBookingSvc();
     const dow = bookingSelectedDate.getDay();
-    const dayInfo = staff[selectedStaffIndex] && staff[selectedStaffIndex].hours[dow];
+    const dayInfo = dayInfoForDate(selectedStaffIndex, bookingSelectedDate);
     const dayKey = weekdayKeys[dow];
     const isToday = sameDate(bookingSelectedDate, todayMidnight);
     if (!svc || !dayInfo || !dayInfo.open){
@@ -10806,7 +11028,7 @@
     let allWindows = [];
     candidateIndices.forEach(idx => {
       const emp = staff[idx];
-      const dayInfo = emp && emp.hours ? emp.hours[dow] : null;
+      const dayInfo = dayInfoForDate(idx, bookingSelectedDate);
       if (!emp || isDateClosedForStaff(idx, bookingSelectedDate)) return;
       const windows = getEffectiveDayWindows(dayInfo, bookingSelectedDate);
       if (!windows.length) return;
@@ -11754,7 +11976,7 @@
       const dow = bookingSelectedDate.getDay();
       resolvedStaffIndex = getCapableStaffIndicesForCats(getBookingCategories()).find(idx => {
         const empCandidate = staff[idx];
-        const dayInfo = empCandidate && empCandidate.hours ? empCandidate.hours[dow] : null;
+        const dayInfo = dayInfoForDate(idx, bookingSelectedDate);
         if (!empCandidate || !dayInfo || !dayInfo.open) return false;
         if (isDateClosedForStaff(idx, bookingSelectedDate)) return false;
         const candidateWindows = getEffectiveDayWindows(dayInfo, bookingSelectedDate);
@@ -11777,7 +11999,7 @@
     } else {
       const dow = bookingSelectedDate.getDay();
       const emp = staff[resolvedStaffIndex];
-      const dayInfo = emp && emp.hours ? emp.hours[dow] : null;
+      const dayInfo = dayInfoForDate(resolvedStaffIndex, bookingSelectedDate);
       const stillOpen = !!(emp && dayInfo && dayInfo.open) && !isDateClosedForStaff(resolvedStaffIndex, bookingSelectedDate)
         && getEffectiveDayWindows(dayInfo, bookingSelectedDate).some(([s, e]) => slotStartMin >= s && slotEndMin <= e);
       if (!stillOpen){
@@ -13569,6 +13791,7 @@
         deleted: !!(s && s.deleted),
         hours: (s && s.hours) || {},
         closedDates: (s && s.closedDates) || [],
+        openDates: (s && s.openDates) || [],
         categories: (s && s.categories) || [],
       })),
       services: (services || []).filter(s => isServiceAvailable(s)).map(s => ({
@@ -14631,6 +14854,7 @@
     manualBookingOverlay: closeManualBookingModal,
     slotChoiceOverlay: closeSlotChoiceOverlay,
     personalTimeOverlay: closePersonalTimeOverlay,
+    openHoursOverlay: closeOpenHoursOverlay,
     apptDetailOverlay: closeApptDetailOverlay,
     clientProfileOverlay: closeClientProfileOverlay,
     specialRequestDetailOverlay: closeSpecialRequestDetailOverlay,
