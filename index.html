@@ -2693,6 +2693,11 @@
                 <input class="field" id="bookingTzUpdateEmail" type="email" placeholder="כתובת אימייל">
                 <div class="reminder-choice-notice" style="margin-top:6px;">כאן נשלח לך תזכורות לתור, ומדי פעם גם פינוק קטן ליום ההולדת 🎁</div>
               </div>
+              
+              <div id="bookingTzUpdateBdayWrap" style="display:none;">
+                <input class="field" id="bookingTzUpdateBday" type="date" style="color-scheme:light;">
+                <div class="reminder-choice-notice" style="margin-top:6px;">שווה למלא 🎂 — ביום ההולדת שלך מחכה לך ברכה, ולפעמים גם הטבה קטנה.</div>
+              </div>
             </div>
             <div id="bookingIdError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין תעודת זהות תקנית (9 ספרות)</div>
             <div id="bookingWelcomeBack" style="display:none; color:var(--sage); font-size:12px; margin:-4px 0 8px;"></div>
@@ -4459,6 +4464,7 @@
     const name = combineNameFields('frFirstName', 'frLastName');
     const phone = document.getElementById('frPhone').value.trim();
     const emailInput = document.getElementById('frEmail');
+    if (idDigits) attachRealTzToMigrated(idDigits, phone);
     const existingClient = idDigits ? clients.find(c => c.teudatZehut === idDigits) : null;
     const frKnown = frKnownClient();
     const email = emailInput.value.trim() || (existingClient && existingClient.email) || '';
@@ -11763,6 +11769,7 @@
         return;
       }
     }
+    if (idDigits) attachRealTzToMigrated(idDigits, phone);
     const wlBlockStatus = getLateCancelStatusForIdentity({ teudatZehut: idDigits, name });
     if (wlBlockStatus.blocked){
       alert(buildBlockedBookingClientMessage());
@@ -11844,6 +11851,18 @@
     if (!d || isPlausibleTeudatZehut(d)) return '';
     return 'שימי לב: תעודת הזהות שהוזנה אינה תקינה (צריכה להיות 9 ספרות). אפשר להמשיך, אבל מומלץ לתקן.';
   }
+  function attachRealTzToMigrated(idDigits, phone){
+    if (!isPlausibleTeudatZehut(idDigits)) return null;
+    if (clients.some(c => c && String(c.teudatZehut || '') === idDigits)) return null;
+    const digits = String(phone || '').replace(/[^0-9]/g, '');
+    if (digits.length < 9) return null;
+    const matches = clients.filter(c => c && String(c.phone || '').replace(/[^0-9]/g, '') === digits);
+    if (matches.length !== 1) return null;
+    const c = matches[0];
+    if (isPlausibleTeudatZehut(c.teudatZehut)) return null;
+    c.teudatZehut = idDigits;
+    return c;
+  }
   function clientNeedsTeudatZehut(client){
     return !!client && !isPlausibleTeudatZehut(client.teudatZehut);
   }
@@ -11852,26 +11871,38 @@
     const wrap = document.getElementById('bookingTzUpdateEmailWrap');
     return !!(box && wrap && box.style.display !== 'none' && wrap.style.display !== 'none');
   }
-  function welcomeBackText(firstName, needsTz, needsEmail){
+  function welcomeBackText(firstName, needsTz, needsEmail, needsBday){
     const name = firstName || '';
-    if (!needsTz && !needsEmail) return `✓ ברוכה שובך, ${name}! אין צורך למלא פרטים נוספים.`;
+    if (!needsTz && !needsEmail && !needsBday) return `✓ ברוכה שובך, ${name}! אין צורך למלא פרטים נוספים.`;
     const missing = [];
     if (needsTz) missing.push('תעודת זהות');
     if (needsEmail) missing.push('כתובת אימייל');
-    return `✓ ברוכה שובך, ${name}! בואי נשלים את מה שחסר לנו — ${missing.join(' ו')}. זה חד-פעמי, ובפעמים הבאות לא נבקש שוב.`;
+    if (needsBday) missing.push('תאריך יום הולדת');
+    const list = missing.length > 1
+      ? missing.slice(0, -1).join(', ') + ' ו' + missing[missing.length - 1]
+      : missing[0];
+    return `✓ ברוכה שובך, ${name}! בואי נשלים את מה שחסר לנו — ${list}. זה חד-פעמי, ובפעמים הבאות לא נבקש שוב.`;
   }
   function refreshBookingTzPrompt(){
     const box = document.getElementById('bookingTzUpdateBox');
     if (!box) return;
     const raw = (document.getElementById('bookingIdInput')?.value || '');
-    const resolved = resolveClientByIdOrPhone(raw);
-    const needsEmail = !!resolved.client && !String(resolved.client.email || '').trim();
-    const show = !!resolved.client && (clientNeedsTeudatZehut(resolved.client) || needsEmail);
+    const serverKnown = !!(runningOnPublicData && serverIdentity && serverIdentity.found);
+    const resolved = serverKnown ? null : resolveClientByIdOrPhone(raw);
+    const localClient = resolved && resolved.client;
+    const haveClient = serverKnown || !!localClient;
+    const needsTz = serverKnown ? !serverIdentity.hasTz : (!!localClient && clientNeedsTeudatZehut(localClient));
+    const needsEmail = serverKnown ? !serverIdentity.hasEmail : (!!localClient && !String(localClient.email || '').trim());
+    const missingBday = serverKnown ? !serverIdentity.hasBirthday : (!!localClient && !String(localClient.birthday || '').trim());
+    const show = haveClient && (needsTz || needsEmail);
+    const needsBday = show && missingBday;
     box.style.display = show ? 'block' : 'none';
     const tzWrapField = document.getElementById('bookingTzUpdateInput');
-    if (tzWrapField) tzWrapField.style.display = (resolved.client && clientNeedsTeudatZehut(resolved.client)) ? '' : 'none';
+    if (tzWrapField) tzWrapField.style.display = needsTz ? '' : 'none';
     const emailWrap = document.getElementById('bookingTzUpdateEmailWrap');
     if (emailWrap) emailWrap.style.display = needsEmail ? 'block' : 'none';
+    const bdayWrap = document.getElementById('bookingTzUpdateBdayWrap');
+    if (bdayWrap) bdayWrap.style.display = needsBday ? 'block' : 'none';
     if (!show){
       const inp = document.getElementById('bookingTzUpdateInput');
       if (inp) inp.value = '';
@@ -12039,7 +12070,8 @@
     if (known){
       welcomeEl.style.display = 'block';
       welcomeEl.style.color = 'var(--sage)';   // חוזרים מהאפור של "רגע, בודקת..."
-      welcomeEl.textContent = welcomeBackText(serverIdentity.firstName, !serverIdentity.hasTz, !serverIdentity.hasEmail);
+      const __askBday = (!serverIdentity.hasTz || !serverIdentity.hasEmail) && !serverIdentity.hasBirthday;
+      welcomeEl.textContent = welcomeBackText(serverIdentity.firstName, !serverIdentity.hasTz, !serverIdentity.hasEmail, __askBday);
       regEl.style.display = 'none';
       if (nameRow) nameRow.style.display = 'none';
       if (phoneInput) phoneInput.style.display = 'none';
@@ -12116,7 +12148,8 @@
     if (known){
       welcomeEl.style.display = 'block';
       welcomeEl.style.color = 'var(--sage)';
-      welcomeEl.textContent = welcomeBackText(known.firstName, !known.hasTz, !known.hasEmail);
+      welcomeEl.textContent = welcomeBackText(known.firstName, !known.hasTz, !known.hasEmail,
+        (!known.hasTz || !known.hasEmail) && !known.hasBirthday);
       detailsEl.style.display = 'none';
       emailWrap.style.display = known.hasEmail ? 'none' : 'block';
       return;
@@ -12185,7 +12218,8 @@
       splitNameIntoFields(match.name, 'bookingFirstNameInput', 'bookingLastNameInput');
       phoneInput.value = match.phone || '';
       welcomeEl.style.display = 'block';
-      welcomeEl.textContent = welcomeBackText(match.name, clientNeedsTeudatZehut(match), !String(match.email || '').trim());
+      const __mTz = clientNeedsTeudatZehut(match), __mEm = !String(match.email || '').trim();
+      welcomeEl.textContent = welcomeBackText(match.name, __mTz, __mEm, (__mTz || __mEm) && !String(match.birthday || '').trim());
       regEl.style.display = 'none';
       updateReminderEmailVisibility();
       applyReminderChannelPref(match.reminderChannelPref);
@@ -12342,6 +12376,12 @@
     if (existingClientPre && firstTimeEmailInput && firstTimeEmailFieldShown()){
       const typedEmail = firstTimeEmailInput.value.trim();
       if (typedEmail && !String(existingClientPre.email || '').trim()) existingClientPre.email = typedEmail;
+    }
+    const firstTimeBdayInput = document.getElementById('bookingTzUpdateBday');
+    const bdayWrapEl = document.getElementById('bookingTzUpdateBdayWrap');
+    if (existingClientPre && firstTimeBdayInput && bdayWrapEl && bdayWrapEl.style.display !== 'none'){
+      const typedBday = (firstTimeBdayInput.value || '').trim();
+      if (typedBday && !String(existingClientPre.birthday || '').trim()) existingClientPre.birthday = typedBday;
     }
     const idDigits = (existingClientPre && existingClientPre.teudatZehut)
       || (idResolved.typedAsTz ? typedDigits : '');
@@ -12582,6 +12622,12 @@
           name: clientNameVal,
           phone: phoneVal,
           email: customerEmail || '',
+          birthday: (() => {
+            const el = document.getElementById('bookingTzUpdateBday');
+            const wrap = document.getElementById('bookingTzUpdateBdayWrap');
+            if (!el || !wrap || wrap.style.display === 'none') return '';
+            return el.value || '';
+          })(),
           reminderChannels,
           appointment: currentBookedAppointment,
           siteUrl: getSiteUrl(),
