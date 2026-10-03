@@ -1829,6 +1829,7 @@
   .staff-filter-chip .avatar img{width:100%; height:100%; object-fit:cover;}
   .staff-filter-chip span{font-size:11px; color:var(--panel-text-dim);}
   .staff-filter-chip.active span{color:var(--panel-text);}
+  #weekNavRow{touch-action:pan-y;}
   .week-cal-wrap{border:1px solid rgba(var(--panel-line-rgb),0.12); border-radius:16px; overflow-x:auto; scroll-behavior:smooth; overflow-anchor:none;}
   .week-cal{display:flex; min-width:820px; scroll-snap-type:x proximity;}
   .cal-hours-col{width:34px; flex-shrink:0;}
@@ -1881,9 +1882,14 @@
     pointer-events:none; line-height:1.3;
   }
   .cal-hour-blocked-band{
-    position:absolute; inset-inline:0;
-    background:repeating-linear-gradient(135deg, rgba(90,30,42,0.07) 0px, rgba(90,30,42,0.07) 10px, transparent 10px, transparent 20px);
+    position:absolute; inset-inline:0; z-index:1;
+    background:
+      repeating-linear-gradient(135deg,
+        rgba(92,86,90,0.17) 0px, rgba(92,86,90,0.17) 4px,
+        transparent 4px, transparent 10px),
+      rgba(92,86,90,0.07);
     cursor:not-allowed;
+    pointer-events:none;
   }
   .cal-hour-line{
     border-top:1px solid rgba(var(--panel-line-rgb),0.42); box-sizing:border-box;
@@ -3508,7 +3514,7 @@
     </div>
     <div id="mbBookFields" style="display:flex; flex-direction:column; gap:10px;">
       <div class="mb-wizard-step active" id="mbstep-1">
-        <input type="tel" inputmode="numeric" maxlength="9" id="mbClientId" class="field" placeholder="תעודת זהות — מילוי תז יטען הכל אוטומטית">
+        <input type="tel" inputmode="numeric" maxlength="9" id="mbClientId" class="field" placeholder="תעודת זהות — או מספר טלפון למטה">
         
         <div id="mbClientIdStatus" class="mb-client-id-status" style="display:none;"></div>
         
@@ -3518,6 +3524,9 @@
           <input type="text" id="mbClientLastName" class="field" placeholder="שם משפחה">
         </div>
         <input type="tel" id="mbClientPhone" class="field" placeholder="050-0000000">
+        
+        <div id="mbPhoneMatches" style="display:none; flex-direction:column; gap:6px; background:#FAF5EE; border-radius:8px; padding:9px 11px;"></div>
+        <button type="button" class="mini-btn" id="mbClearClientBtn" style="display:none; align-self:flex-start; padding:5px 12px; font-size:12.5px;">↩ ניקוי פרטי הלקוחה</button>
         <input type="email" id="mbClientEmail" class="field" placeholder="אימייל (אופציונלי)">
         <textarea id="mbClientNote" class="client-note" style="min-height:44px; margin:0;" placeholder="הערה אישית על הלקוחה (העדפות, רגישויות...)"></textarea>
         
@@ -4729,14 +4738,21 @@
     const statusEl = document.getElementById('mbClientIdStatus');
     if (!statusEl) return;
     const idVal = (document.getElementById('mbClientId')?.value || '');
-    if (idVal.length < 9){
-      statusEl.style.display = 'none';
-      statusEl.className = 'mb-client-id-status';
-      statusEl.textContent = '';
+    const match = idVal ? clients.find(c => c && String(c.teudatZehut || '') === idVal) : null;
+    if (match && !isPlausibleTeudatZehut(idVal)){
+      statusEl.style.display = 'block';
+      statusEl.className = 'mb-client-id-status new';
+      statusEl.textContent = `⚠️ ${match.name} — תעודת הזהות אינה תקינה (9 ספרות). נא להשלים אותה עכשיו.`;
       updateMbLateCancelWarning();
       return;
     }
-    const match = clients.find(c => c.teudatZehut === idVal);
+    if (idVal.length < 9){
+      statusEl.style.display = match ? 'block' : 'none';
+      statusEl.className = match ? 'mb-client-id-status matched' : 'mb-client-id-status';
+      statusEl.textContent = match ? `✓ נמצאה לקוחה קיימת — ${match.name}` : '';
+      updateMbLateCancelWarning();
+      return;
+    }
     statusEl.style.display = 'block';
     if (match){
       statusEl.className = 'mb-client-id-status matched';
@@ -4771,31 +4787,117 @@
   ['mbClientFirstName', 'mbClientLastName'].forEach(fieldId => {
     document.getElementById(fieldId)?.addEventListener('input', updateMbLateCancelWarning);
   });
+  function mbClientDetailEls(){
+    return {
+      id: document.getElementById('mbClientId'),
+      phone: document.getElementById('mbClientPhone'),
+      email: document.getElementById('mbClientEmail'),
+      note: document.getElementById('mbClientNote'),
+      matches: document.getElementById('mbPhoneMatches'),
+    };
+  }
+  function mbUpdateClearBtn(){
+    const btn = document.getElementById('mbClearClientBtn');
+    if (!btn) return;
+    const e = mbClientDetailEls();
+    const any = (e.id && e.id.value.trim()) || (e.phone && e.phone.value.trim())
+      || (document.getElementById('mbClientFirstName') || {}).value
+      || (document.getElementById('mbClientLastName') || {}).value;
+    btn.style.display = any ? 'inline-block' : 'none';
+  }
+  function mbClearClientFields(){
+    const e = mbClientDetailEls();
+    mbLoadedClientKey = null;
+    mbUnlockClientName(true);
+    if (e.id) e.id.value = '';
+    if (e.phone) e.phone.value = '';
+    if (e.email) e.email.value = '';
+    if (e.note) e.note.value = '';
+    if (e.matches){ e.matches.style.display = 'none'; e.matches.innerHTML = ''; }
+    updateMbClientIdStatus();
+    renderMbQuickPick(null);
+    mbUpdateClearBtn();
+  }
+  document.getElementById('mbClearClientBtn')?.addEventListener('click', mbClearClientFields);
+  let mbLoadedClientKey = null;
+  function mbFillFromClient(c, keepPhone){
+    if (!c) return;
+    mbLoadedClientKey = String(c.teudatZehut || '') || null;
+    const e = mbClientDetailEls();
+    mbLockClientName(c.name);
+    if (e.id && c.teudatZehut) e.id.value = String(c.teudatZehut).slice(0, 9);
+    if (e.phone && !keepPhone) e.phone.value = c.phone || '';
+    if (e.email) e.email.value = c.email || '';
+    if (e.note) e.note.value = c.note || '';
+  }
+  function mbRenderPhoneMatches(list){
+    const box = document.getElementById('mbPhoneMatches');
+    if (!box) return;
+    box.innerHTML = '<div style="font-size:12.5px; color:var(--panel-text-dim); line-height:1.5;">'
+      + list.length + ' לקוחות רשומות על המספר הזה. לאיזו מהן התור?</div>';
+    list.forEach((c) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mini-btn';
+      b.style.cssText = 'text-align:start; padding:7px 11px; font-size:13px;';
+      b.textContent = c.name + (c.teudatZehut ? ' · ' + c.teudatZehut : '');
+      b.onclick = () => {
+        mbFillFromClient(c, true);
+        box.style.display = 'none';
+        updateMbClientIdStatus();
+        renderMbQuickPick(c.name);
+        mbUpdateClearBtn();
+      };
+      box.appendChild(b);
+    });
+    box.style.display = 'flex';
+  }
   document.getElementById('mbClientId')?.addEventListener('input', function(){
     this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
-    const phoneInput = document.getElementById('mbClientPhone');
-    const emailInput = document.getElementById('mbClientEmail');
-    const noteInput = document.getElementById('mbClientNote');
-    mbUnlockClientName(true);
-    if (phoneInput) phoneInput.value = '';
-    if (emailInput) emailInput.value = '';
-    if (noteInput) noteInput.value = '';
-    if (this.value.length < 9){ updateMbClientIdStatus(); renderMbQuickPick(null); return; }
-    const match = clients.find(c => c.teudatZehut === this.value);
-    if (match){
-      mbLockClientName(match.name);
-      if (phoneInput) phoneInput.value = match.phone || '';
-      if (emailInput) emailInput.value = match.email || '';
-      if (noteInput) noteInput.value = match.note || '';
+    const e = mbClientDetailEls();
+    if (e.phone && e.phone.value.trim()){
+      updateMbClientIdStatus();
+      mbUpdateClearBtn();
+      return;
     }
+    mbUnlockClientName(true);
+    if (e.email) e.email.value = '';
+    if (e.note) e.note.value = '';
+    if (e.matches) e.matches.style.display = 'none';
+    const match = this.value ? clients.find(c => c && String(c.teudatZehut || '') === this.value) : null;
+    if (match) mbFillFromClient(match);
     updateMbClientIdStatus();
     renderMbQuickPick(match ? match.name : null);
+    mbUpdateClearBtn();
   });
   document.getElementById('mbClientPhone')?.addEventListener('input', function(){
-    const idInput = document.getElementById('mbClientId');
-    if (typeof updateMbClientIdStatus === 'function') updateMbClientIdStatus();
-    const idMatch = clients.find(c => c.teudatZehut === (idInput?.value || ''));
-    renderMbQuickPick(idMatch ? idMatch.name : null);
+    const e = mbClientDetailEls();
+    if (e.id && e.id.value.trim()){
+      if (e.matches) e.matches.style.display = 'none';
+      updateMbClientIdStatus();
+      const idMatch = clients.find(c => c && String(c.teudatZehut || '') === e.id.value);
+      renderMbQuickPick(idMatch ? idMatch.name : null);
+      mbUpdateClearBtn();
+      return;
+    }
+    const digits = (this.value || '').replace(/[^0-9]/g, '');
+    const matches = isValidIsraeliPhone(this.value)
+      ? clients.filter(c => c && String(c.phone || '').replace(/[^0-9]/g, '') === digits)
+      : [];
+    if (matches.length === 1){
+      mbFillFromClient(matches[0], true);
+      if (e.matches) e.matches.style.display = 'none';
+      renderMbQuickPick(matches[0].name);
+    } else if (matches.length > 1){
+      mbUnlockClientName(true);
+      mbRenderPhoneMatches(matches);
+      renderMbQuickPick(null);
+    } else {
+      if (e.matches) e.matches.style.display = 'none';
+      renderMbQuickPick(null);
+    }
+    updateMbClientIdStatus();
+    mbUpdateClearBtn();
   });
   function closeManualBookingModal(){
     document.getElementById('manualBookingOverlay').classList.remove('show');
@@ -6124,13 +6226,22 @@
     }
     const emailVal = (document.getElementById('mbClientEmail')?.value || '').trim();
     const noteVal = (document.getElementById('mbClientNote')?.value || '').trim();
-    const existingByIdOrPhone = idDigits
-      ? clients.find(c => c.teudatZehut === idDigits) || (phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, '')) : null)
-      : (phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, '')) : null);
+    const byLoaded = mbLoadedClientKey
+      ? clients.find(c => c && String(c.teudatZehut || '') === mbLoadedClientKey) : null;
+    const existingByIdOrPhone = byLoaded
+      || (idDigits ? clients.find(c => c && String(c.teudatZehut || '') === idDigits) : null)
+      || (phone ? clients.find(c => c && (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, '')) : null);
     if (existingByIdOrPhone){
-      if (idDigits && !existingByIdOrPhone.teudatZehut) existingByIdOrPhone.teudatZehut = idDigits;
+      const hadPlaceholder = existingByIdOrPhone.teudatZehut
+        && !isPlausibleTeudatZehut(existingByIdOrPhone.teudatZehut);
+      if (idDigits && isPlausibleTeudatZehut(idDigits) && (hadPlaceholder || !existingByIdOrPhone.teudatZehut)){
+        const clash = clients.find(c => c && c !== existingByIdOrPhone && String(c.teudatZehut || '') === idDigits);
+        if (!clash) existingByIdOrPhone.teudatZehut = idDigits;
+      } else if (idDigits && !existingByIdOrPhone.teudatZehut){
+        existingByIdOrPhone.teudatZehut = idDigits;
+      }
       if (emailVal && !existingByIdOrPhone.email) existingByIdOrPhone.email = emailVal;
-      existingByIdOrPhone.note = noteVal;
+      if (noteVal || !existingByIdOrPhone.note) existingByIdOrPhone.note = noteVal;
     } else if (phone || idDigits){
       clients.push({ name, phone, teudatZehut: idDigits || null, email: emailVal, photo: null, visits: 0, daysSinceVisit: null, note: noteVal || 'לקוחה חדשה — נוספה דרך קביעת תור ידנית', birthday: null });
     }
@@ -6653,7 +6764,7 @@
     if (!queue || !queue.items.length) return;
     const bizNameForEmail = (branding.name || '').trim();
     const fromName = bizNameForEmail ? `${bizNameForEmail} — הכל בקליק` : 'הכל בקליק';
-    const fromAddress = 'appointments@rutizolberg.com';
+    const fromAddress = 'torim@hakolbeklik.com';
     const attachments = [];
     queue.items.forEach((item, i) => {
       if (!item.imageDataUrl) return;
@@ -8503,8 +8614,9 @@
       const dy = e.changedTouches[0].clientY - y0;
       x0 = null;
       if (Math.abs(dx) < 60 || Math.abs(dx) <= Math.abs(dy)) return;
+      if (e.cancelable) e.preventDefault();
       shiftWeek(dx < 0 ? 1 : -1);
-    }, { passive: true });
+    }, { passive: false });
   }
   function shiftWeek(delta){
     weekOffset += delta;
@@ -8726,20 +8838,34 @@
         body.title = 'לחיצה על שעה פנויה מוסיפה תור';
       }
       let blockedBands = [];
-      if (!closedInfo && selectedStaffFilter !== 'all'){
-        const s = staff[selectedStaffFilter];
-        const dayInfo = dayInfoForDate(selectedStaffFilter, day.fullDate);
-        if (dayInfo && dayInfo.open){
+      if (!closedInfo){
+        const bandIdxs = (selectedStaffFilter === 'all')
+          ? staff.map((s, i) => i).filter(i => staff[i] && !staff[i].deleted)
+          : [selectedStaffFilter];
+        const openWindows = [];
+        bandIdxs.forEach(i => {
+          if (isDateClosedForStaff(i, day.fullDate)) return;
+          const dayInfo = dayInfoForDate(i, day.fullDate);
+          if (!dayInfo || !dayInfo.open) return;
           const rawRanges = (Array.isArray(dayInfo.ranges) && dayInfo.ranges.length)
             ? dayInfo.ranges
             : (dayInfo.from && dayInfo.to ? [{ from: dayInfo.from, to: dayInfo.to }] : []);
-          const openWindows = rawRanges
-            .map(r => [timeToMinutes(r.from), timeToMinutes(r.to)])
-            .filter(([ws, we]) => ws < we)
-            .sort((a, b) => a[0] - b[0]);
+          rawRanges.forEach(r => {
+            const ws = timeToMinutes(r.from), we = timeToMinutes(r.to);
+            if (ws < we) openWindows.push([ws, we]);
+          });
+        });
+        if (openWindows.length){
+          openWindows.sort((a, b) => a[0] - b[0]);
+          const merged = [];
+          openWindows.forEach(w => {
+            const last = merged[merged.length - 1];
+            if (last && w[0] <= last[1]) last[1] = Math.max(last[1], w[1]);
+            else merged.push([w[0], w[1]]);
+          });
           const viewStart = calStartHour * 60, viewEnd = calEndHour * 60;
           let cursor = viewStart;
-          openWindows.forEach(([ws, we]) => {
+          merged.forEach(([ws, we]) => {
             if (ws > cursor) blockedBands.push([cursor, Math.min(ws, viewEnd)]);
             cursor = Math.max(cursor, we);
           });
@@ -8919,7 +9045,7 @@
     });
     calFragment.appendChild(renderSpecialRequestsColumn((calEndHour - calStartHour) * hourBandHeight));
     calEl.appendChild(calFragment);
-    wireWeekSwipe(document.getElementById('weekCalWrap'));
+    wireWeekSwipe(document.getElementById('weekNavRow'));
     renderOverviewStats();
     if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
     if (__rwcDiagStart !== null && Array.isArray(panelRenderCallLog)){
@@ -11813,6 +11939,17 @@
     const addressLine = (branding && branding.address && branding.address.trim()) ? `\nכתובתנו: ${branding.address.trim()}` : '';
     return `היי ${name}, נקבע לך תור ל${service} בתאריך ${dateLabel} בשעה ${time}${staffName ? ' אצל ' + staffName : ''}. ${actionText || 'לביטול או שינוי מועד, ניתן לפנות אלינו.'}${addressLine}\n\nלניהול התור, לביטול או לקביעת תור נוסף:\n${buildMyAppointmentLink(teudatZehut, phone)}`;
   }
+
+  function smsSegmentCount(text){
+    const n = String(text || '').length;
+    return n <= 70 ? 1 : Math.ceil(n / 67);
+  }
+  function withClientName(base, name){
+    const first = String(name || '').trim().split(/\s+/)[0] || '';
+    if (!first) return base;
+    const withName = first + ', ' + base;
+    return smsSegmentCount(withName) > smsSegmentCount(base) ? base : withName;
+  }
   function getShortApptSmsText(kind, service, dateLabel, time){
     if (kind === 'cancelled') return `התור לטיפול ${service} ביום ${dateLabel} בשעה ${time} בוטל.`;
     const addr = (branding && branding.address && branding.address.trim()) ? `, ${branding.address.trim()}` : '';
@@ -11832,7 +11969,7 @@
       fetch(SMS_FUNCTION_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-App-Key': SMS_APP_KEY },
-        body: JSON.stringify({ phone: client.phone, message: message, bizId: BIZ_ID })
+        body: JSON.stringify({ phone: client.phone, message: withClientName(message, appt.client || (client && client.name)), bizId: BIZ_ID })
       }).catch(e => console.error('SMS send request failed (appointment itself is unaffected):', e));
     } catch (e) {
       console.error('queueApptSms failed (appointment itself is unaffected):', e);
@@ -14965,6 +15102,28 @@
     }).observe(watchEl, { attributes: true, attributeFilter: ['style'] });
   })();
 
+  function currentOverviewInnerTab(){
+    var el = document.querySelector('#sub-overview .inner-subpanel.active');
+    return el ? el.id : null;
+  }
+  var appOverviewInnerWas = currentOverviewInnerTab();
+  document.querySelectorAll('#sub-overview .inner-subpanel').forEach(function(el){
+    new MutationObserver(function(){
+      var now = currentOverviewInnerTab();
+      if (now === null || now === appOverviewInnerWas) return;
+      appOverviewInnerWas = now;
+      if (now !== 'inner-overview-calendar'){
+        if (history.state && history.state.__appOverviewInner){
+          history.replaceState({ __appOverviewInner: now }, '', location.href);
+        } else {
+          history.pushState({ __appOverviewInner: now }, '', location.href);
+        }
+      } else if (history.state && history.state.__appOverviewInner){
+        appBackNavSuppressPop = true;
+        history.back();
+      }
+    }).observe(el, { attributes: true, attributeFilter: ['class'] });
+  });
   function currentAdminSubTabName(){
     var active = document.querySelector('#panel-business > .subpanel.active');
     return active ? active.id.replace(/^sub-/, '') : null;
@@ -14994,6 +15153,14 @@
     if (openId){
       try { APP_BACK_OVERLAY_CLOSERS[openId](); } catch (e) { console.error('Back-button overlay close failed:', e); }
       return;
+    }
+    var curInner = currentOverviewInnerTab();
+    if (curInner && curInner !== 'inner-overview-calendar'){
+      var innerSel = document.getElementById('overviewInnerTabSelect');
+      if (innerSel){
+        innerSel.value = 'inner-overview-calendar';
+        if (typeof onOverviewInnerTabChange === 'function'){ onOverviewInnerTabChange(innerSel); return; }
+      }
     }
     var curAdminTab = currentAdminSubTabName();
     if (document.body.classList.contains('admin-mode') && curAdminTab && curAdminTab !== 'overview'){
