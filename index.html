@@ -1868,6 +1868,20 @@
   }
   .cal-day-head.cal-day-today .cal-day-name{color:#4A6141; font-weight:700;}
   .cal-day-head.cal-day-today .cal-day-num{color:#3D5436; font-weight:800;}
+  .oh-slot{
+    border:1px solid rgba(var(--panel-line-rgb),0.3);
+    background:rgba(92,86,90,0.08);
+    color:var(--panel-text-dim);
+    border-radius:8px; padding:7px 10px; font-size:13px;
+    font-family:'JetBrains Mono', monospace;
+    cursor:pointer; min-width:62px; text-align:center;
+  }
+  .oh-slot:hover{border-color:var(--sage, #5E7856);}
+  .oh-slot.released{
+    background:rgba(94,120,86,0.22);
+    border-color:var(--sage, #5E7856);
+    color:#2F4029; font-weight:700;
+  }
   .cal-day-body{position:relative;}
   .cal-day-head.day-closed{background:rgba(155,44,66,0.07);}
   .cal-day-head.day-closed .cal-day-name, .cal-day-head.day-closed .cal-day-num{color:var(--wine);}
@@ -3128,7 +3142,7 @@
         </div>
       </div>
       
-      <div class="settings-section" data-settings-section="clientimport">
+      <div class="settings-section" data-settings-section="clientimport" id="clientImportSection" style="display:none;">
         <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
           <span class="settings-section-title">📥 טעינת לקוחות מקובץ</span>
           <span class="settings-section-sub">העברת רשימת לקוחות קיימת למערכת</span>
@@ -3146,7 +3160,7 @@
           <div id="clientImportResult" style="display:none; font-size:13.5px; margin-top:12px; max-width:520px;"></div>
         </div>
       </div>
-      <div class="settings-section" data-settings-section="backups">
+      <div class="settings-section" data-settings-section="backups" id="backupsSection" style="display:none;">
         <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
           <span class="settings-section-title">💾 גיבויים ושחזור</span>
           <span class="settings-section-sub">שחזור נתונים למקרה חירום</span>
@@ -3741,33 +3755,24 @@
   </div>
   <div class="appt-detail-body">
     <div class="appt-detail-card" style="display:flex; flex-direction:column; gap:14px; padding:18px 24px;">
-      <div style="font-size:13px; color:var(--panel-text-dim); line-height:1.65;">
-        פותח את השעות האלה <b>בתאריך הזה בלבד</b>, גם אם העובדת אינה עובדת בהן בדרך כלל. השעות הקבועות של אותו יום בשבוע לא משתנות.
-      </div>
       <div>
         <span class="detail-field-label">תאריך</span>
         <div class="appt-detail-value" id="ohDateLabel" style="font-size:16px;"></div>
-      </div>
-      <div style="display:flex; gap:12px; flex-wrap:wrap;">
-        <div style="flex:1; min-width:130px;">
-          <span class="detail-field-label">שעת התחלה</span>
-          <input type="time" id="ohStartTime" class="field" step="900" style="margin:0;">
-        </div>
-        <div style="flex:1; min-width:130px;">
-          <span class="detail-field-label">שעת סיום</span>
-          <input type="time" id="ohEndTime" class="field" step="900" style="margin:0;">
-        </div>
       </div>
       <div>
         <span class="detail-field-label">עובדת</span>
         <select id="ohStaff" class="field" style="margin:0;"></select>
       </div>
+      <div style="font-size:13px; color:var(--panel-text-dim); line-height:1.65;">
+        אלה השעות <b>החסומות</b> בתאריך הזה. <b>לחצי לשחרר שעה חסומה</b> — כל שעה ששוחררה נפתחת לקביעת תור, והשעות שלא נגעת בהן נשארות חסומות. השעות הקבועות של אותו יום בשבוע לא משתנות.
+      </div>
+      <div id="ohSlotGrid" style="display:flex; flex-wrap:wrap; gap:6px; max-height:46vh; overflow-y:auto; padding:2px;"></div>
       <div id="ohExisting" style="display:none; font-size:13.5px; background:#F3ECE0; border-radius:8px; padding:10px 12px;"></div>
       <div id="ohError" style="display:none; color:var(--wine); font-size:13px;"></div>
     </div>
     <div class="appt-detail-actions">
       <button type="button" class="cta" onclick="submitOpenHours()">שמירה</button>
-      <button type="button" class="mini-btn" id="ohRemoveBtn" style="display:none;" onclick="removeOpenHours()">↩ ביטול הפתיחה</button>
+      <button type="button" class="mini-btn" id="ohRemoveBtn" style="display:none;" onclick="removeOpenHours()">↩ ביטול כל השעות ששוחררו</button>
     </div>
   </div>
 </div>
@@ -5092,29 +5097,85 @@
       if (removeBtn) removeBtn.style.display = 'none';
     }
   }
+  const OH_STEP_MIN = 15;
+  let ohReleased = null;   // Set של "HH:MM" שסומנו במסך הנוכחי
+  function ohStaffForGrid(){
+    const idxs = ohStaffIndices((document.getElementById('ohStaff') || {}).value);
+    return idxs;
+  }
+  function ohBlockedSlots(dateKey){
+    const [yy, mm, dd] = String(dateKey).split('-').map(Number);
+    const dateObj = new Date(yy, (mm || 1) - 1, dd || 1);
+    const idxs = ohStaffForGrid();
+    const open = [];
+    idxs.forEach(i => {
+      if (isDateClosedForStaff(i, dateObj)) return;
+      const info = dayInfoForDate(i, dateObj);
+      if (!info || !info.open) return;
+      const rr = (Array.isArray(info.ranges) && info.ranges.length)
+        ? info.ranges : (info.from && info.to ? [{ from: info.from, to: info.to }] : []);
+      rr.forEach(r => open.push([timeToMinutes(r.from), timeToMinutes(r.to)]));
+    });
+    const isOpen = (m) => open.some(([a, b]) => m >= a && m < b);
+    const out = [];
+    for (let m = calStartHour * 60; m < calEndHour * 60; m += OH_STEP_MIN){
+      if (!isOpen(m)) out.push(minutesToTimeGlobal(m));
+    }
+    return out;
+  }
+  function renderOhSlotGrid(){
+    const grid = document.getElementById('ohSlotGrid');
+    if (!grid || !openHoursCurrent) return;
+    const key = openHoursCurrent.date;
+    const already = new Set();
+    ohStaffForGrid().forEach(i => {
+      getOpenDateEntries(i, key).forEach(e => {
+        for (let m = timeToMinutes(e.from); m < timeToMinutes(e.to); m += OH_STEP_MIN){
+          already.add(minutesToTimeGlobal(m));
+        }
+      });
+    });
+    if (ohReleased === null) ohReleased = new Set(already);
+    const blocked = ohBlockedSlots(key);
+    const all = Array.from(new Set(blocked.concat(Array.from(ohReleased))))
+      .sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
+    grid.innerHTML = '';
+    if (!all.length){
+      const none = document.createElement('div');
+      none.style.cssText = 'font-size:13px; color:var(--panel-text-dim); padding:8px 2px;';
+      none.textContent = 'אין שעות חסומות בתאריך הזה — העובדת פנויה לאורך כל היום.';
+      grid.appendChild(none);
+      return;
+    }
+    all.forEach(t => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'oh-slot' + (ohReleased.has(t) ? ' released' : '');
+      b.textContent = t;
+      b.dataset.slot = t;
+      b.title = ohReleased.has(t) ? 'לחצי לבטל את השחרור' : 'לחצי לשחרר שעה חסומה';
+      b.onclick = () => {
+        if (ohReleased.has(t)) ohReleased.delete(t); else ohReleased.add(t);
+        renderOhSlotGrid();
+      };
+      grid.appendChild(b);
+    });
+  }
   function openOpenHoursOverlay(opts){
     opts = opts || {};
     const dateObj = opts.date || new Date();
     const dateKey = formatDateKey(dateObj);
     openHoursCurrent = { date: dateKey };
+    ohReleased = null;
     document.getElementById('ohDateLabel').textContent =
       days[dateObj.getDay()].name + ', ' + formatDateDMY(dateKey);
-    const startTime = opts.time || '17:00';
-    document.getElementById('ohStartTime').value = startTime;
-    const endMinutes = Math.min(timeToMinutes(startTime) + 60, 23 * 60 + 45);
-    document.getElementById('ohEndTime').value = minutesToTimeGlobal(endMinutes);
     document.getElementById('ohError').style.display = 'none';
     renderOhStaffOptions();
     const sel = document.getElementById('ohStaff');
     const wanted = (opts.staff !== undefined && opts.staff !== null) ? String(opts.staff) : 'all';
     sel.value = Array.from(sel.options).some(o => o.value === wanted) ? wanted : 'all';
-    sel.onchange = refreshOhExisting;
-    const idxs = ohStaffIndices(sel.value);
-    const existing = idxs.length === 1 ? getOpenDateEntry(idxs[0], dateKey) : null;
-    if (existing){
-      document.getElementById('ohStartTime').value = existing.from;
-      document.getElementById('ohEndTime').value = existing.to;
-    }
+    sel.onchange = () => { ohReleased = null; renderOhSlotGrid(); refreshOhExisting(); };
+    renderOhSlotGrid();
     refreshOhExisting();
     document.getElementById('openHoursOverlay').classList.add('show');
   }
@@ -5122,6 +5183,7 @@
     const o = document.getElementById('openHoursOverlay');
     if (o) o.classList.remove('show');
     openHoursCurrent = null;
+    ohReleased = null;
   }
   async function applyOpenDatesChange(toast){
     if (typeof saveState === 'function') await saveState();
@@ -5137,27 +5199,68 @@
   }
   async function submitOpenHours(){
     if (!openHoursCurrent) return;
-    const from = document.getElementById('ohStartTime').value;
-    const to = document.getElementById('ohEndTime').value;
     const errorEl = document.getElementById('ohError');
     const fail = (m) => { errorEl.style.display = 'block'; errorEl.textContent = m; };
-    if (!from || !to) return fail('יש למלא שעת התחלה ושעת סיום.');
-    if (timeToMinutes(from) >= timeToMinutes(to)) return fail('שעת הסיום חייבת להיות אחרי שעת ההתחלה.');
     const idxs = ohStaffIndices(document.getElementById('ohStaff').value);
     if (!idxs.length) return fail('צריך לבחור עובדת.');
     errorEl.style.display = 'none';
     const key = openHoursCurrent.date;
+    const picked = Array.from(ohReleased || []).sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
+    const ranges = [];
+    picked.forEach(t => {
+      const m = timeToMinutes(t);
+      const last = ranges[ranges.length - 1];
+      if (last && timeToMinutes(last.to) === m) last.to = minutesToTimeGlobal(m + OH_STEP_MIN);
+      else ranges.push({ from: t, to: minutesToTimeGlobal(m + OH_STEP_MIN) });
+    });
     idxs.forEach(i => {
       const s = staff[i];
       if (!s) return;
       if (!Array.isArray(s.openDates)) s.openDates = [];
-      if (!Array.isArray(s.closedDates)) s.closedDates = [];
       s.openDates = s.openDates.filter(e => !(e && e.date === key));
-      s.closedDates = s.closedDates.filter(e => (typeof e === 'string' ? e : (e && e.date)) !== key);
-      s.openDates.push({ date: key, from: from, to: to });
+      ranges.forEach(r => s.openDates.push({ date: key, from: r.from, to: r.to }));
     });
     closeOpenHoursOverlay();
-    await applyOpenDatesChange('✓ נפתחו שעות ' + from + '–' + to + ' לתאריך הזה');
+    await applyOpenDatesChange(ranges.length
+      ? ('✓ שוחררו ' + picked.length + ' שעות בתאריך הזה')
+      : '✓ כל השעות ששוחררו בוטלו');
+  }
+  function restoreDayToWeeklyHours(dateObj){
+    const dateKey = formatDateKey(dateObj);
+    const idxs = (typeof selectedStaffFilter !== 'undefined' && selectedStaffFilter !== 'all')
+      ? [selectedStaffFilter]
+      : staff.map((s, i) => i).filter(i => staff[i] && !staff[i].deleted);
+    if (!idxs.length) return;
+    const changed = idxs.filter(i => {
+      const s = staff[i];
+      if (!s) return false;
+      const hasOpen = (s.openDates || []).some(e => e && e.date === dateKey);
+      const hasClosed = (s.closedDates || []).some(e => (typeof e === 'string' ? e : (e && e.date)) === dateKey);
+      return hasOpen || hasClosed;
+    });
+    const label = formatDateDMY(dateKey);
+    if (!changed.length){
+      alert('ל-' + label + ' אין שום שינוי חד-פעמי — הוא כבר פועל לפי שעות העבודה הקבועות שבטאב הצוות.');
+      return;
+    }
+    const sameDay = (weekAppointments || []).filter(a =>
+      a && a.date === dateKey && a.status !== 'cancelled' &&
+      (idxs.indexOf(a.staff) !== -1 || typeof a.staff === 'undefined'));
+    if (sameDay.length){
+      alert('אי אפשר להחזיר את ' + label + ' לשעות הקבועות: יש בו ' + sameDay.length +
+            (sameDay.length === 1 ? ' תור שנקבע.' : ' תורים שנקבעו.') +
+            '\n\nההחזרה מבטלת שעות ששוחררו, ותור שנקבע באחת מהן היה נשאר ביומן בשעה שאינה קיימת יותר. צריך קודם לבטל או להזיז את התורים.');
+      return;
+    }
+    const names = changed.map(i => (staff[i] && staff[i].name) || 'עובדת').join(', ');
+    if (!confirm('האם את בטוחה שברצונך להחזיר את ' + label + ' לשעות הקבועות?\n\n' +
+                 'כל השעות ששוחררו וכל חסימה חד-פעמית בתאריך הזה יימחקו, והיום יחזור לשעות שמוגדרות בטאב הצוות עבור ' + names + '.')) return;
+    changed.forEach(i => {
+      const s = staff[i];
+      if (Array.isArray(s.openDates)) s.openDates = s.openDates.filter(e => !(e && e.date === dateKey));
+      if (Array.isArray(s.closedDates)) s.closedDates = s.closedDates.filter(e => (typeof e === 'string' ? e : (e && e.date)) !== dateKey);
+    });
+    applyOpenDatesChange('✓ ' + label + ' חזר לשעות הקבועות');
   }
   async function removeOpenHours(){
     if (!openHoursCurrent) return;
@@ -7050,9 +7153,13 @@
     const u = auth && auth.currentUser;
     return !!(u && !u.isAnonymous && String(u.email || '').trim().toLowerCase() === PLATFORM_ADMIN_EMAIL);
   }
+  const PLATFORM_ONLY_SECTION_IDS = ['platformSection', 'clientImportSection', 'backupsSection'];
   function applyPlatformAdminUi(){
-    const sec = document.getElementById('platformSection');
-    if (sec) sec.style.display = isPlatformAdmin() ? '' : 'none';
+    const show = isPlatformAdmin();
+    PLATFORM_ONLY_SECTION_IDS.forEach(id => {
+      const sec = document.getElementById(id);
+      if (sec) sec.style.display = show ? '' : 'none';
+    });
   }
   window.__applyPlatformAdminUi = applyPlatformAdminUi;
 
@@ -8973,6 +9080,9 @@
       const isTodayCol = typeof sameDate === 'function' && typeof getTodayDateOnly === 'function' && sameDate(day.fullDate, getTodayDateOnly());
       head.className = 'cal-day-head' + (isTodayCol ? ' cal-day-today' : '');
       head.innerHTML = `<span class="cal-day-name">${day.label}</span><span class="cal-day-num">${day.date}</span><span class="heb-date">${hebrewDateStr(day.fullDate)}</span>`;
+      head.style.cursor = 'pointer';
+      head.title = 'לחיצה מחזירה את היום לשעות העבודה הקבועות';
+      head.onclick = () => restoreDayToWeeklyHours(day.fullDate);
       col.appendChild(head);
       const body = document.createElement('div');
       body.className = 'cal-day-body';
@@ -10847,14 +10957,39 @@
     }
     return null;
   }
+  function getOpenDateEntries(staffIdx, dateStr){
+    const s = staff[staffIdx];
+    if (!s || !Array.isArray(s.openDates)) return [];
+    return s.openDates.filter(e => e && e.date === dateStr && e.from && e.to);
+  }
   function dayInfoForDate(staffIdx, dateObj){
     const s = staff[staffIdx];
     const base = (s && s.hours) ? s.hours[dateObj.getDay()] : null;
     if (!s) return base;
     const key = formatDateKey(dateObj);
-    const open = getOpenDateEntry(staffIdx, key);
-    if (open) return { open: true, from: open.from, to: open.to, ranges: [{ from: open.from, to: open.to }] };
-    return base;
+    const extra = getOpenDateEntries(staffIdx, key);
+    if (!extra.length) return base;
+    const blocked = !!getClosedDateEntry(staffIdx, key);
+    const ranges = [];
+    if (!blocked && base && base.open){
+      const br = (Array.isArray(base.ranges) && base.ranges.length)
+        ? base.ranges
+        : (base.from && base.to ? [{ from: base.from, to: base.to }] : []);
+      br.forEach(r => { if (r && r.from && r.to) ranges.push({ from: r.from, to: r.to }); });
+    }
+    extra.forEach(e => ranges.push({ from: e.from, to: e.to }));
+    if (!ranges.length) return base;
+    ranges.sort((a, b) => timeToMinutes(a.from) - timeToMinutes(b.from));
+    const merged = [];
+    ranges.forEach(r => {
+      const last = merged[merged.length - 1];
+      if (last && timeToMinutes(r.from) <= timeToMinutes(last.to)){
+        if (timeToMinutes(r.to) > timeToMinutes(last.to)) last.to = r.to;
+      } else {
+        merged.push({ from: r.from, to: r.to });
+      }
+    });
+    return { open: true, from: merged[0].from, to: merged[merged.length - 1].to, ranges: merged };
   }
   function isDateClosedForStaff(staffIdx, date){
     const dateStr = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
@@ -11717,6 +11852,14 @@
     const wrap = document.getElementById('bookingTzUpdateEmailWrap');
     return !!(box && wrap && box.style.display !== 'none' && wrap.style.display !== 'none');
   }
+  function welcomeBackText(firstName, needsTz, needsEmail){
+    const name = firstName || '';
+    if (!needsTz && !needsEmail) return `✓ ברוכה שובך, ${name}! אין צורך למלא פרטים נוספים.`;
+    const missing = [];
+    if (needsTz) missing.push('תעודת זהות');
+    if (needsEmail) missing.push('כתובת אימייל');
+    return `✓ ברוכה שובך, ${name}! בואי נשלים את מה שחסר לנו — ${missing.join(' ו')}. זה חד-פעמי, ובפעמים הבאות לא נבקש שוב.`;
+  }
   function refreshBookingTzPrompt(){
     const box = document.getElementById('bookingTzUpdateBox');
     if (!box) return;
@@ -11896,7 +12039,7 @@
     if (known){
       welcomeEl.style.display = 'block';
       welcomeEl.style.color = 'var(--sage)';   // חוזרים מהאפור של "רגע, בודקת..."
-      welcomeEl.textContent = `✓ ברוכה שובך, ${serverIdentity.firstName || ''}! אין צורך למלא פרטים נוספים.`;
+      welcomeEl.textContent = welcomeBackText(serverIdentity.firstName, !serverIdentity.hasTz, !serverIdentity.hasEmail);
       regEl.style.display = 'none';
       if (nameRow) nameRow.style.display = 'none';
       if (phoneInput) phoneInput.style.display = 'none';
@@ -11973,7 +12116,7 @@
     if (known){
       welcomeEl.style.display = 'block';
       welcomeEl.style.color = 'var(--sage)';
-      welcomeEl.textContent = `✓ ברוכה שובך, ${known.firstName || ''}! אין צורך למלא פרטים נוספים.`;
+      welcomeEl.textContent = welcomeBackText(known.firstName, !known.hasTz, !known.hasEmail);
       detailsEl.style.display = 'none';
       emailWrap.style.display = known.hasEmail ? 'none' : 'block';
       return;
@@ -12042,7 +12185,7 @@
       splitNameIntoFields(match.name, 'bookingFirstNameInput', 'bookingLastNameInput');
       phoneInput.value = match.phone || '';
       welcomeEl.style.display = 'block';
-      welcomeEl.textContent = `✓ ברוכה שובך, ${match.name}! אין צורך למלא פרטים נוספים.`;
+      welcomeEl.textContent = welcomeBackText(match.name, clientNeedsTeudatZehut(match), !String(match.email || '').trim());
       regEl.style.display = 'none';
       updateReminderEmailVisibility();
       applyReminderChannelPref(match.reminderChannelPref);
