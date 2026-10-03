@@ -1869,18 +1869,19 @@
   .cal-day-head.cal-day-today .cal-day-name{color:#4A6141; font-weight:700;}
   .cal-day-head.cal-day-today .cal-day-num{color:#3D5436; font-weight:800;}
   .oh-slot{
-    border:1px solid rgba(var(--panel-line-rgb),0.3);
-    background:rgba(92,86,90,0.08);
-    color:var(--panel-text-dim);
-    border-radius:8px; padding:7px 10px; font-size:13px;
+    border:1.5px solid rgba(var(--panel-line-rgb),0.55);
+    background:var(--panel-card-bg);
+    color:var(--panel-text);
+    border-radius:8px; padding:9px 12px; font-size:14px; font-weight:600;
     font-family:'JetBrains Mono', monospace;
-    cursor:pointer; min-width:62px; text-align:center;
+    cursor:pointer; min-width:66px; text-align:center;
+    box-shadow:0 1px 2px rgba(28,23,25,0.07);
   }
-  .oh-slot:hover{border-color:var(--sage, #5E7856);}
+  .oh-slot:hover{border-color:#4A6342; background:#FFFFFF;}
   .oh-slot.released{
-    background:rgba(94,120,86,0.22);
-    border-color:var(--sage, #5E7856);
-    color:#2F4029; font-weight:700;
+    background:#4A6342;
+    border-color:#4A6342;
+    color:#FFFFFF; font-weight:700;
   }
   .cal-day-body{position:relative;}
   .cal-day-head.day-closed{background:rgba(155,44,66,0.07);}
@@ -2251,7 +2252,7 @@
     border-color:rgba(var(--panel-line-rgb),0.3); background:var(--panel-card-bg);
   }
 
-  #panel-business, #apptDetailOverlay, #manualBookingOverlay, #personalTimeOverlay, #clientProfileOverlay, #specialRequestDetailOverlay, #bizTopbar{
+  #panel-business, #apptDetailOverlay, #manualBookingOverlay, #personalTimeOverlay, #openHoursOverlay, #clientProfileOverlay, #specialRequestDetailOverlay, #bizTopbar{
     --panel-bg:#FBEFF3;
     --panel-card-bg:#FFF8FA;
     --panel-text:#221B1E;
