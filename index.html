@@ -3127,6 +3127,25 @@
       
         </div>
       </div>
+      
+      <div class="settings-section" data-settings-section="clientimport">
+        <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
+          <span class="settings-section-title">📥 טעינת לקוחות מקובץ</span>
+          <span class="settings-section-sub">העברת רשימת לקוחות קיימת למערכת</span>
+          <span class="settings-section-chevron">▾</span>
+        </button>
+        <div class="settings-section-body">
+          <div style="font-size:13px; color:var(--panel-text-dim); line-height:1.7; margin-bottom:12px; max-width:520px;">
+            טעינה <b>מוסיפה בלבד</b> — היא לעולם אינה מוחקת ואינה משנה לקוחה קיימת.
+            אפשר להריץ אותה שוב בלי חשש: לקוחה שכבר נטענה פשוט תדולג.
+          </div>
+          <input type="file" id="clientImportFile" accept=".json,application/json" class="field" style="max-width:520px;">
+          <div id="clientImportPreview" style="display:none; font-size:13.5px; line-height:1.8; background:#FAF5EE; border-radius:10px; padding:12px 14px; margin-top:12px; max-width:520px;"></div>
+          <div id="clientImportError" style="display:none; color:var(--wine); font-size:13px; margin-top:10px; max-width:520px;"></div>
+          <button type="button" class="cta" id="clientImportRunBtn" style="display:none; margin-top:12px;" onclick="runClientImport()">טעינת הלקוחות</button>
+          <div id="clientImportResult" style="display:none; font-size:13.5px; margin-top:12px; max-width:520px;"></div>
+        </div>
+      </div>
       <div class="settings-section" data-settings-section="backups">
         <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
           <span class="settings-section-title">💾 גיבויים ושחזור</span>
@@ -7750,16 +7769,20 @@
     const sortedClientIndices = clients.map((c, i) => i).sort((a, b) => clients[a].name.localeCompare(clients[b].name, 'he'));
     sortedClientIndices.forEach(i => {
       const c = clients[i];
-      const isBday = isBirthdayToday(c.birthday);
-      if (isBday){
-        birthdayClients.push(c.name);
-        const todayYear = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }).slice(0, 4);
-        if (c.email && c.lastBirthdayGreetingYear !== todayYear){
-          c.lastBirthdayGreetingYear = todayYear;
-          sendEmail(c.email, 'מזל טוב מ' + (branding.name || 'הכל בקליק') + '!', `היי ${c.name}, מזל טוב ליום ההולדת שלך! מאחלים לך יום נפלא, ומחכים לראותך אצלנו בקרוב.`);
-          if (typeof saveState === 'function') saveState();
-        }
+      if (!isBirthdayToday(c.birthday)) return;
+      birthdayClients.push(c.name);
+      const todayYear = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }).slice(0, 4);
+      if (c.email && c.lastBirthdayGreetingYear !== todayYear){
+        c.lastBirthdayGreetingYear = todayYear;
+        sendEmail(c.email, 'מזל טוב מ' + (branding.name || 'הכל בקליק') + '!', `היי ${c.name}, מזל טוב ליום ההולדת שלך! מאחלים לך יום נפלא, ומחכים לראותך אצלנו בקרוב.`);
+        if (typeof saveState === 'function') saveState();
       }
+    });
+    const CLIENT_RENDER_CAP = 100;
+    let matchedCount = 0, renderedCount = 0;
+    const visibleIndices = [];
+    sortedClientIndices.forEach(i => {
+      const c = clients[i];
       if (searchTerm){
         const nameMatch = c.name.toLowerCase().includes(searchTerm);
         const digitsInTerm = searchTerm.replace(/[^0-9]/g, '');
@@ -7768,6 +7791,13 @@
         const searchIsDigits = /\d/.test(searchTerm);
         if (!nameMatch && !(searchIsDigits && (phoneMatch || idMatch))) return;
       }
+      matchedCount++;
+      if (visibleIndices.length < CLIENT_RENDER_CAP) visibleIndices.push(i);
+    });
+    renderedCount = visibleIndices.length;
+    visibleIndices.forEach(i => {
+      const c = clients[i];
+      const isBday = isBirthdayToday(c.birthday);
       const row = document.createElement('div');
       row.className = 'client-card';
       row.dataset.clientName = c.name;
@@ -8044,6 +8074,15 @@
       });
       listEl.appendChild(row);
     });
+    if (matchedCount > renderedCount){
+      const more = document.createElement('div');
+      more.className = 'client-list-more';
+      more.style.cssText = 'font-size:13px; color:var(--panel-text-dim); line-height:1.7; padding:14px 4px; text-align:center;';
+      more.textContent = searchTerm
+        ? ('מוצגות ' + renderedCount + ' מתוך ' + matchedCount + ' תוצאות. אפשר לצמצם את החיפוש.')
+        : ('מוצגות ' + renderedCount + ' לקוחות מתוך ' + matchedCount + '. לאיתור לקוחה מסוימת יש להשתמש בשורת החיפוש למעלה — אפשר לחפש לפי שם, טלפון או מספר זהות.');
+      listEl.appendChild(more);
+    }
     const bdayAlertEl = document.getElementById('birthdayAlert');
     if (birthdayClients.length){
       bdayAlertEl.classList.add('show');
@@ -8144,6 +8183,127 @@
     openAddModal('addInventoryOverlay', ['newInvName', 'newInvStock', 'newInvThreshold'], 'newInvName', 'newInvError');
   }
   function closeAddInventoryModal(){ closeAddModal('addInventoryOverlay'); }
+  let clientImportPending = null;
+  function clientImportShowError(msg){
+    const el = document.getElementById('clientImportError');
+    const btn = document.getElementById('clientImportRunBtn');
+    const prev = document.getElementById('clientImportPreview');
+    if (el){ el.style.display = msg ? 'block' : 'none'; el.textContent = msg || ''; }
+    if (msg){
+      clientImportPending = null;
+      if (btn) btn.style.display = 'none';
+      if (prev) prev.style.display = 'none';
+    }
+  }
+  function normalizeImportedClient(raw){
+    if (!raw || typeof raw !== 'object') return null;
+    const name = String(raw.name || '').trim();
+    const tz = String(raw.teudatZehut || '').replace(/[^0-9]/g, '');
+    if (!name || !tz) return null;
+    const out = { name: name, teudatZehut: tz, visits: 0, note: '' };
+    const phone = String(raw.phone || '').trim();
+    if (phone) out.phone = phone;
+    const email = String(raw.email || '').trim();
+    if (email) out.email = email;
+    return out;
+  }
+  function analyzeClientImport(list){
+    const seen = Object.create(null);
+    const existingTz = Object.create(null);
+    (clients || []).forEach(c => { if (c && c.teudatZehut) existingTz[String(c.teudatZehut)] = true; });
+    const fresh = [], already = [], broken = [], dupInFile = [];
+    const phoneCount = Object.create(null);
+    list.forEach((raw, i) => {
+      const c = normalizeImportedClient(raw);
+      if (!c){ broken.push(i + 1); return; }
+      if (seen[c.teudatZehut]){ dupInFile.push(c.name); return; }
+      seen[c.teudatZehut] = true;
+      if (existingTz[c.teudatZehut]){ already.push(c.name); return; }
+      if (c.phone){
+        const d = c.phone.replace(/[^0-9]/g, '');
+        phoneCount[d] = (phoneCount[d] || 0) + 1;
+      }
+      fresh.push(c);
+    });
+    let sharedNumbers = 0, sharedClients = 0;
+    Object.keys(phoneCount).forEach(p => {
+      if (phoneCount[p] > 1){ sharedNumbers++; sharedClients += phoneCount[p]; }
+    });
+    return { fresh, already, broken, dupInFile, sharedNumbers, sharedClients,
+             noPhone: fresh.filter(c => !c.phone).length };
+  }
+  document.getElementById('clientImportFile')?.addEventListener('change', function(){
+    const resEl = document.getElementById('clientImportResult');
+    if (resEl) resEl.style.display = 'none';
+    clientImportShowError('');
+    const file = this.files && this.files[0];
+    if (!file) return;
+    if (!isOwnerSession || !isOwnerSession()){
+      clientImportShowError('צריך להיות מחוברת כמנהלת כדי לטעון לקוחות.');
+      return;
+    }
+    if (typeof cloudLoadComplete !== 'undefined' && !cloudLoadComplete){
+      clientImportShowError('הנתונים עדיין נטענים מהענן. רגע אחד ונסי שוב.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      let parsed;
+      try { parsed = JSON.parse(String(reader.result || '')); }
+      catch (e){ clientImportShowError('הקובץ אינו קובץ JSON תקין. יש לטעון את הקובץ כפי שהתקבל, בלי לפתוח ולשמור אותו בתוכנה אחרת.'); return; }
+      if (!Array.isArray(parsed)){ clientImportShowError('הקובץ אינו רשימת לקוחות.'); return; }
+      if (!parsed.length){ clientImportShowError('הקובץ ריק.'); return; }
+      const a = analyzeClientImport(parsed);
+      if (!a.fresh.length){
+        clientImportShowError(a.already.length
+          ? ('כל ' + a.already.length + ' הלקוחות שבקובץ כבר קיימות במערכת. אין מה לטעון.')
+          : 'לא נמצאה בקובץ אף לקוחה תקינה (צריך שם ומספר זהות).');
+        return;
+      }
+      clientImportPending = a.fresh;
+      const prev = document.getElementById('clientImportPreview');
+      let html = '<b>' + a.fresh.length + ' לקוחות ייווספו.</b>';
+      html += '<br>כרגע יש במערכת ' + (clients || []).length + '.';
+      if (a.already.length) html += '<br>' + a.already.length + ' כבר קיימות ויידולגו.';
+      if (a.sharedNumbers) html += '<br>' + a.sharedNumbers + ' מספרי טלפון משותפים ל-' + a.sharedClients + ' לקוחות — המערכת תבקש לבחור ביניהן בכל פעם.';
+      if (a.noPhone) html += '<br>' + a.noPhone + ' בלי מספר טלפון — לא יקבלו תזכורות.';
+      if (a.dupInFile.length) html += '<br>' + a.dupInFile.length + ' כפילויות בתוך הקובץ עצמו יידולגו.';
+      if (a.broken.length) html += '<br>' + a.broken.length + ' שורות בקובץ חסרות שם או מספר זהות ויידולגו.';
+      prev.innerHTML = html;
+      prev.style.display = 'block';
+      document.getElementById('clientImportRunBtn').style.display = 'inline-block';
+    };
+    reader.onerror = () => clientImportShowError('לא הצלחתי לקרוא את הקובץ.');
+    reader.readAsText(file, 'utf-8');
+  });
+  async function runClientImport(){
+    if (!clientImportPending || !clientImportPending.length) return;
+    const n = clientImportPending.length;
+    if (!confirm('להוסיף ' + n + ' לקוחות לכרטסת?\n\nהפעולה מוסיפה בלבד ואינה מוחקת דבר.')) return;
+    const btn = document.getElementById('clientImportRunBtn');
+    if (btn){ btn.disabled = true; btn.textContent = 'טוען...'; }
+    clientImportPending.forEach(c => clients.push(c));
+    const added = n;
+    clientImportPending = null;
+    try {
+      if (typeof saveState === 'function') await saveState();
+      if (typeof renderClients === 'function') renderClients();
+      const res = document.getElementById('clientImportResult');
+      if (res){
+        res.style.display = 'block';
+        res.innerHTML = '✓ <b>' + added + ' לקוחות נוספו.</b> סך הכול בכרטסת: ' + clients.length + '.';
+      }
+      if (typeof showAdminToast === 'function') showAdminToast('✓ ' + added + ' לקוחות נטענו');
+    } catch (e){
+      console.error('client import save failed:', e);
+      clientImportShowError('הלקוחות נוספו למסך אבל השמירה לענן נכשלה. לא לרענן את הדף — לנסות שוב בעוד רגע.');
+    }
+    if (btn){ btn.disabled = false; btn.textContent = 'טעינת הלקוחות'; btn.style.display = 'none'; }
+    const f = document.getElementById('clientImportFile');
+    if (f) f.value = '';
+    const prev = document.getElementById('clientImportPreview');
+    if (prev) prev.style.display = 'none';
+  }
   function addClient(){
     const firstEl = document.getElementById('newClientFirstName');
     const lastEl = document.getElementById('newClientLastName');
