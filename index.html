@@ -3593,11 +3593,12 @@
 <div id="manualBookingOverlay" class="myday-overlay">
   <div class="myday-sheet">
     <div class="myday-header">
-      <h3>הוספת תור ידנית</h3>
+      <h3 id="mbModalTitle">הוספת תור ידנית</h3>
       <div class="myday-actions">
         <button onclick="closeManualBookingModal()">✕ סגירה</button>
       </div>
     </div>
+    <div id="mbRescheduleBanner" style="display:none; background:rgba(176,46,70,0.07); border:1px solid rgba(176,46,70,0.25); border-radius:10px; padding:9px 12px; font-size:13px; line-height:1.55; margin-bottom:12px;"></div>
     
     <div class="mb-step-dots" id="mbStepDots">
       <span class="mb-step-dot active" data-mbstep="1"></span>
@@ -3655,6 +3656,8 @@
         <input type="hidden" id="mbService">
         <label style="font-size:12px; color:var(--ivory-dim); margin-bottom:-4px;">משך הטיפול הכולל (בדקות) — מחושב אוטומטית מסכום הטיפולים שנבחרו, ואפשר לשנות במיוחד ללקוחה הזו</label>
         <input type="number" id="mbDuration" class="field" min="5" step="5" placeholder="משך בדקות">
+        <label style="font-size:12px; color:var(--ivory-dim); margin-bottom:-4px;">הערות לפגישה הזו (נשמרות על התור, לא על כרטיס הלקוחה)</label>
+        <textarea id="mbApptNote" class="field" rows="2" placeholder="למשל: מגיעה עם הבת, מבקשת גוון בהיר יותר, לשלם במזומן"></textarea>
         <div id="mbStep2Error" style="display:none; color:var(--wine); font-size:13px;"></div>
         <div class="step-nav">
           <button class="step-back" onclick="mbGoToStep(1)">חזרה</button>
@@ -3682,6 +3685,14 @@
         <input type="hidden" id="mbTime">
         <div class="slot-grid" id="mbSlotGrid"></div>
         <div id="mbSlotsHint" style="font-size:12px;color:#8A8178;margin-top:-4px;"></div>
+        <button type="button" class="cta ghost" id="mbOtherTimeBtn" style="width:100%; border-style:dashed; margin-top:8px;">🕐 בחירת כל שעה אחרת — גם תפוסה וגם מחוץ לשעות העבודה</button>
+        <div id="mbOtherTimeWrap" style="display:none; margin-top:8px;">
+          <div class="field-row">
+            <input type="time" id="mbOtherTime" class="field" step="300" style="margin:0;">
+            <button type="button" class="cta ghost" id="mbOtherTimeApply" style="margin:0; white-space:nowrap;">בחירת השעה</button>
+          </div>
+          <div id="mbOtherTimeWarn" style="display:none; font-size:12.5px; line-height:1.5; margin-top:8px; padding:8px 10px; border-radius:8px; background:rgba(176,46,70,0.08); border:1px solid rgba(176,46,70,0.25);"></div>
+        </div>
         <div id="mbError" style="display:none; color:var(--wine); font-size:13px;"></div>
         <div class="step-nav">
           <button class="step-back" onclick="mbGoToStep(2)">חזרה</button>
@@ -3700,22 +3711,38 @@
     <div id="apptDetailConfirmedBadge" style="display:none; color:#1c8a4b; background:rgba(28,138,75,0.1); border:1px solid rgba(28,138,75,0.3); border-radius:8px; padding:8px 12px; font-weight:700; text-align:center; margin-bottom:12px;">✓ אושר ע״י הלקוחה</div>
     <div class="appt-detail-card">
       <div class="appt-detail-row"><span class="appt-detail-label">לקוחה</span><span class="appt-detail-value" id="apptDetailClient"></span></div>
-      
+      <div class="appt-detail-row"><span class="appt-detail-label">טלפון</span><span class="appt-detail-value" id="apptDetailPhone"></span></div>
+      <div class="appt-detail-row"><span class="appt-detail-label">ת"ז</span><span class="appt-detail-value" id="apptDetailTz"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">קטגוריה</span><span class="appt-detail-value" id="apptDetailCategory"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">שירות</span><span class="appt-detail-value" id="apptDetailService"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">תאריך</span><span class="appt-detail-value" id="apptDetailDate"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">שעה</span><span class="appt-detail-value" id="apptDetailTime"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">עובדת</span><span class="appt-detail-value" id="apptDetailStaff"></span></div>
+      <div class="appt-detail-row" id="apptDetailNoteRow" style="display:none;"><span class="appt-detail-label">הערות לפגישה</span><span class="appt-detail-value" id="apptDetailNote" style="white-space:pre-wrap;"></span></div>
     </div>
     
     <div class="appt-detail-card" id="apptEditPanel" style="display:none; margin-top:12px;">
-      <div class="appt-edit-label">משך הטיפול</div>
+      <div class="appt-edit-label">שעת התור</div>
+      <div id="apptEditTimeEcho" style="font-family:'JetBrains Mono'; font-size:14px; font-weight:700; margin:2px 0 8px;"></div>
+      <div class="slot-grid" id="apptEditSlotGrid" style="margin-bottom:8px;"></div>
+      <div id="apptEditSlotHint" style="font-size:12px; color:var(--muted,#8a7f72); line-height:1.5; margin-bottom:8px;"></div>
+      <button type="button" class="cta ghost" id="apptEditOtherTimeBtn" style="width:100%; border-style:dashed;">🕐 בחירת כל שעה אחרת — גם תפוסה וגם מחוץ לשעות העבודה</button>
+      <div id="apptEditOtherTimeWrap" style="display:none; margin-top:8px;">
+        <div class="field-row">
+          <input type="time" id="apptEditOtherTime" class="field" step="300" style="margin:0;">
+          <button type="button" class="cta ghost" id="apptEditOtherTimeApply" style="margin:0; white-space:nowrap;">בחירת השעה</button>
+        </div>
+        <div id="apptEditOtherTimeWarn" style="display:none; font-size:12.5px; line-height:1.5; margin-top:8px; padding:8px 10px; border-radius:8px; background:rgba(176,46,70,0.08); border:1px solid rgba(176,46,70,0.25);"></div>
+      </div>
+      <div class="appt-edit-label" style="margin-top:16px;">משך הטיפול</div>
       <div class="appt-edit-dur-row">
         <button type="button" class="appt-edit-step" id="apptEditDurMinus" aria-label="הפחתת 5 דקות">−</button>
         <input type="number" id="apptEditDur" class="field" min="5" step="5" inputmode="numeric" style="margin:0; text-align:center;">
         <button type="button" class="appt-edit-step" id="apptEditDurPlus" aria-label="הוספת 5 דקות">+</button>
         <span class="appt-edit-dur-unit">דקות</span>
       </div>
+      <div class="appt-edit-label" style="margin-top:14px;">הערות לפגישה הזו</div>
+      <textarea id="apptEditNote" class="field" rows="2" style="margin:0;" placeholder="למשל: מגיעה עם הבת, מבקשת גוון בהיר יותר, לשלם במזומן"></textarea>
       <div class="appt-edit-label" style="margin-top:14px;">טיפולים בתור</div>
       <div id="apptEditSvcList" class="mb-svc-chip-row"></div>
       <div class="appt-edit-label" style="margin-top:12px;">הוספת טיפול</div>
@@ -3732,6 +3759,7 @@
     </div>
     <div class="appt-detail-actions">
       <button type="button" class="cta" id="apptDetailEditBtn">✎ עריכת התור</button>
+      <button type="button" class="cta" id="apptDetailRescheduleBtn">📅 קביעה מחדש — יום ושעה אחרים</button>
       <button type="button" class="cta" id="apptDetailCancelBtn">ביטול תור</button>
       <button type="button" class="cta appt-detail-client-btn" id="apptDetailClientBtn">לכרטסת הלקוחה</button>
     </div>
@@ -4072,6 +4100,8 @@
   }
   let mbSelectedServices = [];
   let mbFromSpecialRequestId = null;
+  let mbRescheduleApptId = null;
+  let mbForcedTime = null;
   let mbDurationManuallySet = false;
   let mbCurrentCategory = null;
   function mbSelectedServiceObjs(){
@@ -4749,18 +4779,45 @@
     const idx = services.findIndex(s => s.name === bestService);
     return idx !== -1 ? idx : null;
   }
+  function openRescheduleModal(appt){
+    if (!appt) return;
+    const client = findClientForAppt(appt);
+    const dParts = String(appt.date).split('-').map(Number);
+    closeApptDetailOverlay();
+    openManualBookingModal({
+      rescheduleAppt: appt,
+      date: new Date(dParts[0], dParts[1] - 1, dParts[2]),
+      time: appt.time,
+      staff: appt.staff,
+      duration: appt.dur,
+      clientName: appt.client,
+      clientId: (client && client.teudatZehut) || appt.teudatZehut || '',
+      clientPhone: (client && client.phone) || '',
+      services: apptServiceObjects(appt).map(o => o.name),
+    });
+  }
   function openManualBookingModal(opts){
     opts = opts || {};
     mbFromSpecialRequestId = opts.fromSpecialRequestId || null;
+    mbRescheduleApptId = (opts.rescheduleAppt && opts.rescheduleAppt.id) || null;
+    mbForcedTime = null;
     const suggestedSvcIdx = opts.serviceIndex !== undefined
       ? opts.serviceIndex
       : mostFrequentServiceIndexFor(opts.clientName);
     const hasSuggestion = suggestedSvcIdx !== null && suggestedSvcIdx !== undefined && !!services[suggestedSvcIdx];
-    mbSelectedServices = hasSuggestion ? [{ svcIndex: suggestedSvcIdx }] : [];
-    mbDurationManuallySet = false;
+    const presetServiceIdx = (opts.services || [])
+      .map(n => services.findIndex(s => s && s.name === n))
+      .filter(i => i !== -1)
+      .map(i => ({ svcIndex: i }));
+    mbSelectedServices = presetServiceIdx.length
+      ? presetServiceIdx
+      : (hasSuggestion ? [{ svcIndex: suggestedSvcIdx }] : []);
+    mbDurationManuallySet = !!(opts.rescheduleAppt && opts.duration);
     renderMbSelectedServicesUI();
     const durInput = document.getElementById('mbDuration');
     if (durInput) durInput.value = opts.duration || mbTotalDuration() || 30;
+    const mbNoteInput = document.getElementById('mbApptNote');
+    if (mbNoteInput) mbNoteInput.value = (opts.rescheduleAppt && opts.rescheduleAppt.note) || '';
     mbSelectedStaffIndex = opts.staff !== undefined ? opts.staff : 'any';
     const targetDate = opts.date || new Date();
     mbSelectedDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
@@ -4787,7 +4844,29 @@
     const mbStep2ErrEl = document.getElementById('mbStep2Error');
     if (mbStep1ErrEl) mbStep1ErrEl.style.display = 'none';
     if (mbStep2ErrEl) mbStep2ErrEl.style.display = 'none';
-    if (typeof mbGoToStep === 'function') mbGoToStep(1);
+    const mbTitleEl = document.getElementById('mbModalTitle');
+    const mbBanner = document.getElementById('mbRescheduleBanner');
+    const mbSubmitEl = document.getElementById('mbSubmitBtn');
+    const mbOtherWrapEl = document.getElementById('mbOtherTimeWrap');
+    if (mbOtherWrapEl) mbOtherWrapEl.style.display = 'none';
+    const mbOtherWarnEl = document.getElementById('mbOtherTimeWarn');
+    if (mbOtherWarnEl){ mbOtherWarnEl.style.display = 'none'; mbOtherWarnEl.textContent = ''; }
+    const mbOtherInputEl = document.getElementById('mbOtherTime');
+    if (mbOtherInputEl) mbOtherInputEl.value = opts.time || '';
+    if (opts.rescheduleAppt){
+      const ra = opts.rescheduleAppt;
+      if (mbTitleEl) mbTitleEl.textContent = 'קביעה מחדש של תור';
+      if (mbSubmitEl) mbSubmitEl.textContent = 'שמירת השינוי';
+      if (mbBanner){
+        mbBanner.style.display = 'block';
+        mbBanner.textContent = `מוזז התור של ${ra.client} — כרגע ${formatDateDMY(ra.date)} בשעה ${ra.time}. לבחור יום ושעה חדשים. התור אינו מבוטל ואינו נקבע מחדש: אותו תור עובר למועד אחר.`;
+      }
+    } else {
+      if (mbTitleEl) mbTitleEl.textContent = 'הוספת תור ידנית';
+      if (mbSubmitEl) mbSubmitEl.textContent = 'הוספת תור';
+      if (mbBanner){ mbBanner.style.display = 'none'; mbBanner.textContent = ''; }
+    }
+    if (typeof mbGoToStep === 'function') mbGoToStep(opts.rescheduleAppt ? 3 : 1);
     document.getElementById('manualBookingOverlay').classList.add('show');
     resetManualBookingScroll();
     mbRefreshCalendarAndSlots();
@@ -4806,6 +4885,46 @@
   document.getElementById('mbDuration')?.addEventListener('input', function(){
     mbDurationManuallySet = true;
     mbRefreshCalendarAndSlots();
+  });
+  document.getElementById('apptDetailRescheduleBtn')?.addEventListener('click', () => {
+    if (apptDetailCurrent) openRescheduleModal(apptDetailCurrent);
+  });
+  document.getElementById('mbOtherTimeBtn')?.addEventListener('click', () => {
+    const wrap = document.getElementById('mbOtherTimeWrap');
+    if (!wrap) return;
+    const showing = wrap.style.display !== 'none';
+    wrap.style.display = showing ? 'none' : '';
+    if (!showing){
+      const inp = document.getElementById('mbOtherTime');
+      const cur = document.getElementById('mbTime');
+      if (inp) inp.value = (cur && cur.value) || mbRequestedTime || '';
+    }
+  });
+  document.getElementById('mbOtherTimeApply')?.addEventListener('click', () => {
+    const inp = document.getElementById('mbOtherTime');
+    const warn = document.getElementById('mbOtherTimeWarn');
+    const raw = (inp && inp.value) || '';
+    if (!/^\d{2}:\d{2}$/.test(raw)){
+      if (warn){ warn.style.display = 'block'; warn.textContent = 'יש לבחור שעה תקינה.'; }
+      return;
+    }
+    const conflict = mbConflictAt(raw);
+    mbRequestedTime = raw;
+    mbForcedTime = conflict ? raw : null;
+    const timeEl = document.getElementById('mbTime');
+    if (timeEl) timeEl.value = raw;
+    if (warn){
+      if (!conflict){
+        warn.style.display = 'none';
+        warn.textContent = '';
+      } else {
+        warn.style.display = 'block';
+        warn.textContent = conflict.kind === 'appt'
+          ? `⚠️ השעה הזו חופפת לתור של ${(conflict.clash && conflict.clash.client) || 'לקוחה אחרת'} ב-${conflict.clash && conflict.clash.time}. אפשר לשמור בכל זאת — שתי הלקוחות יופיעו ביומן באותו זמן.`
+          : '⚠️ השעה הזו מחוץ לשעות העבודה של העובדת ביום הזה (או שהיום סגור). אפשר לשמור בכל זאת.';
+      }
+    }
+    renderManualBookingSlots();
   });
   function mbLockClientName(name){
     const firstInput = document.getElementById('mbClientFirstName');
@@ -4998,6 +5117,8 @@
   });
   function closeManualBookingModal(){
     document.getElementById('manualBookingOverlay').classList.remove('show');
+    mbRescheduleApptId = null;
+    mbForcedTime = null;
   }
   function mbGoToStep(n){
     document.querySelectorAll('#manualBookingOverlay .mb-wizard-step').forEach(s => s.classList.remove('active'));
@@ -5456,13 +5577,56 @@
       });
     }
     const previousTimeGotDropped = previouslySelected && timeInput.value !== previouslySelected;
+    if (mbForcedTime && !timeInput.value){
+      timeInput.value = mbForcedTime;
+      const forced = document.createElement('div');
+      forced.className = 'slot selected';
+      forced.textContent = mbForcedTime;
+      gridEl.insertBefore(forced, gridEl.firstChild);
+    }
     if (hint){
-      if (previousTimeGotDropped && anyAvailable){
-        hint.textContent = `השעה ${previouslySelected} שנבחרה לא מתאימה למשך הטיפול הנוכחי — יש לבחור שעה אחרת מהרשימה.`;
+      const canOverride = ' אפשר תמיד לבחור שעה אחרת לגמרי בכפתור שלמטה — גם שעה תפוסה — ואז תוצג אזהרה ותידרש אישור.';
+      if (mbForcedTime && timeInput.value === mbForcedTime){
+        hint.textContent = `נבחרה השעה ${mbForcedTime} ידנית, מחוץ לרשימת השעות הפנויות.`;
+      } else if (previousTimeGotDropped && anyAvailable){
+        hint.textContent = `השעה ${previouslySelected} שנבחרה לא מתאימה למשך הטיפול הנוכחי — יש לבחור שעה אחרת מהרשימה.` + canOverride;
       } else {
-        hint.textContent = anyAvailable ? 'מוצגות כאן רק שעות פנויות, בדיוק כמו בקביעת תור ללקוחה.' : 'אין שעות פנויות ביום הזה. אפשר לבחור יום אחר בלוח השנה.';
+        hint.textContent = (anyAvailable
+          ? 'מוצגות כאן רק שעות פנויות, בדיוק כמו בקביעת תור ללקוחה.'
+          : 'אין שעות פנויות ביום הזה. אפשר לבחור יום אחר בלוח השנה.') + canOverride;
       }
     }
+  }
+  function mbConflictAt(timeStr){
+    const dateVal = document.getElementById('mbDate')?.value;
+    const staffValRaw = document.getElementById('mbStaff')?.value;
+    if (!dateVal || !timeStr) return null;
+    const parts = dateVal.split('-').map(Number);
+    const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+    const overrideDur = parseInt(document.getElementById('mbDuration')?.value);
+    const dur = !isNaN(overrideDur) && overrideDur > 0 ? overrideDur : (mbTotalDuration() || 30);
+    const startMin = timeToMinutes(timeStr);
+    const endMin = startMin + dur;
+    const candidates = staffValRaw === 'any'
+      ? getCapableStaffIndicesForCats(mbSelectedCategories())
+      : [parseInt(staffValRaw)].filter(i => !isNaN(i));
+    let firstClash = null;
+    const free = candidates.some(idx => {
+      const dayInfo = dayInfoForDate(idx, dateObj);
+      const windows = (typeof getOwnerDayWindows === 'function') ? getOwnerDayWindows(dayInfo, dateObj) : [];
+      if (!windows.some(([s, e]) => startMin >= s && endMin <= e)) return false;
+      const clash = weekAppointments.find(a => {
+        if (!a || a.date !== dateVal || a.staff !== idx) return false;
+        if (a.status === 'cancelled') return false;
+        if (mbRescheduleApptId && a.id === mbRescheduleApptId) return false;
+        const s = timeToMinutes(a.time), e = s + (a.dur || 30);
+        return startMin < e && endMin > s;
+      });
+      if (clash){ if (!firstClash) firstClash = clash; return false; }
+      return !getBlockedRangesForStaff(dateObj, idx).some(([bs, be]) => startMin < be && endMin > bs);
+    });
+    if (free) return null;
+    return firstClash ? { kind: 'appt', clash: firstClash } : { kind: 'hours' };
   }
   function minutesToTimeGlobal(m){
     return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
@@ -5670,12 +5834,30 @@
     const confirmedBadge = document.getElementById('apptDetailConfirmedBadge');
     if (confirmedBadge) confirmedBadge.style.display = appt.confirmedByClient ? 'block' : 'none';
     document.getElementById('apptDetailClient').textContent = appt.client || '';
+    const apptDetailClientRec = findClientForAppt(appt);
+    const apptDetailPhoneEl = document.getElementById('apptDetailPhone');
+    if (apptDetailPhoneEl){
+      const ph = (apptDetailClientRec && apptDetailClientRec.phone) || '';
+      apptDetailPhoneEl.textContent = ph || 'אין מספר בכרטסת';
+    }
+    const apptDetailTzEl = document.getElementById('apptDetailTz');
+    if (apptDetailTzEl){
+      const tzRaw = String((apptDetailClientRec && apptDetailClientRec.teudatZehut) || appt.teudatZehut || '');
+      apptDetailTzEl.textContent = isPlausibleTeudatZehut(tzRaw) ? tzRaw : 'חסרה';
+    }
     document.getElementById('apptDetailService').textContent = describeApptServices(appt) || '—';
     const apptDetailCategoryEl = document.getElementById('apptDetailCategory');
     if (apptDetailCategoryEl) apptDetailCategoryEl.textContent = describeApptCategories(appt) || '—';
     document.getElementById('apptDetailDate').textContent = formatDateDMY(appt.date);
     document.getElementById('apptDetailTime').textContent = appt.time + (appt.dur ? ' (' + appt.dur + ' דק\')' : '');
     document.getElementById('apptDetailStaff').textContent = (staff[appt.staff] && staff[appt.staff].name) || '—';
+    const apptDetailNoteRow = document.getElementById('apptDetailNoteRow');
+    const apptDetailNoteEl = document.getElementById('apptDetailNote');
+    if (apptDetailNoteRow && apptDetailNoteEl){
+      const noteTxt = String(appt.note || '').trim();
+      apptDetailNoteEl.textContent = noteTxt;
+      apptDetailNoteRow.style.display = noteTxt ? '' : 'none';
+    }
     const apptDetailCancelBtn = document.getElementById('apptDetailCancelBtn');
     if (apptDetailCancelBtn){
       const isPastAppt = isApptInThePast(appt);
@@ -5731,6 +5913,9 @@
     if (!appt) return;
     apptEditDraft = {
       dur: appt.dur || 30,
+      time: appt.time || '',
+      forcedTime: false,
+      note: appt.note || '',
       services: apptServiceObjects(appt).map(o => ({
         name: o.name,
         duration: (o.svc && o.svc.duration) || 0,
@@ -5740,6 +5925,14 @@
     };
     const durEl = document.getElementById('apptEditDur');
     if (durEl) durEl.value = apptEditDraft.dur;
+    const noteEl = document.getElementById('apptEditNote');
+    if (noteEl) noteEl.value = apptEditDraft.note || '';
+    const otherWrap = document.getElementById('apptEditOtherTimeWrap');
+    if (otherWrap) otherWrap.style.display = 'none';
+    const otherWarn = document.getElementById('apptEditOtherTimeWarn');
+    if (otherWarn){ otherWarn.style.display = 'none'; otherWarn.textContent = ''; }
+    const otherInput = document.getElementById('apptEditOtherTime');
+    if (otherInput) otherInput.value = apptEditDraft.time || '';
     renderApptEditPanel();
     const panel = document.getElementById('apptEditPanel');
     if (panel) panel.style.display = '';
@@ -5795,6 +5988,91 @@
       catSel.onchange = fillApptEditServiceOptions;
     }
     fillApptEditServiceOptions();
+    renderApptEditSlots();
+  }
+  function getOwnerDayWindows(dayInfo, dateObj){
+    if (!dayInfo || !dayInfo.open) return [];
+    if (dateObj < todayMidnight) return [];
+    const rawRanges = (Array.isArray(dayInfo.ranges) && dayInfo.ranges.length)
+      ? dayInfo.ranges
+      : (dayInfo.from && dayInfo.to ? [{ from: dayInfo.from, to: dayInfo.to }] : []);
+    return rawRanges
+      .map(r => [timeToMinutes(r.from), timeToMinutes(r.to)])
+      .filter(([s, e]) => s < e)
+      .sort((a, b) => a[0] - b[0]);
+  }
+  function apptEditConflictAt(startMin, dur){
+    const appt = apptDetailCurrent;
+    if (!appt) return null;
+    const parts = String(appt.date).split('-').map(Number);
+    const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+    const endMin = startMin + dur;
+    const clash = weekAppointments.find(a => {
+      if (!a || a.id === appt.id) return false;
+      if (a.date !== appt.date || a.staff !== appt.staff) return false;
+      if (a.status === 'cancelled') return false;
+      const s = timeToMinutes(a.time), e = s + (a.dur || 30);
+      return startMin < e && endMin > s;
+    });
+    if (clash) return { kind: 'appt', clash };
+    const blocked = (typeof getBlockedRangesForStaff === 'function' ? getBlockedRangesForStaff(dateObj, appt.staff) : [])
+      .some(([bs, be]) => startMin < be && endMin > bs);
+    if (blocked) return { kind: 'block' };
+    const windows = getOwnerDayWindows(dayInfoForDate(appt.staff, dateObj), dateObj);
+    if (windows.length && !windows.some(([s, e]) => startMin >= s && endMin <= e)) return { kind: 'hours' };
+    return null;
+  }
+  function renderApptEditSlots(){
+    const gridEl = document.getElementById('apptEditSlotGrid');
+    const hintEl = document.getElementById('apptEditSlotHint');
+    const echoEl = document.getElementById('apptEditTimeEcho');
+    const appt = apptDetailCurrent;
+    if (!gridEl || !apptEditDraft || !appt) return;
+    gridEl.innerHTML = '';
+    const dur = apptEditDraft.dur || appt.dur || 30;
+    if (echoEl){
+      const endStr = minutesToTimeGlobal(timeToMinutes(apptEditDraft.time) + dur);
+      const moved = apptEditDraft.time !== appt.time;
+      echoEl.textContent = `${apptEditDraft.time}–${endStr}` + (moved ? `  (במקום ${appt.time})` : '');
+      echoEl.style.color = moved ? 'var(--wine,#b02e46)' : '';
+    }
+    const parts = String(appt.date).split('-').map(Number);
+    const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+    const windows = getOwnerDayWindows(dayInfoForDate(appt.staff, dateObj), dateObj);
+    let offered = 0;
+    windows.forEach(([openMin, closeMin]) => {
+      const first = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
+      for (let t = first; t + dur <= closeMin; t += slotStepMinutes){
+        if (apptEditConflictAt(t, dur)) continue;
+        offered += 1;
+        const timeStr = minutesToTimeGlobal(t);
+        const d = document.createElement('div');
+        d.className = 'slot' + (timeStr === apptEditDraft.time ? ' selected' : '');
+        d.textContent = timeStr;
+        d.onclick = () => {
+          apptEditDraft.time = timeStr;
+          apptEditDraft.forcedTime = false;
+          const otherInput = document.getElementById('apptEditOtherTime');
+          if (otherInput) otherInput.value = timeStr;
+          const warn = document.getElementById('apptEditOtherTimeWarn');
+          if (warn){ warn.style.display = 'none'; warn.textContent = ''; }
+          renderApptEditSlots();
+        };
+        gridEl.appendChild(d);
+      }
+    });
+    if (!gridEl.querySelector('.slot.selected')){
+      const d = document.createElement('div');
+      d.className = 'slot selected';
+      d.textContent = apptEditDraft.time;
+      d.onclick = () => {};
+      gridEl.insertBefore(d, gridEl.firstChild);
+    }
+    if (hintEl){
+      hintEl.textContent = offered
+        ? `מוצגות השעות הפנויות ל${(staff[appt.staff] && staff[appt.staff].name) || 'עובדת זו'} באותו יום, לפי משך של ${dur} דקות. אפשר תמיד לבחור שעה אחרת לגמרי בכפתור שלמטה — גם שעה תפוסה — ואז תוצג אזהרה ותידרש אישור. להעברה ליום אחר או לעובדת אחרת — "📅 קביעה מחדש" בתחתית המסך.`
+        : `אין שעה פנויה אחרת באותו יום באורך של ${dur} דקות. אפשר לקצר את המשך, או ללחוץ על הכפתור שלמטה ולבחור כל שעה שהיא — כולל תפוסה — ולאשר את החפיפה.`;
+    }
   }
   function fillApptEditServiceOptions(){
     const catSel = document.getElementById('apptEditAddCat');
@@ -5825,32 +6103,25 @@
       apptEditShowError('משך הטיפול חייב להיות לפחות 5 דקות.');
       return;
     }
-    const startMin = timeToMinutes(appt.time);
+    const newTime = /^\d{2}:\d{2}$/.test(String(apptEditDraft.time || '')) ? apptEditDraft.time : appt.time;
+    const timeChanged = newTime !== appt.time;
+    const startMin = timeToMinutes(newTime);
     const endMin = startMin + newDur;
-    const clash = weekAppointments.find(a => {
-      if (!a || a.id === appt.id) return false;
-      if (a.date !== appt.date || a.staff !== appt.staff) return false;
-      const s = timeToMinutes(a.time), e = s + (a.dur || 30);
-      return startMin < e && endMin > s;
-    });
-    if (clash){
-      apptEditShowError(`המשך החדש גולש לתור של ${clash.client || 'לקוחה אחרת'} ב-${clash.time}. יש לקצר את המשך, או להזיז קודם את התור השני.`);
-      return;
-    }
     const dParts = String(appt.date).split('-').map(Number);
     const apptDateObj = new Date(dParts[0], dParts[1] - 1, dParts[2]);
-    const blocked = (typeof getBlockedRangesForStaff === 'function' ? getBlockedRangesForStaff(apptDateObj, appt.staff) : [])
-      .some(([bs, be]) => startMin < be && endMin > bs);
-    if (blocked){
-      apptEditShowError('המשך החדש גולש לתוך חסימת זמן אישי של העובדת. יש לקצר את המשך, או להסיר קודם את החסימה.');
-      return;
-    }
     const emp = staff[appt.staff];
-    const dayInfo = emp ? dayInfoForDate(appt.staff, apptDateObj) : null;
-    const windows = (emp && dayInfo && typeof getEffectiveDayWindows === 'function') ? getEffectiveDayWindows(dayInfo, apptDateObj) : [];
-    if (windows.length && !windows.some(([s, e]) => startMin >= s && endMin <= e)){
-      apptEditShowError(`המשך החדש חורג משעות העבודה של ${(emp && emp.name) || 'העובדת'} ביום הזה.`);
-      return;
+    const conflict = apptEditConflictAt(startMin, newDur);
+    if (conflict){
+      const describe = conflict.kind === 'appt'
+        ? `${timeChanged ? 'השעה החדשה חופפת' : 'המשך החדש גולש'} לתור של ${(conflict.clash && conflict.clash.client) || 'לקוחה אחרת'} ב-${conflict.clash && conflict.clash.time}`
+        : conflict.kind === 'block'
+          ? `${timeChanged ? 'השעה החדשה נופלת' : 'המשך החדש גולש'} לתוך חסימת זמן אישי של העובדת`
+          : `${timeChanged ? 'השעה החדשה חורגת' : 'המשך החדש חורג'} משעות העבודה של ${(emp && emp.name) || 'העובדת'} ביום הזה`;
+      if (!apptEditDraft.forcedTime){
+        apptEditShowError(describe + '. אפשר לקצר את המשך, לבחור שעה אחרת מהרשימה, או ללחוץ "שעה אחרת" ולאשר במפורש.');
+        return;
+      }
+      if (!confirm(`⚠️ ${describe}.\n\nלשמור בכל זאת?`)) return;
     }
     const draftCats = [];
     apptEditDraft.services.forEach(s => { if (s.category && draftCats.indexOf(s.category) === -1) draftCats.push(s.category); });
@@ -5859,17 +6130,42 @@
       const nm = (emp && emp.name) || 'העובדת';
       if (!confirm(`⚠️ ${nm} לא מוגדרת כמבצעת ${unqualified.join(' / ')}.\n\nלשמור את השינוי בכל זאת?`)) return;
     }
+    const previousTime = appt.time;
     appt.dur = newDur;
+    appt.time = newTime;
+    appt.note = (document.getElementById('apptEditNote')?.value || '').trim();
     appt.services = apptEditDraft.services.map(s => ({ name: s.name, duration: s.duration || 0, price: s.price || 0 }));
     appt.service = apptEditDraft.services.map(s => s.name).join(' + ');
     appt.price = apptEditDraft.services.reduce((sum, s) => sum + (s.price || 0), 0);
+    if (timeChanged){
+      ['reminderSent', 'callReminderSent', 'secondSmsReminderSent', 'callRetryDispatched'].forEach(f => { delete appt[f]; });
+      delete appt.callRetryScheduledFor;
+    }
     apptEditShowError('');
     if (typeof saveState === 'function') saveState();
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderClients === 'function') renderClients();
     closeApptEditPanel();
     openApptDetailOverlay(appt); // מציג מיד את הפרטים המעודכנים
-    if (typeof showAdminToast === 'function') showAdminToast('✓ התור עודכן');
+    if (!timeChanged){
+      if (typeof showAdminToast === 'function') showAdminToast('✓ התור עודכן');
+      return;
+    }
+    const moveMsg = `התור של ${appt.client} הוזז מ-${previousTime} ל-${appt.time}.\n\nלשלוח לה עכשיו הודעה על השעה החדשה?\n\n(בכל מקרה התזכורת האוטומטית שתצא לפני התור תנקוב בשעה החדשה.)`;
+    if (confirm(moveMsg)){
+      queueApptSms(appt, getShortApptSmsText('moved', appt.service, formatDateDMY(appt.date), appt.time));
+      const movedClient = findClientForAppt(appt);
+      if (movedClient && movedClient.email){
+        sendEmail(
+          movedClient.email,
+          'שעת התור שלך השתנתה',
+          `היי ${appt.client}, התור שלך ל${appt.service} בתאריך ${formatDateDMY(appt.date)} הועבר משעה ${previousTime} לשעה ${appt.time}. מצטערים על אי הנוחות, נתראה!\n\n${getSiteUrl()}`
+        );
+      }
+      if (typeof showAdminToast === 'function') showAdminToast(`✓ התור הוזז ל-${appt.time} — נשלחה הודעה ללקוחה`);
+    } else {
+      if (typeof showAdminToast === 'function') showAdminToast(`✓ התור הוזז ל-${appt.time} (לא נשלחה הודעה)`);
+    }
   }
   document.getElementById('apptDetailEditBtn')?.addEventListener('click', openApptEditPanel);
   document.getElementById('apptEditCancelBtn')?.addEventListener('click', closeApptEditPanel);
@@ -5880,6 +6176,7 @@
     const v = parseInt(d.value, 10);
     d.value = Math.max(5, (isNaN(v) ? 30 : v) - 5);
     if (apptEditDraft) apptEditDraft.dur = parseInt(d.value, 10);
+    renderApptEditSlots();
   });
   document.getElementById('apptEditDurPlus')?.addEventListener('click', () => {
     const d = document.getElementById('apptEditDur');
@@ -5887,6 +6184,50 @@
     const v = parseInt(d.value, 10);
     d.value = (isNaN(v) ? 30 : v) + 5;
     if (apptEditDraft) apptEditDraft.dur = parseInt(d.value, 10);
+    renderApptEditSlots();
+  });
+  document.getElementById('apptEditDur')?.addEventListener('input', () => {
+    if (!apptEditDraft) return;
+    const v = parseInt(document.getElementById('apptEditDur').value, 10);
+    if (!isNaN(v) && v > 0){ apptEditDraft.dur = v; renderApptEditSlots(); }
+  });
+  document.getElementById('apptEditOtherTimeBtn')?.addEventListener('click', () => {
+    const wrap = document.getElementById('apptEditOtherTimeWrap');
+    if (!wrap) return;
+    const showing = wrap.style.display !== 'none';
+    wrap.style.display = showing ? 'none' : '';
+    if (!showing){
+      const inp = document.getElementById('apptEditOtherTime');
+      if (inp && apptEditDraft) inp.value = apptEditDraft.time || '';
+    }
+  });
+  document.getElementById('apptEditOtherTimeApply')?.addEventListener('click', () => {
+    if (!apptEditDraft || !apptDetailCurrent) return;
+    const inp = document.getElementById('apptEditOtherTime');
+    const warn = document.getElementById('apptEditOtherTimeWarn');
+    const raw = (inp && inp.value) || '';
+    if (!/^\d{2}:\d{2}$/.test(raw)){
+      if (warn){ warn.style.display = 'block'; warn.textContent = 'יש לבחור שעה תקינה.'; }
+      return;
+    }
+    const dur = apptEditDraft.dur || 30;
+    const conflict = apptEditConflictAt(timeToMinutes(raw), dur);
+    apptEditDraft.time = raw;
+    apptEditDraft.forcedTime = !!conflict;
+    if (warn){
+      if (!conflict){
+        warn.style.display = 'none';
+        warn.textContent = '';
+      } else {
+        warn.style.display = 'block';
+        warn.textContent = conflict.kind === 'appt'
+          ? `⚠️ השעה הזו חופפת לתור של ${(conflict.clash && conflict.clash.client) || 'לקוחה אחרת'} ב-${conflict.clash && conflict.clash.time}. אפשר לשמור בכל זאת — שתי הלקוחות יופיעו ביומן באותו זמן.`
+          : conflict.kind === 'block'
+            ? '⚠️ השעה הזו נופלת בתוך חסימת זמן אישי של העובדת. אפשר לשמור בכל זאת.'
+            : '⚠️ השעה הזו מחוץ לשעות העבודה של העובדת ביום הזה. אפשר לשמור בכל זאת.';
+      }
+    }
+    renderApptEditSlots();
   });
   document.getElementById('apptEditAddBtn')?.addEventListener('click', () => {
     if (!apptEditDraft) return;
@@ -6343,6 +6684,7 @@
       if (!isOpenAndNotClosed(idx)) return false;
       const conflict = weekAppointments.some(a => {
         if (a.day !== dayKey || a.date !== dateVal || a.staff !== idx) return false;
+        if (mbRescheduleApptId && a.id === mbRescheduleApptId) return false;
         const aStart = timeToMinutes(a.time);
         const aEnd = aStart + a.dur;
         return !(endMin <= aStart || startMin >= aEnd);
@@ -6351,13 +6693,26 @@
       const blockConflict = getBlockedRangesForStaff(apptDate, idx).some(([bs, be]) => !(endMin <= bs || startMin >= be));
       return !blockConflict;
     };
+    const mbForcedNow = mbForcedTime && mbForcedTime === timeVal;
+    if (mbForcedNow){
+      const forcedConflict = mbConflictAt(timeVal);
+      if (forcedConflict){
+        const what = forcedConflict.kind === 'appt'
+          ? `השעה ${timeVal} חופפת לתור של ${(forcedConflict.clash && forcedConflict.clash.client) || 'לקוחה אחרת'} ב-${forcedConflict.clash && forcedConflict.clash.time}`
+          : `השעה ${timeVal} מחוץ לשעות העבודה ביום הזה`;
+        if (!confirm(`⚠️ ${what}.\n\nלשמור בכל זאת?`)) return;
+      }
+    }
     let staffIdx;
     if (staffValRaw === 'any'){
       const assignedIdx = mbSlotStaffAssignment[timeVal];
       staffIdx = isStillFree(assignedIdx) ? assignedIdx : getCapableStaffIndicesForCats(mbSelectedCategories()).find(isStillFree);
+      if (staffIdx === undefined && mbForcedNow){
+        staffIdx = getCapableStaffIndicesForCats(mbSelectedCategories())[0];
+      }
       if (staffIdx === undefined){
         errorEl.style.display = 'block';
-        errorEl.textContent = 'אף עובדת מתאימה כבר לא פנויה בשעה זו — נא לבחור שעה אחרת.';
+        errorEl.textContent = 'אף עובדת מתאימה כבר לא פנויה בשעה זו — נא לבחור שעה אחרת, או ללחוץ "בחירת כל שעה אחרת" ולאשר חפיפה.';
         if (typeof renderManualBookingSlots === 'function') renderManualBookingSlots();
         return;
       }
@@ -6368,11 +6723,12 @@
         errorEl.textContent = 'יש למלא שם, תאריך, שעה, שירות ועובדת.';
         return;
       }
-      if (!isStillFree(staffIdx)){
+      if (!isStillFree(staffIdx) && !mbForcedNow){
         errorEl.style.display = 'block';
-        errorEl.textContent = isOpenAndNotClosed(staffIdx)
+        errorEl.textContent = (isOpenAndNotClosed(staffIdx)
           ? 'יש כבר תור חופף לעובדת זו באותו זמן.'
-          : 'היום הזה סגור לעובדת זו (יום חופש שבועי או סגירה חד-פעמית).';
+          : 'היום הזה סגור לעובדת זו (יום חופש שבועי או סגירה חד-פעמית).')
+          + ' אפשר לבחור שעה אחרת מהרשימה, או ללחוץ "בחירת כל שעה אחרת" ולאשר במפורש.';
         return;
       }
     }
@@ -6388,9 +6744,60 @@
         return;
       }
     }
-    if (clientHasOverlappingAppointment(name, dateVal, startMin, endMin, null)){
+    if (clientHasOverlappingAppointment(name, dateVal, startMin, endMin, mbRescheduleApptId)){
       errorEl.style.display = 'block';
       errorEl.textContent = `ל${name} כבר יש תור אחר שחופף לשעה הזו — נא לבדוק ביומן לפני שממשיכים.`;
+      return;
+    }
+    if (mbRescheduleApptId){
+      const target = weekAppointments.find(a => a && a.id === mbRescheduleApptId);
+      if (!target){
+        errorEl.style.display = 'block';
+        errorEl.textContent = 'התור שעמדנו להזיז כבר אינו קיים ביומן — ייתכן שבוטל בינתיים. נא לרענן ולנסות שוב.';
+        return;
+      }
+      const prevDate = target.date, prevTime = target.time;
+      const movedInTime = (prevDate !== dateVal) || (prevTime !== timeVal);
+      target.day = dayKey;
+      target.date = dateVal;
+      target.time = timeVal;
+      target.dur = dur;
+      target.staff = staffIdx;
+      target.service = combinedServiceName;
+      target.services = combinedServicesList;
+      target.price = totalPrice;
+      target.note = (document.getElementById('mbApptNote')?.value || '').trim();
+      if (movedInTime){
+        ['reminderSent', 'callReminderSent', 'secondSmsReminderSent', 'callRetryDispatched'].forEach(f => { delete target[f]; });
+        delete target.callRetryScheduledFor;
+      }
+      if (typeof saveState === 'function') saveState();
+      closeManualBookingModal();
+      if (typeof weekOffsetForDate === 'function') weekOffset = weekOffsetForDate(apptDate);
+      if (typeof computeWeekDays === 'function') weekDays = computeWeekDays();
+      if (typeof renderWeekCal === 'function') renderWeekCal();
+      if (typeof renderClients === 'function') renderClients();
+      if (!movedInTime){
+        showAdminToast('✓ התור עודכן');
+        mbRescheduleApptId = null;
+        return;
+      }
+      const label = `${formatDateDMY(dateVal)} בשעה ${timeVal}`;
+      if (confirm(`התור של ${target.client} הוזז מ-${formatDateDMY(prevDate)} ${prevTime} ל-${label}.\n\nלשלוח לה עכשיו הודעה על המועד החדש?\n\n(בכל מקרה התזכורת האוטומטית שתצא לפני התור תנקוב במועד החדש.)`)){
+        queueApptSms(target, getShortApptSmsText('moved', target.service, formatDateDMY(target.date), target.time));
+        const movedClient = findClientForAppt(target);
+        if (movedClient && movedClient.email){
+          sendEmail(
+            movedClient.email,
+            'מועד התור שלך השתנה',
+            `היי ${target.client}, התור שלך ל${target.service} הועבר מ-${formatDateDMY(prevDate)} בשעה ${prevTime} ל-${label}. מצטערים על אי הנוחות, נתראה!\n\n${getSiteUrl()}`
+          );
+        }
+        showAdminToast(`✓ התור הוזז ל-${label} — נשלחה הודעה ללקוחה`);
+      } else {
+        showAdminToast(`✓ התור הוזז ל-${label} (לא נשלחה הודעה)`);
+      }
+      mbRescheduleApptId = null;
       return;
     }
     const mbBlockStatus = getLateCancelStatusForIdentity({ teudatZehut: idDigits, name });
@@ -6422,7 +6829,7 @@
       price: totalPrice,
       staff: staffIdx,
       status: 'pending',
-      note: '',
+      note: (document.getElementById('mbApptNote')?.value || '').trim(),
       reminderChannels: Array.from(document.querySelectorAll('input[name="mbReminderChannel"]:checked')).map(cb => cb.value)
     };
     weekAppointments.push(manualAppointment);
@@ -7906,6 +8313,11 @@
     }
     return appointments.map(a => renderOneAppointmentRow(a, options)).join('');
   }
+  function escapeApptText(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
   function renderOneAppointmentRow(a, options){
       if (options.upcoming){
         const confirmedBadge = a.confirmedByClient
@@ -7921,7 +8333,7 @@
               <button class="visit-cancel-btn" data-cancel-appt-id="${a.id || ''}" title="ביטול התור הזה" style="margin-inline-start:auto; background:none; border:1px solid rgba(155,44,66,0.4); color:var(--wine); border-radius:8px; font-size:12px; padding:3px 8px; cursor:pointer;">✕ ביטול</button>
             </div>
             <div class="upcoming-meta">${a.staff !== undefined && staff[a.staff] ? 'אצל ' + staff[a.staff].name + ' · ' : ''}${formatAppointmentStatus(a)}</div>
-            ${a.note ? `<div style="font-size:12px; color:var(--panel-text-dim); margin-top:5px;">${a.note}</div>` : ''}
+            ${a.note ? `<div style="font-size:12px; color:var(--panel-text-dim); margin-top:5px; white-space:pre-wrap;">${escapeApptText(a.note)}</div>` : ''}
           </div>`;
       }
       return `
@@ -7936,7 +8348,7 @@
             <button class="visit-status-btn${a.status === 'completed' ? ' active-yes' : ''}" data-status="completed">✓ הגיעה</button>
             <button class="visit-status-btn${a.status === 'no-show' ? ' active-no' : ''}" data-status="no-show">✗ לא הגיעה</button>
           </div>
-          <textarea class="visit-note" placeholder="הערה על הטיפול הזה...">${a.note || ''}</textarea>
+          <textarea class="visit-note" placeholder="הערה על הטיפול הזה...">${escapeApptText(a.note)}</textarea>
         </div>`;
   }
   function refreshClientRowBirthdayBadge(row, c){
@@ -12748,6 +13160,7 @@
   }
   function getShortApptSmsText(kind, service, dateLabel, time){
     if (kind === 'cancelled') return `התור לטיפול ${service} ביום ${dateLabel} בשעה ${time} בוטל.`;
+    if (kind === 'moved') return `התור לטיפול ${service} ביום ${dateLabel} הועבר לשעה ${time}.`;
     const addr = (branding && branding.address && branding.address.trim()) ? `, ${branding.address.trim()}` : '';
     return `התור נקבע: ${service} ${dateLabel} ${time}${addr}.`;
   }
@@ -14570,7 +14983,7 @@
       about: aboutMe, recommendations
     };
     pendingSaveCount++;
-    return db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
+    const runSaveTransaction = () => db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
       const server = doc.exists ? doc.data() : {};
       backfillMissingListIds(server);
       const payload = { savedAt: nowIso };
@@ -14601,11 +15014,24 @@
       payload.lateCancellations = mergedLateCancellations;
       if (!hasChange) return null; // nothing this tab needs to write right now
       if (!silent) showSaveStatus('שומר...');
+      lastSavePayloadBytes = measurePayloadBytes(payload);
       tx.set(CLOUD_DOC, payload, { merge: true });
       return payload;
-    })).then(committedPayload => {
+    }));
+    const TRANSIENT_SAVE_ERRORS = ['aborted', 'unavailable', 'deadline-exceeded', 'cancelled', 'internal'];
+    const isTransientSaveError = err => {
+      const code = String((err && err.code) || '').toLowerCase();
+      return TRANSIENT_SAVE_ERRORS.some(c => code.indexOf(c) !== -1);
+    };
+    return runSaveTransaction().catch(err => {
+      if (!isTransientSaveError(err)) throw err;
+      console.warn('Cloud save hit a transient error, retrying once:', err && err.code);
+      if (!silent) showSaveStatus('שומר... (ניסיון נוסף)');
+      return new Promise(r => setTimeout(r, 900)).then(runSaveTransaction);
+    }).then(committedPayload => {
       if (!committedPayload) { if (!silent) showSaveStatus('נשמר ✓', 1800); else hideSaveStatus(); return; }
       if (!silent) showSaveStatus('נשמר ✓', 2600);
+      checkSaveSizeHeadroom();
       weekAppointments = committedPayload.weekAppointments;
       waitlist = committedPayload.waitlist;
       clients = committedPayload.clients;
@@ -14628,12 +15054,61 @@
     }).catch(err => {
       console.error('Cloud save failed:', err);
       hideSaveStatus();
-      const msg = ((err && err.message) || '').toLowerCase();
-      const sizeIssue = msg.indexOf('size') !== -1 || msg.indexOf('large') !== -1 || msg.indexOf('big') !== -1 || msg.indexOf('exceeds') !== -1 || msg.indexOf('longer than') !== -1;
-      showSaveErrorBanner(sizeIssue
-        ? '⚠ השינוי האחרון לא נשמר בעננן — כנראה שהתמונה שהועלתה גדולה מדי. נא לנסות תמונה אחרת ולא לרענן את הדף בינתיים.'
-        : '⚠ השינוי האחרון לא נשמר בעננן. נא לבדוק את החיבור לאינטרנט ולנסות שוב — לא לרענן את הדף בינתיים, אחרת השינוי יאבד.');
+      showSaveErrorBanner(describeSaveFailure(err));
     }).finally(() => { pendingSaveCount--; });
+  }
+  let lastSavePayloadBytes = 0;
+  const FIRESTORE_DOC_LIMIT = 1048576;   // מגבלה קשיחה של Firestore למסמך אחד
+  function measurePayloadBytes(payload){
+    try {
+      const s = JSON.stringify(payload);
+      return (typeof TextEncoder !== 'undefined') ? new TextEncoder().encode(s).length : s.length * 2;
+    } catch (e) { return 0; }
+  }
+  function heaviestSaveField(){
+    try {
+      const fields = { לקוחות: clients, תורים: weekAppointments, צוות: staff, טיפולים: services,
+                       'יומן ביטולים': cancellationLog, 'רשימת המתנה': waitlist, מלאי: (typeof inventory !== 'undefined' ? inventory : []) };
+      let bestName = '', bestBytes = 0;
+      Object.keys(fields).forEach(k => {
+        const b = measurePayloadBytes(fields[k] || []);
+        if (b > bestBytes){ bestBytes = b; bestName = k; }
+      });
+      return bestName ? `${bestName} (${Math.round(bestBytes / 1024)} ק"ב)` : '';
+    } catch (e) { return ''; }
+  }
+  function describeSaveFailure(err){
+    const code = String((err && err.code) || '').toLowerCase();
+    const msg = String((err && err.message) || '').toLowerCase();
+    const tail = (err && err.code) ? `  [${err.code}]` : '';
+    const sizeIssue = msg.indexOf('size') !== -1 || msg.indexOf('large') !== -1 || msg.indexOf('bytes') !== -1
+      || msg.indexOf('exceeds') !== -1 || msg.indexOf('longer than') !== -1
+      || lastSavePayloadBytes > FIRESTORE_DOC_LIMIT;
+    if (sizeIssue){
+      const kb = Math.round(lastSavePayloadBytes / 1024);
+      const heaviest = heaviestSaveField();
+      return `⚠ השינוי האחרון לא נשמר — נתוני העסק חצו את מגבלת הגודל של הענן (${kb} ק"ב מתוך 1024). ` +
+             (heaviest ? `הכי כבד: ${heaviest}. ` : '') +
+             'אין טעם לנסות שוב עד שמצמצמים — נא לא לרענן את הדף, ולפנות לתמיכה.' + tail;
+    }
+    if (code.indexOf('permission') !== -1 || code.indexOf('unauthenticated') !== -1){
+      return '⚠ השינוי האחרון לא נשמר — ההתחברות פגה. נא לצאת ולהיכנס מחדש בלשונית אחרת, ואז לחזור לכאן ולשמור שוב. לא לרענן את הדף, אחרת השינוי יאבד.' + tail;
+    }
+    if (code.indexOf('aborted') !== -1){
+      return '⚠ השינוי האחרון לא נשמר — מישהי אחרת (או לשונית אחרת של היומן) שמרה בדיוק באותו רגע. נא ללחוץ שוב על השמירה; בדרך כלל זה עובר בניסיון השני.' + tail;
+    }
+    if (code.indexOf('unavailable') !== -1 || code.indexOf('deadline') !== -1 || code.indexOf('network') !== -1){
+      return '⚠ השינוי האחרון לא נשמר — החיבור לאינטרנט נותק באמצע השמירה. נא לבדוק את הרשת ולשמור שוב. לא לרענן את הדף בינתיים, אחרת השינוי יאבד.' + tail;
+    }
+    return '⚠ השינוי האחרון לא נשמר בענן. נא לבדוק את החיבור לאינטרנט ולנסות שוב — לא לרענן את הדף בינתיים, אחרת השינוי יאבד.' + tail;
+  }
+  function checkSaveSizeHeadroom(){
+    if (!lastSavePayloadBytes) return;
+    if (lastSavePayloadBytes < FIRESTORE_DOC_LIMIT * 0.85) return;
+    if (window.__sizeWarningShown) return;
+    window.__sizeWarningShown = true;
+    const kb = Math.round(lastSavePayloadBytes / 1024);
+    showSaveErrorBanner(`⚠ נתוני העסק תופסים ${kb} ק"ב מתוך 1024 המותרים בענן. השמירה עדיין עובדת, אבל כשזה יתמלא היא תיעצר לגמרי. הכי כבד: ${heaviestSaveField()}. כדאי לפנות לתמיכה עכשיו ולא לחכות.`);
   }
   let PUBLIC_DOC = db.collection('publicView').doc(BIZ_ID || '__unconfigured__');
   function pointDocsAtBusiness(){
