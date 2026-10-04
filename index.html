@@ -76,7 +76,7 @@
     console.error('Firebase failed to initialize — cloud sync and login will be unavailable:', e);
     const unavailable = () => Promise.reject(new Error('Firebase unavailable'));
     db = { collection: () => ({ doc: () => ({ get: unavailable, set: unavailable, add: unavailable }) }) };
-    auth = { onAuthStateChanged: () => {}, signInWithEmailAndPassword: unavailable, signOut: unavailable, currentUser: null };
+    auth = { onAuthStateChanged: () => {}, signInWithEmailAndPassword: unavailable, sendPasswordResetEmail: unavailable, signOut: unavailable, currentUser: null };
   }
 </script>
 <style>
@@ -3973,6 +3973,9 @@
       <input type="password" id="loginPassword" class="field" placeholder="סיסמה" name="password" autocomplete="current-password">
       <div id="loginError" style="display:none; color:var(--wine); font-size:13px;"></div>
       <button type="button" class="cta" id="loginSubmitBtn" onclick="doLogin()">התחברות</button>
+      <button type="button" id="loginForgotBtn" onclick="doSendPasswordReset()"
+              style="background:none; border:none; padding:2px; font-family:inherit; font-size:13px; color:var(--wine-deep); text-decoration:underline; cursor:pointer; align-self:flex-start;">שכחת סיסמה?</button>
+      <div id="loginResetNotice" style="display:none; font-size:13px; color:var(--sage); line-height:1.6;"></div>
     </form>
   </div>
 </div>
@@ -15546,6 +15549,42 @@
     document.getElementById('loginOverlay').classList.remove('show');
   }
   let loginInFlight = false;
+  let passwordResetInFlight = false;
+  function doSendPasswordReset(){
+    if (passwordResetInFlight) return;
+    const email = (document.getElementById('loginEmail')?.value || '').trim();
+    const errorEl = document.getElementById('loginError');
+    const noticeEl = document.getElementById('loginResetNotice');
+    const btnEl = document.getElementById('loginForgotBtn');
+    if (errorEl){ errorEl.style.display = 'none'; }
+    if (noticeEl){ noticeEl.style.display = 'none'; noticeEl.textContent = ''; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+      if (errorEl){
+        errorEl.style.display = 'block';
+        errorEl.textContent = 'כדי לשלוח קישור לאיפוס סיסמה, יש להקליד קודם את כתובת האימייל בשדה שלמעלה.';
+      }
+      document.getElementById('loginEmail')?.focus();
+      return;
+    }
+    passwordResetInFlight = true;
+    const original = btnEl ? btnEl.textContent : '';
+    if (btnEl){ btnEl.disabled = true; btnEl.textContent = 'שולחת...'; }
+    const done = () => {
+      passwordResetInFlight = false;
+      if (btnEl){ btnEl.disabled = false; btnEl.textContent = original || 'שכחת סיסמה?'; }
+      if (noticeEl){
+        noticeEl.style.display = 'block';
+        noticeEl.textContent = 'אם הכתובת ' + email + ' רשומה אצלנו, נשלח אליה עכשיו קישור לבחירת סיסמה חדשה. '
+          + 'הקישור תקף לזמן מוגבל, וכדאי להציץ גם בתיקיית הספאם.';
+      }
+    };
+    Promise.resolve()
+      .then(() => auth.sendPasswordResetEmail(email))
+      .catch(err => {
+        console.error('Password reset email could not be sent:', err);
+      })
+      .then(done);
+  }
   function doLogin(){
     if (loginInFlight) return;
     const email = document.getElementById('loginEmail').value.trim();
