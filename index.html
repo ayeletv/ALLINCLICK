@@ -14948,10 +14948,24 @@
       if (!localByKey.has(k)) { merged.push(sItem); return; }
       const lItem = localByKey.get(k);
       const lastLoadedItem = lastLoadedByKey.get(k);
-      const localUntouchedSinceLoad = lastLoadedItem !== undefined && JSON.stringify(lItem) === JSON.stringify(lastLoadedItem);
-      if (localUntouchedSinceLoad){
-        Object.keys(lItem).forEach(k => { if (!(k in sItem)) delete lItem[k]; });
-        Object.assign(lItem, sItem);
+      if (lastLoadedItem !== undefined){
+        const fieldKeys = new Set([].concat(Object.keys(sItem), Object.keys(lastLoadedItem), Object.keys(lItem)));
+        const resolved = {};
+        fieldKeys.forEach(f => {
+          const inLocal = Object.prototype.hasOwnProperty.call(lItem, f);
+          const inLast = Object.prototype.hasOwnProperty.call(lastLoadedItem, f);
+          const localChanged = inLocal
+            ? JSON.stringify(lItem[f]) !== JSON.stringify(lastLoadedItem[f])
+            : inLast; // היה קודם ואינו עכשיו — הדפדפן מחק אותו במכוון
+          if (localChanged){
+            if (inLocal) resolved[f] = lItem[f];
+            return;                                  // נמחק מקומית — לא חוזר
+          }
+          if (Object.prototype.hasOwnProperty.call(sItem, f)) resolved[f] = sItem[f];
+          else if (inLocal) resolved[f] = lItem[f];
+        });
+        Object.keys(lItem).forEach(f => { if (!(f in resolved)) delete lItem[f]; });
+        Object.assign(lItem, resolved);
       }
       merged.push(lItem);
     });
