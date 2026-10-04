@@ -5846,7 +5846,7 @@
       return;
     }
     const emp = staff[appt.staff];
-    const dayInfo = emp && emp.hours ? emp.hours[apptDateObj.getDay()] : null;
+    const dayInfo = emp ? dayInfoForDate(appt.staff, apptDateObj) : null;
     const windows = (emp && dayInfo && typeof getEffectiveDayWindows === 'function') ? getEffectiveDayWindows(dayInfo, apptDateObj) : [];
     if (windows.length && !windows.some(([s, e]) => startMin >= s && endMin <= e)){
       apptEditShowError(`המשך החדש חורג משעות העבודה של ${(emp && emp.name) || 'העובדת'} ביום הזה.`);
@@ -6333,7 +6333,7 @@
     const endMin = startMin + dur;
     const isOpenAndNotClosed = idx => {
       const emp2 = staff[idx];
-      const dayInfo2 = emp2 && emp2.hours ? emp2.hours[apptDate.getDay()] : null;
+      const dayInfo2 = emp2 ? dayInfoForDate(idx, apptDate) : null;
       if (!emp2 || !dayInfo2 || !dayInfo2.open) return false;
       if (isDateClosedForStaff(idx, apptDate)) return false;
       return getEffectiveDayWindows(dayInfo2, apptDate).some(([s, e]) => startMin >= s && endMin <= e);
