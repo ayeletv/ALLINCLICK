@@ -3513,7 +3513,7 @@
       </div>
       <textarea id="frNote" class="client-note" style="min-height:50px;" placeholder="הערה נוספת (אופציונלי) — כל דבר שלא נכנס לשדות למעלה"></textarea>
       <div class="label" style="margin-top:6px;">פרטי קשר</div>
-      <input type="tel" inputmode="numeric" maxlength="9" id="frId" class="field" placeholder="תעודת זהות">
+      <input type="tel" inputmode="numeric" maxlength="10" id="frId" class="field" placeholder="תעודת זהות או מספר טלפון">
       <div id="frWelcomeBack" style="display:none; color:var(--sage); font-size:12px; margin:-4px 0 0;"></div>
       <div id="frContactDetails" style="display:none; flex-direction:column; gap:10px;">
         <div class="field-row">
@@ -4466,7 +4466,9 @@
     const phone = document.getElementById('frPhone').value.trim();
     const emailInput = document.getElementById('frEmail');
     if (idDigits) attachRealTzToMigrated(idDigits, phone);
-    const existingClient = idDigits ? clients.find(c => c.teudatZehut === idDigits) : null;
+    const frResolvedLocal = resolveClientByIdOrPhone(document.getElementById('frId').value || '');
+    const existingClient = (idDigits.length === 9 ? clients.find(c => c && c.teudatZehut === idDigits) : null)
+      || (frResolvedLocal && frResolvedLocal.client) || null;
     const frKnown = frKnownClient();
     const email = emailInput.value.trim() || (existingClient && existingClient.email) || '';
     if (!svcObjs.length){
@@ -4474,8 +4476,8 @@
       errorEl.style.display = 'block';
       return;
     }
-    if (!/^\d{9}$/.test(idDigits)){
-      errorEl.textContent = 'יש להזין תעודת זהות תקנית (9 ספרות).';
+    if (!frKnown && !/^\d{9}$/.test(idDigits)){
+      errorEl.textContent = 'יש להזין תעודת זהות תקנית (9 ספרות), או מספר טלפון שכבר רשום אצלנו.';
       errorEl.style.display = 'block';
       return;
     }
@@ -4769,7 +4771,9 @@
     const statusEl = document.getElementById('mbClientIdStatus');
     if (!statusEl) return;
     const idVal = (document.getElementById('mbClientId')?.value || '');
-    const match = idVal ? clients.find(c => c && String(c.teudatZehut || '') === idVal) : null;
+    const loaded = mbLoadedClientKey
+      ? clients.find(c => c && String(c.teudatZehut || '') === mbLoadedClientKey) : null;
+    const match = loaded || (idVal.length === 9 ? clients.find(c => c && String(c.teudatZehut || '') === idVal) : null);
     if (match && !isPlausibleTeudatZehut(idVal)){
       statusEl.style.display = 'block';
       statusEl.className = 'mb-client-id-status new';
@@ -4895,7 +4899,7 @@
     if (e.email) e.email.value = '';
     if (e.note) e.note.value = '';
     if (e.matches) e.matches.style.display = 'none';
-    const match = this.value ? clients.find(c => c && String(c.teudatZehut || '') === this.value) : null;
+    const match = this.value.length === 9 ? clients.find(c => c && String(c.teudatZehut || '') === this.value) : null;
     if (match) mbFillFromClient(match);
     updateMbClientIdStatus();
     renderMbQuickPick(match ? match.name : null);
@@ -8188,13 +8192,22 @@
       });
       listEl.appendChild(row);
     });
-    if (matchedCount > renderedCount){
+    const totalClients = clients.filter(c => c && !c.deleted).length;
+    if (searchTerm || matchedCount > renderedCount){
       const more = document.createElement('div');
       more.className = 'client-list-more';
       more.style.cssText = 'font-size:13px; color:var(--panel-text-dim); line-height:1.7; padding:14px 4px; text-align:center;';
-      more.textContent = searchTerm
-        ? ('מוצגות ' + renderedCount + ' מתוך ' + matchedCount + ' תוצאות. אפשר לצמצם את החיפוש.')
-        : ('מוצגות ' + renderedCount + ' לקוחות מתוך ' + matchedCount + '. לאיתור לקוחה מסוימת יש להשתמש בשורת החיפוש למעלה — אפשר לחפש לפי שם, טלפון או מספר זהות.');
+      const n = (x) => x.toLocaleString('he-IL');
+      if (searchTerm){
+        more.textContent = matchedCount > renderedCount
+          ? ('מוצגות ' + n(renderedCount) + ' מתוך ' + n(matchedCount) + ' תוצאות (מתוך ' + n(totalClients) + ' לקוחות). אפשר לצמצם את החיפוש.')
+          : (matchedCount === 0
+              ? ('אין תוצאות לחיפוש הזה, מתוך ' + n(totalClients) + ' לקוחות.')
+              : ('מוצגות ' + n(matchedCount) + (matchedCount === 1 ? ' תוצאה' : ' תוצאות') + ' מתוך ' + n(totalClients) + ' לקוחות.'));
+      } else {
+        more.textContent = 'מוצגות ' + n(renderedCount) + ' לקוחות מתוך ' + n(matchedCount) +
+          '. לאיתור לקוחה מסוימת יש להשתמש בשורת החיפוש למעלה — אפשר לחפש לפי שם, טלפון או מספר זהות.';
+      }
       listEl.appendChild(more);
     }
     const bdayAlertEl = document.getElementById('birthdayAlert');
@@ -11683,12 +11696,16 @@
     const knownName = combineNameFields('bookingFirstNameInput', 'bookingLastNameInput');
     const knownPhone = (document.getElementById('bookingPhoneInput')?.value || '').trim();
     const knownId = (document.getElementById('bookingIdInput')?.value || '').replace(/[^0-9]/g, '');
-    const knownClient = knownId.length === 9 ? clients.find(c => c.teudatZehut === knownId) : null;
+    const knownComplete = knownId.length === 9
+      || isValidIsraeliPhone((document.getElementById('bookingIdInput')?.value || ''));
+    const knownResolved = knownComplete
+      ? resolveClientByIdOrPhone(document.getElementById('bookingIdInput')?.value || '') : null;
+    const knownClient = (knownResolved && knownResolved.client) || null;
     const ftpEmailEl = document.getElementById('ftpEmail');
     const reminderEmailEl = document.getElementById('reminderEmailInput');
     const knownEmail = (knownClient && knownClient.email) || (ftpEmailEl && ftpEmailEl.value.trim()) || (reminderEmailEl && reminderEmailEl.value.trim()) || '';
     const srvKnown = runningOnPublicData && serverIdentity && serverIdentity.found
-      && serverIdentity.id === knownId && knownId.length === 9;
+      && serverIdentity.id === knownId && knownComplete;
     if (srvKnown){
       boxEl.innerHTML = `
         <div class="waitlist-prompt">
@@ -11705,7 +11722,7 @@
       scrollWaitlistBoxIntoView();
       return;
     }
-    if (knownName && isValidIsraeliPhone(knownPhone) && knownId.length === 9 && knownEmail){
+    if (knownName && isValidIsraeliPhone(knownPhone) && knownComplete && knownEmail){
       boxEl.innerHTML = `
         <div class="waitlist-prompt">
           השעה ${time} לא זמינה — ${reason || 'תפוסה כרגע.'}
@@ -11717,7 +11734,8 @@
         </div>`;
       boxEl.querySelector('.wl-known-name').textContent = knownName;
       boxEl.querySelector('.wl-known-phone').textContent = knownPhone;
-      boxEl.querySelector('.wl-join-known-btn').onclick = () => joinWaitlist(time, knownName, knownPhone, knownId, knownEmail);
+      boxEl.querySelector('.wl-join-known-btn').onclick = () => joinWaitlist(time, knownName, knownPhone,
+        (knownClient && knownClient.teudatZehut) || knownId, knownEmail);
       boxEl.querySelector('.wl-not-me-btn').onclick = () => showWaitlistPromptManual(time, reason);
       scrollWaitlistBoxIntoView();
       return;
@@ -11734,7 +11752,7 @@
     document.getElementById('waitlistBox').innerHTML = `
       <div class="waitlist-prompt">
         השעה ${time} לא זמינה — ${reason || 'תפוסה כרגע.'}
-        <input type="tel" inputmode="numeric" maxlength="9" id="wlId" class="field" style="margin-top:8px;" placeholder="תעודת זהות">
+        <input type="tel" inputmode="numeric" maxlength="10" id="wlId" class="field" style="margin-top:8px;" placeholder="תעודת זהות או מספר טלפון">
         <div class="field-row">
           <input type="text" id="wlFirstName" class="field" placeholder="שם פרטי">
           <input type="text" id="wlLastName" class="field" placeholder="שם משפחה">
@@ -11765,7 +11783,11 @@
       phone = phoneEl.value.trim();
       idDigits = idEl.value.replace(/[^0-9]/g, '');
       email = emailEl.value.trim();
-      if (!firstNameOk || !lastNameOk || !isValidIsraeliPhone(phone) || idDigits.length !== 9 || !email){
+      const wlResolved = resolveClientByIdOrPhone(idEl.value || '');
+      const wlKnown = wlResolved && wlResolved.client;
+      if (wlKnown && String(wlKnown.teudatZehut || '')) idDigits = String(wlKnown.teudatZehut);
+      if (!firstNameOk || !lastNameOk || !isValidIsraeliPhone(phone) || !email
+          || (!wlKnown && idDigits.length !== 9)){
         errorEl.style.display = 'block';
         return;
       }
@@ -12129,15 +12151,24 @@
   let frIdentityTimer = null;
   let frIdentitySeq = 0;
   let frIdentityCheckingTimer = null;
+  function frIdentifierComplete(raw){
+    const digits = String(raw || '').replace(/[^0-9]/g, '');
+    return digits.length === 9 || isValidIsraeliPhone(raw);
+  }
   function frKnownClient(){
-    const digits = ((document.getElementById('frId') || {}).value || '').replace(/[^0-9]/g, '');
-    if (digits.length !== 9) return null;
+    const rawVal = ((document.getElementById('frId') || {}).value || '');
+    const digits = rawVal.replace(/[^0-9]/g, '');
+    if (!frIdentifierComplete(rawVal)) return null;
     if (runningOnPublicData){
       return (frServerIdentity && frServerIdentity.found && frServerIdentity.id === digits) ? frServerIdentity : null;
     }
-    const c = (clients || []).find(x => x && x.teudatZehut === digits);
+    const r = resolveClientByIdOrPhone(rawVal);
+    const c = r && r.client;
     if (!c) return null;
-    return { found: true, id: digits, firstName: (c.name || '').trim().split(/\s+/)[0] || '', hasEmail: !!c.email, hasPhone: !!c.phone, blocked: false };
+    return { found: true, id: digits, firstName: (c.name || '').trim().split(/\s+/)[0] || '',
+             hasTz: isPlausibleTeudatZehut(c.teudatZehut),
+             hasEmail: !!c.email, hasPhone: !!c.phone,
+             hasBirthday: !!String(c.birthday || '').trim(), blocked: false };
   }
   function applyFrIdentity(){
     const welcomeEl = document.getElementById('frWelcomeBack');
@@ -12156,14 +12187,16 @@
       return;
     }
     welcomeEl.style.display = 'none';
-    detailsEl.style.display = digits.length === 9 ? 'flex' : 'none';
-    emailWrap.style.display = digits.length === 9 ? 'block' : 'none';
+    const complete = frIdentifierComplete((document.getElementById('frId') || {}).value || '');
+    detailsEl.style.display = complete ? 'flex' : 'none';
+    emailWrap.style.display = complete ? 'block' : 'none';
   }
   function frLookupIdentity(){
     clearTimeout(frIdentityTimer);
     clearTimeout(frIdentityCheckingTimer);
-    const digits = ((document.getElementById('frId') || {}).value || '').replace(/[^0-9]/g, '');
-    if (!runningOnPublicData || digits.length !== 9){
+    const rawFr = ((document.getElementById('frId') || {}).value || '');
+    const digits = rawFr.replace(/[^0-9]/g, '');
+    if (!runningOnPublicData || !frIdentifierComplete(rawFr)){
       frServerIdentity = null;
       frIdentitySeq++;
       applyFrIdentity();
@@ -13417,6 +13450,7 @@
     btn.classList.add('active');
     var topbarFilters = document.getElementById('bizTopbarCalFilters');
     if (topbarFilters) topbarFilters.style.display = (name === 'overview') ? 'flex' : 'none';
+    if (typeof applyPlatformAdminUi === 'function') applyPlatformAdminUi();
     window.scrollTo(0, 0);
   }
   function toggleHelpHint(el, event){
