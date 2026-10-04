@@ -6979,7 +6979,8 @@
     const payload = {
       to: to,
       from: `${fromName} <${fromAddress}>`,
-      message: { subject: subject, text: text, html: html }
+      message: { subject: subject, text: text, html: html },
+      createdAt: new Date().toISOString(),
     };
     if (attachments.length) payload.message.attachments = attachments;
     db.collection('mail').add(payload).catch(err => console.error('Email send failed:', err));
