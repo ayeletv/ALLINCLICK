@@ -4765,6 +4765,7 @@
     mbCalViewMonth = mbSelectedDate.getMonth();
     document.getElementById('mbDate').value = formatDateKey(mbSelectedDate);
     document.getElementById('mbTime').value = opts.time || '';
+    mbRequestedTime = opts.time || null;
     document.getElementById('mbClientId').value = opts.clientId || '';
     if (opts.clientName) mbLockClientName(opts.clientName); else mbUnlockClientName(true);
     document.getElementById('mbClientPhone').value = opts.clientPhone || '';
@@ -5350,7 +5351,7 @@
     const gridEl = document.getElementById('mbSlotGrid');
     const hint = document.getElementById('mbSlotsHint');
     if (!timeInput || !gridEl) return;
-    const previouslySelected = timeInput.value;
+    const previouslySelected = timeInput.value || mbRequestedTime || '';
     gridEl.innerHTML = '';
     timeInput.value = '';
     mbSlotStaffAssignment = {};
@@ -5373,6 +5374,7 @@
         gridEl.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
         d.classList.add('selected');
         timeInput.value = timeStr;
+        mbRequestedTime = timeStr;
       };
       gridEl.appendChild(d);
       if (timeStr === previouslySelected) timeInput.value = timeStr;
@@ -11553,6 +11555,7 @@
   let mbSelectedDate = new Date(todayMidnight);
   let mbSelectedStaffIndex = 'any';
   let mbSlotStaffAssignment = {};
+  let mbRequestedTime = null;
   function renderMbStaffPicker(){
     const pickerEl = document.getElementById('mbStaffPicker');
     if (!pickerEl) return;
