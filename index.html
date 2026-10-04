@@ -3742,6 +3742,12 @@
         <button type="button" class="appt-edit-step" id="apptEditDurPlus" aria-label="הוספת 5 דקות">+</button>
         <span class="appt-edit-dur-unit">דקות</span>
       </div>
+      <div class="appt-edit-label" style="margin-top:14px;">איך לשלוח תזכורת לתור הזה</div>
+      <div class="reminder-choice" id="apptEditReminderChoice">
+        <label><input type="checkbox" name="apptEditReminderChannel" value="sms"> SMS</label>
+        <label><input type="checkbox" name="apptEditReminderChannel" value="call"> שיחת טלפון</label>
+      </div>
+      <p style="font-size:11.5px; color:var(--muted,#8a7f72); margin:2px 0 0; line-height:1.5;">לקוחה עם טלפון כשר אינה יכולה לקבל SMS — עבורה יש לבחור שיחת טלפון.</p>
       <div class="appt-edit-label" style="margin-top:14px;">הערות לפגישה הזו</div>
       <textarea id="apptEditNote" class="field" rows="2" style="margin:0;" placeholder="למשל: מגיעה עם הבת, מבקשת גוון בהיר יותר, לשלם במזומן"></textarea>
       <div class="appt-edit-label" style="margin-top:14px;">טיפולים בתור</div>
@@ -5934,6 +5940,10 @@
     if (durEl) durEl.value = apptEditDraft.dur;
     const noteEl = document.getElementById('apptEditNote');
     if (noteEl) noteEl.value = apptEditDraft.note || '';
+    const apptEditChannels = Array.isArray(appt.reminderChannels) ? appt.reminderChannels : [];
+    document.querySelectorAll('input[name="apptEditReminderChannel"]').forEach(cb => {
+      cb.checked = apptEditChannels.indexOf(cb.value) !== -1;
+    });
     const otherWrap = document.getElementById('apptEditOtherTimeWrap');
     if (otherWrap) otherWrap.style.display = 'none';
     const otherWarn = document.getElementById('apptEditOtherTimeWarn');
@@ -6141,6 +6151,13 @@
     appt.dur = newDur;
     appt.time = newTime;
     appt.note = (document.getElementById('apptEditNote')?.value || '').trim();
+    const apptEditNewChannels = Array.from(document.querySelectorAll('input[name="apptEditReminderChannel"]:checked')).map(cb => cb.value);
+    const apptEditChannelsChanged = JSON.stringify(apptEditNewChannels) !== JSON.stringify(appt.reminderChannels || []);
+    appt.reminderChannels = apptEditNewChannels;
+    if (apptEditChannelsChanged){
+      if (apptEditNewChannels.indexOf('call') !== -1) delete appt.callReminderSent;
+      if (apptEditNewChannels.indexOf('sms') !== -1) delete appt.reminderSent;
+    }
     appt.services = apptEditDraft.services.map(s => ({ name: s.name, duration: s.duration || 0, price: s.price || 0 }));
     appt.service = apptEditDraft.services.map(s => s.name).join(' + ');
     appt.price = apptEditDraft.services.reduce((sum, s) => sum + (s.price || 0), 0);
@@ -6590,6 +6607,22 @@
     fieldsEl.querySelectorAll('.cpReminderChannel').forEach(function(cb){
       cb.addEventListener('change', function(){
         c.reminderChannelPref = Array.from(fieldsEl.querySelectorAll('.cpReminderChannel:checked')).map(el => el.value);
+        const cpFuture = weekAppointments.filter(a => apptBelongsToClient(a, c) && !isAppointmentHistory(a) && a.status !== 'cancelled');
+        const cpPrefLabel = c.reminderChannelPref.length
+          ? c.reminderChannelPref.map(v => (v === 'sms' ? 'SMS' : 'שיחת טלפון')).join(' + ')
+          : '';
+        if (cpFuture.length && cpPrefLabel &&
+            confirm(`ל${c.name} יש ${cpFuture.length === 1 ? 'תור עתידי אחד' : cpFuture.length + ' תורים עתידיים'}.\n\nלהחיל עליהם גם את השינוי (${cpPrefLabel})?\n\nבלי זה הם ימשיכו לצאת בערוץ שנבחר בזמן שנקבעו — השינוי כאן חל רק על תורים חדשים.`)){
+          cpFuture.forEach(a => {
+            a.reminderChannels = c.reminderChannelPref.slice();
+            if (a.reminderChannels.indexOf('call') !== -1) delete a.callReminderSent;
+            if (a.reminderChannels.indexOf('sms') !== -1) delete a.reminderSent;
+          });
+          if (typeof saveState === 'function') saveState();
+          if (typeof showAdminToast === 'function') showAdminToast(`✓ עודכן גם ב-${cpFuture.length} תורים עתידיים`);
+          renderClientProfileOverlay();
+          return;
+        }
         if (typeof saveState === 'function') saveState();
         if (typeof showAdminToast === 'function') showAdminToast('✓ אופן ההתקשרות עודכן בהצלחה');
       });
