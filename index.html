@@ -6151,12 +6151,15 @@
     appt.dur = newDur;
     appt.time = newTime;
     appt.note = (document.getElementById('apptEditNote')?.value || '').trim();
+    const apptEditOldChannels = Array.isArray(appt.reminderChannels) ? appt.reminderChannels.slice() : [];
     const apptEditNewChannels = Array.from(document.querySelectorAll('input[name="apptEditReminderChannel"]:checked')).map(cb => cb.value);
-    const apptEditChannelsChanged = JSON.stringify(apptEditNewChannels) !== JSON.stringify(appt.reminderChannels || []);
     appt.reminderChannels = apptEditNewChannels;
-    if (apptEditChannelsChanged){
-      if (apptEditNewChannels.indexOf('call') !== -1) delete appt.callReminderSent;
-      if (apptEditNewChannels.indexOf('sms') !== -1) delete appt.reminderSent;
+    const apptEditAdded = ch => apptEditNewChannels.indexOf(ch) !== -1 && apptEditOldChannels.indexOf(ch) === -1;
+    if (apptEditAdded('call')) delete appt.callReminderSent;
+    if (apptEditAdded('sms')) delete appt.reminderSent;
+    if (apptEditOldChannels.indexOf('sms') !== -1 && apptEditNewChannels.indexOf('sms') === -1){
+      appt.reminderSent = true;
+      appt.secondSmsReminderSent = true;
     }
     appt.services = apptEditDraft.services.map(s => ({ name: s.name, duration: s.duration || 0, price: s.price || 0 }));
     appt.service = apptEditDraft.services.map(s => s.name).join(' + ');
@@ -6614,9 +6617,15 @@
         if (cpFuture.length && cpPrefLabel &&
             confirm(`ל${c.name} יש ${cpFuture.length === 1 ? 'תור עתידי אחד' : cpFuture.length + ' תורים עתידיים'}.\n\nלהחיל עליהם גם את השינוי (${cpPrefLabel})?\n\nבלי זה הם ימשיכו לצאת בערוץ שנבחר בזמן שנקבעו — השינוי כאן חל רק על תורים חדשים.`)){
           cpFuture.forEach(a => {
+            const was = Array.isArray(a.reminderChannels) ? a.reminderChannels.slice() : [];
             a.reminderChannels = c.reminderChannelPref.slice();
-            if (a.reminderChannels.indexOf('call') !== -1) delete a.callReminderSent;
-            if (a.reminderChannels.indexOf('sms') !== -1) delete a.reminderSent;
+            const added = ch => a.reminderChannels.indexOf(ch) !== -1 && was.indexOf(ch) === -1;
+            if (added('call')) delete a.callReminderSent;
+            if (added('sms')) delete a.reminderSent;
+            if (was.indexOf('sms') !== -1 && a.reminderChannels.indexOf('sms') === -1){
+              a.reminderSent = true;
+              a.secondSmsReminderSent = true;
+            }
           });
           if (typeof saveState === 'function') saveState();
           if (typeof showAdminToast === 'function') showAdminToast(`✓ עודכן גם ב-${cpFuture.length} תורים עתידיים`);
@@ -15010,17 +15019,30 @@
     stamp(data.weekAppointments, 'appt');
     stamp(data.waitlist, 'wl');
   }
+  function keysWithOccurrence(arr, keyFn){
+    const seen = Object.create(null);
+    return arr.map(item => {
+      const base = keyFn(item);
+      if (!base) return null;
+      const n = (seen[base] === undefined) ? 0 : seen[base] + 1;
+      seen[base] = n;
+      return base + '#' + n;
+    });
+  }
   function mergeListField(serverArr, lastLoadedArr, localArr, keyFn){
     serverArr = serverArr || []; lastLoadedArr = lastLoadedArr || []; localArr = localArr || [];
     const allHaveKeys = serverArr.concat(lastLoadedArr, localArr).every(item => !!keyFn(item));
     if (!allHaveKeys) return localArr;
-    const lastLoadedKeys = new Set(lastLoadedArr.map(keyFn));
-    const lastLoadedByKey = new Map(lastLoadedArr.map(item => [keyFn(item), item]));
-    const localByKey = new Map(localArr.map(item => [keyFn(item), item]));
+    const serverKeys = keysWithOccurrence(serverArr, keyFn);
+    const lastLoadedKeysArr = keysWithOccurrence(lastLoadedArr, keyFn);
+    const localKeys = keysWithOccurrence(localArr, keyFn);
+    const lastLoadedKeys = new Set(lastLoadedKeysArr);
+    const lastLoadedByKey = new Map(lastLoadedArr.map((item, i) => [lastLoadedKeysArr[i], item]));
+    const localByKey = new Map(localArr.map((item, i) => [localKeys[i], item]));
     const merged = [];
     const seenKeys = new Set();
-    serverArr.forEach(sItem => {
-      const k = keyFn(sItem);
+    serverArr.forEach((sItem, sIdx) => {
+      const k = serverKeys[sIdx];
       seenKeys.add(k);
       if (lastLoadedKeys.has(k) && !localByKey.has(k)) return; // this tab deleted it since its last load
       if (!localByKey.has(k)) { merged.push(sItem); return; }
@@ -15047,8 +15069,8 @@
       }
       merged.push(lItem);
     });
-    localArr.forEach(lItem => {
-      const k = keyFn(lItem);
+    localArr.forEach((lItem, lIdx) => {
+      const k = localKeys[lIdx];
       if (seenKeys.has(k)) return;
       if (lastLoadedKeys.has(k)) return; // deleted elsewhere since this tab's last load — don't resurrect it
       merged.push(lItem);
