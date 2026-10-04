@@ -675,6 +675,19 @@
     margin-bottom:6px;
     font-size:13px;
   }
+  .identity-choice-row{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
+  .fr-date-range{display:flex; gap:10px; flex-wrap:wrap;}
+  .fr-date-range > div{flex:1 1 220px; min-width:0;}
+  .fr-date-range-label{display:block; font-size:12px; color:#8A8178; margin-bottom:3px;}
+  .identity-choice-btn{
+    flex:1 1 auto; min-width:92px;
+    padding:10px 14px;
+    font-family:inherit; font-size:14.5px; font-weight:700;
+    color:var(--wine-deep); background:rgba(155,44,66,0.09);
+    border:1px solid rgba(155,44,66,0.4); border-radius:12px;
+    cursor:pointer;
+  }
+  .identity-choice-btn:hover{background:rgba(155,44,66,0.17);}
   .reminder-choice label{
     display:flex; align-items:center; gap:5px;
     cursor:pointer;
@@ -2694,20 +2707,25 @@
                 <input class="field" id="bookingTzUpdateEmail" type="email" placeholder="כתובת אימייל">
                 <div class="reminder-choice-notice" style="margin-top:6px;">כאן נשלח לך תזכורות לתור, ומדי פעם גם פינוק קטן ליום ההולדת 🎁</div>
               </div>
-              
-              <div id="bookingTzUpdateBdayWrap" style="display:none;">
-                <input class="field" id="bookingTzUpdateBday" type="date" style="color-scheme:light;">
-                <div class="reminder-choice-notice" style="margin-top:6px;">שווה למלא 🎂 — ביום ההולדת שלך מחכה לך ברכה, ולפעמים גם הטבה קטנה.</div>
+              <div class="dmy-date-picker full-width" id="bookingTzUpdateBdayWrap" style="display:none;">
+                <select id="bookingTzUpdateBdayDay" aria-label="יום לידה"></select>
+                <select id="bookingTzUpdateBdayMonth" aria-label="חודש לידה"></select>
+                <select id="bookingTzUpdateBdayYear" aria-label="שנת לידה"></select>
               </div>
             </div>
             <div id="bookingIdError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין תעודת זהות תקנית (9 ספרות)</div>
             <div id="bookingWelcomeBack" style="display:none; color:var(--sage); font-size:12px; margin:-4px 0 8px;"></div>
+            <div id="bookingIdentityChoice" style="display:none;"></div>
             <div id="newClientRegistration" style="display:none;">
               <div class="field-row">
                 <input class="field" id="bookingFirstNameInput" placeholder="שם פרטי">
                 <input class="field" id="bookingLastNameInput" placeholder="שם משפחה">
               </div>
               <div id="bookingNameError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין שם פרטי ושם משפחה</div>
+              <div id="bookingNewTzWrap" style="display:none;">
+                <input class="field" id="bookingNewTzInput" type="tel" inputmode="numeric" maxlength="9" placeholder="תעודת זהות (9 ספרות)">
+                <div id="bookingNewTzError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין תעודת זהות בת 9 ספרות</div>
+              </div>
               <input class="field" id="bookingPhoneInput" type="tel" placeholder="050-0000000">
               <div id="bookingPhoneError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">מספר טלפון לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567)</div>
               <div id="firstTimePerks" class="first-time-perks">
@@ -3109,7 +3127,6 @@
         <div class="settings-section-body">
           <div style="font-size:12.5px; color:var(--panel-text-dim); max-width:480px; line-height:1.7; margin-bottom:12px;">הקמת עסק חדש יוצרת בבת אחת את כל מה שנדרש: מסמך העסק, הדף הציבורי, חשבון ההתחברות של בעלת הסלון, ושיוך הדומיין. הקטע הזה מוצג רק לחשבון שמתחזק את המערכת.</div>
           <button class="template-btn" style="width:fit-content;" onclick="openNewBusinessWizard()">➕ הקמת עסק חדש</button>
-          
           <button class="template-btn" style="width:fit-content; margin-top:10px;" onclick="openAttachDomainDialog()">🌐 חיבור דומיין לעסק קיים</button>
         </div>
       </div>
@@ -3147,7 +3164,6 @@
       
         </div>
       </div>
-      
       <div class="settings-section" data-settings-section="clientimport" id="clientImportSection" style="display:none;">
         <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
           <span class="settings-section-title">📥 טעינת לקוחות מקובץ</span>
@@ -3164,6 +3180,31 @@
           <div id="clientImportError" style="display:none; color:var(--wine); font-size:13px; margin-top:10px; max-width:520px;"></div>
           <button type="button" class="cta" id="clientImportRunBtn" style="display:none; margin-top:12px;" onclick="runClientImport()">טעינת הלקוחות</button>
           <div id="clientImportResult" style="display:none; font-size:13.5px; margin-top:12px; max-width:520px;"></div>
+        </div>
+      </div>
+      <div class="settings-section" data-settings-section="clientmerge" id="clientMergeSection" style="display:none;">
+        <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
+          <span class="settings-section-title">🔗 איחוד כרטיסים כפולים</span>
+          <span class="settings-section-sub">אותה לקוחה שנכנסה פעמיים</span>
+          <span class="settings-section-chevron">▾</span>
+        </button>
+        <div class="settings-section-body">
+          <div style="font-size:13.5px; font-weight:700; color:var(--wine); background:rgba(155,44,66,0.1); border:1px solid rgba(155,44,66,0.35); border-radius:10px; padding:10px 14px; margin:10px 0; max-width:560px;">
+            ⚠️ איחוד אינו ניתן לביטול. לפני שמאחדים — להוריד גיבוי של הכרטסת בכפתור שלמטה.
+          </div>
+          <div style="font-size:13px; color:var(--panel-text-dim); line-height:1.7; margin-bottom:12px; max-width:560px;">
+            הכרטיס שנשאר הוא זה שיש עליו יותר מידע. התורים, ההיסטוריה, ההערות והביקורים
+            של הכרטיס השני עוברים אליו, והשם השני נשמר בהערה כדי שאפשר יהיה לחפש לפיו.
+            אפשר להחליף איזה כרטיס נשאר, ואפשר להוריד סימון מכל שורה שלא בטוחים לגביה.
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="template-btn" onclick="downloadClientsBackup()">💾 הורדת גיבוי של הכרטסת</button>
+            <button type="button" class="template-btn" onclick="findDuplicateClientPairs()">🔍 חיפוש כפילויות</button>
+          </div>
+          <div id="clientMergeList" style="margin-top:14px; max-width:720px;"></div>
+          <div id="clientMergeError" style="display:none; color:var(--wine); font-size:13px; margin-top:10px; max-width:560px;"></div>
+          <button type="button" class="cta" id="clientMergeRunBtn" style="display:none; margin-top:12px;" onclick="runClientMerge()">איחוד הכרטיסים המסומנים</button>
+          <div id="clientMergeResult" style="display:none; font-size:13.5px; margin-top:12px; max-width:560px;"></div>
         </div>
       </div>
       <div class="settings-section" data-settings-section="backups" id="backupsSection" style="display:none;">
@@ -3274,7 +3315,6 @@
   <div style="display:none;" data-build="17.09-v45-blocked-booking"></div>
 </footer>
 
-
 <div id="saveStatusIndicator" style="position:fixed; bottom:84px; inset-inline-end:16px; background:rgba(20,16,20,0.92); color:#F5EEE4; font-size:13.5px; font-weight:600; padding:9px 18px; border-radius:999px; z-index:999998; display:none; direction:rtl; box-shadow:0 2px 12px rgba(0,0,0,.35);"></div>
 <div id="myDayOverlay" class="myday-overlay">
   <div class="myday-sheet">
@@ -3303,7 +3343,6 @@
     <div id="clientArrivalContent"></div>
   </div>
 </div>
-
 <div id="addClientOverlay" class="myday-overlay add-modal-overlay">
   <div class="myday-sheet add-modal">
     <div class="myday-header">
@@ -3506,11 +3545,25 @@
         <div id="frTimeEcho" class="reminder-choice-notice" style="display:none;"></div>
       </div>
       <div class="label" style="margin-top:6px;">טווח תאריכים (לא חובה — ברירת המחדל 30 הימים הקרובים)</div>
-      <div style="display:flex; gap:10px; align-items:center;">
-        <input type="date" id="frDateFrom" class="field" style="margin:0;">
-        <span>עד</span>
-        <input type="date" id="frDateTo" class="field" style="margin:0;">
+      <div class="fr-date-range">
+        <div>
+          <span class="fr-date-range-label">מתאריך</span>
+          <div class="dmy-date-picker full-width" id="frDateFromWrap">
+            <select id="frDateFromDay" aria-label="יום התחלה"></select>
+            <select id="frDateFromMonth" aria-label="חודש התחלה"></select>
+            <select id="frDateFromYear" aria-label="שנת התחלה"></select>
+          </div>
+        </div>
+        <div>
+          <span class="fr-date-range-label">עד תאריך</span>
+          <div class="dmy-date-picker full-width" id="frDateToWrap">
+            <select id="frDateToDay" aria-label="יום סיום"></select>
+            <select id="frDateToMonth" aria-label="חודש סיום"></select>
+            <select id="frDateToYear" aria-label="שנת סיום"></select>
+          </div>
+        </div>
       </div>
+      <div id="frDateRangeEcho" class="reminder-choice-notice" style="display:none;"></div>
       <textarea id="frNote" class="client-note" style="min-height:50px;" placeholder="הערה נוספת (אופציונלי) — כל דבר שלא נכנס לשדות למעלה"></textarea>
       <div class="label" style="margin-top:6px;">פרטי קשר</div>
       <input type="tel" inputmode="numeric" maxlength="10" id="frId" class="field" placeholder="תעודת זהות או מספר טלפון">
@@ -3563,7 +3616,6 @@
           <input type="text" id="mbClientLastName" class="field" placeholder="שם משפחה">
         </div>
         <input type="tel" id="mbClientPhone" class="field" placeholder="050-0000000">
-        
         <div id="mbPhoneMatches" style="display:none; flex-direction:column; gap:6px; background:#FAF5EE; border-radius:8px; padding:9px 11px;"></div>
         <button type="button" class="mini-btn" id="mbClearClientBtn" style="display:none; align-self:flex-start; padding:5px 12px; font-size:12.5px;">↩ ניקוי פרטי הלקוחה</button>
         <input type="email" id="mbClientEmail" class="field" placeholder="אימייל (אופציונלי)">
@@ -3709,7 +3761,6 @@
       <div id="slotChoiceBlockedNote" style="display:none; font-size:13px; color:var(--panel-text-dim); line-height:1.6; text-align:center;"></div>
       <button type="button" class="cta" id="slotChoiceBookBtn">📅 קביעת תור ללקוחה</button>
       <button type="button" class="cta" id="slotChoiceBlockBtn" style="background:var(--wine-deep);">🚫 חסימת זמן אישי</button>
-      
       <button type="button" class="cta" id="slotChoiceOpenBtn" style="background:var(--sage, #5E7856);">🕓 פתיחת שעות חסומות</button>
       <button type="button" class="mini-btn" id="slotChoiceReleaseBtn" style="display:none;">↩ שחרור היום מהחסימה</button>
     </div>
@@ -3752,7 +3803,6 @@
     </div>
   </div>
 </div>
-
 
 <div id="openHoursOverlay" class="appt-detail-overlay">
   <div class="appt-detail-topbar">
@@ -3918,7 +3968,6 @@
         <button onclick="closeLoginOverlay()">✕ סגירה</button>
       </div>
     </div>
-    
     <form id="loginForm" onsubmit="return false;" style="display:flex; flex-direction:column; gap:10px;">
       <input type="email" id="loginEmail" class="field" placeholder="אימייל" name="email" autocomplete="username">
       <input type="password" id="loginPassword" class="field" placeholder="סיסמה" name="password" autocomplete="current-password">
@@ -3936,7 +3985,6 @@
         <button type="button" onclick="closeHoursTimePicker()">✕ סגירה</button>
       </div>
     </div>
-    
     <div class="hours-time-picker-cols">
       <div class="hours-time-picker-colwrap">
         <div class="hours-time-picker-collbl">שעה</div>
@@ -4371,13 +4419,21 @@
       if (customWrap) customWrap.style.display = (this.value === 'custom' && this.checked) ? 'flex' : 'none';
     });
   });
-  document.getElementById('frDateFrom')?.addEventListener('change', function(){
-    const toEl = document.getElementById('frDateTo');
-    if (!toEl) return;
-    const todayStr = formatDateKey(todayMidnight);
-    const minForTo = this.value && this.value > todayStr ? this.value : todayStr;
-    toEl.min = minForTo;
-    if (toEl.value && toEl.value < minForTo) toEl.value = '';
+  function frDateFromValue(){ return readDMYPicker('frDateFromDay', 'frDateFromMonth', 'frDateFromYear') || ''; }
+  function frDateToValue(){ return readDMYPicker('frDateToDay', 'frDateToMonth', 'frDateToYear') || ''; }
+  function updateFrDateRangeEcho(){
+    const echo = document.getElementById('frDateRangeEcho');
+    if (!echo) return;
+    const from = frDateFromValue(), to = frDateToValue();
+    if (!from && !to){ echo.style.display = 'none'; echo.textContent = ''; return; }
+    const show = (v) => v ? formatDateDMY(v) : '';
+    echo.style.display = 'block';
+    if (from && to) echo.textContent = 'מחפשות לך תור בין ' + show(from) + ' ל-' + show(to) + '.';
+    else if (from) echo.textContent = 'מחפשות לך תור מ-' + show(from) + ' והלאה.';
+    else echo.textContent = 'מחפשות לך תור עד ' + show(to) + '.';
+  }
+  ['frDateFromDay', 'frDateFromMonth', 'frDateFromYear', 'frDateToDay', 'frDateToMonth', 'frDateToYear'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', updateFrDateRangeEcho);
   });
   wireIdentityAutofill({ idId: 'frId', firstId: 'frFirstName', lastId: 'frLastName', phoneId: 'frPhone', emailId: 'frEmail' });
   function updateFrTimeEcho(){
@@ -4432,11 +4488,9 @@
     document.getElementById('frTimeFrom').value = '';
     document.getElementById('frTimeTo').value = '';
     if (typeof updateFrTimeEcho === 'function') updateFrTimeEcho();
-    const frTodayStr = formatDateKey(todayMidnight);
-    document.getElementById('frDateFrom').min = frTodayStr;
-    document.getElementById('frDateFrom').value = '';
-    document.getElementById('frDateTo').min = frTodayStr;
-    document.getElementById('frDateTo').value = '';
+    populateDMYPicker('frDateFromDay', 'frDateFromMonth', 'frDateFromYear', { allowBlank: true, yearsForward: 2 });
+    populateDMYPicker('frDateToDay', 'frDateToMonth', 'frDateToYear', { allowBlank: true, yearsForward: 2 });
+    updateFrDateRangeEcho();
     document.getElementById('frNote').value = '';
     document.getElementById('frId').value = '';
     splitNameIntoFields('', 'frFirstName', 'frLastName');
@@ -4516,8 +4570,8 @@
     const timeToVal = document.getElementById('frTimeTo').value;
     const preference = {
       days: anyDay ? [] : checkedDays,
-      dateFrom: document.getElementById('frDateFrom').value || null,
-      dateTo: document.getElementById('frDateTo').value || null
+      dateFrom: frDateFromValue() || null,
+      dateTo: frDateToValue() || null
     };
     if (timeOfDay === 'custom'){
       if (!timeFromVal || !timeToVal){
@@ -6248,9 +6302,9 @@
       errorEl.textContent = 'מספר הטלפון שהוזן לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567) או להשאיר את השדה ריק.';
       return;
     }
-    if (!/^\d{9}$/.test(idDigits)){
+    if (!/^\d{9}$/.test(idDigits) && !isValidIsraeliPhone(phone)){
       errorEl.style.display = 'block';
-      errorEl.textContent = 'יש להזין תעודת זהות תקינה (9 ספרות) — אי אפשר לקבוע תור בלעדיה.';
+      errorEl.textContent = 'צריך לפחות אחד משניים: תעודת זהות בת 9 ספרות, או מספר טלפון תקין.';
       return;
     }
     errorEl.style.display = 'none';
@@ -6336,6 +6390,16 @@
       errorEl.textContent = buildBlockedBookingAdminWarning(mbBlockStatus, (mbBlockStatus.client && mbBlockStatus.client.name) || name) + ' התור לא נקבע.';
       return;
     }
+    const emailVal = (document.getElementById('mbClientEmail')?.value || '').trim();
+    const noteVal = (document.getElementById('mbClientNote')?.value || '').trim();
+    const byLoaded = mbLoadedClientKey
+      ? clients.find(c => c && String(c.teudatZehut || '') === mbLoadedClientKey) : null;
+    const existingByIdOrPhone = byLoaded
+      || (idDigits ? clients.find(c => c && String(c.teudatZehut || '') === idDigits) : null)
+      || (phone ? clients.find(c => c && (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, '')) : null);
+    const assignedTz = idDigits
+      || (existingByIdOrPhone && String(existingByIdOrPhone.teudatZehut || ''))
+      || nextMigrationNumber();
     const manualAppointment = {
       id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000),
       day: dayKey,
@@ -6343,7 +6407,7 @@
       time: timeVal,
       dur,
       client: name,
-      teudatZehut: idDigits || null,
+      teudatZehut: assignedTz || null,
       service: combinedServiceName,
       services: combinedServicesList,
       price: totalPrice,
@@ -6357,13 +6421,6 @@
       removeSpecialRequestSilently(mbFromSpecialRequestId);
       mbFromSpecialRequestId = null;
     }
-    const emailVal = (document.getElementById('mbClientEmail')?.value || '').trim();
-    const noteVal = (document.getElementById('mbClientNote')?.value || '').trim();
-    const byLoaded = mbLoadedClientKey
-      ? clients.find(c => c && String(c.teudatZehut || '') === mbLoadedClientKey) : null;
-    const existingByIdOrPhone = byLoaded
-      || (idDigits ? clients.find(c => c && String(c.teudatZehut || '') === idDigits) : null)
-      || (phone ? clients.find(c => c && (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, '')) : null);
     if (existingByIdOrPhone){
       const hadPlaceholder = existingByIdOrPhone.teudatZehut
         && !isPlausibleTeudatZehut(existingByIdOrPhone.teudatZehut);
@@ -6376,7 +6433,7 @@
       if (emailVal && !existingByIdOrPhone.email) existingByIdOrPhone.email = emailVal;
       if (noteVal || !existingByIdOrPhone.note) existingByIdOrPhone.note = noteVal;
     } else if (phone || idDigits){
-      clients.push({ name, phone, teudatZehut: idDigits || null, email: emailVal, photo: null, visits: 0, daysSinceVisit: null, note: noteVal || 'לקוחה חדשה — נוספה דרך קביעת תור ידנית', birthday: null });
+      clients.push({ name, phone, teudatZehut: assignedTz || null, email: emailVal, photo: null, visits: 0, daysSinceVisit: null, note: noteVal || 'לקוחה חדשה — נוספה דרך קביעת תור ידנית', birthday: null });
     }
     if (typeof saveState === 'function') saveState();
     closeManualBookingModal();
@@ -7164,7 +7221,7 @@
     const u = auth && auth.currentUser;
     return !!(u && !u.isAnonymous && String(u.email || '').trim().toLowerCase() === PLATFORM_ADMIN_EMAIL);
   }
-  const PLATFORM_ONLY_SECTION_IDS = ['platformSection', 'clientImportSection', 'backupsSection'];
+  const PLATFORM_ONLY_SECTION_IDS = ['platformSection', 'clientImportSection', 'clientMergeSection', 'backupsSection'];
   function applyPlatformAdminUi(){
     const show = isPlatformAdmin();
     PLATFORM_ONLY_SECTION_IDS.forEach(id => {
@@ -7729,6 +7786,7 @@
     return readDMYPickerEls(document.getElementById(dayId), document.getElementById(monthId), document.getElementById(yearId));
   }
   populateDMYPicker('ftpBirthdayDay', 'ftpBirthdayMonth', 'ftpBirthdayYear', { allowBlank: true, yearsBack: 100 });
+  populateDMYPicker('bookingTzUpdateBdayDay', 'bookingTzUpdateBdayMonth', 'bookingTzUpdateBdayYear', { allowBlank: true, yearsBack: 100 });
   populateDMYPicker('newClientBirthdayDay', 'newClientBirthdayMonth', 'newClientBirthdayYear', { allowBlank: true, yearsBack: 100 });
   function hebrewDayNumeral(n){
     if (n === 15) return 'ט״ו';
@@ -7871,6 +7929,14 @@
           <textarea class="visit-note" placeholder="הערה על הטיפול הזה...">${a.note || ''}</textarea>
         </div>`;
   }
+  function refreshClientRowBirthdayBadge(row, c){
+    if (!row || !c) return;
+    const el = row.querySelector('.visits');
+    if (!el) return;
+    const isBday = typeof isBirthdayToday === 'function' && isBirthdayToday(c.birthday);
+    el.innerHTML = `${c.visits || 0} ביקורים · אחרון ${formatLastVisit(c.daysSinceVisit)}`
+      + (isBday ? ' <span class="badge" style="background:rgba(201,162,39,0.2); color:var(--panel-gold); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : '');
+  }
   function renderClients(){
     const __rcDiagStart = Array.isArray(clientsRenderCallLog) ? (typeof performance !== 'undefined' ? performance.now() : Date.now()) : null;
     const listEl = document.getElementById('clientList');
@@ -7902,7 +7968,8 @@
     sortedClientIndices.forEach(i => {
       const c = clients[i];
       if (searchTerm){
-        const nameMatch = c.name.toLowerCase().includes(searchTerm);
+        const nameMatch = c.name.toLowerCase().includes(searchTerm)
+          || String(c.note || '').toLowerCase().includes(searchTerm);
         const digitsInTerm = searchTerm.replace(/[^0-9]/g, '');
         const phoneMatch = (c.phone || '').replace(/[^0-9]/g, '').includes(digitsInTerm);
         const idMatch = (c.teudatZehut || '').includes(digitsInTerm);
@@ -8072,11 +8139,17 @@
         const bdayMonthEl = bdayWrap.querySelector('.mini-bday-month');
         const bdayYearEl = bdayWrap.querySelector('.mini-bday-year');
         populateDMYPickerEls(bdayDayEl, bdayMonthEl, bdayYearEl, { allowBlank: true, yearsBack: 100, value: c.birthday });
+        let prevBirthday = c.birthday || null;
         const onBdayChange = () => {
-          c.birthday = readDMYPickerEls(bdayDayEl, bdayMonthEl, bdayYearEl);
-          renderClients();
+          const picked = readDMYPickerEls(bdayDayEl, bdayMonthEl, bdayYearEl);
+          c.birthday = picked;
+          refreshClientRowBirthdayBadge(row, c);
           if (typeof saveState === 'function') saveState();
-          if (typeof showAdminToast === 'function') showAdminToast('✓ יום ההולדת עודכן בהצלחה');
+          if (typeof showAdminToast === 'function'){
+            if (picked) showAdminToast('✓ יום ההולדת עודכן בהצלחה');
+            else if (prevBirthday) showAdminToast('✓ יום ההולדת נמחק');
+          }
+          prevBirthday = picked || null;
         };
         bdayDayEl.onchange = onBdayChange;
         bdayMonthEl.onchange = onBdayChange;
@@ -8196,7 +8269,7 @@
     if (searchTerm || matchedCount > renderedCount){
       const more = document.createElement('div');
       more.className = 'client-list-more';
-      more.style.cssText = 'font-size:13px; color:var(--panel-text-dim); line-height:1.7; padding:14px 4px; text-align:center;';
+      more.style.cssText = 'font-size:13px; color:var(--panel-text-dim, #6B6259); line-height:1.7; padding:10px 4px 14px; text-align:center; font-weight:600;';
       const n = (x) => x.toLocaleString('he-IL');
       if (searchTerm){
         more.textContent = matchedCount > renderedCount
@@ -8208,7 +8281,7 @@
         more.textContent = 'מוצגות ' + n(renderedCount) + ' לקוחות מתוך ' + n(matchedCount) +
           '. לאיתור לקוחה מסוימת יש להשתמש בשורת החיפוש למעלה — אפשר לחפש לפי שם, טלפון או מספר זהות.';
       }
-      listEl.appendChild(more);
+      listEl.insertBefore(more, listEl.firstChild);
     }
     const bdayAlertEl = document.getElementById('birthdayAlert');
     if (birthdayClients.length){
@@ -8430,6 +8503,258 @@
     if (f) f.value = '';
     const prev = document.getElementById('clientImportPreview');
     if (prev) prev.style.display = 'none';
+  }
+
+  function normaliseHebrewName(s){
+    return String(s || '').trim()
+      .replace(/["'׳״]/g, '')
+      .replace(/יי/g, 'י')
+      .replace(/וו/g, 'ו')
+      .replace(/ת/g, 'ט')          // אסתי / אסטי
+      .replace(/\s+/g, ' ');
+  }
+  function clientFirstName(c){
+    const n = String((c && c.name) || '').trim().split(/\s+/);
+    return normaliseHebrewName(n[0] || '');
+  }
+  function clientLastName(c){
+    const n = String((c && c.name) || '').trim().split(/\s+/);
+    return n.length > 1 ? normaliseHebrewName(n.slice(1).join(' ')) : '';
+  }
+  function nameSimilarity(a, b){
+    a = String(a || ''); b = String(b || '');
+    if (!a && !b) return 1;
+    if (!a || !b) return 0;
+    if (a === b) return 1;
+    const m = a.length, n = b.length;
+    let prev = new Array(n + 1), cur = new Array(n + 1);
+    for (let j = 0; j <= n; j++) prev[j] = j;
+    for (let i = 1; i <= m; i++){
+      cur[0] = i;
+      for (let j = 1; j <= n; j++){
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i-1] === b[j-1] ? 0 : 1));
+      }
+      const t = prev; prev = cur; cur = t;
+    }
+    return 1 - (prev[n] / Math.max(m, n));
+  }
+  function clientCompleteness(c){
+    if (!c) return -1;
+    let score = 0;
+    if (clientLastName(c)) score += 4;
+    if (isPlausibleTeudatZehut(c.teudatZehut)) score += 4;
+    if (String(c.email || '').trim()) score += 3;
+    if (String(c.birthday || '').trim()) score += 2;
+    if (String(c.note || '').trim()) score += 1;
+    if (c.photo) score += 1;
+    if (Array.isArray(c.photos) && c.photos.length) score += 1;
+    if (Array.isArray(c.followUps) && c.followUps.length) score += 1;
+    score += Math.min(Number(c.visits) || 0, 20) / 10;
+    score += String((c && c.name) || '').trim().length / 100;  // שובר שוויון יציב
+    return score;
+  }
+  let clientMergePlan = null;
+  function clientMergeShowError(msg){
+    const el = document.getElementById('clientMergeError');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.style.display = msg ? 'block' : 'none';
+  }
+  function downloadClientsBackup(){
+    try {
+      const blob = new Blob([JSON.stringify(clients, null, 1)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'גיבוי לקוחות ' + formatDateKey(new Date()) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      if (typeof showAdminToast === 'function') showAdminToast('✓ הגיבוי ירד למחשב');
+    } catch (e){
+      console.error('clients backup download failed:', e);
+      clientMergeShowError('לא הצלחנו להוריד את הגיבוי. לא לאחד לפני שיש גיבוי.');
+    }
+  }
+  function duplicateClientPairs(){
+    const byPhone = {};
+    clients.forEach((c, i) => {
+      if (!c || c.deleted) return;
+      const p = String(c.phone || '').replace(/[^0-9]/g, '');
+      if (p.length < 9) return;     // בלי טלפון אין על מה להשוות
+      (byPhone[p] = byPhone[p] || []).push(i);
+    });
+    const pairs = [];
+    Object.keys(byPhone).forEach(p => {
+      const idxs = byPhone[p];
+      if (idxs.length < 2) return;
+      for (let a = 0; a < idxs.length; a++){
+        for (let b = a + 1; b < idxs.length; b++){
+          const ca = clients[idxs[a]], cb = clients[idxs[b]];
+          const f = nameSimilarity(clientFirstName(ca), clientFirstName(cb));
+          const l = nameSimilarity(clientLastName(ca), clientLastName(cb));
+          let why = null;
+          if (f === 1) why = 'אותו שם פרטי ואותו טלפון';
+          else if (f >= 0.7 && l >= 0.7 && clientLastName(ca) && clientLastName(cb)) why = 'שם דומה מאוד ואותו טלפון';
+          if (!why) continue;
+          const keepFirst = clientCompleteness(ca) >= clientCompleteness(cb);
+          pairs.push({
+            phone: p,
+            keep: keepFirst ? idxs[a] : idxs[b],
+            drop: keepFirst ? idxs[b] : idxs[a],
+            why,
+            chosen: true,
+          });
+        }
+      }
+    });
+    return pairs;
+  }
+  function findDuplicateClientPairs(){
+    clientMergeShowError('');
+    const pairs = duplicateClientPairs();
+    clientMergePlan = pairs;
+    const listEl = document.getElementById('clientMergeList');
+    const runBtn = document.getElementById('clientMergeRunBtn');
+    const resEl = document.getElementById('clientMergeResult');
+    if (resEl) resEl.style.display = 'none';
+    if (!listEl) return;
+    if (!pairs.length){
+      listEl.innerHTML = '<div style="font-size:13.5px; color:var(--panel-text-dim); padding:10px 2px;">לא נמצאו כפילויות. הכרטסת נקייה.</div>';
+      if (runBtn) runBtn.style.display = 'none';
+      return;
+    }
+    renderClientMergeList();
+    if (runBtn) runBtn.style.display = 'inline-block';
+  }
+  function renderClientMergeList(){
+    const listEl = document.getElementById('clientMergeList');
+    if (!listEl || !clientMergePlan) return;
+    const n = clientMergePlan.filter(p => p.chosen).length;
+    listEl.innerHTML =
+      '<div style="font-size:13.5px; font-weight:700; margin-bottom:10px;">נמצאו ' + clientMergePlan.length +
+      ' זוגות. מסומנים לאיחוד: <span id="clientMergeCount">' + n + '</span>.</div>' +
+      clientMergePlan.map((p, i) => {
+        const keep = clients[p.keep], drop = clients[p.drop];
+        if (!keep || !drop) return '';
+        return '<div style="display:flex; gap:10px; align-items:flex-start; padding:9px 10px; border:1px solid rgba(var(--panel-line-rgb),0.25); border-radius:10px; margin-bottom:7px; background:var(--panel-card-bg);">' +
+          '<input type="checkbox" data-merge-row="' + i + '"' + (p.chosen ? ' checked' : '') + ' style="width:auto; margin-top:3px;">' +
+          '<div style="flex:1; min-width:0; font-size:13.5px; line-height:1.75;">' +
+            '<div><b>נשאר:</b> ' + (keep.name || '—') + ' <span style="color:var(--panel-text-dim);">(' + (keep.teudatZehut || 'בלי ת"ז') + ', ' + (keep.visits || 0) + ' ביקורים)</span></div>' +
+            '<div><b>מתאחד לתוכו:</b> ' + (drop.name || '—') + ' <span style="color:var(--panel-text-dim);">(' + (drop.teudatZehut || 'בלי ת"ז') + ', ' + (drop.visits || 0) + ' ביקורים)</span></div>' +
+            '<div style="font-size:12px; color:var(--panel-text-dim);">' + p.phone + ' · ' + p.why + '</div>' +
+          '</div>' +
+          '<button type="button" class="template-btn" data-merge-swap="' + i + '" style="flex:0 0 auto; padding:5px 10px; font-size:12px;">↔ להחליף</button>' +
+        '</div>';
+      }).join('');
+    listEl.querySelectorAll('[data-merge-row]').forEach(cb => {
+      cb.onchange = () => {
+        clientMergePlan[parseInt(cb.dataset.mergeRow, 10)].chosen = cb.checked;
+        const c = document.getElementById('clientMergeCount');
+        if (c) c.textContent = String(clientMergePlan.filter(p => p.chosen).length);
+      };
+    });
+    listEl.querySelectorAll('[data-merge-swap]').forEach(btn => {
+      btn.onclick = () => {
+        const p = clientMergePlan[parseInt(btn.dataset.mergeSwap, 10)];
+        const t = p.keep; p.keep = p.drop; p.drop = t;
+        renderClientMergeList();
+      };
+    });
+  }
+  function mergeTwoClients(keep, drop){
+    if (!keep || !drop || keep === drop) return;
+    const dropTz = String(drop.teudatZehut || '');
+    const keepTz = String(keep.teudatZehut || '');
+    const dropName = String(drop.name || '');
+    const keepName = String(keep.name || '');
+    const belongsToDrop = (rec, nameField) => {
+      if (!rec) return false;
+      const recTz = String(rec.teudatZehut || '');
+      if (recTz && dropTz) return recTz === dropTz;
+      if (recTz && !dropTz) return false;
+      return String(rec[nameField] || '') === dropName;
+    };
+    const retarget = (list, nameField) => {
+      (list || []).forEach(rec => {
+        if (!belongsToDrop(rec, nameField)) return;
+        if (keepTz) rec.teudatZehut = keepTz;
+        if (nameField in rec) rec[nameField] = keepName;
+      });
+    };
+    retarget(typeof weekAppointments !== 'undefined' ? weekAppointments : [], 'client');
+    retarget(typeof waitlist !== 'undefined' ? waitlist : [], 'name');
+    retarget(typeof specialRequests !== 'undefined' ? specialRequests : [], 'name');
+    retarget(typeof lateCancellations !== 'undefined' ? lateCancellations : [], 'client');
+    retarget(typeof cancellationLog !== 'undefined' ? cancellationLog : [], 'client');
+
+    if (!isPlausibleTeudatZehut(keep.teudatZehut) && isPlausibleTeudatZehut(drop.teudatZehut)){
+      keep.teudatZehut = drop.teudatZehut;
+    }
+    if (!String(keep.phone || '').trim()) keep.phone = drop.phone || '';
+    if (!String(keep.email || '').trim()) keep.email = drop.email || '';
+    if (!String(keep.birthday || '').trim()) keep.birthday = drop.birthday || null;
+    if (!keep.photo && drop.photo) keep.photo = drop.photo;
+    if (Array.isArray(drop.photos) && drop.photos.length){
+      keep.photos = (Array.isArray(keep.photos) ? keep.photos : []).concat(drop.photos);
+    }
+    if (Array.isArray(drop.followUps) && drop.followUps.length){
+      keep.followUps = (Array.isArray(keep.followUps) ? keep.followUps : []).concat(drop.followUps);
+    }
+    if (!Array.isArray(keep.reminderChannelPref) || !keep.reminderChannelPref.length){
+      if (Array.isArray(drop.reminderChannelPref) && drop.reminderChannelPref.length){
+        keep.reminderChannelPref = drop.reminderChannelPref;
+      }
+    }
+    keep.visits = (Number(keep.visits) || 0) + (Number(drop.visits) || 0);
+    const kd = keep.daysSinceVisit, dd = drop.daysSinceVisit;
+    if (dd !== null && dd !== undefined){
+      keep.daysSinceVisit = (kd === null || kd === undefined) ? dd : Math.min(kd, dd);
+    }
+    const notes = [];
+    if (String(keep.note || '').trim()) notes.push(String(keep.note).trim());
+    if (String(drop.note || '').trim() && String(drop.note).trim() !== String(keep.note || '').trim()){
+      notes.push(String(drop.note).trim());
+    }
+    if (dropName && dropName !== keepName) notes.push('ידועה גם כ: ' + dropName);
+    keep.note = notes.join(' · ');
+
+    const i = clients.indexOf(drop);
+    if (i !== -1) clients.splice(i, 1);
+  }
+  async function runClientMerge(){
+    clientMergeShowError('');
+    if (!clientMergePlan) return;
+    const chosen = clientMergePlan.filter(p => p.chosen);
+    if (!chosen.length){ clientMergeShowError('לא סומן אף זוג.'); return; }
+    if (!confirm('לאחד ' + chosen.length + ' זוגות כרטיסים?\n\nהפעולה אינה ניתנת לביטול. יש גיבוי?')) return;
+    const jobs = chosen.map(p => ({ keep: clients[p.keep], drop: clients[p.drop] }));
+    const btn = document.getElementById('clientMergeRunBtn');
+    if (btn){ btn.disabled = true; btn.textContent = 'מאחד...'; }
+    let merged = 0;
+    jobs.forEach(j => {
+      if (!j.keep || !j.drop) return;
+      if (clients.indexOf(j.keep) === -1 || clients.indexOf(j.drop) === -1) return;
+      mergeTwoClients(j.keep, j.drop);
+      merged++;
+    });
+    try {
+      if (typeof saveState === 'function') await saveState();
+      if (typeof renderClients === 'function') renderClients();
+      const res = document.getElementById('clientMergeResult');
+      if (res){
+        res.style.display = 'block';
+        res.innerHTML = '✓ <b>' + merged + ' זוגות אוחדו.</b> בכרטסת נשארו ' + clients.length + ' לקוחות.';
+      }
+      if (typeof showAdminToast === 'function') showAdminToast('✓ ' + merged + ' זוגות אוחדו');
+    } catch (e){
+      console.error('client merge save failed:', e);
+      clientMergeShowError('האיחוד בוצע על המסך אבל השמירה לענן נכשלה. לא לרענן את הדף — לנסות שוב בעוד רגע.');
+    }
+    if (btn){ btn.disabled = false; btn.textContent = 'איחוד הכרטיסים המסומנים'; }
+    clientMergePlan = null;
+    findDuplicateClientPairs();
   }
   function addClient(){
     const firstEl = document.getElementById('newClientFirstName');
@@ -11858,6 +12183,21 @@
   function isPlausibleTeudatZehut(digits){
     return /^\d{9}$/.test(String(digits || ''));
   }
+  function identifierComplete(raw){
+    const digits = String(raw || '').replace(/[^0-9]/g, '');
+    return digits.length === 9 || isValidIsraeliPhone(raw);
+  }
+  function prepareNewClientRegistration(raw){
+    const digits = String(raw || '').replace(/[^0-9]/g, '');
+    const typedAsTz = isPlausibleTeudatZehut(digits);
+    const typedAsPhone = isValidIsraeliPhone(raw);
+    const tzWrap = document.getElementById('bookingNewTzWrap');
+    if (tzWrap) tzWrap.style.display = (!typedAsTz && typedAsPhone) ? 'block' : 'none';
+    if (!typedAsTz && typedAsPhone){
+      const phoneEl = document.getElementById('bookingPhoneInput');
+      if (phoneEl && !phoneEl.value.trim()) phoneEl.value = digits;
+    }
+  }
   function resolveClientByIdOrPhone(raw){
     const digits = String(raw || '').replace(/[^0-9]/g, '');
     const out = { digits, typedAsTz: isPlausibleTeudatZehut(digits), typedAsPhone: isValidIsraeliPhone(raw), client: null, matchedBy: null };
@@ -11886,8 +12226,24 @@
     c.teudatZehut = idDigits;
     return c;
   }
+  function nextMigrationNumber(){
+    let max = 2000;
+    clients.forEach(c => {
+      const d = String((c && c.teudatZehut) || '');
+      if (/^\d{1,8}$/.test(d)){
+        const n = parseInt(d, 10);
+        if (n > max && n < 100000000) max = n;
+      }
+    });
+    return String(max + 1);
+  }
   function clientNeedsTeudatZehut(client){
     return !!client && !isPlausibleTeudatZehut(client.teudatZehut);
+  }
+  function readFirstTimeBirthday(){
+    const wrap = document.getElementById('bookingTzUpdateBdayWrap');
+    if (!wrap || wrap.style.display === 'none') return '';
+    return readDMYPicker('bookingTzUpdateBdayDay', 'bookingTzUpdateBdayMonth', 'bookingTzUpdateBdayYear') || '';
   }
   function firstTimeEmailFieldShown(){
     const box = document.getElementById('bookingTzUpdateBox');
@@ -11926,6 +12282,8 @@
     if (emailWrap) emailWrap.style.display = needsEmail ? 'block' : 'none';
     const bdayWrap = document.getElementById('bookingTzUpdateBdayWrap');
     if (bdayWrap) bdayWrap.style.display = needsBday ? 'block' : 'none';
+    const welcomeLine = document.getElementById('bookingWelcomeBack');
+    if (welcomeLine && show) welcomeLine.style.display = 'none';
     if (!show){
       const inp = document.getElementById('bookingTzUpdateInput');
       if (inp) inp.value = '';
@@ -11992,7 +12350,6 @@
       } finally { identityAutofillBusy = false; }
     });
 
-
     [firstEl, lastEl].forEach(nameEl => {
       if (!nameEl) return;
       nameEl.addEventListener('input', function(){
@@ -12051,6 +12408,7 @@
     skipIdListener: true, notifyIdOnFill: true,
   });
   let serverIdentity = null;       // { id, found, firstName, hasTz, hasEmail, blocked }
+  let serverIdentityPick = null;
   let serverIdentityTimer = null;
   let serverIdentitySeq = 0;       // כדי שתשובה ישנה שאיחרה לא תדרוס תשובה חדשה
   const serverIdentityCache = {};  // תשובות שכבר קיבלנו — הקלדה חוזרת לא שואלת שוב
@@ -12082,7 +12440,38 @@
         return null;
       });
   }
-  function clearServerIdentity(){ serverIdentity = null; }
+  function clearServerIdentity(){ serverIdentity = null; serverIdentityPick = null; }
+  function renderIdentityChoice(candidates, onPick){
+    const box = document.getElementById('bookingIdentityChoice');
+    if (!box) return;
+    if (!candidates || candidates.length < 2){
+      box.style.display = 'none';
+      box.innerHTML = '';
+      return;
+    }
+    box.style.display = 'block';
+    box.innerHTML = '<div class="reminder-choice-notice" style="margin-bottom:8px;">המספר הזה רשום אצלנו על יותר מלקוחה אחת. מי מכן את?</div>'
+      + '<div class="identity-choice-row">'
+      + candidates.map(c => `<button type="button" class="identity-choice-btn" data-pick="${c.index}">${c.firstName || 'לקוחה'}</button>`).join('')
+      + '</div>';
+    box.querySelectorAll('.identity-choice-btn').forEach(btn => {
+      btn.onclick = () => onPick(parseInt(btn.dataset.pick, 10));
+    });
+  }
+  async function pickSharedPhoneIdentity(index){
+    const digits = (document.getElementById('bookingIdInput')?.value || '').replace(/[^0-9]/g, '');
+    if (!digits || isNaN(index)) return;
+    serverIdentityPick = index;
+    const res = await callClientApi('lookup', { id: digits, clientIndex: index })
+      .catch(err => { console.error('Choosing among shared-phone clients failed:', err); return null; });
+    if (!res || !res.found){
+      serverIdentityPick = null;
+      return;
+    }
+    serverIdentity = Object.assign({ id: digits }, res);
+    serverIdentitySeq++;
+    applyServerIdentityToBookingForm();
+  }
   function applyServerIdentityToBookingForm(){
     const welcomeEl = document.getElementById('bookingWelcomeBack');
     const regEl = document.getElementById('newClientRegistration');
@@ -12096,14 +12485,18 @@
       const __askBday = (!serverIdentity.hasTz || !serverIdentity.hasEmail) && !serverIdentity.hasBirthday;
       welcomeEl.textContent = welcomeBackText(serverIdentity.firstName, !serverIdentity.hasTz, !serverIdentity.hasEmail, __askBday);
       regEl.style.display = 'none';
+      renderIdentityChoice(null);
       if (nameRow) nameRow.style.display = 'none';
       if (phoneInput) phoneInput.style.display = 'none';
     } else {
       welcomeEl.style.display = 'none';
       if (nameRow) nameRow.style.display = '';
       if (phoneInput) phoneInput.style.display = '';
-      const digits = (document.getElementById('bookingIdInput')?.value || '').replace(/[^0-9]/g, '');
-      regEl.style.display = digits.length === 9 ? 'block' : 'none';
+      const rawTyped = document.getElementById('bookingIdInput')?.value || '';
+      const ambiguous = !!(serverIdentity && serverIdentity.ambiguousPhone);
+      renderIdentityChoice(ambiguous ? serverIdentity.candidates : null, pickSharedPhoneIdentity);
+      regEl.style.display = (!ambiguous && identifierComplete(rawTyped)) ? 'block' : 'none';
+      prepareNewClientRegistration(rawTyped);
     }
     if (known && Array.isArray(serverIdentity.reminderChannels) && serverIdentity.reminderChannels.length
         && typeof applyReminderChannelPref === 'function'){
@@ -12128,6 +12521,7 @@
     clearTimeout(serverIdentityTimer);
     clearTimeout(serverIdentityCheckingTimer);
     const digits = String(raw || '').replace(/[^0-9]/g, '');
+    serverIdentityPick = null;
     if (digits.length < 9){ clearServerIdentity(); applyServerIdentityToBookingForm(); return; }
     const cachedHit = cachedServerIdentity(digits);
     if (cachedHit){
@@ -12151,10 +12545,7 @@
   let frIdentityTimer = null;
   let frIdentitySeq = 0;
   let frIdentityCheckingTimer = null;
-  function frIdentifierComplete(raw){
-    const digits = String(raw || '').replace(/[^0-9]/g, '');
-    return digits.length === 9 || isValidIsraeliPhone(raw);
-  }
+  function frIdentifierComplete(raw){ return identifierComplete(raw); }
   function frKnownClient(){
     const rawVal = ((document.getElementById('frId') || {}).value || '');
     const digits = rawVal.replace(/[^0-9]/g, '');
@@ -12245,33 +12636,56 @@
     const phoneInput = document.getElementById('bookingPhoneInput');
     splitNameIntoFields('', 'bookingFirstNameInput', 'bookingLastNameInput');
     phoneInput.value = '';
+    localBookingMatch = null;
     refreshBookingTzPrompt();
     const resolvedHere = resolveClientByIdOrPhone(this.value);
     if (resolvedHere.client){
-      const match = resolvedHere.client;
-      splitNameIntoFields(match.name, 'bookingFirstNameInput', 'bookingLastNameInput');
-      phoneInput.value = match.phone || '';
-      welcomeEl.style.display = 'block';
-      const __mTz = clientNeedsTeudatZehut(match), __mEm = !String(match.email || '').trim();
-      welcomeEl.textContent = welcomeBackText(match.name, __mTz, __mEm, (__mTz || __mEm) && !String(match.birthday || '').trim());
-      regEl.style.display = 'none';
-      updateReminderEmailVisibility();
-      applyReminderChannelPref(match.reminderChannelPref);
-      refreshBookingTzPrompt();
+      showLocalBookingMatch(resolvedHere.client);
       return;
     }
-    if (digits.length === 9){
+    if (resolvedHere.ambiguousPhone){
+      const wanted = digits;
+      const candidates = [];
+      clients.forEach((c, i) => {
+        if (c && String(c.phone || '').replace(/[^0-9]/g, '') === wanted){
+          candidates.push({ index: i, firstName: (c.name || '').trim().split(/\s+/)[0] || 'לקוחה' });
+        }
+      });
       welcomeEl.style.display = 'none';
-      regEl.style.display = 'block';
+      regEl.style.display = 'none';
+      renderIdentityChoice(candidates, (idx) => {
+        const chosen = clients[idx];
+        if (chosen) { renderIdentityChoice(null); showLocalBookingMatch(chosen); }
+      });
       updateReminderEmailVisibility();
       applyReminderChannelPref(null);
       return;
     }
+    renderIdentityChoice(null);
     welcomeEl.style.display = 'none';
-    regEl.style.display = 'none';
+    regEl.style.display = identifierComplete(this.value) ? 'block' : 'none';
+    prepareNewClientRegistration(this.value);
     updateReminderEmailVisibility();
     applyReminderChannelPref(null);
   });
+  let localBookingMatch = null;
+  function showLocalBookingMatch(match){
+    const welcomeEl = document.getElementById('bookingWelcomeBack');
+    const regEl = document.getElementById('newClientRegistration');
+    const phoneInput = document.getElementById('bookingPhoneInput');
+    renderIdentityChoice(null);
+    splitNameIntoFields(match.name, 'bookingFirstNameInput', 'bookingLastNameInput');
+    if (phoneInput) phoneInput.value = match.phone || '';
+    welcomeEl.style.display = 'block';
+    welcomeEl.style.color = 'var(--sage)';
+    const __mTz = clientNeedsTeudatZehut(match), __mEm = !String(match.email || '').trim();
+    welcomeEl.textContent = welcomeBackText(match.name, __mTz, __mEm, (__mTz || __mEm) && !String(match.birthday || '').trim());
+    regEl.style.display = 'none';
+    localBookingMatch = match;
+    updateReminderEmailVisibility();
+    applyReminderChannelPref(match.reminderChannelPref);
+    refreshBookingTzPrompt();
+  }
   document.querySelectorAll('input[name="reminderChannel"]').forEach(function(radio){
     radio.addEventListener('change', function(){
       document.getElementById('reminderChoiceError').style.display = 'none';
@@ -12368,6 +12782,13 @@
     idErrorEl.style.display = 'none';
     idInput.style.borderColor = '';
     let existingClientPre = idResolved.client;
+    if (!existingClientPre && !runningOnPublicData && localBookingMatch){
+      const lbmPhone = String(localBookingMatch.phone || '').replace(/[^0-9]/g, '');
+      const lbmTz = String(localBookingMatch.teudatZehut || '');
+      if (clients.indexOf(localBookingMatch) !== -1 && (lbmPhone === typedDigits || lbmTz === typedDigits)){
+        existingClientPre = localBookingMatch;
+      }
+    }
     if (!existingClientPre && runningOnPublicData && serverIdentity && serverIdentity.found){
       if (serverIdentity.blocked){
         alert(buildBlockedBookingClientMessage());
@@ -12389,7 +12810,8 @@
     const needsTeudatZehut = fromServerKnown
       ? !(serverIdentity && serverIdentity.hasTz)
       : clientNeedsTeudatZehut(existingClientPre);
-    if (existingClientPre && needsTeudatZehut && !tzUpdateDigits){
+    const bookedByTheSalon = typeof isOwnerSession === 'function' ? isOwnerSession() : !runningOnPublicData;
+    if (existingClientPre && needsTeudatZehut && !tzUpdateDigits && !bookedByTheSalon){
       idErrorEl.style.display = 'block';
       idErrorEl.textContent = 'כדי להמשיך יש להשלים את תעודת הזהות — זה חד-פעמי, ובפעמים הבאות לא נבקש שוב.';
       const tzBox = document.getElementById('bookingTzUpdateBox');
@@ -12411,14 +12833,17 @@
       const typedEmail = firstTimeEmailInput.value.trim();
       if (typedEmail && !String(existingClientPre.email || '').trim()) existingClientPre.email = typedEmail;
     }
-    const firstTimeBdayInput = document.getElementById('bookingTzUpdateBday');
-    const bdayWrapEl = document.getElementById('bookingTzUpdateBdayWrap');
-    if (existingClientPre && firstTimeBdayInput && bdayWrapEl && bdayWrapEl.style.display !== 'none'){
-      const typedBday = (firstTimeBdayInput.value || '').trim();
-      if (typedBday && !String(existingClientPre.birthday || '').trim()) existingClientPre.birthday = typedBday;
+    const typedFirstTimeBday = readFirstTimeBirthday();
+    if (existingClientPre && typedFirstTimeBday && !String(existingClientPre.birthday || '').trim()){
+      existingClientPre.birthday = typedFirstTimeBday;
     }
-    const idDigits = (existingClientPre && existingClientPre.teudatZehut)
-      || (idResolved.typedAsTz ? typedDigits : '');
+    const newTzInput = document.getElementById('bookingNewTzInput');
+    const newTzWrap = document.getElementById('bookingNewTzWrap');
+    const newTzDigits = (newTzWrap && newTzWrap.style.display !== 'none' && newTzInput)
+      ? (newTzInput.value || '').replace(/[^0-9]/g, '') : '';
+    let idDigits = (existingClientPre && existingClientPre.teudatZehut)
+      || (idResolved.typedAsTz ? typedDigits : '')
+      || newTzDigits;
     const bookingBlockStatus = getLateCancelStatusForIdentity({ teudatZehut: idDigits, name: (existingClientPre && existingClientPre.name) || '' });
     if (bookingBlockStatus.blocked){
       alert(buildBlockedBookingClientMessage());
@@ -12448,6 +12873,23 @@
         return;
       }
       errorEl.style.display = 'none';
+      const newTzErrorEl = document.getElementById('bookingNewTzError');
+      if (!isPlausibleTeudatZehut(idDigits) && bookedByTheSalon){
+        idDigits = nextMigrationNumber();
+      }
+      if (!isPlausibleTeudatZehut(idDigits)){
+        if (newTzWrap && newTzWrap.style.display !== 'none'){
+          if (newTzErrorEl) newTzErrorEl.style.display = 'block';
+          if (newTzInput){ newTzInput.style.borderColor = 'var(--wine)'; newTzInput.focus(); }
+        } else {
+          idErrorEl.style.display = 'block';
+          idErrorEl.textContent = 'יש להזין תעודת זהות תקנית (9 ספרות)';
+          idInput.focus();
+        }
+        return;
+      }
+      if (newTzErrorEl) newTzErrorEl.style.display = 'none';
+      if (newTzInput) newTzInput.style.borderColor = '';
     }
     const reminderChecked = Array.from(document.querySelectorAll('input[name="reminderChannel"]:checked'));
     const reminderErrorEl = document.getElementById('reminderChoiceError');
@@ -12556,7 +12998,7 @@
       const providedEmail = firstTimeEmail || (isNewRegistration
         ? ((ftpEmailEl && ftpEmailEl.value.trim()) || '')
         : ((reminderEmailEl && reminderEmailEl.value.trim()) || ''));
-      if (!providedEmail){
+      if (!providedEmail && !bookedByTheSalon){
         if (isNewRegistration){
           document.getElementById('ftpEmailError').style.display = 'block';
           if (ftpEmailEl){ ftpEmailEl.style.borderColor = 'var(--wine)'; ftpEmailEl.focus(); }
@@ -12652,16 +13094,12 @@
       try {
         apiResult = await callClientApi('book', {
           id: idInput.value,
+          clientIndex: (serverIdentityPick === null || serverIdentityPick === undefined) ? undefined : serverIdentityPick,
           teudatZehut: idDigits || tzUpdateDigits || '',
           name: clientNameVal,
           phone: phoneVal,
           email: customerEmail || '',
-          birthday: (() => {
-            const el = document.getElementById('bookingTzUpdateBday');
-            const wrap = document.getElementById('bookingTzUpdateBdayWrap');
-            if (!el || !wrap || wrap.style.display === 'none') return '';
-            return el.value || '';
-          })(),
+          birthday: readFirstTimeBirthday(),
           reminderChannels,
           appointment: currentBookedAppointment,
           siteUrl: getSiteUrl(),
@@ -15395,12 +15833,16 @@
       return el && el.classList.contains('show');
     }) || null;
   }
+  function isGatedSubTab(name){
+    return !!(name && typeof gatedTabsConfig !== 'undefined' && gatedTabsConfig[name]);
+  }
   function persistAdminViewState(){
     try {
       var isAdminNow = document.body.classList.contains('admin-mode');
+      var sub = isAdminNow ? currentAdminSubTabName() : null;
       sessionStorage.setItem('appAdminViewState', JSON.stringify({
         adminMode: isAdminNow,
-        subTab: isAdminNow ? currentAdminSubTabName() : null
+        subTab: isGatedSubTab(sub) ? null : sub
       }));
     } catch (e) { /* פרטי/חסום — פשוט לא נשמר, לא קריטי */ }
   }
@@ -15417,7 +15859,7 @@
     if (!document.body.classList.contains('admin-mode')){
       showPanel('business', bizBtn);
     }
-    if (saved.subTab && saved.subTab !== 'overview'){
+    if (saved.subTab && saved.subTab !== 'overview' && !isGatedSubTab(saved.subTab)){
       var tabBtn = document.querySelector('#bizSubNavRow button[onclick*="\'' + saved.subTab + '\'"]');
       if (tabBtn && typeof guardedShowSub === 'function') guardedShowSub(saved.subTab, tabBtn);
     }
