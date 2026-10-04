@@ -4772,7 +4772,11 @@
       || (opts.clientPhone && clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === opts.clientPhone.replace(/[^0-9]/g, '')));
     document.getElementById('mbClientEmail').value = (mbOpenMatch && mbOpenMatch.email) || '';
     document.getElementById('mbClientNote').value = (mbOpenMatch && mbOpenMatch.note) || '';
+    mbLoadedClientKey = (mbOpenMatch && String(mbOpenMatch.teudatZehut || '')) || null;
     if (typeof updateMbClientIdStatus === 'function') updateMbClientIdStatus();
+    if (typeof mbUpdateClearBtn === 'function') mbUpdateClearBtn();
+    const mbMatchesEl = document.getElementById('mbPhoneMatches');
+    if (mbMatchesEl){ mbMatchesEl.style.display = 'none'; mbMatchesEl.innerHTML = ''; }
     renderMbQuickPick(opts.clientName || (mbOpenMatch && mbOpenMatch.name) || null);
     document.getElementById('mbError').style.display = 'none';
     const mbStep1ErrEl = document.getElementById('mbStep1Error');
