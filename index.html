@@ -14919,6 +14919,7 @@
   let lastBackupDateKey = '';
   let lastLoadedSnapshot = null;
   let pendingSaveCount = 0;
+  let unsavedChangePending = false;
   function cloneJSON(v){ return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
   function backfillMissingListIds(data){
     if (!data) return;
@@ -15029,7 +15030,9 @@
       if (!silent) showSaveStatus('שומר... (ניסיון נוסף)');
       return new Promise(r => setTimeout(r, 900)).then(runSaveTransaction);
     }).then(committedPayload => {
-      if (!committedPayload) { if (!silent) showSaveStatus('נשמר ✓', 1800); else hideSaveStatus(); return; }
+      if (!committedPayload) { unsavedChangePending = false; hideSaveErrorBanner(); if (!silent) showSaveStatus('נשמר ✓', 1800); else hideSaveStatus(); return; }
+      unsavedChangePending = false;
+      hideSaveErrorBanner();
       if (!silent) showSaveStatus('נשמר ✓', 2600);
       checkSaveSizeHeadroom();
       weekAppointments = committedPayload.weekAppointments;
@@ -15054,7 +15057,9 @@
     }).catch(err => {
       console.error('Cloud save failed:', err);
       hideSaveStatus();
-      showSaveErrorBanner(describeSaveFailure(err));
+      unsavedChangePending = true;
+      showSaveErrorBanner(describeSaveFailure(err), { retry: true });
+      scheduleUnsavedRetry();
     }).finally(() => { pendingSaveCount--; });
   }
   let lastSavePayloadBytes = 0;
@@ -15267,19 +15272,46 @@
       .then(() => { lastPublishedPublicJson = json; })
       .catch(err => { console.error('Public view publish failed:', err); });
   }
-  function showSaveErrorBanner(message){
+  function showSaveErrorBanner(message, opts){
     const existing = document.getElementById('saveErrorBanner');
     if (existing) existing.remove();
     const banner = document.createElement('div');
     banner.id = 'saveErrorBanner';
     banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#9B2C42; color:#fff; text-align:center; padding:10px 40px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
     banner.textContent = message;
+    if (opts && opts.retry){
+      const retryBtn = document.createElement('button');
+      retryBtn.id = 'saveRetryBtn';
+      retryBtn.type = 'button';
+      retryBtn.textContent = '↻ לנסות לשמור שוב';
+      retryBtn.style.cssText = 'margin-inline-start:12px; background:#fff; color:#9B2C42; border:none; border-radius:8px; font-size:13px; font-weight:700; padding:4px 12px; cursor:pointer;';
+      retryBtn.onclick = () => {
+        retryBtn.disabled = true;
+        retryBtn.textContent = 'שומרת...';
+        saveState();
+      };
+      banner.appendChild(retryBtn);
+    }
     const closeBtn = document.createElement('span');
     closeBtn.textContent = ' ✕';
     closeBtn.style.cssText = 'position:absolute; left:14px; top:8px; cursor:pointer; font-weight:bold;';
     closeBtn.onclick = () => banner.remove();
     banner.appendChild(closeBtn);
     document.body.prepend(banner);
+  }
+  function hideSaveErrorBanner(){
+    const el = document.getElementById('saveErrorBanner');
+    if (el) el.remove();
+  }
+  let __unsavedRetryTimer = null;
+  function scheduleUnsavedRetry(){
+    if (__unsavedRetryTimer) return;
+    __unsavedRetryTimer = setTimeout(() => {
+      __unsavedRetryTimer = null;
+      if (!unsavedChangePending) return;
+      saveState({ silent: true });
+      if (unsavedChangePending) scheduleUnsavedRetry();
+    }, 30000);
   }
   function showSaveStatus(text, autoHideMs, tone){
     const el = document.getElementById('saveStatusIndicator');
@@ -15884,6 +15916,7 @@
       refreshPublicDataQuietly().then(ok => { if (ok) rerenderEverything(); });
       return;
     }
+    if (unsavedChangePending){ saveState(); return; }
     CLOUD_DOC.get().then(doc => {
       if (!doc.exists) return;
       const rawCloudData = doc.data();
@@ -15901,6 +15934,7 @@
     const overlayOpen = document.querySelector('[id$="Overlay"].show');
     if (isTyping || overlayOpen) return;
     if (pendingSaveCount > 0) return;
+    if (unsavedChangePending){ saveState({ silent: true }); return; }
     CLOUD_DOC.get().then(doc => {
       if (!doc.exists) return;
       const rawCloudData = doc.data();
@@ -15938,7 +15972,10 @@
       return;
     }
     if (typeof saveState === 'function') saveState();
-    setTimeout(() => location.reload(), 1500);
+    setTimeout(() => {
+      if (unsavedChangePending){ setTimeout(attemptMidnightRefresh, 5 * 60 * 1000); return; }
+      location.reload();
+    }, 1500);
   }
   scheduleMidnightRefresh();
   let isLoggedIn = false;
