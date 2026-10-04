@@ -3622,11 +3622,12 @@
         <input type="email" id="mbClientEmail" class="field" placeholder="אימייל (אופציונלי)">
         <textarea id="mbClientNote" class="client-note" style="min-height:44px; margin:0;" placeholder="הערה אישית על הלקוחה (העדפות, רגישויות...)"></textarea>
         
-        <div class="label" style="margin-top:4px;">איך לשלוח תזכורת/אישור התור? (אפשר לבחור יותר מאחת)</div>
+        <div class="label" style="margin-top:4px;">איך לשלוח תזכורת/אישור התור? (חובה לבחור, אפשר יותר מאחת)</div>
         <div class="reminder-choice" id="mbReminderChoice">
-          <label><input type="checkbox" name="mbReminderChannel" value="sms" checked> SMS</label>
+          <label><input type="checkbox" name="mbReminderChannel" value="sms"> SMS</label>
           <label><input type="checkbox" name="mbReminderChannel" value="call"> שיחת טלפון</label>
         </div>
+        <p style="font-size:11.5px; color:#8A8178; margin:2px 0 4px; line-height:1.5;">לקוחה עם טלפון כשר אינה יכולה לקבל SMS — עבורה יש לבחור שיחת טלפון.</p>
         <div id="mbStep1Error" style="display:none; color:var(--wine); font-size:13px;"></div>
         <div class="step-nav">
           <button class="cta" id="mbStep1ContinueBtn" style="flex:1;" onclick="mbContinueToStep2()">המשך</button>
@@ -4836,6 +4837,7 @@
     mbLoadedClientKey = (mbOpenMatch && String(mbOpenMatch.teudatZehut || '')) || null;
     if (typeof updateMbClientIdStatus === 'function') updateMbClientIdStatus();
     if (typeof mbUpdateClearBtn === 'function') mbUpdateClearBtn();
+    document.querySelectorAll('input[name="mbReminderChannel"]').forEach(cb => { cb.checked = false; });
     const mbMatchesEl = document.getElementById('mbPhoneMatches');
     if (mbMatchesEl){ mbMatchesEl.style.display = 'none'; mbMatchesEl.innerHTML = ''; }
     renderMbQuickPick(opts.clientName || (mbOpenMatch && mbOpenMatch.name) || null);
@@ -5135,6 +5137,11 @@
     const lastOk = document.getElementById('mbClientLastName').value.trim();
     if (!firstOk || !lastOk){
       if (errEl){ errEl.style.display = 'block'; errEl.textContent = 'יש למלא שם פרטי ושם משפחה לפני שממשיכים.'; }
+      return;
+    }
+    const mbChannelsChosen = document.querySelectorAll('input[name="mbReminderChannel"]:checked').length;
+    if (!mbChannelsChosen){
+      if (errEl){ errEl.style.display = 'block'; errEl.textContent = 'לא ניתן להמשיך — יש לבחור איך לשלוח ללקוחה תזכורת: SMS, שיחת טלפון, או שניהם. (ללקוחה עם טלפון כשר יש לבחור שיחה — SMS לא יגיע אליה.)'; }
       return;
     }
     if (errEl) errEl.style.display = 'none';
@@ -6320,9 +6327,20 @@
     if (c.email){
       emailLink.href = 'mailto:' + c.email;
       emailLink.classList.remove('disabled');
+      emailLink.textContent = '✉️ שליחת מייל';
+      emailLink.title = 'שליחת מייל אל ' + c.email;
     } else {
       emailLink.href = '#';
       emailLink.classList.add('disabled');
+      emailLink.textContent = '✉️ אין אימייל בכרטסת';
+      emailLink.title = 'אין כתובת מייל ללקוחה הזו. אפשר להוסיף אותה בשדה "אימייל" שמעל.';
+    }
+    if (c.phone){
+      callLink.textContent = '📞 התקשרות';
+      callLink.title = 'התקשרות אל ' + c.phone;
+    } else {
+      callLink.textContent = '📞 אין טלפון בכרטסת';
+      callLink.title = 'אין מספר טלפון ללקוחה הזו. אפשר להוסיף אותו בשדה "טלפון" שמעל.';
     }
   }
   function wireCpAppointmentRows(containerId, appts, opts){
@@ -6577,7 +6595,7 @@
       });
     });
 
-    const allAppointments = getClientAppointments(c.name);
+    const allAppointments = getClientAppointments(c.name, weekAppointments.filter(a => apptBelongsToClient(a, c)));
     const history = allAppointments.filter(isAppointmentHistory);
     const upcoming = allAppointments.filter(a => !isAppointmentHistory(a));
     document.getElementById('cpUpcoming').innerHTML = renderClientAppointmentRows(upcoming, { upcoming: true, emptyText: 'אין תורים עתידיים.' });
@@ -8285,6 +8303,19 @@
     if (d.getTime() !== getTodayDateOnly().getTime()) return false;
     return !isAppointmentHistory(appt);
   }
+  function apptNameKey(s){
+    return String(s || '').trim().replace(/["'׳״]/g, '').replace(/\s+/g, ' ');
+  }
+  function apptBelongsToClient(appt, c){
+    if (!appt || !c) return false;
+    const at = String(appt.teudatZehut || '').trim();
+    const ct = String(c.teudatZehut || '').trim();
+    if (at && ct && at === ct) return true;
+    if (apptNameKey(appt.client) !== apptNameKey(c.name)) return false;
+    if (!at) return true;
+    const ownerOfId = clients.find(x => x && String(x.teudatZehut || '').trim() === at);
+    return !ownerOfId || ownerOfId === c;
+  }
   function getClientAppointments(clientName, prefiltered){
     return (prefiltered || weekAppointments.filter(a => a.client === clientName))
       .slice()
@@ -8366,11 +8397,25 @@
     const birthdayClients = [];
     const searchEl = document.getElementById('clientSearch');
     const searchTerm = searchEl ? searchEl.value.trim().toLowerCase() : '';
-    const apptsByClientName = {};
+    const apptsByClientIndex = new Map();
+    const clientIdxByTz = new Map();
+    const clientIdxByName = new Map();
+    clients.forEach((c, i) => {
+      const tz = String((c && c.teudatZehut) || '').trim();
+      if (tz && !clientIdxByTz.has(tz)) clientIdxByTz.set(tz, i);
+      const nk = apptNameKey(c && c.name);
+      if (nk && !clientIdxByName.has(nk)) clientIdxByName.set(nk, i);
+    });
     const apptById = new Map();
     weekAppointments.forEach(a => {
-      (apptsByClientName[a.client] || (apptsByClientName[a.client] = [])).push(a);
       if (a.id) apptById.set(a.id, a);
+      const tz = String((a && a.teudatZehut) || '').trim();
+      let idx = tz && clientIdxByTz.has(tz) ? clientIdxByTz.get(tz) : undefined;
+      if (idx === undefined) idx = clientIdxByName.get(apptNameKey(a && a.client));
+      if (idx === undefined) return;
+      const bucket = apptsByClientIndex.get(idx) || [];
+      bucket.push(a);
+      apptsByClientIndex.set(idx, bucket);
     });
     const sortedClientIndices = clients.map((c, i) => i).sort((a, b) => clients[a].name.localeCompare(clients[b].name, 'he'));
     sortedClientIndices.forEach(i => {
@@ -8409,7 +8454,7 @@
       row.className = 'client-card';
       row.dataset.clientName = c.name;
       const avatarHtml = c.photo ? `<img src="${c.photo}">` : c.name.trim().charAt(0);
-      const allAppointments = getClientAppointments(c.name, apptsByClientName[c.name]);
+      const allAppointments = getClientAppointments(c.name, apptsByClientIndex.get(i) || []);
       const todayAppts = allAppointments.filter(isAppointmentToday);
       const history = allAppointments.filter(isAppointmentHistory);
       const upcoming = allAppointments.filter(a => !isAppointmentHistory(a) && !isAppointmentToday(a));
