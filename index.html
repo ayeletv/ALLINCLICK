@@ -6433,7 +6433,7 @@
       if (!appt) return;
       visitEl.querySelectorAll('.visit-status-btn').forEach(btn => {
         btn.onclick = () => {
-          appt.status = appt.status === btn.dataset.status ? 'pending' : btn.dataset.status;
+            setApptStatus(appt, appt.status === btn.dataset.status ? 'pending' : btn.dataset.status);
           if (typeof saveState === 'function') saveState();
           renderClientProfileOverlay();
         };
@@ -6602,6 +6602,11 @@
     const c = clientProfileCurrent;
     if (!c) return;
     document.getElementById('cpHeaderName').textContent = c.name || 'כרטיס לקוחה';
+    const cpExplicit = (c && Array.isArray(c.reminderChannelPref)) ? c.reminderChannelPref : [];
+    const cpShownChannels = cpExplicit.length
+      ? cpExplicit
+      : ((typeof lastChannelsForClient === 'function') ? lastChannelsForClient(c) : []);
+    const cpIsImplied = !cpExplicit.length && cpShownChannels.length > 0;
     const fieldsEl = document.getElementById('cpPersonalFields');
     fieldsEl.innerHTML = `
       <div class="name-field-wrap">
@@ -6631,14 +6636,20 @@
       </div>
       <div class="mini-field-label" style="margin-top:14px; display:block;">אופן התקשרות (לתזכורות)</div>
       <div class="reminder-choice" id="cpReminderChoice">
-        <!-- בלי סימון אוטומטי של SMS.
-             "אני רואה שפותחים לקוחה ואופן ההתקשרות אוטומטית מסומן SMS,
-              וזה לא תקין" (04.10.2026). הכרטיס הראה SMS לכל לקוחה שלא
-             נבחר לה כלום מעולם — כלומר הוא הציג בחירה שאיש לא עשה,
-             ומי שראתה אותה הניחה שהכול בסדר. -->
-        <label><input type="checkbox" class="cpReminderChannel" value="sms"${(c.reminderChannelPref && c.reminderChannelPref.indexOf('sms') !== -1) ? ' checked' : ''}> SMS</label>
-        <label><input type="checkbox" class="cpReminderChannel" value="call"${(c.reminderChannelPref && c.reminderChannelPref.indexOf('call') !== -1) ? ' checked' : ''}> שיחת טלפון</label>
+        <!-- מה שהלקוחה באמת מקבלת, ולא רק מה שנבחר לה במפורש.
+             "אני עדיין נכנסת לתורים שנקבעו והכרטיס של הלקוחה לא מסומן
+              באופן התקשרות, אני משתגעת, כאילו אני מעדכנת וזה מוחק
+              אחרות" (05.10.2026).
+             שום דבר לא נמחק. אתמול הוסר הסימון האוטומטי של SMS, ונכון
+             שהוא הציג בחירה שאיש לא עשה — אבל התוצאה הייתה שכל לקוחה
+             שמעולם לא נבחרה לה העדפה מפורשת (וזה רוב הלקוחות הוותיקות)
+             נפתחה ריקה לגמרי. ריק נראה בדיוק כמו נמחק.
+             לכן כשאין העדפה שמורה, מוצג מה שבאמת ייצא אליה לפי התור
+             האחרון שלה, עם שורה שאומרת שזו עדיין לא בחירה קבועה. -->
+        <label><input type="checkbox" class="cpReminderChannel" value="sms"${(cpShownChannels.indexOf('sms') !== -1) ? ' checked' : ''}> SMS</label>
+        <label><input type="checkbox" class="cpReminderChannel" value="call"${(cpShownChannels.indexOf('call') !== -1) ? ' checked' : ''}> שיחת טלפון</label>
       </div>
+      ${cpIsImplied ? `<p style="font-size:11.5px; color:var(--panel-text-dim); margin:4px 0 0; line-height:1.5;">מוצג לפי התור האחרון שלה — עדיין לא נבחרה עבורה העדפה קבועה. סימון כאן יקבע אותה.</p>` : ''}
       <textarea class="client-note" id="cpNoteInput" placeholder="הערה אישית (העדפות, רגישויות...)">${c.note || ''}</textarea>
     `;
     const nameInput = fieldsEl.querySelector('#cpNameInput');
@@ -8514,6 +8525,7 @@
             <span class="visit-date">${formatHistoryDate(a)}</span>
             <span class="t">${a.time || ''}</span>
             <span class="visit-svc">${a.service || 'שירות'}${a.dur ? ` <span class="visit-dur">(${a.dur} דק')</span>` : ''}</span>
+            ${a.confirmedByClient ? `<span class="upcoming-confirmed-badge" title="הלקוחה אישרה את התור הזה בשיחה הטלפונית" style="display:inline-flex; align-items:center; gap:3px; color:#1c8a4b; background:rgba(28,138,75,0.12); border:1px solid rgba(28,138,75,0.35); border-radius:6px; padding:2px 7px; font-size:11px; font-weight:700; white-space:nowrap;">✓ אושר</span>` : ''}
             <button class="visit-delete-btn" data-delete-history-id="${a.id || ''}" title="מחיקת הרשומה הזו (למשל רישום כפול בטעות)" style="margin-inline-start:auto; background:none; border:1px solid rgba(var(--panel-line-rgb),0.15); color:var(--panel-text-dim); border-radius:8px; font-size:12px; padding:3px 8px; cursor:pointer;">🗑</button>
           </div>
           <div class="visit-status-actions">
@@ -8800,7 +8812,7 @@
         if (!appt) return;
         visitEl.querySelectorAll('.visit-status-btn').forEach(btn => {
           btn.onclick = () => {
-            appt.status = appt.status === btn.dataset.status ? 'pending' : btn.dataset.status;
+            setApptStatus(appt, appt.status === btn.dataset.status ? 'pending' : btn.dataset.status);
             visitEl.querySelectorAll('.visit-status-btn').forEach(b => b.classList.remove('active-yes', 'active-no'));
             if (appt.status === 'completed') btn.classList.add('active-yes');
             if (appt.status === 'no-show') btn.classList.add('active-no');
@@ -8851,7 +8863,7 @@
         if (!appt) return;
         visitEl.querySelectorAll('.visit-status-btn').forEach(btn => {
           btn.onclick = () => {
-            appt.status = appt.status === btn.dataset.status ? 'pending' : btn.dataset.status;
+            setApptStatus(appt, appt.status === btn.dataset.status ? 'pending' : btn.dataset.status);
             visitEl.querySelectorAll('.visit-status-btn').forEach(b => b.classList.remove('active-yes', 'active-no'));
             if (appt.status === 'completed') btn.classList.add('active-yes');
             if (appt.status === 'no-show') btn.classList.add('active-no');
