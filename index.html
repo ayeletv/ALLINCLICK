@@ -1845,7 +1845,7 @@
   #weekNavRow{touch-action:pan-y;}
   .week-cal-wrap{border:1px solid rgba(var(--panel-line-rgb),0.12); border-radius:16px; overflow-x:auto; scroll-behavior:smooth; overflow-anchor:none;}
   .week-cal{display:flex; min-width:820px; scroll-snap-type:x proximity;}
-  .cal-hours-col{width:34px; flex-shrink:0;}
+  .cal-hours-col{width:46px; flex-shrink:0;}
   .cal-hours-spacer{position:sticky; top:0; z-index:5; background:var(--panel-bg);}
   .cal-hour-lbl{
     font-family:'JetBrains Mono';
@@ -1857,16 +1857,22 @@
     box-sizing:border-box;
   }
   .cal-today-btn{
-    background:#E3EBDF; color:#3D5436; border:1px solid var(--sage);
-    font-weight:700; cursor:pointer; white-space:nowrap;
+    -webkit-appearance:none; appearance:none;
+    background-image:none !important;
+    background-color:#E3EBDF; color:#3D5436;
+    border:1.5px solid var(--sage); border-radius:999px;
+    padding:6px 14px;
+    font-family:'Heebo'; font-size:12.5px; font-weight:700;
+    cursor:pointer; white-space:nowrap; line-height:1.2;
   }
-  .cal-today-btn:hover{background:#D4E0CE;}
+  .biz-topbar-cal-filters .cal-today-btn{font-size:10.5px; padding:5px 10px; max-width:none;}
+  .cal-today-btn:hover{background-color:#D4E0CE;}
   .cal-today-btn.is-current{opacity:0.55; cursor:default;}
   .cal-now-pin{
-    position:absolute; inset-inline-end:0; transform:translateY(-50%);
+    position:absolute; inset-inline:0; transform:translateY(-50%);
     z-index:6; pointer-events:none;
-    display:flex; align-items:center; gap:2px;
-    font-size:11px; line-height:1;
+    display:flex; align-items:center; justify-content:center; gap:1px;
+    font-size:10px; line-height:1;
   }
   .cal-now-pin .pin-time{
     background:#3E6B2E; color:#fff; font-size:8.5px; font-weight:700;
@@ -1918,25 +1924,6 @@
   .cal-now-fill{
     position:absolute; inset-inline:0; top:0; z-index:0; pointer-events:none;
     background:rgba(122,153,106,0.22);
-  }
-  .cal-now-line{
-    position:absolute; inset-inline:0; z-index:4; pointer-events:none;
-    height:0; border-top:3px solid #3E6B2E;
-  }
-  .cat-color-dot{
-    width:26px; height:26px; border-radius:50%; flex:0 0 auto;
-    margin-inline-end:10px; cursor:pointer; align-self:center;
-    border:2px solid rgba(255,255,255,0.85);
-    box-shadow:0 0 0 1px rgba(0,0,0,0.18);
-  }
-  .cat-color-dot:hover{transform:scale(1.08);}
-  .cal-now-chip{
-    position:absolute; top:50%; inset-inline-start:3px; transform:translateY(-50%);
-    background:#3E6B2E; color:#fff;
-    font-size:10px; font-weight:700; line-height:1;
-    padding:3px 7px; border-radius:999px;
-    font-variant-numeric:tabular-nums; white-space:nowrap;
-    box-shadow:0 1px 4px rgba(0,0,0,0.35);
   }
   .cal-day-head.day-closed{background:rgba(155,44,66,0.07);}
   .cal-day-head.day-closed .cal-day-name, .cal-day-head.day-closed .cal-day-num{color:var(--wine);}
@@ -3349,7 +3336,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-05 · 27';
+        window.__APP_BUILD = '2026-10-05 · 28';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -4624,7 +4611,7 @@
   ['frDateFromDay', 'frDateFromMonth', 'frDateFromYear', 'frDateToDay', 'frDateToMonth', 'frDateToYear'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', updateFrDateRangeEcho);
   });
-  wireIdentityAutofill({ idId: 'frId', firstId: 'frFirstName', lastId: 'frLastName', phoneId: 'frPhone', emailId: 'frEmail' });
+  wireIdentityAutofill({ idId: 'frId', firstId: 'frFirstName', lastId: 'frLastName', phoneId: 'frPhone', emailId: 'frEmail', allowPhoneIdentifier: true });
   function updateFrTimeEcho(){
     const echo = document.getElementById('frTimeEcho');
     if (!echo) return;
@@ -10277,12 +10264,6 @@
       const bands = (calEndHour - calStartHour) || 1;
       const h = calNowFillHeightPx(totalPx / bands);
       el.style.height = h + 'px';
-      const line = parent.querySelector('.cal-now-line[data-now-line]');
-      if (line){
-        line.style.top = h + 'px';
-        const chip = line.querySelector('.cal-now-chip');
-        if (chip) chip.textContent = label;
-      }
     });
     document.querySelectorAll('.cal-now-pin[data-now-pin]').forEach(pin => {
       const band = lastRenderedHourBandHeight || 0;
@@ -10632,17 +10613,6 @@
         nowFill.dataset.nowFill = '1';
         nowFill.style.height = nowFillH + 'px';
         body.appendChild(nowFill);
-        const nowLine = document.createElement('div');
-        nowLine.className = 'cal-now-line';
-        nowLine.dataset.nowLine = '1';
-        nowLine.style.top = nowFillH + 'px';
-        const nowChip = document.createElement('span');
-        nowChip.className = 'cal-now-chip';
-        const nowForChip = new Date();
-        nowChip.textContent = 'עכשיו ' + String(nowForChip.getHours()).padStart(2, '0')
-          + ':' + String(nowForChip.getMinutes()).padStart(2, '0');
-        nowLine.appendChild(nowChip);
-        body.appendChild(nowLine);
       }
       const closedInfo = getWeekColClosedInfo(day.fullDate);
       const isPastDay = typeof getTodayDateOnly === 'function' && day.fullDate < getTodayDateOnly();
@@ -13712,9 +13682,17 @@
       if (identityAutofillBusy) return;
       identityAutofillBusy = true;
       try {
-        this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);
+        const maxDigits = cfg.allowPhoneIdentifier ? 10 : 9;
+        this.value = this.value.replace(/[^0-9]/g, '').slice(0, maxDigits);
         clearAllButSelf(this);
-        if (this.value.length === 9){
+        if (cfg.allowPhoneIdentifier){
+          const typedIdentifier = this.value;
+          const resolved = resolveClientByIdOrPhone(typedIdentifier);
+          if (resolved && resolved.client){
+            fillFrom(resolved.client);
+            if (resolved.matchedBy === 'phone') this.value = typedIdentifier;
+          }
+        } else if (this.value.length === 9){
           fillFrom(clients.find(c => c && c.teudatZehut === this.value));
         }
       } finally { identityAutofillBusy = false; }
