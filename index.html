@@ -3628,6 +3628,7 @@
           <label><input type="checkbox" name="mbReminderChannel" value="call"> שיחת טלפון</label>
         </div>
         <p style="font-size:11.5px; color:#8A8178; margin:2px 0 4px; line-height:1.5;">לקוחה עם טלפון כשר אינה יכולה לקבל SMS — עבורה יש לבחור שיחת טלפון.</p>
+        <p id="mbChannelAutoHint" style="display:none; font-size:11.5px; color:var(--wine); margin:2px 0 4px; line-height:1.5; font-weight:600;"></p>
         <div id="mbStep1Error" style="display:none; color:var(--wine); font-size:13px;"></div>
         <div class="step-nav">
           <button class="cta" id="mbStep1ContinueBtn" style="flex:1;" onclick="mbContinueToStep2()">המשך</button>
@@ -4844,6 +4845,10 @@
     if (typeof updateMbClientIdStatus === 'function') updateMbClientIdStatus();
     if (typeof mbUpdateClearBtn === 'function') mbUpdateClearBtn();
     document.querySelectorAll('input[name="mbReminderChannel"]').forEach(cb => { cb.checked = false; });
+    mbChannelsAutoFilled = false;
+    const mbAutoHintEl = document.getElementById('mbChannelAutoHint');
+    if (mbAutoHintEl){ mbAutoHintEl.style.display = 'none'; mbAutoHintEl.textContent = ''; }
+    if (mbOpenMatch && typeof mbApplyKnownChannels === 'function') mbApplyKnownChannels(mbOpenMatch);
     const mbMatchesEl = document.getElementById('mbPhoneMatches');
     if (mbMatchesEl){ mbMatchesEl.style.display = 'none'; mbMatchesEl.innerHTML = ''; }
     renderMbQuickPick(opts.clientName || (mbOpenMatch && mbOpenMatch.name) || null);
@@ -4896,6 +4901,13 @@
   });
   document.getElementById('apptDetailRescheduleBtn')?.addEventListener('click', () => {
     if (apptDetailCurrent) openRescheduleModal(apptDetailCurrent);
+  });
+  document.querySelectorAll('input[name="mbReminderChannel"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      mbChannelsAutoFilled = false;
+      const hint = document.getElementById('mbChannelAutoHint');
+      if (hint){ hint.style.display = 'none'; hint.textContent = ''; }
+    });
   });
   document.getElementById('mbOtherTimeBtn')?.addEventListener('click', () => {
     const wrap = document.getElementById('mbOtherTimeWrap');
@@ -5053,6 +5065,31 @@
     if (e.phone && !keepPhone) e.phone.value = c.phone || '';
     if (e.email) e.email.value = c.email || '';
     if (e.note) e.note.value = c.note || '';
+    mbApplyKnownChannels(c);
+  }
+  function lastChannelsForClient(c){
+    if (!c) return [];
+    const hers = weekAppointments
+      .filter(a => a && Array.isArray(a.reminderChannels) && a.reminderChannels.length && apptBelongsToClient(a, c))
+      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    if (hers.length) return hers[0].reminderChannels.slice();
+    if (Array.isArray(c.reminderChannelPref) && c.reminderChannelPref.length) return c.reminderChannelPref.slice();
+    return [];
+  }
+  let mbChannelsAutoFilled = false;
+  function mbApplyKnownChannels(c){
+    const known = lastChannelsForClient(c);
+    document.querySelectorAll('input[name="mbReminderChannel"]').forEach(cb => {
+      cb.checked = known.indexOf(cb.value) !== -1;
+    });
+    mbChannelsAutoFilled = known.length > 0;
+    const hint = document.getElementById('mbChannelAutoHint');
+    if (hint){
+      hint.style.display = known.length ? 'block' : 'none';
+      hint.textContent = known.length
+        ? `מולא אוטומטית לפי התור הקודם של הלקוחה: ${known.map(v => (v === 'sms' ? 'SMS' : 'שיחת טלפון')).join(' + ')}. אפשר לשנות.`
+        : '';
+    }
   }
   function mbRenderPhoneMatches(list){
     const box = document.getElementById('mbPhoneMatches');
@@ -5145,10 +5182,15 @@
       if (errEl){ errEl.style.display = 'block'; errEl.textContent = 'יש למלא שם פרטי ושם משפחה לפני שממשיכים.'; }
       return;
     }
-    const mbChannelsChosen = document.querySelectorAll('input[name="mbReminderChannel"]:checked').length;
-    if (!mbChannelsChosen){
+    const mbChosen = Array.from(document.querySelectorAll('input[name="mbReminderChannel"]:checked')).map(cb => cb.value);
+    if (!mbChosen.length){
       if (errEl){ errEl.style.display = 'block'; errEl.textContent = 'לא ניתן להמשיך — יש לבחור איך לשלוח ללקוחה תזכורת: SMS, שיחת טלפון, או שניהם. (ללקוחה עם טלפון כשר יש לבחור שיחה — SMS לא יגיע אליה.)'; }
       return;
+    }
+    if (mbChannelsAutoFilled){
+      const label = mbChosen.map(v => (v === 'sms' ? 'SMS' : 'שיחת טלפון')).join(' + ');
+      mbChannelsAutoFilled = false;
+      if (!confirm(`שים לב — אופן ההתקשרות מולא אוטומטית לפי התור הקודם של הלקוחה:\n\n${label}\n\nלהמשיך עם זה?`)) return;
     }
     if (errEl) errEl.style.display = 'none';
     mbGoToStep(2);
@@ -6570,7 +6612,12 @@
       </div>
       <div class="mini-field-label" style="margin-top:14px; display:block;">אופן התקשרות (לתזכורות)</div>
       <div class="reminder-choice" id="cpReminderChoice">
-        <label><input type="checkbox" class="cpReminderChannel" value="sms"${(!c.reminderChannelPref || c.reminderChannelPref.indexOf('sms') !== -1) ? ' checked' : ''}> SMS</label>
+        <!-- בלי סימון אוטומטי של SMS.
+             "אני רואה שפותחים לקוחה ואופן ההתקשרות אוטומטית מסומן SMS,
+              וזה לא תקין" (04.10.2026). הכרטיס הראה SMS לכל לקוחה שלא
+             נבחר לה כלום מעולם — כלומר הוא הציג בחירה שאיש לא עשה,
+             ומי שראתה אותה הניחה שהכול בסדר. -->
+        <label><input type="checkbox" class="cpReminderChannel" value="sms"${(c.reminderChannelPref && c.reminderChannelPref.indexOf('sms') !== -1) ? ' checked' : ''}> SMS</label>
         <label><input type="checkbox" class="cpReminderChannel" value="call"${(c.reminderChannelPref && c.reminderChannelPref.indexOf('call') !== -1) ? ' checked' : ''}> שיחת טלפון</label>
       </div>
       <textarea class="client-note" id="cpNoteInput" placeholder="הערה אישית (העדפות, רגישויות...)">${c.note || ''}</textarea>
@@ -6908,8 +6955,11 @@
       }
       if (emailVal && !existingByIdOrPhone.email) existingByIdOrPhone.email = emailVal;
       if (noteVal || !existingByIdOrPhone.note) existingByIdOrPhone.note = noteVal;
+      if (manualAppointment.reminderChannels.length){
+        existingByIdOrPhone.reminderChannelPref = manualAppointment.reminderChannels.slice();
+      }
     } else if (phone || idDigits){
-      clients.push({ name, phone, teudatZehut: assignedTz || null, email: emailVal, photo: null, visits: 0, daysSinceVisit: null, note: noteVal || 'לקוחה חדשה — נוספה דרך קביעת תור ידנית', birthday: null });
+      clients.push({ name, phone, teudatZehut: assignedTz || null, email: emailVal, photo: null, visits: 0, daysSinceVisit: null, note: noteVal || 'לקוחה חדשה — נוספה דרך קביעת תור ידנית', birthday: null, reminderChannelPref: manualAppointment.reminderChannels.slice() });
     }
     if (typeof saveState === 'function') saveState();
     closeManualBookingModal();
@@ -15097,6 +15147,7 @@
       categoryMessages, holidayOverrides,
       about: aboutMe, recommendations
     };
+    unsavedChangePending = true;
     pendingSaveCount++;
     const runSaveTransaction = () => db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
       const server = doc.exists ? doc.data() : {};
