@@ -3326,7 +3326,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-05 · 24';
+        window.__APP_BUILD = '2026-10-05 · 26';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -3357,6 +3357,9 @@
         <div class="search-with-add-row quick-add-row-standalone" style="justify-content:space-between;">
           <div class="label" style="margin:0;">קטגוריות ראשיות</div>
           <button type="button" class="quick-add-fab" onclick="openAddCategoryModal()" title="הוספת קטגוריה" aria-label="הוספת קטגוריה">+</button>
+        </div>
+        <div style="font-size:12.5px; color:var(--panel-text-dim); line-height:1.6; margin:2px 0 10px;">
+          🎨 לחיצה על עיגול הצבע שליד קטגוריה קובעת את הצבע שלה. הצבע חל גם על הריבוע שהלקוחה רואה במסך קביעת התור וגם על כל התורים של אותה קטגוריה ביומן.
         </div>
         <div class="client-list" id="categoryList"></div>
       </div>
@@ -10704,11 +10707,9 @@
         block.style.insetInlineStart = `calc(${col * colWidthPct}% + 2px)`;
         block.style.insetInlineEnd = `calc(${(colCount - col - 1) * colWidthPct}% + 2px)`;
         const apptStyle = appointmentBlockStyle(a);
-        const staffColor = staffColors[a.staff % staffColors.length];
-        block.style.background = (apptStyle && apptStyle.bg) || staffColor;
+        block.style.background = (apptStyle && apptStyle.bg) || '#E6E1DC';
         if (apptStyle){
           block.style.color = apptStyle.fg;
-          block.style.borderInlineStart = `3px solid ${staffColor}`;
           block.classList.add(apptStyle.onLight ? 'cal-appt-onlight' : 'cal-appt-ondark');
         }
         const apptCatName = categoryOfAppointment(a);
@@ -11597,7 +11598,7 @@
   let editingCategoryIndices = new Set();
   const CATEGORY_COLOR_CHOICES = [
     { hex: '#C9A227', name: 'צהוב' },
-    { hex: '#3F6B5C', name: 'ירוק' },
+    { hex: '#6E8E5E', name: 'ירוק' },
     { hex: '#9B2C42', name: 'יין' },
     { hex: '#B5654B', name: 'טרקוטה' },
     { hex: '#5B7C99', name: 'תכלת' },
@@ -11734,7 +11735,7 @@
     if (typeof saveState === 'function') saveState();
     if (typeof showAdminToast === 'function') showAdminToast('✓ הקטגוריה נוספה בהצלחה');
   }
-  const catTilePalette = ['#9B2C42', '#C9A227', '#3F6B5C', '#B5654B', '#5B7C99', '#8B5FA3'];
+  const catTilePalette = ['#C9A227', '#6E8E5E', '#9B2C42', '#B5654B', '#5B7C99', '#8B5FA3'];
   function categoryBaseColor(cat){
     if (!cat) return null;
     if (categoryColors && categoryColors[cat]) return categoryColors[cat];
@@ -11743,18 +11744,7 @@
     return catTilePalette[idx % catTilePalette.length];
   }
   function defaultCategoryColorIndex(cat){
-    let n = 0;
-    for (let i = 0; i < categories.length; i++){
-      const c = categories[i];
-      const hasAny = typeof availableServicesOf === 'function'
-        ? availableServicesOf(c).length > 0
-        : services.some(s => s && s.category === c);
-      if (!hasAny) continue;
-      if (c === cat) return n;
-      n++;
-    }
-    const tail = categories.indexOf(cat);
-    return tail === -1 ? -1 : n + tail;
+    return categories.indexOf(cat);
   }
   function tintHex(hex, whiteAmount){
     const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
@@ -11817,7 +11807,7 @@
     return (l + 0.05) / (ink + 0.05);
   }
   const CAL_TONE_LIGHTNESS = 0.69;
-  const CAL_TONE_SATURATION_MIN = 0.46;
+  const CAL_TONE_SATURATION_MIN = 0.30;
   const CAL_TONE_SATURATION_MAX = 0.78;
   function calendarToneOf(hex){
     const hsl = hexToHsl(hex);
@@ -11865,6 +11855,7 @@
       const tile = document.createElement('div');
       tile.className = 'cat-tile';
       tile.style.background = categoryBaseColor(cat) || catTilePalette[colorIdx % catTilePalette.length];
+      void colorIdx;
       colorIdx++;
       const selectedCount = catServices.filter(s => bkSelectedServices.some(sel => sel.svcIndex === services.indexOf(s))).length;
       tile.innerHTML = `<span class="cat-tile-name">${cat}</span><span class="cat-tile-count">${catServices.length} טיפולים${selectedCount ? ` · ${selectedCount} נבחרו` : ''}</span>`;
@@ -11980,6 +11971,7 @@
       const tile = document.createElement('div');
       tile.className = 'cat-tile';
       tile.style.background = categoryBaseColor(cat) || catTilePalette[colorIdx % catTilePalette.length];
+      void colorIdx;
       colorIdx++;
       tile.innerHTML = `<span class="cat-tile-name">${cat}</span><span class="cat-tile-count">${catServices.length} שירות${catServices.length === 1 ? '' : 'ים'}</span>`;
       tile.onclick = () => showSvcManageCategoryServices(cat);
