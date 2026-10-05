@@ -1899,8 +1899,16 @@
   .cal-day-body{position:relative;}
   .cal-now-fill{
     position:absolute; inset-inline:0; top:0; z-index:0; pointer-events:none;
-    background:rgba(122,153,106,0.16);
-    border-bottom:2px solid rgba(96,128,80,0.75);
+    background:rgba(122,153,106,0.22);
+    border-bottom:3px solid #4A7A3A;
+  }
+  .cal-now-chip{
+    position:absolute; bottom:3px; inset-inline-start:3px;
+    background:#4A7A3A; color:#fff;
+    font-size:9.5px; font-weight:700; line-height:1;
+    padding:3px 6px; border-radius:999px;
+    font-variant-numeric:tabular-nums; white-space:nowrap;
+    box-shadow:0 1px 3px rgba(0,0,0,0.25);
   }
   .cal-day-head.day-closed{background:rgba(155,44,66,0.07);}
   .cal-day-head.day-closed .cal-day-name, .cal-day-head.day-closed .cal-day-num{color:var(--wine);}
@@ -1948,7 +1956,7 @@
     cursor:pointer;
     box-shadow:inset 0 0 0 1px rgba(28,23,25,0.16);
   }
-  .appt-confirm-row{display:flex; gap:10px; margin-top:12px;}
+  .appt-confirm-row{display:flex; gap:10px;}
   .appt-confirm-btn{
     flex:1; border:none; border-radius:12px; padding:13px 10px; cursor:pointer;
     font-family:'Heebo'; font-size:15px; font-weight:700; color:#fff;
@@ -2156,12 +2164,8 @@
     border-bottom-left-radius:0; border-bottom-right-radius:0;
   }
   .cal-appt.cal-appt-highlight{ animation:calApptHighlightFade 2s ease forwards; }
-  .cal-appt.cal-appt-confirmed{
-    box-shadow:inset 0 0 0 1px #0A3D23, inset 0 0 0 3px #4ADE80, inset 0 0 0 4px #0A3D23;
-  }
-  .cal-appt.cal-appt-confirmed.cal-appt-tiny{
-    box-shadow:inset 0 0 0 1px #0A3D23, inset 0 0 0 2px #4ADE80;
-  }
+  .cal-appt.cal-appt-confirmed{ box-shadow:inset 0 0 0 2.5px #166534; }
+  .cal-appt.cal-appt-confirmed.cal-appt-tiny{ box-shadow:inset 0 0 0 1.5px #166534; }
   .cal-appt.cal-appt-ondark .cal-appt-meta{opacity:0.88;}
   .myday-filter{display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:13px; color:#8A8178;}
   .myday-filter select{
@@ -3315,7 +3319,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-05 · 19';
+        window.__APP_BUILD = '2026-10-05 · 22';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -3816,12 +3820,6 @@
       <div class="appt-detail-row"><span class="appt-detail-label">עובדת</span><span class="appt-detail-value" id="apptDetailStaff"></span></div>
       <div class="appt-detail-row" id="apptDetailNoteRow" style="display:none;"><span class="appt-detail-label">הערות לפגישה</span><span class="appt-detail-value" id="apptDetailNote" style="white-space:pre-wrap;"></span></div>
     </div>
-    
-    <div id="apptDetailConfirmRow" class="appt-confirm-row">
-      <button type="button" class="appt-confirm-btn ok" id="apptDetailConfirmBtn">✓ אישור התור</button>
-      <button type="button" class="appt-confirm-btn no" id="apptDetailDeclineBtn">✕ ביטול התור</button>
-    </div>
-    <p id="apptDetailConfirmHint" class="appt-confirm-hint"></p>
 
     <div class="appt-detail-card" id="apptEditPanel" style="display:none; margin-top:12px;">
       <div class="appt-edit-label">שעת התור</div>
@@ -3873,7 +3871,12 @@
       <button type="button" class="cta" id="apptDetailEditBtn">✎ עריכת התור</button>
       
       <button type="button" class="cta" id="apptDetailRescheduleBtn">📅 קביעה מחדש — יום ושעה אחרים</button>
-      <button type="button" class="cta" id="apptDetailCancelBtn">ביטול תור</button>
+      
+      <div id="apptDetailConfirmRow" class="appt-confirm-row">
+        <button type="button" class="appt-confirm-btn ok" id="apptDetailConfirmBtn">✓ אישור התור</button>
+        <button type="button" class="appt-confirm-btn no" id="apptDetailCancelBtn">✕ ביטול התור</button>
+      </div>
+      <p id="apptDetailConfirmHint" class="appt-confirm-hint"></p>
       <button type="button" class="cta appt-detail-client-btn" id="apptDetailClientBtn">לכרטסת הלקוחה</button>
     </div>
   </div>
@@ -6083,11 +6086,6 @@
       apptDetailNoteEl.textContent = noteTxt;
       apptDetailNoteRow.style.display = noteTxt ? '' : 'none';
     }
-    const apptDetailCancelBtn = document.getElementById('apptDetailCancelBtn');
-    if (apptDetailCancelBtn){
-      const isPastAppt = isApptInThePast(appt);
-      apptDetailCancelBtn.style.display = isPastAppt ? 'none' : '';
-    }
     closeApptEditPanel();
     refreshApptDetailConfirmRow();
     const editBtn = document.getElementById('apptDetailEditBtn');
@@ -6543,7 +6541,7 @@
   function refreshApptDetailConfirmRow(){
     const row = document.getElementById('apptDetailConfirmRow');
     const okBtn = document.getElementById('apptDetailConfirmBtn');
-    const noBtn = document.getElementById('apptDetailDeclineBtn');
+    const noBtn = document.getElementById('apptDetailCancelBtn');
     const hint = document.getElementById('apptDetailConfirmHint');
     const appt = apptDetailCurrent;
     if (!row || !okBtn || !noBtn) return;
@@ -6576,12 +6574,6 @@
     if (!confirm(`לאשר את התור של ${appt.client} (${appt.service}, ${formatDateDMY(appt.date)} ${appt.time})?\n\nזה נרשם בדיוק כמו אישור של הלקוחה בשיחה הטלפונית, ולא תצא אליה שיחת אישור.`)) return;
     setApptConfirmedByOwner(appt, true);
     showAdminToast('✓ התור אושר');
-  });
-  document.getElementById('apptDetailDeclineBtn')?.addEventListener('click', () => {
-    if (!apptDetailCurrent) return;
-    const appt = apptDetailCurrent;
-    cancelAdminAppointment(appt); // מבקש אישור בעצמו
-    if (!weekAppointments.some(a => a.id === appt.id)) closeApptDetailOverlay();
   });
   document.getElementById('apptDetailClientBtn')?.addEventListener('click', () => {
     if (!apptDetailCurrent) return;
@@ -10179,12 +10171,20 @@
   function refreshCalNowFill(){
     const fills = document.querySelectorAll('.cal-now-fill[data-now-fill]');
     if (!fills.length) return;
+    const now = new Date();
+    const label = 'עכשיו ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
     fills.forEach(el => {
       const parent = el.parentElement;
       if (!parent) return;
       const totalPx = parseFloat(parent.style.height) || 0;
       const bands = (calEndHour - calStartHour) || 1;
-      el.style.height = calNowFillHeightPx(totalPx / bands) + 'px';
+      const h = calNowFillHeightPx(totalPx / bands);
+      el.style.height = h + 'px';
+      const chip = el.querySelector('.cal-now-chip');
+      if (chip){
+        chip.textContent = label;
+        chip.style.display = h >= 20 ? '' : 'none';
+      }
     });
   }
   setInterval(refreshCalNowFill, 60000);
@@ -10507,7 +10507,15 @@
         const nowFill = document.createElement('div');
         nowFill.className = 'cal-now-fill';
         nowFill.dataset.nowFill = '1';
-        nowFill.style.height = calNowFillHeightPx(hourBandHeight) + 'px';
+        const nowFillH = calNowFillHeightPx(hourBandHeight);
+        nowFill.style.height = nowFillH + 'px';
+        const nowChip = document.createElement('span');
+        nowChip.className = 'cal-now-chip';
+        const nowForChip = new Date();
+        nowChip.textContent = 'עכשיו ' + String(nowForChip.getHours()).padStart(2, '0')
+          + ':' + String(nowForChip.getMinutes()).padStart(2, '0');
+        if (nowFillH < 20) nowChip.style.display = 'none';
+        nowFill.appendChild(nowChip);
         body.appendChild(nowFill);
       }
       const closedInfo = getWeekColClosedInfo(day.fullDate);
@@ -11719,27 +11727,44 @@
     const l = 0.2126 * srgbChannel(r) + 0.7152 * srgbChannel(g) + 0.0722 * srgbChannel(b);
     return 1.05 / (l + 0.05);
   }
+  function hexToHsl(hex){
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    if (max === min) return { h: 0, s: 0, l };
+    const d = max - min;
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    let h;
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0));
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    return { h: h * 60, s, l };
+  }
+  function hslToRgbString(h, s, l){
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l - c / 2;
+    let r = 0, g = 0, b = 0;
+    if (h < 60){ r = c; g = x; } else if (h < 120){ r = x; g = c; }
+    else if (h < 180){ g = c; b = x; } else if (h < 240){ g = x; b = c; }
+    else if (h < 300){ r = x; b = c; } else { r = c; b = x; }
+    return `rgb(${Math.round((r + m) * 255)}, ${Math.round((g + m) * 255)}, ${Math.round((b + m) * 255)})`;
+  }
   function contrastWithInk(r, g, b){
     const l = 0.2126 * srgbChannel(r) + 0.7152 * srgbChannel(g) + 0.0722 * srgbChannel(b);
     const ink = 0.2126 * srgbChannel(36) + 0.7152 * srgbChannel(27) + 0.0722 * srgbChannel(30);
     return (l + 0.05) / (ink + 0.05);
   }
+  const CAL_TONE_LIGHTNESS = 0.80;
+  const CAL_TONE_SATURATION = 0.52;
   function calendarToneOf(hex){
-    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
-    if (!m) return hex;
-    const n = parseInt(m[1], 16);
-    let r = Math.round(((n >> 16) & 255) + (255 - ((n >> 16) & 255)) * 0.10);
-    let g = Math.round(((n >> 8) & 255) + (255 - ((n >> 8) & 255)) * 0.10);
-    let b = Math.round((n & 255) + (255 - (n & 255)) * 0.10);
-    if (contrastWithWhite(r, g, b) >= 4.6 || contrastWithInk(r, g, b) >= 4.6){
-      return `rgb(${r}, ${g}, ${b})`;
-    }
-    for (let i = 0; i < 60 && contrastWithInk(r, g, b) < 4.6; i++){
-      r = Math.round(r + (255 - r) * 0.06);
-      g = Math.round(g + (255 - g) * 0.06);
-      b = Math.round(b + (255 - b) * 0.06);
-    }
-    return `rgb(${r}, ${g}, ${b})`;
+    const hsl = hexToHsl(hex);
+    if (!hsl) return hex;
+    if (hsl.s === 0) return hslToRgbString(0, 0, CAL_TONE_LIGHTNESS);
+    return hslToRgbString(hsl.h, Math.max(CAL_TONE_SATURATION, Math.min(0.72, hsl.s)), CAL_TONE_LIGHTNESS);
   }
   function colorLuminance(cssColor){
     const m = /(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(String(cssColor || ''));
