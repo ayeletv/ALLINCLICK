@@ -1902,6 +1902,13 @@
     background:rgba(122,153,106,0.22);
     border-bottom:3px solid #4A7A3A;
   }
+  .cat-color-dot{
+    width:26px; height:26px; border-radius:50%; flex:0 0 auto;
+    margin-inline-end:10px; cursor:pointer; align-self:center;
+    border:2px solid rgba(255,255,255,0.85);
+    box-shadow:0 0 0 1px rgba(0,0,0,0.18);
+  }
+  .cat-color-dot:hover{transform:scale(1.08);}
   .cal-now-chip{
     position:absolute; bottom:3px; inset-inline-start:3px;
     background:#4A7A3A; color:#fff;
@@ -2164,8 +2171,8 @@
     border-bottom-left-radius:0; border-bottom-right-radius:0;
   }
   .cal-appt.cal-appt-highlight{ animation:calApptHighlightFade 2s ease forwards; }
-  .cal-appt.cal-appt-confirmed{ box-shadow:inset 0 0 0 2.5px #166534; }
-  .cal-appt.cal-appt-confirmed.cal-appt-tiny{ box-shadow:inset 0 0 0 1.5px #166534; }
+  .cal-appt.cal-appt-confirmed{ box-shadow:inset 0 0 0 2.5px #14532D; }
+  .cal-appt.cal-appt-confirmed.cal-appt-tiny{ box-shadow:inset 0 0 0 1.5px #14532D; }
   .cal-appt.cal-appt-ondark .cal-appt-meta{opacity:0.88;}
   .myday-filter{display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:13px; color:#8A8178;}
   .myday-filter select{
@@ -3319,7 +3326,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-05 · 22';
+        window.__APP_BUILD = '2026-10-05 · 24';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -8280,7 +8287,7 @@
         inforuIvrCampaignId: opts.campaign || '',
         maintainerEmail: PLATFORM_ADMIN_EMAIL,
       },
-      staff: [], services: [], categories: [], categoryMessages: {},
+      staff: [], services: [], categories: [], categoryMessages: {}, categoryColors: {},
       clients: [], weekAppointments: [], personalBlocks: [],
       waitlist: [], specialRequests: [], lateCancellations: [], cancellationLog: [],
       inventory: [], whatsNewItems: [], holidayOverrides: [], recommendations: [],
@@ -8295,7 +8302,7 @@
   function blankPublicDoc(opts){
     return {
       branding: { name: opts.name, logo: null, phone: '', whatsapp: '', address: '' },
-      staff: [], services: [], categories: [], categoryMessages: {},
+      staff: [], services: [], categories: [], categoryMessages: {}, categoryColors: {},
       holidayOverrides: [], whatsNewItems: [], recommendations: [],
       about: { photo: null, text: '' },
       busy: [],
@@ -9930,6 +9937,7 @@
   let staff = [];
   let categories = [];
   let categoryMessages = {};
+  let categoryColors = {};
   let services = [];
   let cancellationLog = [];
   let lateCancellations = [];
@@ -11587,6 +11595,38 @@
     if (categories.includes(current)) sel.value = current;
   }
   let editingCategoryIndices = new Set();
+  const CATEGORY_COLOR_CHOICES = [
+    { hex: '#C9A227', name: 'צהוב' },
+    { hex: '#3F6B5C', name: 'ירוק' },
+    { hex: '#9B2C42', name: 'יין' },
+    { hex: '#B5654B', name: 'טרקוטה' },
+    { hex: '#5B7C99', name: 'תכלת' },
+    { hex: '#8B5FA3', name: 'סגול' },
+    { hex: '#C2185B', name: 'ורוד' },
+    { hex: '#6D4C41', name: 'חום' },
+  ];
+  function openCategoryColorPicker(cat){
+    const current = categoryBaseColor(cat);
+    const lines = CATEGORY_COLOR_CHOICES.map((c, i) => `${i + 1}. ${c.name}`).join('\n');
+    const answer = prompt(
+      `באיזה צבע להציג את "${cat}"?\n\nהצבע חל גם על האריח שהלקוחה רואה וגם על התורים ביומן.\n\n${lines}\n\nלהקליד מספר, או 0 כדי לחזור לברירת המחדל:`,
+      ''
+    );
+    if (answer === null) return;
+    const n = parseInt(String(answer).trim(), 10);
+    if (Number.isNaN(n) || n < 0 || n > CATEGORY_COLOR_CHOICES.length) return;
+    if (n === 0) delete categoryColors[cat];
+    else categoryColors[cat] = CATEGORY_COLOR_CHOICES[n - 1].hex;
+    if (typeof saveState === 'function') saveState();
+    renderCategories();
+    if (typeof renderCategoryGrid === 'function') renderCategoryGrid();
+    if (typeof renderSvcManageCategoryGrid === 'function') renderSvcManageCategoryGrid();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof showAdminToast === 'function'){
+      showAdminToast(n === 0 ? `"${cat}" חזרה לצבע ברירת המחדל` : `"${cat}" מוצגת עכשיו ב${CATEGORY_COLOR_CHOICES[n - 1].name}`);
+    }
+    void current;
+  }
   function renderCategories(){
     const listEl = document.getElementById('categoryList');
     if (!listEl) return;
@@ -11601,6 +11641,7 @@
         row.innerHTML = `
           <div class="client-info">
             <div class="name-row">
+              <span class="cat-color-dot" data-cat-color="${cat}" title="לחיצה לבחירת צבע הקטגוריה" style="background:${categoryBaseColor(cat) || '#CCC'};"></span>
               <div style="flex:1;">
                 <h4>${cat}</h4>
                 <div class="phone">${count} שירותים בקטגוריה זו</div>
@@ -11614,6 +11655,8 @@
           editingCategoryIndices.add(i);
           renderCategories();
         };
+        const dot = row.querySelector('.cat-color-dot');
+        if (dot) dot.onclick = (e) => { e.stopPropagation(); openCategoryColorPicker(cat); };
       } else {
         row.innerHTML = `
           <div class="client-info">
@@ -11694,9 +11737,24 @@
   const catTilePalette = ['#9B2C42', '#C9A227', '#3F6B5C', '#B5654B', '#5B7C99', '#8B5FA3'];
   function categoryBaseColor(cat){
     if (!cat) return null;
-    const idx = categories.indexOf(cat);
+    if (categoryColors && categoryColors[cat]) return categoryColors[cat];
+    const idx = defaultCategoryColorIndex(cat);
     if (idx === -1) return null;
     return catTilePalette[idx % catTilePalette.length];
+  }
+  function defaultCategoryColorIndex(cat){
+    let n = 0;
+    for (let i = 0; i < categories.length; i++){
+      const c = categories[i];
+      const hasAny = typeof availableServicesOf === 'function'
+        ? availableServicesOf(c).length > 0
+        : services.some(s => s && s.category === c);
+      if (!hasAny) continue;
+      if (c === cat) return n;
+      n++;
+    }
+    const tail = categories.indexOf(cat);
+    return tail === -1 ? -1 : n + tail;
   }
   function tintHex(hex, whiteAmount){
     const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
@@ -11758,13 +11816,15 @@
     const ink = 0.2126 * srgbChannel(36) + 0.7152 * srgbChannel(27) + 0.0722 * srgbChannel(30);
     return (l + 0.05) / (ink + 0.05);
   }
-  const CAL_TONE_LIGHTNESS = 0.80;
-  const CAL_TONE_SATURATION = 0.52;
+  const CAL_TONE_LIGHTNESS = 0.69;
+  const CAL_TONE_SATURATION_MIN = 0.46;
+  const CAL_TONE_SATURATION_MAX = 0.78;
   function calendarToneOf(hex){
     const hsl = hexToHsl(hex);
     if (!hsl) return hex;
     if (hsl.s === 0) return hslToRgbString(0, 0, CAL_TONE_LIGHTNESS);
-    return hslToRgbString(hsl.h, Math.max(CAL_TONE_SATURATION, Math.min(0.72, hsl.s)), CAL_TONE_LIGHTNESS);
+    const s = Math.max(CAL_TONE_SATURATION_MIN, Math.min(CAL_TONE_SATURATION_MAX, hsl.s));
+    return hslToRgbString(hsl.h, s, CAL_TONE_LIGHTNESS);
   }
   function colorLuminance(cssColor){
     const m = /(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(String(cssColor || ''));
@@ -15821,7 +15881,7 @@
       branding, customTemplates, staff,
       categories, services, whatsNewItems, invAlertEmail, inventory,
       ownerAccessCode, gatedTabsConfig, personalBlocks, specialRequests,
-      categoryMessages, holidayOverrides,
+      categoryMessages, categoryColors, holidayOverrides,
       about: aboutMe, recommendations
     };
     unsavedChangePending = true;
@@ -15891,7 +15951,7 @@
           branding, clients, customTemplates,
           staff, weekAppointments, categories, services, whatsNewItems,
           invAlertEmail, inventory, waitlist, cancellationLog, lateCancellations, ownerAccessCode,
-          gatedTabsConfig, personalBlocks, specialRequests, categoryMessages,
+          gatedTabsConfig, personalBlocks, specialRequests, categoryMessages, categoryColors,
           savedAt: committedPayload.savedAt
         };
         CLOUD_DOC.collection('backups').doc(backupDateKey).set(fullSnapshot).catch(err => console.error('Backup save failed:', err));
@@ -16098,6 +16158,7 @@
       })),
       categories: (categories || []).slice(),
       categoryMessages: cloneJSON(categoryMessages) || {},
+      categoryColors: cloneJSON(categoryColors) || {},
       holidayOverrides: (holidayOverrides || []).slice(),
       whatsNewItems: cloneJSON(whatsNewItems) || [],
       recommendations: visibleRecommendations().map(r => ({
@@ -16248,6 +16309,7 @@
     if (data.services) services = data.services;
     if (data.whatsNewItems) whatsNewItems = data.whatsNewItems;
     if (data.categoryMessages && typeof data.categoryMessages === 'object') categoryMessages = data.categoryMessages;
+    if (data.categoryColors && typeof data.categoryColors === 'object') categoryColors = data.categoryColors;
     if (typeof data.invAlertEmail === 'string') invAlertEmail = data.invAlertEmail;
     if (Array.isArray(data.holidayOverrides)) holidayOverrides = data.holidayOverrides.slice();
     else if (data.openOnTishaBav === true) migrateLegacyTishaBavFlag();
@@ -16589,6 +16651,7 @@
     if (Array.isArray(data.services)) services = data.services;
     if (Array.isArray(data.categories)) categories = data.categories;
     if (data.categoryMessages && typeof data.categoryMessages === 'object') categoryMessages = data.categoryMessages;
+    if (data.categoryColors && typeof data.categoryColors === 'object') categoryColors = data.categoryColors;
     if (Array.isArray(data.holidayOverrides)) holidayOverrides = data.holidayOverrides.slice();
     if (Array.isArray(data.whatsNewItems)) whatsNewItems = data.whatsNewItems;
     if (data.about && typeof data.about === 'object') aboutMe = Object.assign({ photo: null, text: '' }, data.about);
