@@ -3293,7 +3293,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-05 · 13';
+        window.__APP_BUILD = '2026-10-05 · 14';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -13667,20 +13667,16 @@
   const SMS_FUNCTION_URL = 'https://sendqueuedsms-737599524118.me-west1.run.app';
   const SMS_APP_KEY = 'rz-sms-9f3k2m8x-2026';
   const SMS_DUPLICATE_WINDOW_MS = 5 * 60 * 1000;
-  const recentSmsSends = [];
+  const lastSmsPerPhone = {};
+  function smsPhoneKey(phone){ return String(phone || '').replace(/[^0-9]/g, ''); }
   function smsAlreadySentRecently(phone, message){
-    const now = Date.now();
-    for (let i = recentSmsSends.length - 1; i >= 0; i--){
-      if (now - recentSmsSends[i].at > SMS_DUPLICATE_WINDOW_MS) recentSmsSends.splice(i, 1);
-    }
-    const key = String(phone || '').replace(/[^0-9]/g, '') + '|' + String(message || '');
-    return recentSmsSends.some(e => e.key === key);
+    const last = lastSmsPerPhone[smsPhoneKey(phone)];
+    if (!last) return false;
+    if (Date.now() - last.at > SMS_DUPLICATE_WINDOW_MS) return false;
+    return last.message === String(message || '');
   }
   function rememberSmsSend(phone, message){
-    recentSmsSends.push({
-      key: String(phone || '').replace(/[^0-9]/g, '') + '|' + String(message || ''),
-      at: Date.now()
-    });
+    lastSmsPerPhone[smsPhoneKey(phone)] = { message: String(message || ''), at: Date.now() };
   }
   function queueApptSms(appt, message){
     try {
