@@ -1856,6 +1856,24 @@
     border-top:1px solid rgba(var(--panel-line-rgb),0.08);
     box-sizing:border-box;
   }
+  .cal-today-btn{
+    background:#E3EBDF; color:#3D5436; border:1px solid var(--sage);
+    font-weight:700; cursor:pointer; white-space:nowrap;
+  }
+  .cal-today-btn:hover{background:#D4E0CE;}
+  .cal-today-btn.is-current{opacity:0.55; cursor:default;}
+  .cal-now-pin{
+    position:absolute; inset-inline-end:0; transform:translateY(-50%);
+    z-index:6; pointer-events:none;
+    display:flex; align-items:center; gap:2px;
+    font-size:11px; line-height:1;
+  }
+  .cal-now-pin .pin-time{
+    background:#3E6B2E; color:#fff; font-size:8.5px; font-weight:700;
+    padding:2px 4px; border-radius:4px; font-variant-numeric:tabular-nums;
+    box-shadow:0 1px 3px rgba(0,0,0,0.3);
+  }
+  .cal-hours-col{position:relative;}
   .cal-day-col{flex:1; min-width:104px; border-inline-start:1px solid rgba(var(--panel-line-rgb),0.08); position:relative; scroll-snap-align:start;}
   .cal-day-head{
     height:56px;
@@ -1900,7 +1918,10 @@
   .cal-now-fill{
     position:absolute; inset-inline:0; top:0; z-index:0; pointer-events:none;
     background:rgba(122,153,106,0.22);
-    border-bottom:3px solid #4A7A3A;
+  }
+  .cal-now-line{
+    position:absolute; inset-inline:0; z-index:4; pointer-events:none;
+    height:0; border-top:3px solid #3E6B2E;
   }
   .cat-color-dot{
     width:26px; height:26px; border-radius:50%; flex:0 0 auto;
@@ -1910,12 +1931,12 @@
   }
   .cat-color-dot:hover{transform:scale(1.08);}
   .cal-now-chip{
-    position:absolute; bottom:3px; inset-inline-start:3px;
-    background:#4A7A3A; color:#fff;
-    font-size:9.5px; font-weight:700; line-height:1;
-    padding:3px 6px; border-radius:999px;
+    position:absolute; top:50%; inset-inline-start:3px; transform:translateY(-50%);
+    background:#3E6B2E; color:#fff;
+    font-size:10px; font-weight:700; line-height:1;
+    padding:3px 7px; border-radius:999px;
     font-variant-numeric:tabular-nums; white-space:nowrap;
-    box-shadow:0 1px 3px rgba(0,0,0,0.25);
+    box-shadow:0 1px 4px rgba(0,0,0,0.35);
   }
   .cal-day-head.day-closed{background:rgba(155,44,66,0.07);}
   .cal-day-head.day-closed .cal-day-name, .cal-day-head.day-closed .cal-day-num{color:var(--wine);}
@@ -2537,6 +2558,8 @@
           <option value="month">חודשי</option>
         </select>
         <select id="calStaffFilterSelect" class="mini-select cal-mini-btn" onchange="onCalStaffFilterSelectChange(this)"></select>
+        
+        <button type="button" id="calTodayBtn" class="cal-mini-btn cal-today-btn" onclick="goToCurrentWeek()" title="חזרה ליומן של השבוע הנוכחי">נוכחי</button>
       </span>
     </div>
     
@@ -2763,7 +2786,7 @@
                 <input class="field" id="bookingNewTzInput" type="tel" inputmode="numeric" maxlength="9" placeholder="תעודת זהות (9 ספרות)">
                 <div id="bookingNewTzError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין תעודת זהות בת 9 ספרות</div>
               </div>
-              <input class="field" id="bookingPhoneInput" type="tel" placeholder="050-0000000">
+              <input class="field" id="bookingPhoneInput" type="tel" inputmode="numeric" maxlength="10" placeholder="050-0000000">
               <div id="bookingPhoneError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">מספר טלפון לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567)</div>
               <div id="firstTimePerks" class="first-time-perks">
                 <p class="ftp-title">🎁 פעם ראשונה? נעים להכיר! אפשר גם לעדכן אותנו קצת עלייך כדי לקבל פינוקים שווים ביום ההולדת שלך:</p>
@@ -3326,7 +3349,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-05 · 26';
+        window.__APP_BUILD = '2026-10-05 · 27';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -3667,7 +3690,8 @@
           <input type="text" id="frFirstName" class="field" placeholder="שם פרטי">
           <input type="text" id="frLastName" class="field" placeholder="שם משפחה">
         </div>
-        <input type="tel" id="frPhone" class="field" placeholder="050-0000000">
+        
+        <input type="tel" inputmode="numeric" maxlength="10" id="frPhone" class="field" placeholder="050-0000000">
       </div>
       <div id="frEmailWrap" style="display:none;">
         <input type="email" id="frEmail" class="field" placeholder="אימייל">
@@ -3675,8 +3699,9 @@
 
       <div class="label" style="margin-top:6px;">איך תרצי לקבל תזכורת? (אפשר לבחור יותר מאחת)</div>
       <div class="reminder-choice" id="frReminderChoice">
-        <label><input type="checkbox" name="frReminderChannel" value="sms" checked> SMS</label>
-        <label><input type="checkbox" name="frReminderChannel" value="call"> שיחת טלפון</label>
+        
+        <label><input type="checkbox" name="frReminderChannel" value="sms"> SMS</label>
+        <label><input type="checkbox" name="frReminderChannel" value="call" checked> שיחת טלפון</label>
       </div>
       <div id="frError" style="display:none; color:var(--wine); font-size:13px;"></div>
       <button class="cta" onclick="submitFlexibleRequest()">שליחת בקשה</button>
@@ -3711,7 +3736,7 @@
           <input type="text" id="mbClientFirstName" class="field" placeholder="שם פרטי">
           <input type="text" id="mbClientLastName" class="field" placeholder="שם משפחה">
         </div>
-        <input type="tel" id="mbClientPhone" class="field" placeholder="050-0000000">
+        <input type="tel" inputmode="numeric" maxlength="10" id="mbClientPhone" class="field" placeholder="050-0000000">
         
         <div id="mbPhoneMatches" style="display:none; flex-direction:column; gap:6px; background:#FAF5EE; border-radius:8px; padding:9px 11px;"></div>
         <button type="button" class="mini-btn" id="mbClearClientBtn" style="display:none; align-self:flex-start; padding:5px 12px; font-size:12.5px;">↩ ניקוי פרטי הלקוחה</button>
@@ -6658,6 +6683,38 @@
       callLink.title = 'אין מספר טלפון ללקוחה הזו. אפשר להוסיף אותו בשדה "טלפון" שמעל.';
     }
   }
+  function goToAppointmentInCalendar(appt){
+    if (!appt || !appt.date) return;
+    const parts = String(appt.date).split('-').map(Number);
+    if (parts.length !== 3) return;
+    const apptDate = new Date(parts[0], parts[1] - 1, parts[2]);
+    if (isNaN(apptDate.getTime())) return;
+    if (typeof closeClientProfileOverlay === 'function') closeClientProfileOverlay();
+    const bizBtn = document.getElementById('businessTabBtn');
+    if (typeof showPanel === 'function' && bizBtn) showPanel('business', bizBtn);
+    if (typeof setOverviewView === 'function') setOverviewView('week');
+    if (typeof weekOffsetForDate === 'function') weekOffset = weekOffsetForDate(apptDate);
+    if (typeof computeWeekDays === 'function') weekDays = computeWeekDays();
+    pendingCalHighlightApptId = appt.id || null;
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`.cal-appt[data-appt-id="${appt.id}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    setTimeout(() => {
+      if (pendingCalHighlightApptId === (appt.id || null)) pendingCalHighlightApptId = null;
+    }, 2100);
+  }
+  function wireRowJumpToCalendar(visitEl, appt){
+    if (!visitEl || !appt) return;
+    visitEl.style.cursor = 'pointer';
+    visitEl.title = 'לחיצה פותחת את התור הזה ביומן';
+    visitEl.addEventListener('click', (e) => {
+      if (e.target.closest('button, input, textarea, select, a')) return;
+      goToAppointmentInCalendar(appt);
+    });
+  }
   function wireCpAppointmentRows(containerId, appts, opts){
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -6665,6 +6722,7 @@
       const apptId = visitEl.dataset.apptId;
       const appt = weekAppointments.find(a => a.id === apptId);
       if (!appt) return;
+      wireRowJumpToCalendar(visitEl, appt);
       visitEl.querySelectorAll('.visit-status-btn').forEach(btn => {
         btn.onclick = () => {
             setApptStatus(appt, appt.status === btn.dataset.status ? 'pending' : btn.dataset.status);
@@ -8774,6 +8832,13 @@
   function readDMYPicker(dayId, monthId, yearId){
     return readDMYPickerEls(document.getElementById(dayId), document.getElementById(monthId), document.getElementById(yearId));
   }
+  document.addEventListener('input', function(e){
+    const el = e.target;
+    if (!el || el.tagName !== 'INPUT') return;
+    if (el.type !== 'tel' || el.getAttribute('maxlength') !== '10') return;
+    const digits = String(el.value || '').replace(/[^0-9]/g, '').slice(0, 10);
+    if (el.value !== digits) el.value = digits;
+  }, true);
   populateDMYPicker('mbBirthdayDay', 'mbBirthdayMonth', 'mbBirthdayYear', { allowBlank: true, yearsBack: 100 });
   populateDMYPicker('ftpBirthdayDay', 'ftpBirthdayMonth', 'ftpBirthdayYear', { allowBlank: true, yearsBack: 100 });
   populateDMYPicker('bookingTzUpdateBdayDay', 'bookingTzUpdateBdayMonth', 'bookingTzUpdateBdayYear', { allowBlank: true, yearsBack: 100 });
@@ -9215,6 +9280,7 @@
         const apptId = visitEl.dataset.apptId;
         const appt = apptById.get(apptId);
         if (!appt) return;
+        wireRowJumpToCalendar(visitEl, appt);
         visitEl.querySelectorAll('.visit-status-btn').forEach(btn => {
           btn.onclick = () => {
             setApptStatus(appt, appt.status === btn.dataset.status ? 'pending' : btn.dataset.status);
@@ -9259,6 +9325,7 @@
         const apptId = visitEl.dataset.apptId;
         const appt = apptById.get(apptId);
         if (!appt) return;
+        wireRowJumpToCalendar(visitEl, appt);
         const cancelBtn = visitEl.querySelector('[data-cancel-appt-id]');
         if (cancelBtn) cancelBtn.onclick = () => cancelAdminAppointment(appt);
       });
@@ -9266,6 +9333,7 @@
         const apptId = visitEl.dataset.todayApptId;
         const appt = apptById.get(apptId);
         if (!appt) return;
+        wireRowJumpToCalendar(visitEl, appt);
         visitEl.querySelectorAll('.visit-status-btn').forEach(btn => {
           btn.onclick = () => {
             setApptStatus(appt, appt.status === btn.dataset.status ? 'pending' : btn.dataset.status);
@@ -10179,6 +10247,24 @@
     if (minutesIn <= 0) return 0;
     return Math.min(totalPx, Math.round(minutesIn / 60 * hourBandHeight));
   }
+  function calNowPinTopPx(hourBandHeight){
+    if (!weekDays || !weekDays.some(d => d && typeof sameDate === 'function'
+      && sameDate(d.fullDate, getTodayDateOnly()))) return null;
+    const now = new Date();
+    const minutesIn = (now.getHours() * 60 + now.getMinutes()) - (calStartHour * 60);
+    if (minutesIn < 0) return null;
+    const totalPx = (calEndHour - calStartHour) * hourBandHeight;
+    const px = Math.round(minutesIn / 60 * hourBandHeight);
+    return px > totalPx ? null : px;
+  }
+  function goToCurrentWeek(){
+    weekOffset = 0;
+    if (typeof computeWeekDays === 'function') weekDays = computeWeekDays();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
+    if (typeof renderMiniCal === 'function') renderMiniCal();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ חזרנו לשבוע הנוכחי');
+  }
   function refreshCalNowFill(){
     const fills = document.querySelectorAll('.cal-now-fill[data-now-fill]');
     if (!fills.length) return;
@@ -10191,12 +10277,24 @@
       const bands = (calEndHour - calStartHour) || 1;
       const h = calNowFillHeightPx(totalPx / bands);
       el.style.height = h + 'px';
-      const chip = el.querySelector('.cal-now-chip');
-      if (chip){
-        chip.textContent = label;
-        chip.style.display = h >= 20 ? '' : 'none';
+      const line = parent.querySelector('.cal-now-line[data-now-line]');
+      if (line){
+        line.style.top = h + 'px';
+        const chip = line.querySelector('.cal-now-chip');
+        if (chip) chip.textContent = label;
       }
     });
+    document.querySelectorAll('.cal-now-pin[data-now-pin]').forEach(pin => {
+      const band = lastRenderedHourBandHeight || 0;
+      const top = band ? calNowPinTopPx(band) : null;
+      if (top === null){ pin.style.display = 'none'; return; }
+      pin.style.display = '';
+      pin.style.top = (currentDayHeadHeight() + top) + 'px';
+      const t = pin.querySelector('.pin-time');
+      if (t) t.textContent = label.replace('עכשיו ', '');
+    });
+    const todayBtn = document.getElementById('calTodayBtn');
+    if (todayBtn) todayBtn.classList.toggle('is-current', weekOffset === 0);
   }
   setInterval(refreshCalNowFill, 60000);
   const calStartHour = 8, calEndHour = 24;
@@ -10481,6 +10579,8 @@
         : `${first.getDate()}.${first.getMonth() + 1} - ${last.getDate()}.${last.getMonth() + 1}`;
       navLabelEl.textContent = rangeTxt + (weekOffset === 0 ? ' (השבוע)' : '');
     }
+    const calTodayBtnEl = document.getElementById('calTodayBtn');
+    if (calTodayBtnEl) calTodayBtnEl.classList.toggle('is-current', weekOffset === 0);
     calEl.innerHTML = '';
     const calFragment = document.createDocumentFragment();
     const hoursCol = document.createElement('div');
@@ -10497,6 +10597,17 @@
       lbl.style.height = hourBandHeight + 'px';
       lbl.textContent = String(h).padStart(2, '0');
       hoursCol.appendChild(lbl);
+    }
+    const nowPinTop = calNowPinTopPx(hourBandHeight);
+    if (nowPinTop !== null){
+      const pin = document.createElement('div');
+      pin.className = 'cal-now-pin';
+      pin.dataset.nowPin = '1';
+      pin.style.top = (currentDayHeadHeight() + nowPinTop) + 'px';
+      const nowForPin = new Date();
+      pin.innerHTML = `<span class="pin-time">${String(nowForPin.getHours()).padStart(2, '0')}:${String(nowForPin.getMinutes()).padStart(2, '0')}</span><span>📌</span>`;
+      pin.title = 'השעה עכשיו';
+      hoursCol.appendChild(pin);
     }
     calFragment.appendChild(hoursCol);
     weekDays.forEach((day, dayIdx) => {
@@ -10515,19 +10626,23 @@
       body.className = 'cal-day-body';
       body.style.height = (calEndHour - calStartHour) * hourBandHeight + 'px';
       if (isTodayCol){
+        const nowFillH = calNowFillHeightPx(hourBandHeight);
         const nowFill = document.createElement('div');
         nowFill.className = 'cal-now-fill';
         nowFill.dataset.nowFill = '1';
-        const nowFillH = calNowFillHeightPx(hourBandHeight);
         nowFill.style.height = nowFillH + 'px';
+        body.appendChild(nowFill);
+        const nowLine = document.createElement('div');
+        nowLine.className = 'cal-now-line';
+        nowLine.dataset.nowLine = '1';
+        nowLine.style.top = nowFillH + 'px';
         const nowChip = document.createElement('span');
         nowChip.className = 'cal-now-chip';
         const nowForChip = new Date();
         nowChip.textContent = 'עכשיו ' + String(nowForChip.getHours()).padStart(2, '0')
           + ':' + String(nowForChip.getMinutes()).padStart(2, '0');
-        if (nowFillH < 20) nowChip.style.display = 'none';
-        nowFill.appendChild(nowChip);
-        body.appendChild(nowFill);
+        nowLine.appendChild(nowChip);
+        body.appendChild(nowLine);
       }
       const closedInfo = getWeekColClosedInfo(day.fullDate);
       const isPastDay = typeof getTodayDateOnly === 'function' && day.fullDate < getTodayDateOnly();
@@ -11605,6 +11720,14 @@
     { hex: '#8B5FA3', name: 'סגול' },
     { hex: '#C2185B', name: 'ורוד' },
     { hex: '#6D4C41', name: 'חום' },
+    { hex: '#E07A1F', name: 'כתום' },
+    { hex: '#2E7D8F', name: 'טורקיז' },
+    { hex: '#4C6BBF', name: 'כחול' },
+    { hex: '#7A8B2E', name: 'ירוק זית' },
+    { hex: '#A0486E', name: 'בורדו ורוד' },
+    { hex: '#5C6B7A', name: 'אפור כחלחל' },
+    { hex: '#8E6F3E', name: 'חרדל' },
+    { hex: '#3F7D5A', name: 'ירוק כהה' },
   ];
   function openCategoryColorPicker(cat){
     const current = categoryBaseColor(cat);
@@ -13329,7 +13452,7 @@
           <input type="text" id="wlFirstName" class="field" placeholder="שם פרטי">
           <input type="text" id="wlLastName" class="field" placeholder="שם משפחה">
         </div>
-        <input type="tel" id="wlPhone" class="field" placeholder="050-0000000">
+        <input type="tel" inputmode="numeric" maxlength="10" id="wlPhone" class="field" placeholder="050-0000000">
         <input type="email" id="wlEmail" class="field" placeholder="אימייל (כדי שנוכל להודיע לך אם יתפנה מקום)">
         <div id="wlError" style="display:none; color:var(--wine); font-size:12px; margin-bottom:6px;">יש למלא תעודת זהות (9 ספרות), שם פרטי, שם משפחה, טלפון ואימייל תקינים</div>
         <div><button data-primary onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
