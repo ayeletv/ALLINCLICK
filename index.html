@@ -1897,6 +1897,11 @@
     color:#FFFFFF; font-weight:700;
   }
   .cal-day-body{position:relative;}
+  .cal-now-fill{
+    position:absolute; inset-inline:0; top:0; z-index:0; pointer-events:none;
+    background:rgba(122,153,106,0.16);
+    border-bottom:2px solid rgba(96,128,80,0.75);
+  }
   .cal-day-head.day-closed{background:rgba(155,44,66,0.07);}
   .cal-day-head.day-closed .cal-day-name, .cal-day-head.day-closed .cal-day-num{color:var(--wine);}
   .cal-day-body.day-closed{
@@ -1943,6 +1948,18 @@
     cursor:pointer;
     box-shadow:inset 0 0 0 1px rgba(28,23,25,0.16);
   }
+  .appt-confirm-row{display:flex; gap:10px; margin-top:12px;}
+  .appt-confirm-btn{
+    flex:1; border:none; border-radius:12px; padding:13px 10px; cursor:pointer;
+    font-family:'Heebo'; font-size:15px; font-weight:700; color:#fff;
+    transition:filter 0.15s ease, transform 0.1s ease;
+  }
+  .appt-confirm-btn:hover{filter:brightness(1.07);}
+  .appt-confirm-btn:active{transform:translateY(1px);}
+  .appt-confirm-btn.ok{background:#1C8A4B;}
+  .appt-confirm-btn.ok.undo{background:#6F7B72;}
+  .appt-confirm-btn.no{background:#B02E46;}
+  .appt-confirm-hint{font-size:12px; color:var(--muted,#8a7f72); line-height:1.55; margin:8px 2px 0;}
   .cal-appt b{font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .cal-appt-name{font-weight:700; font-size:12px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;}
   .cal-appt-meta{font-weight:400; font-size:9.5px; line-height:1.15; opacity:0.72; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;}
@@ -2139,8 +2156,8 @@
     border-bottom-left-radius:0; border-bottom-right-radius:0;
   }
   .cal-appt.cal-appt-highlight{ animation:calApptHighlightFade 2s ease forwards; }
-  .cal-appt.cal-appt-confirmed{ box-shadow:inset 0 0 0 2px #2E8B57; }
-  .cal-appt.cal-appt-confirmed.cal-appt-tiny{ box-shadow:inset 0 0 0 1px #2E8B57; }
+  .cal-appt.cal-appt-confirmed{ box-shadow:inset 0 0 0 1px #fff, inset 0 0 0 3px #1C8A4B; }
+  .cal-appt.cal-appt-confirmed.cal-appt-tiny{ box-shadow:inset 0 0 0 1.5px #1C8A4B; }
   .myday-filter{display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:13px; color:#8A8178;}
   .myday-filter select{
     background:#F3ECE0; border:none; border-radius:8px;
@@ -3293,7 +3310,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-05 · 15';
+        window.__APP_BUILD = '2026-10-05 · 18';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -3680,6 +3697,15 @@
         <div id="mbPhoneMatches" style="display:none; flex-direction:column; gap:6px; background:#FAF5EE; border-radius:8px; padding:9px 11px;"></div>
         <button type="button" class="mini-btn" id="mbClearClientBtn" style="display:none; align-self:flex-start; padding:5px 12px; font-size:12.5px;">↩ ניקוי פרטי הלקוחה</button>
         <input type="email" id="mbClientEmail" class="field" placeholder="אימייל (אופציונלי)">
+        
+        <div id="mbBirthdayWrap" style="display:none; flex-direction:column; gap:5px;">
+          <div class="label" style="margin:2px 0 0;" id="mbBirthdayLabel">תאריך לידה (לא חובה)</div>
+          <div class="dmy-date-picker" id="mbBirthdayPicker">
+            <select id="mbBirthdayDay" aria-label="יום לידה"></select>
+            <select id="mbBirthdayMonth" aria-label="חודש לידה"></select>
+            <select id="mbBirthdayYear" aria-label="שנת לידה"></select>
+          </div>
+        </div>
         <textarea id="mbClientNote" class="client-note" style="min-height:44px; margin:0;" placeholder="הערה אישית על הלקוחה (העדפות, רגישויות...)"></textarea>
         
         
@@ -3786,6 +3812,12 @@
       <div class="appt-detail-row" id="apptDetailNoteRow" style="display:none;"><span class="appt-detail-label">הערות לפגישה</span><span class="appt-detail-value" id="apptDetailNote" style="white-space:pre-wrap;"></span></div>
     </div>
     
+    <div id="apptDetailConfirmRow" class="appt-confirm-row">
+      <button type="button" class="appt-confirm-btn ok" id="apptDetailConfirmBtn">✓ אישור התור</button>
+      <button type="button" class="appt-confirm-btn no" id="apptDetailDeclineBtn">✕ ביטול התור</button>
+    </div>
+    <p id="apptDetailConfirmHint" class="appt-confirm-hint"></p>
+
     <div class="appt-detail-card" id="apptEditPanel" style="display:none; margin-top:12px;">
       <div class="appt-edit-label">שעת התור</div>
       <div id="apptEditTimeEcho" style="font-family:'JetBrains Mono'; font-size:14px; font-weight:700; margin:2px 0 8px;"></div>
@@ -4914,6 +4946,8 @@
       || (opts.clientPhone && clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === opts.clientPhone.replace(/[^0-9]/g, '')));
     document.getElementById('mbClientEmail').value = (mbOpenMatch && mbOpenMatch.email) || '';
     document.getElementById('mbClientNote').value = (mbOpenMatch && mbOpenMatch.note) || '';
+    mbClearBirthdayPicker();
+    refreshMbBirthdayRow(mbOpenMatch || null);
     mbLoadedClientKey = (mbOpenMatch && String(mbOpenMatch.teudatZehut || '')) || null;
     if (typeof updateMbClientIdStatus === 'function') updateMbClientIdStatus();
     if (typeof mbUpdateClearBtn === 'function') mbUpdateClearBtn();
@@ -5105,6 +5139,32 @@
       matches: document.getElementById('mbPhoneMatches'),
     };
   }
+  function refreshMbBirthdayRow(existing){
+    const wrap = document.getElementById('mbBirthdayWrap');
+    if (!wrap) return;
+    const label = document.getElementById('mbBirthdayLabel');
+    if (existing && existing.birthday){
+      wrap.style.display = 'none';
+      return;
+    }
+    wrap.style.display = 'flex';
+    if (label){
+      label.textContent = existing
+        ? `תאריך לידה — חסר בכרטיס של ${existing.name || 'הלקוחה'} (לא חובה)`
+        : 'תאריך לידה (לא חובה)';
+    }
+  }
+  function mbReadBirthday(){
+    const wrap = document.getElementById('mbBirthdayWrap');
+    if (!wrap || wrap.style.display === 'none') return '';
+    return readDMYPicker('mbBirthdayDay', 'mbBirthdayMonth', 'mbBirthdayYear') || '';
+  }
+  function mbClearBirthdayPicker(){
+    ['mbBirthdayDay', 'mbBirthdayMonth', 'mbBirthdayYear'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  }
   function mbUpdateClearBtn(){
     const btn = document.getElementById('mbClearClientBtn');
     if (!btn) return;
@@ -5138,6 +5198,7 @@
     if (e.phone && !keepPhone) e.phone.value = c.phone || '';
     if (e.email) e.email.value = c.email || '';
     if (e.note) e.note.value = c.note || '';
+    refreshMbBirthdayRow(c);
     mbApplyKnownChannels(c);
   }
   function lastChannelsForClient(c){
@@ -5209,6 +5270,7 @@
     if (e.email) e.email.value = '';
     if (e.note) e.note.value = '';
     if (e.matches) e.matches.style.display = 'none';
+    refreshMbBirthdayRow(null);
     const match = this.value.length === 9 ? clients.find(c => c && String(c.teudatZehut || '') === this.value) : null;
     if (match) mbFillFromClient(match);
     updateMbClientIdStatus();
@@ -6022,6 +6084,7 @@
       apptDetailCancelBtn.style.display = isPastAppt ? 'none' : '';
     }
     closeApptEditPanel();
+    refreshApptDetailConfirmRow();
     const editBtn = document.getElementById('apptDetailEditBtn');
     if (editBtn) editBtn.style.display = isApptInThePast(appt) ? 'none' : '';
     document.getElementById('apptDetailOverlay').classList.add('show');
@@ -6453,6 +6516,66 @@
     if (!apptDetailCurrent) return;
     const appt = apptDetailCurrent;
     cancelAdminAppointment(appt); // does its own confirm(); no-ops if she cancels the dialog
+    if (!weekAppointments.some(a => a.id === appt.id)) closeApptDetailOverlay();
+  });
+  function setApptConfirmedByOwner(appt, confirmed){
+    if (!appt) return;
+    if (confirmed){
+      appt.confirmedByClient = true;
+      appt.confirmedAt = new Date().toISOString();
+    } else {
+      delete appt.confirmedByClient;
+      delete appt.confirmedAt;
+    }
+    if (typeof saveState === 'function') saveState();
+    refreshApptDetailConfirmRow();
+    const badge = document.getElementById('apptDetailConfirmedBadge');
+    if (badge) badge.style.display = appt.confirmedByClient ? 'block' : 'none';
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof renderClients === 'function') renderClients();
+    if (typeof renderOverviewDayView === 'function') renderOverviewDayView();
+  }
+  function refreshApptDetailConfirmRow(){
+    const row = document.getElementById('apptDetailConfirmRow');
+    const okBtn = document.getElementById('apptDetailConfirmBtn');
+    const noBtn = document.getElementById('apptDetailDeclineBtn');
+    const hint = document.getElementById('apptDetailConfirmHint');
+    const appt = apptDetailCurrent;
+    if (!row || !okBtn || !noBtn) return;
+    if (!appt || isApptInThePast(appt)){
+      row.style.display = 'none';
+      if (hint) hint.style.display = 'none';
+      return;
+    }
+    row.style.display = 'flex';
+    const confirmed = !!appt.confirmedByClient;
+    okBtn.textContent = confirmed ? '↩ ביטול סימון האישור' : '✓ אישור התור';
+    okBtn.classList.toggle('undo', confirmed);
+    noBtn.textContent = '✕ ביטול התור';
+    if (hint){
+      hint.style.display = 'block';
+      hint.textContent = confirmed
+        ? `התור מסומן כמאושר${appt.confirmedAt ? ' (' + formatCancelledAtLabel({ cancelledAtIso: appt.confirmedAt }) + ')' : ''}. לא תצא אליה שיחת אישור נוספת.`
+        : 'אישור כאן זהה לחלוטין לאישור של הלקוחה בשיחה הטלפונית — אחריו לא תצא אליה שיחת אישור.';
+    }
+  }
+  document.getElementById('apptDetailConfirmBtn')?.addEventListener('click', () => {
+    const appt = apptDetailCurrent;
+    if (!appt) return;
+    if (appt.confirmedByClient){
+      if (!confirm(`להסיר את סימון האישור מהתור של ${appt.client}?\n\nאחרי ההסרה היא שוב תיכלל בשיחות האישור לפני התור.`)) return;
+      setApptConfirmedByOwner(appt, false);
+      showAdminToast('סימון האישור הוסר');
+      return;
+    }
+    if (!confirm(`לאשר את התור של ${appt.client} (${appt.service}, ${formatDateDMY(appt.date)} ${appt.time})?\n\nזה נרשם בדיוק כמו אישור של הלקוחה בשיחה הטלפונית, ולא תצא אליה שיחת אישור.`)) return;
+    setApptConfirmedByOwner(appt, true);
+    showAdminToast('✓ התור אושר');
+  });
+  document.getElementById('apptDetailDeclineBtn')?.addEventListener('click', () => {
+    if (!apptDetailCurrent) return;
+    const appt = apptDetailCurrent;
+    cancelAdminAppointment(appt); // מבקש אישור בעצמו
     if (!weekAppointments.some(a => a.id === appt.id)) closeApptDetailOverlay();
   });
   document.getElementById('apptDetailClientBtn')?.addEventListener('click', () => {
@@ -7100,12 +7223,14 @@
       }
       if (emailVal && !existingByIdOrPhone.email) existingByIdOrPhone.email = emailVal;
       if (noteVal || !existingByIdOrPhone.note) existingByIdOrPhone.note = noteVal;
+      const mbBirthdayVal = mbReadBirthday();
+      if (mbBirthdayVal && !existingByIdOrPhone.birthday) existingByIdOrPhone.birthday = mbBirthdayVal;
       if (manualAppointment.reminderChannels.length){
         existingByIdOrPhone.reminderChannelPref = manualAppointment.reminderChannels.slice();
       }
     } else if (phone || idDigits){
       clients.push({ name, phone, teudatZehut: assignedTz || null, email: emailVal, photo: null, visits: 0, daysSinceVisit: null, // ההערה האוטומטית נשארת, לבקשתה.
-      note: noteVal || 'לקוחה חדשה — נוספה דרך קביעת תור ידנית', birthday: null, reminderChannelPref: manualAppointment.reminderChannels.slice() });
+      note: noteVal || 'לקוחה חדשה — נוספה דרך קביעת תור ידנית', birthday: mbReadBirthday() || null, reminderChannelPref: manualAppointment.reminderChannels.slice() });
     }
     if (typeof saveState === 'function') saveState();
     closeManualBookingModal();
@@ -8642,6 +8767,7 @@
   function readDMYPicker(dayId, monthId, yearId){
     return readDMYPickerEls(document.getElementById(dayId), document.getElementById(monthId), document.getElementById(yearId));
   }
+  populateDMYPicker('mbBirthdayDay', 'mbBirthdayMonth', 'mbBirthdayYear', { allowBlank: true, yearsBack: 100 });
   populateDMYPicker('ftpBirthdayDay', 'ftpBirthdayMonth', 'ftpBirthdayYear', { allowBlank: true, yearsBack: 100 });
   populateDMYPicker('bookingTzUpdateBdayDay', 'bookingTzUpdateBdayMonth', 'bookingTzUpdateBdayYear', { allowBlank: true, yearsBack: 100 });
   populateDMYPicker('newClientBirthdayDay', 'newClientBirthdayMonth', 'newClientBirthdayYear', { allowBlank: true, yearsBack: 100 });
@@ -10038,6 +10164,25 @@
   }
   renderStaff();
   const staffColors = ['#E8CE7A', '#A6C29B', '#E2A8B9', '#D9AAB8', '#D9B27C'];
+  function calNowFillHeightPx(hourBandHeight){
+    const now = new Date();
+    const totalPx = (calEndHour - calStartHour) * hourBandHeight;
+    const minutesIn = (now.getHours() * 60 + now.getMinutes()) - (calStartHour * 60);
+    if (minutesIn <= 0) return 0;
+    return Math.min(totalPx, Math.round(minutesIn / 60 * hourBandHeight));
+  }
+  function refreshCalNowFill(){
+    const fills = document.querySelectorAll('.cal-now-fill[data-now-fill]');
+    if (!fills.length) return;
+    fills.forEach(el => {
+      const parent = el.parentElement;
+      if (!parent) return;
+      const totalPx = parseFloat(parent.style.height) || 0;
+      const bands = (calEndHour - calStartHour) || 1;
+      el.style.height = calNowFillHeightPx(totalPx / bands) + 'px';
+    });
+  }
+  setInterval(refreshCalNowFill, 60000);
   const calStartHour = 8, calEndHour = 24;
   const MOBILE_CAL_BREAKPOINT = 480;
   const DAY_HEAD_HEIGHT_DESKTOP = 56;
@@ -10353,6 +10498,13 @@
       const body = document.createElement('div');
       body.className = 'cal-day-body';
       body.style.height = (calEndHour - calStartHour) * hourBandHeight + 'px';
+      if (isTodayCol){
+        const nowFill = document.createElement('div');
+        nowFill.className = 'cal-now-fill';
+        nowFill.dataset.nowFill = '1';
+        nowFill.style.height = calNowFillHeightPx(hourBandHeight) + 'px';
+        body.appendChild(nowFill);
+      }
       const closedInfo = getWeekColClosedInfo(day.fullDate);
       const isPastDay = typeof getTodayDateOnly === 'function' && day.fullDate < getTodayDateOnly();
       if (closedInfo){
@@ -10530,8 +10682,13 @@
         const colWidthPct = 100 / colCount;
         block.style.insetInlineStart = `calc(${col * colWidthPct}% + 2px)`;
         block.style.insetInlineEnd = `calc(${(colCount - col - 1) * colWidthPct}% + 2px)`;
-        block.style.background = staffColors[a.staff % staffColors.length];
-        block.title = `${a.client} · ${a.service} · ${a.time} (${dur} דק') — לחיצה לצפייה בפרטי התור`;
+        const apptCatColor = appointmentCategoryColor(a);
+        const staffColor = staffColors[a.staff % staffColors.length];
+        block.style.background = apptCatColor || staffColor;
+        if (apptCatColor) block.style.borderInlineStart = `3px solid ${staffColor}`;
+        const apptCatName = categoryOfAppointment(a);
+        block.title = `${a.client} · ${a.service}${apptCatName ? ' (' + apptCatName + ')' : ''} · ${a.time} (${dur} דק')`
+          + ` · אצל ${(staff[a.staff] && staff[a.staff].name) || '—'} — לחיצה לצפייה בפרטי התור`;
         const blockHeightPx = heightPx;
         if (blockHeightPx < 22) block.classList.add('cal-appt-tiny');
         else if (blockHeightPx >= 26) block.classList.add('cal-appt-wrap');
@@ -11518,6 +11675,36 @@
     if (typeof showAdminToast === 'function') showAdminToast('✓ הקטגוריה נוספה בהצלחה');
   }
   const catTilePalette = ['#9B2C42', '#C9A227', '#3F6B5C', '#B5654B', '#5B7C99', '#8B5FA3'];
+  function categoryBaseColor(cat){
+    if (!cat) return null;
+    const idx = categories.indexOf(cat);
+    if (idx === -1) return null;
+    return catTilePalette[idx % catTilePalette.length];
+  }
+  function tintHex(hex, whiteAmount){
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+    if (!m) return hex;
+    const n = parseInt(m[1], 16);
+    const mix = (c) => Math.round(c + (255 - c) * whiteAmount);
+    const r = mix((n >> 16) & 255), g = mix((n >> 8) & 255), b = mix(n & 255);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+  function categoryOfServiceName(serviceName){
+    const s = services.find(x => x && x.name === serviceName);
+    return (s && s.category) || '';
+  }
+  function categoryOfAppointment(a){
+    if (!a) return '';
+    if (Array.isArray(a.services) && a.services.length){
+      const c = categoryOfServiceName(a.services[0] && a.services[0].name);
+      if (c) return c;
+    }
+    return categoryOfServiceName(String(a.service || '').split(' + ')[0].trim());
+  }
+  function appointmentCategoryColor(a){
+    const base = categoryBaseColor(categoryOfAppointment(a));
+    return base ? tintHex(base, 0.86) : null;
+  }
   function isServiceAvailable(svc){
     return !svc || svc.available !== false;
   }
@@ -11542,7 +11729,7 @@
       if (!catServices.length) return;
       const tile = document.createElement('div');
       tile.className = 'cat-tile';
-      tile.style.background = catTilePalette[colorIdx % catTilePalette.length];
+      tile.style.background = categoryBaseColor(cat) || catTilePalette[colorIdx % catTilePalette.length];
       colorIdx++;
       const selectedCount = catServices.filter(s => bkSelectedServices.some(sel => sel.svcIndex === services.indexOf(s))).length;
       tile.innerHTML = `<span class="cat-tile-name">${cat}</span><span class="cat-tile-count">${catServices.length} טיפולים${selectedCount ? ` · ${selectedCount} נבחרו` : ''}</span>`;
@@ -11657,7 +11844,7 @@
       anyTile = true;
       const tile = document.createElement('div');
       tile.className = 'cat-tile';
-      tile.style.background = catTilePalette[colorIdx % catTilePalette.length];
+      tile.style.background = categoryBaseColor(cat) || catTilePalette[colorIdx % catTilePalette.length];
       colorIdx++;
       tile.innerHTML = `<span class="cat-tile-name">${cat}</span><span class="cat-tile-count">${catServices.length} שירות${catServices.length === 1 ? '' : 'ים'}</span>`;
       tile.onclick = () => showSvcManageCategoryServices(cat);
