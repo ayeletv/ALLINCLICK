@@ -3336,7 +3336,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-05 · 29';
+        window.__APP_BUILD = '2026-10-05 · 30';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -4991,7 +4991,7 @@
     mbChannelsAutoFilled = false;
     const mbAutoHintEl = document.getElementById('mbChannelAutoHint');
     if (mbAutoHintEl){ mbAutoHintEl.style.display = 'none'; mbAutoHintEl.textContent = ''; }
-    if (mbOpenMatch && typeof mbApplyKnownChannels === 'function') mbApplyKnownChannels(mbOpenMatch);
+    if (typeof mbApplyKnownChannels === 'function') mbApplyKnownChannels(mbOpenMatch || null);
     const mbMatchesEl = document.getElementById('mbPhoneMatches');
     if (mbMatchesEl){ mbMatchesEl.style.display = 'none'; mbMatchesEl.innerHTML = ''; }
     renderMbQuickPick(opts.clientName || (mbOpenMatch && mbOpenMatch.name) || null);
@@ -5266,6 +5266,7 @@
       known = known.filter(v => v !== 'sms');
       if (!known.length) known = c.reminderChannelPref.slice();
     }
+    if (!known.length) known = ['call'];
     document.querySelectorAll('input[name="mbReminderChannel"]').forEach(cb => {
       cb.checked = known.indexOf(cb.value) !== -1;
     });
@@ -5273,11 +5274,13 @@
     const hint = document.getElementById('mbChannelAutoHint');
     if (hint){
       hint.style.display = known.length ? 'block' : 'none';
-      hint.textContent = known.length
-        ? (blocked
-            ? `בכרטיס של ${c.name || 'הלקוחה'} מסומן "שיחת טלפון" בלבד (למשל טלפון כשר), ולכן סומן כאן ${known.map(v => (v === 'sms' ? 'SMS' : 'שיחת טלפון')).join(' + ')}. SMS לא יישלח אליה גם אם יסומן — כדי לשנות זאת יש לעדכן את אופן ההתקשרות בכרטיס.`
-            : `מולא אוטומטית לפי התור הקודם של הלקוחה: ${known.map(v => (v === 'sms' ? 'SMS' : 'שיחת טלפון')).join(' + ')}. אפשר לשנות.`)
-        : '';
+      const label = known.map(v => (v === 'sms' ? 'SMS' : 'שיחת טלפון')).join(' + ');
+      hint.textContent = !known.length ? ''
+        : blocked
+          ? `בכרטיס של ${c.name || 'הלקוחה'} מסומן "שיחת טלפון" בלבד (למשל טלפון כשר), ולכן סומן כאן ${label}. SMS לא יישלח אליה גם אם יסומן — כדי לשנות זאת יש לעדכן את אופן ההתקשרות בכרטיס.`
+          : !c
+            ? `ברירת המחדל ללקוחה חדשה היא ${label}, כי שיחה מגיעה לכל טלפון — גם כשר. אפשר לשנות.`
+            : `מולא אוטומטית לפי התור הקודם של הלקוחה: ${label}. אפשר לשנות.`;
     }
   }
   function mbRenderPhoneMatches(list){
@@ -6685,11 +6688,16 @@
     }
   }
   function goToAppointmentInCalendar(appt){
-    if (!appt || !appt.date) return;
+    const fail = (why) => {
+      console.warn('goToAppointmentInCalendar:', why, appt);
+      if (typeof showAdminToast === 'function') showAdminToast('לא הצלחנו לפתוח את התור ביומן — ' + why);
+    };
+    if (!appt) return fail('התור לא נמצא');
+    if (!appt.date) return fail('אין תאריך על התור');
     const parts = String(appt.date).split('-').map(Number);
-    if (parts.length !== 3) return;
+    if (parts.length !== 3 || parts.some(n => Number.isNaN(n))) return fail('התאריך על התור אינו תקין');
     const apptDate = new Date(parts[0], parts[1] - 1, parts[2]);
-    if (isNaN(apptDate.getTime())) return;
+    if (isNaN(apptDate.getTime())) return fail('התאריך על התור אינו תקין');
     if (typeof closeClientProfileOverlay === 'function') closeClientProfileOverlay();
     const bizBtn = document.getElementById('businessTabBtn');
     if (typeof showPanel === 'function' && bizBtn) showPanel('business', bizBtn);
@@ -6720,8 +6728,7 @@
     const container = document.getElementById(containerId);
     if (!container) return;
     container.querySelectorAll('.visit-row').forEach(visitEl => {
-      const apptId = visitEl.dataset.apptId;
-      const appt = weekAppointments.find(a => a.id === apptId);
+      const appt = apptForRowEl(visitEl, null);
       if (!appt) return;
       wireRowJumpToCalendar(visitEl, appt);
       visitEl.querySelectorAll('.visit-status-btn').forEach(btn => {
@@ -8972,13 +8979,31 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
   }
+  function apptRowKey(a){
+    if (!a) return '';
+    return [a.date || '', a.time || '', a.client || ''].join('|')
+      .replace(/"/g, '&quot;');
+  }
+  function apptForRowEl(visitEl, byId){
+    if (!visitEl) return null;
+    const id = visitEl.dataset.apptId;
+    if (id){
+      const found = byId && typeof byId.get === 'function' ? byId.get(id) : null;
+      if (found) return found;
+      const direct = weekAppointments.find(x => x && x.id === id);
+      if (direct) return direct;
+    }
+    const key = visitEl.dataset.apptKey;
+    if (!key) return null;
+    return weekAppointments.find(x => x && apptRowKey(x) === key) || null;
+  }
   function renderOneAppointmentRow(a, options){
       if (options.upcoming){
         const confirmedBadge = a.confirmedByClient
           ? `<span class="upcoming-confirmed-badge" style="display:inline-flex; align-items:center; gap:3px; color:#1c8a4b; background:rgba(28,138,75,0.12); border:1px solid rgba(28,138,75,0.35); border-radius:6px; padding:2px 7px; font-size:11px; font-weight:700; white-space:nowrap;">✓ אושר</span>`
           : '';
         return `
-          <div class="visit-row upcoming-visit-row" data-appt-id="${a.id || ''}">
+          <div class="visit-row upcoming-visit-row" data-appt-id="${a.id || ''}" data-appt-key="${apptRowKey(a)}">
             <div class="visit-row-head">
               <span class="visit-date">${formatHistoryDate(a)}</span>
               <span class="t">${a.time || ''}</span>
@@ -8991,7 +9016,7 @@
           </div>`;
       }
       return `
-        <div class="visit-row" data-appt-id="${a.id || ''}">
+        <div class="visit-row" data-appt-id="${a.id || ''}" data-appt-key="${apptRowKey(a)}">
           <div class="visit-row-head">
             <span class="visit-date">${formatHistoryDate(a)}</span>
             <span class="t">${a.time || ''}</span>
@@ -9123,7 +9148,7 @@
           <div class="client-today-block" style="margin:10px 0; padding:10px; border:1px solid rgba(201,162,39,0.35); border-radius:10px; background:rgba(201,162,39,0.08);">
             <div style="font-weight:600; font-size:13px; margin-bottom:6px;">📌 טיפול של היום</div>
             ${todayAppts.map(a => `
-              <div class="visit-row" data-today-appt-id="${a.id || ''}" style="border:none; padding:0; margin-bottom:8px;">
+              <div class="visit-row" data-today-appt-id="${a.id || ''}" data-appt-key="${apptRowKey(a)}" style="border:none; padding:0; margin-bottom:8px;">
                 <div class="visit-row-head">
                   <span class="t">${a.time || ''}</span>
                   <span class="visit-svc">${a.service || 'שירות'}</span>
@@ -9278,8 +9303,7 @@
         if (typeof showAdminToast === 'function') showAdminToast('✓ ההערה נשמרה בהצלחה');
       });
       row.querySelectorAll('[data-panel="history"] .visit-row').forEach(visitEl => {
-        const apptId = visitEl.dataset.apptId;
-        const appt = apptById.get(apptId);
+        const appt = apptForRowEl(visitEl, apptById);
         if (!appt) return;
         wireRowJumpToCalendar(visitEl, appt);
         visitEl.querySelectorAll('.visit-status-btn').forEach(btn => {
@@ -9323,8 +9347,7 @@
         }
       });
       row.querySelectorAll('[data-panel="upcoming"] .visit-row').forEach(visitEl => {
-        const apptId = visitEl.dataset.apptId;
-        const appt = apptById.get(apptId);
+        const appt = apptForRowEl(visitEl, apptById);
         if (!appt) return;
         wireRowJumpToCalendar(visitEl, appt);
         const cancelBtn = visitEl.querySelector('[data-cancel-appt-id]');
@@ -9332,7 +9355,8 @@
       });
       row.querySelectorAll('[data-today-appt-id]').forEach(visitEl => {
         const apptId = visitEl.dataset.todayApptId;
-        const appt = apptById.get(apptId);
+        const appt = apptById.get(apptId)
+          || weekAppointments.find(x => x && apptRowKey(x) === visitEl.dataset.apptKey);
         if (!appt) return;
         wireRowJumpToCalendar(visitEl, appt);
         visitEl.querySelectorAll('.visit-status-btn').forEach(btn => {
