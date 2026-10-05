@@ -2156,8 +2156,13 @@
     border-bottom-left-radius:0; border-bottom-right-radius:0;
   }
   .cal-appt.cal-appt-highlight{ animation:calApptHighlightFade 2s ease forwards; }
-  .cal-appt.cal-appt-confirmed{ box-shadow:inset 0 0 0 1px #fff, inset 0 0 0 3px #1C8A4B; }
-  .cal-appt.cal-appt-confirmed.cal-appt-tiny{ box-shadow:inset 0 0 0 1.5px #1C8A4B; }
+  .cal-appt.cal-appt-confirmed{
+    box-shadow:inset 0 0 0 1px #0A3D23, inset 0 0 0 3px #4ADE80, inset 0 0 0 4px #0A3D23;
+  }
+  .cal-appt.cal-appt-confirmed.cal-appt-tiny{
+    box-shadow:inset 0 0 0 1px #0A3D23, inset 0 0 0 2px #4ADE80;
+  }
+  .cal-appt.cal-appt-ondark .cal-appt-meta{opacity:0.88;}
   .myday-filter{display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:13px; color:#8A8178;}
   .myday-filter select{
     background:#F3ECE0; border:none; border-radius:8px;
@@ -3310,7 +3315,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-05 · 18';
+        window.__APP_BUILD = '2026-10-05 · 19';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -10682,10 +10687,14 @@
         const colWidthPct = 100 / colCount;
         block.style.insetInlineStart = `calc(${col * colWidthPct}% + 2px)`;
         block.style.insetInlineEnd = `calc(${(colCount - col - 1) * colWidthPct}% + 2px)`;
-        const apptCatColor = appointmentCategoryColor(a);
+        const apptStyle = appointmentBlockStyle(a);
         const staffColor = staffColors[a.staff % staffColors.length];
-        block.style.background = apptCatColor || staffColor;
-        if (apptCatColor) block.style.borderInlineStart = `3px solid ${staffColor}`;
+        block.style.background = (apptStyle && apptStyle.bg) || staffColor;
+        if (apptStyle){
+          block.style.color = apptStyle.fg;
+          block.style.borderInlineStart = `3px solid ${staffColor}`;
+          block.classList.add(apptStyle.onLight ? 'cal-appt-onlight' : 'cal-appt-ondark');
+        }
         const apptCatName = categoryOfAppointment(a);
         block.title = `${a.client} · ${a.service}${apptCatName ? ' (' + apptCatName + ')' : ''} · ${a.time} (${dur} דק')`
           + ` · אצל ${(staff[a.staff] && staff[a.staff].name) || '—'} — לחיצה לצפייה בפרטי התור`;
@@ -11703,7 +11712,48 @@
   }
   function appointmentCategoryColor(a){
     const base = categoryBaseColor(categoryOfAppointment(a));
-    return base ? tintHex(base, 0.86) : null;
+    return base ? calendarToneOf(base) : null;
+  }
+  function srgbChannel(v){ v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+  function contrastWithWhite(r, g, b){
+    const l = 0.2126 * srgbChannel(r) + 0.7152 * srgbChannel(g) + 0.0722 * srgbChannel(b);
+    return 1.05 / (l + 0.05);
+  }
+  function contrastWithInk(r, g, b){
+    const l = 0.2126 * srgbChannel(r) + 0.7152 * srgbChannel(g) + 0.0722 * srgbChannel(b);
+    const ink = 0.2126 * srgbChannel(36) + 0.7152 * srgbChannel(27) + 0.0722 * srgbChannel(30);
+    return (l + 0.05) / (ink + 0.05);
+  }
+  function calendarToneOf(hex){
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+    if (!m) return hex;
+    const n = parseInt(m[1], 16);
+    let r = Math.round(((n >> 16) & 255) + (255 - ((n >> 16) & 255)) * 0.10);
+    let g = Math.round(((n >> 8) & 255) + (255 - ((n >> 8) & 255)) * 0.10);
+    let b = Math.round((n & 255) + (255 - (n & 255)) * 0.10);
+    if (contrastWithWhite(r, g, b) >= 4.6 || contrastWithInk(r, g, b) >= 4.6){
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+    for (let i = 0; i < 60 && contrastWithInk(r, g, b) < 4.6; i++){
+      r = Math.round(r + (255 - r) * 0.06);
+      g = Math.round(g + (255 - g) * 0.06);
+      b = Math.round(b + (255 - b) * 0.06);
+    }
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+  function colorLuminance(cssColor){
+    const m = /(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(String(cssColor || ''));
+    if (!m) return 1;
+    return (0.2126 * +m[1] + 0.7152 * +m[2] + 0.0722 * +m[3]) / 255;
+  }
+  function appointmentBlockStyle(a){
+    const bg = appointmentCategoryColor(a);
+    if (!bg) return null;
+    const m = /(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(bg);
+    if (!m) return null;
+    const r = +m[1], g = +m[2], b = +m[3];
+    const onLight = contrastWithInk(r, g, b) >= contrastWithWhite(r, g, b);
+    return { bg, fg: onLight ? '#241B1E' : '#FFFFFF', onLight };
   }
   function isServiceAvailable(svc){
     return !svc || svc.available !== false;
