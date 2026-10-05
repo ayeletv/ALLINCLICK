@@ -5135,10 +5135,29 @@
   document.getElementById('mbClientPhone')?.addEventListener('input', function(){
     const e = mbClientDetailEls();
     if (e.id && e.id.value.trim()){
-      if (e.matches) e.matches.style.display = 'none';
+      const typedId = e.id.value.trim();
+      const idMatch = clients.find(c => c && String(c.teudatZehut || '') === typedId);
+      if (idMatch){
+        if (e.matches) e.matches.style.display = 'none';
+        updateMbClientIdStatus();
+        renderMbQuickPick(idMatch.name);
+        mbUpdateClearBtn();
+        return;
+      }
+      const typedDigits = (this.value || '').replace(/[^0-9]/g, '');
+      const byPhone = isValidIsraeliPhone(this.value)
+        ? clients.filter(c => c && String(c.phone || '').replace(/[^0-9]/g, '') === typedDigits)
+        : [];
+      if (byPhone.length === 1 && !isPlausibleTeudatZehut(byPhone[0].teudatZehut)){
+        mbFillFromClient(byPhone[0], true);
+        if (e.id) e.id.value = typedId;
+        if (e.matches) e.matches.style.display = 'none';
+      } else if (byPhone.length > 1){
+        mbRenderPhoneMatches(byPhone);
+      } else if (e.matches){
+        e.matches.style.display = 'none';
+      }
       updateMbClientIdStatus();
-      const idMatch = clients.find(c => c && String(c.teudatZehut || '') === e.id.value);
-      renderMbQuickPick(idMatch ? idMatch.name : null);
       mbUpdateClearBtn();
       return;
     }
