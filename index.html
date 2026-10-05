@@ -3293,7 +3293,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-05 · 12';
+        window.__APP_BUILD = '2026-10-05 · 13';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -13666,6 +13666,22 @@
   }
   const SMS_FUNCTION_URL = 'https://sendqueuedsms-737599524118.me-west1.run.app';
   const SMS_APP_KEY = 'rz-sms-9f3k2m8x-2026';
+  const SMS_DUPLICATE_WINDOW_MS = 5 * 60 * 1000;
+  const recentSmsSends = [];
+  function smsAlreadySentRecently(phone, message){
+    const now = Date.now();
+    for (let i = recentSmsSends.length - 1; i >= 0; i--){
+      if (now - recentSmsSends[i].at > SMS_DUPLICATE_WINDOW_MS) recentSmsSends.splice(i, 1);
+    }
+    const key = String(phone || '').replace(/[^0-9]/g, '') + '|' + String(message || '');
+    return recentSmsSends.some(e => e.key === key);
+  }
+  function rememberSmsSend(phone, message){
+    recentSmsSends.push({
+      key: String(phone || '').replace(/[^0-9]/g, '') + '|' + String(message || ''),
+      at: Date.now()
+    });
+  }
   function queueApptSms(appt, message){
     try {
       if (!appt) return;
@@ -13675,10 +13691,19 @@
       const channels = onAppt || onClient;
       if (channels && channels.indexOf('sms') === -1) return;
       if (!client || !client.phone) return;
+      const finalMessage = withClientName(message, appt.client || (client && client.name));
+      if (smsAlreadySentRecently(client.phone, finalMessage)){
+        console.warn('SMS suppressed as a duplicate:', client.phone, finalMessage);
+        if (typeof showAdminToast === 'function'){
+          showAdminToast('ℹ ההודעה הזו כבר נשלחה ללקוחה לפני רגע — לא נשלחה שוב');
+        }
+        return;
+      }
+      rememberSmsSend(client.phone, finalMessage);
       fetch(SMS_FUNCTION_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-App-Key': SMS_APP_KEY },
-        body: JSON.stringify({ phone: client.phone, message: withClientName(message, appt.client || (client && client.name)), bizId: BIZ_ID })
+        body: JSON.stringify({ phone: client.phone, message: finalMessage, bizId: BIZ_ID })
       }).catch(e => console.error('SMS send request failed (appointment itself is unaffected):', e));
     } catch (e) {
       console.error('queueApptSms failed (appointment itself is unaffected):', e);
