@@ -3293,7 +3293,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-05 · 14';
+        window.__APP_BUILD = '2026-10-05 · 15';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5150,8 +5150,17 @@
     return [];
   }
   let mbChannelsAutoFilled = false;
+  function clientCardBlocksSms(c){
+    return !!(c && Array.isArray(c.reminderChannelPref) && c.reminderChannelPref.length
+      && c.reminderChannelPref.indexOf('sms') === -1);
+  }
   function mbApplyKnownChannels(c){
-    const known = lastChannelsForClient(c);
+    const blocked = clientCardBlocksSms(c);
+    let known = lastChannelsForClient(c);
+    if (blocked){
+      known = known.filter(v => v !== 'sms');
+      if (!known.length) known = c.reminderChannelPref.slice();
+    }
     document.querySelectorAll('input[name="mbReminderChannel"]').forEach(cb => {
       cb.checked = known.indexOf(cb.value) !== -1;
     });
@@ -5160,7 +5169,9 @@
     if (hint){
       hint.style.display = known.length ? 'block' : 'none';
       hint.textContent = known.length
-        ? `מולא אוטומטית לפי התור הקודם של הלקוחה: ${known.map(v => (v === 'sms' ? 'SMS' : 'שיחת טלפון')).join(' + ')}. אפשר לשנות.`
+        ? (blocked
+            ? `בכרטיס של ${c.name || 'הלקוחה'} מסומן "שיחת טלפון" בלבד (למשל טלפון כשר), ולכן סומן כאן ${known.map(v => (v === 'sms' ? 'SMS' : 'שיחת טלפון')).join(' + ')}. SMS לא יישלח אליה גם אם יסומן — כדי לשנות זאת יש לעדכן את אופן ההתקשרות בכרטיס.`
+            : `מולא אוטומטית לפי התור הקודם של הלקוחה: ${known.map(v => (v === 'sms' ? 'SMS' : 'שיחת טלפון')).join(' + ')}. אפשר לשנות.`)
         : '';
     }
   }
@@ -13684,6 +13695,10 @@
       const onAppt = (Array.isArray(appt.reminderChannels) && appt.reminderChannels.length) ? appt.reminderChannels : null;
       const client = findClientForAppt(appt);
       const onClient = (client && Array.isArray(client.reminderChannelPref) && client.reminderChannelPref.length) ? client.reminderChannelPref : null;
+      if (onClient && onClient.indexOf('sms') === -1){
+        console.warn('SMS not sent: the client card allows other channels only.', client && client.name);
+        return;
+      }
       const channels = onAppt || onClient;
       if (channels && channels.indexOf('sms') === -1) return;
       if (!client || !client.phone) return;
