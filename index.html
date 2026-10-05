@@ -3336,7 +3336,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-05 · 28';
+        window.__APP_BUILD = '2026-10-05 · 29';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -4664,8 +4664,14 @@
     document.getElementById('frTimeFrom').value = '';
     document.getElementById('frTimeTo').value = '';
     if (typeof updateFrTimeEcho === 'function') updateFrTimeEcho();
-    populateDMYPicker('frDateFromDay', 'frDateFromMonth', 'frDateFromYear', { allowBlank: true, yearsForward: 2 });
-    populateDMYPicker('frDateToDay', 'frDateToMonth', 'frDateToYear', { allowBlank: true, yearsForward: 2 });
+    const frToday = new Date();
+    const frWeekAhead = new Date(frToday.getFullYear(), frToday.getMonth(), frToday.getDate() + 7);
+    const frFmt = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+      + '-' + String(d.getDate()).padStart(2, '0');
+    populateDMYPicker('frDateFromDay', 'frDateFromMonth', 'frDateFromYear',
+      { allowBlank: true, yearsForward: 2, value: frFmt(frToday) });
+    populateDMYPicker('frDateToDay', 'frDateToMonth', 'frDateToYear',
+      { allowBlank: true, yearsForward: 2, value: frFmt(frWeekAhead) });
     updateFrDateRangeEcho();
     document.getElementById('frNote').value = '';
     document.getElementById('frId').value = '';
@@ -4676,7 +4682,7 @@
     frIdentitySeq++;
     applyFrIdentity();
     warmClientApi();
-    document.querySelectorAll('input[name="frReminderChannel"]').forEach(cb => { cb.checked = (cb.value === 'sms'); });
+    document.querySelectorAll('input[name="frReminderChannel"]').forEach(cb => { cb.checked = (cb.value === 'call'); });
     document.getElementById('frError').style.display = 'none';
     document.getElementById('frFormWrap').style.display = 'flex';
     document.getElementById('frResultWrap').style.display = 'none';
@@ -5241,6 +5247,14 @@
     return [];
   }
   let mbChannelsAutoFilled = false;
+  function channelsForNewAppointment(requested, clientRef){
+    if (Array.isArray(requested) && requested.length) return requested.slice();
+    const c = clientRef && typeof findClientForAppt === 'function'
+      ? findClientForAppt({ teudatZehut: clientRef.teudatZehut, client: clientRef.name })
+      : null;
+    const known = c && typeof lastChannelsForClient === 'function' ? lastChannelsForClient(c) : [];
+    return known && known.length ? known.slice() : ['call'];
+  }
   function clientCardBlocksSms(c){
     return !!(c && Array.isArray(c.reminderChannelPref) && c.reminderChannelPref.length
       && c.reminderChannelPref.indexOf('sms') === -1);
@@ -5944,7 +5958,7 @@
       staff: appt.staff,
       status: 'pending',
       note: '',
-      reminderChannels: ['sms']
+      reminderChannels: channelsForNewAppointment(w.reminderChannels, w)
     };
     weekAppointments.push(newAppt);
     const existingByIdOrPhone = w.teudatZehut
@@ -11021,7 +11035,7 @@
           staff: match.staffIdx,
           status: 'pending',
           note: req.note || '',
-          reminderChannels: (Array.isArray(req.reminderChannels) && req.reminderChannels.length) ? req.reminderChannels : ['sms']
+          reminderChannels: channelsForNewAppointment(req.reminderChannels, req)
         };
         const mergedAppts = mergeListField(server.weekAppointments, lastLoadedSnapshot.weekAppointments, weekAppointments.concat([appt]), a => a && a.id);
         const updatedReq = Object.assign({}, req, { status: 'matched', matchedDate: match.date, matchedTime: match.time, matchedStaff: match.staffIdx });
@@ -11176,7 +11190,7 @@
           service: (svc && svc.name) || w.service || 'שירות',
           services: svc ? [{ name: svc.name, duration: svc.duration || 0, price: svc.price || 0 }] : [],
           price: svc ? (svc.price || 0) : 0, staff: match.staffIdx, status: 'pending', note: '',
-          reminderChannels: ['sms']
+          reminderChannels: channelsForNewAppointment(w.reminderChannels, w)
         };
         const mergedAppts = mergeListField(server.weekAppointments, lastLoadedSnapshot.weekAppointments, weekAppointments.concat([appt]), a => a && a.id);
         const updatedEntry = Object.assign({}, w, { status: 'matched', matchedDate: match.date, matchedTime: match.time, matchedStaff: match.staffIdx });
