@@ -3749,6 +3749,7 @@
         <label><input type="checkbox" name="apptEditReminderChannel" value="call"> שיחת טלפון</label>
       </div>
       <p style="font-size:11.5px; color:var(--muted,#8a7f72); margin:2px 0 0; line-height:1.5;">לקוחה עם טלפון כשר אינה יכולה לקבל SMS — עבורה יש לבחור שיחת טלפון.</p>
+      <p id="apptEditSmsBlockedNote" style="display:none; font-size:12px; color:var(--wine); font-weight:600; margin:6px 0 0; line-height:1.5;"></p>
       <div class="appt-edit-label" style="margin-top:14px;">הערות לפגישה הזו</div>
       <textarea id="apptEditNote" class="field" rows="2" style="margin:0;" placeholder="למשל: מגיעה עם הבת, מבקשת גוון בהיר יותר, לשלם במזומן"></textarea>
       <div class="appt-edit-label" style="margin-top:14px;">טיפולים בתור</div>
@@ -5986,6 +5987,7 @@
     document.querySelectorAll('input[name="apptEditReminderChannel"]').forEach(cb => {
       cb.checked = apptEditChannels.indexOf(cb.value) !== -1;
     });
+    refreshApptEditSmsBlockedNote();
     const otherWrap = document.getElementById('apptEditOtherTimeWrap');
     if (otherWrap) otherWrap.style.display = 'none';
     const otherWarn = document.getElementById('apptEditOtherTimeWarn');
@@ -5997,6 +5999,20 @@
     if (panel) panel.style.display = '';
     const editBtn = document.getElementById('apptDetailEditBtn');
     if (editBtn) editBtn.style.display = 'none';
+  }
+  function refreshApptEditSmsBlockedNote(){
+    const el = document.getElementById('apptEditSmsBlockedNote');
+    const appt = apptDetailCurrent;
+    if (!el || !appt) return;
+    const smsChecked = Array.from(document.querySelectorAll('input[name="apptEditReminderChannel"]:checked'))
+      .some(cb => cb.value === 'sms');
+    const c = (typeof findClientForAppt === 'function') ? findClientForAppt(appt) : null;
+    const pref = (c && Array.isArray(c.reminderChannelPref)) ? c.reminderChannelPref : [];
+    const blocked = smsChecked && pref.length && pref.indexOf('sms') === -1;
+    el.style.display = blocked ? 'block' : 'none';
+    el.textContent = blocked
+      ? `⚠ ה-SMS לא יישלח: בכרטיס של ${(c && c.name) || 'הלקוחה'} מסומן "שיחת טלפון" בלבד, וההגדרה בכרטיס גוברת. כדי שיישלח SMS — לשנות את אופן ההתקשרות בכרטיס הלקוחה.`
+      : '';
   }
   function renderApptEditPanel(){
     if (!apptEditDraft) return;
@@ -6259,6 +6275,9 @@
     if (!apptEditDraft) return;
     const v = parseInt(document.getElementById('apptEditDur').value, 10);
     if (!isNaN(v) && v > 0){ apptEditDraft.dur = v; renderApptEditSlots(); }
+  });
+  document.querySelectorAll('input[name="apptEditReminderChannel"]').forEach(cb => {
+    cb.addEventListener('change', refreshApptEditSmsBlockedNote);
   });
   document.getElementById('apptEditOtherTimeBtn')?.addEventListener('click', () => {
     const wrap = document.getElementById('apptEditOtherTimeWrap');
@@ -6679,8 +6698,26 @@
           renderClientProfileOverlay();
           return;
         }
-        if (typeof saveState === 'function') saveState();
-        if (typeof showAdminToast === 'function') showAdminToast('✓ אופן ההתקשרות עודכן בהצלחה');
+        const cpWanted = c.reminderChannelPref.slice();
+        const cpVerify = () => {
+          const tz = String(c.teudatZehut || '').trim();
+          const ph = String(c.phone || '').replace(/[^0-9]/g, '');
+          const fresh = clients.find(x => x && tz && String(x.teudatZehut || '').trim() === tz)
+            || clients.find(x => x && ph && String(x.phone || '').replace(/[^0-9]/g, '') === ph)
+            || null;
+          const got = (fresh && fresh.reminderChannelPref) || [];
+          return JSON.stringify(got) === JSON.stringify(cpWanted);
+        };
+        const cpSaved = (typeof saveState === 'function') ? saveState() : Promise.resolve();
+        Promise.resolve(cpSaved).then(() => {
+          if (cpVerify()){
+            if (typeof showAdminToast === 'function') showAdminToast('✓ אופן ההתקשרות עודכן בהצלחה');
+            return;
+          }
+          if (typeof showSaveErrorBanner === 'function'){
+            showSaveErrorBanner(`⚠ אופן ההתקשרות של ${c.name} לא נשמר בפועל, למרות שהפעולה נראתה תקינה. נא לנסות שוב, ואם זה חוזר — לצלם את ההודעה הזו.`, { retry: true });
+          }
+        });
       });
     });
 
@@ -6963,6 +7000,16 @@
     }
     if (typeof saveState === 'function') saveState();
     closeManualBookingModal();
+    const mbLinked = (typeof findClientForAppt === 'function') ? findClientForAppt(manualAppointment) : null;
+    if (!mbLinked || !mbLinked.phone){
+      if (typeof showSaveErrorBanner === 'function'){
+        showSaveErrorBanner(`⚠ התור של ${name} נקבע, אבל ${!mbLinked ? 'לא נוצר לה כרטיס לקוחה' : 'לא נשמר לה מספר טלפון בכרטיס'}. בלי זה לא תצא אליה תזכורת. נא לצלם את ההודעה הזו ולפתוח לה כרטיס ידנית בכרטסת.`);
+      }
+      console.error('manual booking: client record missing after save', {
+        name, phone, idDigits, assignedTz, hadExisting: !!existingByIdOrPhone,
+        loadedKey: mbLoadedClientKey, clientsCount: clients.length,
+      });
+    }
     showAdminToast('✓ התור נוסף ואושר בהצלחה');
     try {
       if (typeof renderClients === 'function') renderClients();
@@ -8376,6 +8423,7 @@
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
   const TODAY_APPT_HISTORY_CUTOFF_MINUTES = 120;
+  const TODAY_APPT_HISTORY_GRACE_MINUTES = 15;
   function isAppointmentHistory(appt){
     const d = getAppointmentDateOnly(appt);
     if (!d) return false;
@@ -8385,7 +8433,8 @@
       const apptMinutes = timeToMinutes(appt.time || '00:00');
       const now = new Date();
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
-      return (nowMinutes - apptMinutes) > TODAY_APPT_HISTORY_CUTOFF_MINUTES;
+      const apptEnd = apptMinutes + (appt.dur || 0);
+      return (nowMinutes - apptEnd) > TODAY_APPT_HISTORY_GRACE_MINUTES;
     }
     return false;
   }
@@ -9830,11 +9879,40 @@
       return startMin < aEnd && endMin > aStart;
     });
   }
+  function lateCancelAlreadyLogged(appt){
+    if (!appt) return false;
+    return lateCancellations.some(e => e && (
+      (appt.id && e.apptId && e.apptId === appt.id) ||
+      (e.date === appt.date && e.time === (appt.time || '') && e.client === (appt.client || ''))
+    ));
+  }
   function setApptStatus(appt, status, refreshFn){
+    const wasStatus = appt.status;
     appt.status = status;
+    if (status === 'no-show' && wasStatus !== 'no-show' && !lateCancelAlreadyLogged(appt)){
+      if (confirm(`"${appt.client}" לא הגיעה לתור (${appt.service}, ${formatDateDMY(appt.date)} ${appt.time}) — לרשום את זה כאי-הגעה שתיכנס להיסטוריית "ביטולים מאוחרים" שלה?`)){
+        logLateCancellation(appt, 'no-show');
+        const updated = getLateCancelStatusForAppt(appt);
+        if (updated.count === 2) sendLateCancelAdminAlert(appt, 2, false);
+      }
+    }
+    if (wasStatus === 'no-show' && status !== 'no-show'){
+      const mine = lateCancellations.filter(e => e && e.type === 'no-show' && (
+        (appt.id && e.apptId && e.apptId === appt.id) ||
+        (!e.apptId && e.date === appt.date && e.time === (appt.time || '') && e.client === (appt.client || ''))
+      ));
+      if (mine.length && confirm(`לתור הזה רשומה אי-הגעה בהיסטוריית "ביטולים מאוחרים" של ${appt.client}.\n\nלהסיר אותה? (אם הסימון היה בטעות — כן. אי-הגעות נספרות, ואחרי שתיים הלקוחה נחסמת מקביעת תור.)`)){
+        mine.forEach(e => {
+          const i = lateCancellations.indexOf(e);
+          if (i !== -1) lateCancellations.splice(i, 1);
+        });
+        if (typeof showAdminToast === 'function') showAdminToast('✓ אי-ההגעה הוסרה מההיסטוריה של הלקוחה');
+      }
+    }
     if (typeof refreshFn === 'function') refreshFn();
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderClients === 'function') renderClients();
+    if (typeof saveState === 'function') saveState();
   }
   function logApptNoteFollowUp(appt, previousNote){
     const note = (appt.note || '').trim();
@@ -12535,6 +12613,7 @@
       staffName: (staff[appt.staff] && staff[appt.staff].name) || '',
       price: getApptPrice(appt),
       cancelledAtIso: new Date().toISOString(),
+      apptId: appt.id || null,
       type: type === 'no-show' ? 'no-show' : 'cancel'
     });
   }
@@ -15082,7 +15161,23 @@
   function mergeListField(serverArr, lastLoadedArr, localArr, keyFn){
     serverArr = serverArr || []; lastLoadedArr = lastLoadedArr || []; localArr = localArr || [];
     const allHaveKeys = serverArr.concat(lastLoadedArr, localArr).every(item => !!keyFn(item));
-    if (!allHaveKeys) return localArr;
+    if (!allHaveKeys){
+      const contentSig = item => {
+        if (!item || typeof item !== 'object') return JSON.stringify(item);
+        const copy = {};
+        Object.keys(item).sort().forEach(k => { if (k !== 'id') copy[k] = item[k]; });
+        return JSON.stringify(copy);
+      };
+      const localIds = new Set(localArr.map(item => (item && item.id) || null).filter(Boolean));
+      const lastLoadedIds = new Set(lastLoadedArr.map(item => (item && item.id) || null).filter(Boolean));
+      const localSignatures = new Set(localArr.map(contentSig));
+      const rescued = serverArr.filter(sItem => {
+        if (!sItem) return false;
+        if (sItem.id && (localIds.has(sItem.id) || lastLoadedIds.has(sItem.id))) return false;
+        return !localSignatures.has(contentSig(sItem));
+      });
+      return rescued.length ? localArr.concat(rescued) : localArr;
+    }
     const serverKeys = keysWithOccurrence(serverArr, keyFn);
     const lastLoadedKeysArr = keysWithOccurrence(lastLoadedArr, keyFn);
     const localKeys = keysWithOccurrence(localArr, keyFn);
@@ -15587,6 +15682,29 @@
       gatedTabsConfig = Object.assign({}, gatedTabsConfig, data.gatedTabsConfig);
     }
   }
+  function rebindOpenRecords(){
+    if (typeof clientProfileCurrent !== 'undefined' && clientProfileCurrent){
+      const prev = clientProfileCurrent;
+      const tz = String(prev.teudatZehut || '').trim();
+      const ph = String(prev.phone || '').replace(/[^0-9]/g, '');
+      const fresh = clients.find(c => c && tz && String(c.teudatZehut || '').trim() === tz)
+        || clients.find(c => c && ph && String(c.phone || '').replace(/[^0-9]/g, '') === ph)
+        || clients.find(c => c && c.name === prev.name)
+        || null;
+      if (fresh && fresh !== prev){
+        clientProfileCurrent = fresh;
+        if (typeof renderClientProfileOverlay === 'function'
+            && document.getElementById('clientProfileOverlay')
+            && document.getElementById('clientProfileOverlay').classList.contains('show')){
+          renderClientProfileOverlay();
+        }
+      }
+    }
+    if (typeof apptDetailCurrent !== 'undefined' && apptDetailCurrent && apptDetailCurrent.id){
+      const freshAppt = weekAppointments.find(a => a && a.id === apptDetailCurrent.id);
+      if (freshAppt && freshAppt !== apptDetailCurrent) apptDetailCurrent = freshAppt;
+    }
+  }
   function rerenderEverything(){
     const isAdminActive = (typeof isLoggedIn !== 'undefined' && isLoggedIn) ||
       (typeof document !== 'undefined' && document.body && document.body.classList.contains('admin-mode'));
@@ -16041,6 +16159,7 @@
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       applyCloudData(rawCloudData);
       pruneExpiredWaitlistEntries();
+      rebindOpenRecords();
       rerenderEverything();
       cloudLoadComplete = true;
       publishPublicView(); // מפרסם את החצי הלא-רגיש; אצל לקוחה זה לא עושה כלום
@@ -16092,6 +16211,7 @@
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       applyCloudData(rawCloudData);
       pruneExpiredWaitlistEntries();
+      rebindOpenRecords();
       rerenderEverything();
     }).catch(err => console.error('Refresh on tab return failed:', err));
   });
@@ -16111,6 +16231,7 @@
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       applyCloudData(rawCloudData);
       pruneExpiredWaitlistEntries();
+      rebindOpenRecords();
       rerenderEverything();
     }).catch(err => console.error('Background live-sync check failed:', err));
   }
