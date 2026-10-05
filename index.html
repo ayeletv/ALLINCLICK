@@ -6225,6 +6225,8 @@
     if (timeChanged){
       ['reminderSent', 'callReminderSent', 'secondSmsReminderSent', 'callRetryDispatched'].forEach(f => { delete appt[f]; });
       delete appt.callRetryScheduledFor;
+      delete appt.confirmedByClient;
+      delete appt.confirmedAt;
     }
     apptEditShowError('');
     if (typeof saveState === 'function') saveState();
@@ -6925,6 +6927,8 @@
       if (movedInTime){
         ['reminderSent', 'callReminderSent', 'secondSmsReminderSent', 'callRetryDispatched'].forEach(f => { delete target[f]; });
         delete target.callRetryScheduledFor;
+        delete target.confirmedByClient;
+        delete target.confirmedAt;
       }
       if (typeof saveState === 'function') saveState();
       closeManualBookingModal();
@@ -7007,7 +7011,8 @@
         existingByIdOrPhone.reminderChannelPref = manualAppointment.reminderChannels.slice();
       }
     } else if (phone || idDigits){
-      clients.push({ name, phone, teudatZehut: assignedTz || null, email: emailVal, photo: null, visits: 0, daysSinceVisit: null, note: noteVal || 'לקוחה חדשה — נוספה דרך קביעת תור ידנית', birthday: null, reminderChannelPref: manualAppointment.reminderChannels.slice() });
+      clients.push({ name, phone, teudatZehut: assignedTz || null, email: emailVal, photo: null, visits: 0, daysSinceVisit: null, // ההערה האוטומטית נשארת, לבקשתה.
+      note: noteVal || 'לקוחה חדשה — נוספה דרך קביעת תור ידנית', birthday: null, reminderChannelPref: manualAppointment.reminderChannels.slice() });
     }
     if (typeof saveState === 'function') saveState();
     closeManualBookingModal();
@@ -12554,10 +12559,20 @@
   }
   function lateCancelEntryBelongsTo(entry, clientRecord, appt){
     if (!entry) return false;
-    const tz = (clientRecord && clientRecord.teudatZehut) || (appt && appt.teudatZehut) || null;
-    if (tz && entry.teudatZehut) return entry.teudatZehut === tz;
+    const tz = String((clientRecord && clientRecord.teudatZehut) || (appt && appt.teudatZehut) || '').trim();
+    const entryTz = String(entry.teudatZehut || '').trim();
+    if (tz && entryTz) return entryTz === tz;
     const name = (clientRecord && clientRecord.name) || (appt && appt.client) || '';
-    return !!name && entry.client === name;
+    if (!name) return false;
+    const sameName = (typeof apptNameKey === 'function')
+      ? apptNameKey(entry.client) === apptNameKey(name)
+      : entry.client === name;
+    if (!sameName) return false;
+    if (entryTz && typeof clients !== 'undefined' && Array.isArray(clients)){
+      const owner = clients.find(x => x && String(x.teudatZehut || '').trim() === entryTz);
+      if (owner && clientRecord && owner !== clientRecord) return false;
+    }
+    return true;
   }
   let lateCancelNoticeCount = 0;
   function openLateCancelNotice(countAfterThis){
@@ -15378,7 +15393,7 @@
       return '⚠ השינוי האחרון לא נשמר — מישהי אחרת (או לשונית אחרת של היומן) שמרה בדיוק באותו רגע. נא ללחוץ שוב על השמירה; בדרך כלל זה עובר בניסיון השני.' + tail;
     }
     if (code.indexOf('unavailable') !== -1 || code.indexOf('deadline') !== -1 || code.indexOf('network') !== -1){
-      return '⚠ השינוי האחרון לא נשמר — החיבור לאינטרנט נותק באמצע השמירה. נא לבדוק את הרשת ולשמור שוב. לא לרענן את הדף בינתיים, אחרת השינוי יאבד.' + tail;
+      return '⚠ השינוי האחרון לא נשמר — החיבור לאינטרנט נותק באמצע השמירה. השינוי לא אבד: המערכת מנסה לשמור שוב לבד כל חצי דקה, וההודעה הזו תיעלם מעצמה ברגע שזה יצליח. אפשר גם ללחוץ כאן על "לנסות לשמור שוב". בשום אופן לא לרענן את הדף עד שייכתב "נשמר ✓".' + tail;
     }
     return '⚠ השינוי האחרון לא נשמר בענן. נא לבדוק את החיבור לאינטרנט ולנסות שוב — לא לרענן את הדף בינתיים, אחרת השינוי יאבד.' + tail;
   }
