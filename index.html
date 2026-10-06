@@ -443,9 +443,16 @@
     background:var(--gold); border-color:var(--gold); color:var(--ink);
   }
   body.th-on .cal-today-btn{
-    background-color:rgba(var(--gold-rgb),0.16);
+    background-color:var(--th-c2-pale, #F3E6C8);
     color:var(--panel-gold);
-    border-color:rgba(var(--gold-rgb),0.55);
+    border-color:rgba(var(--gold-rgb),0.75);
+  }
+  body.th-on .cal-today-btn:hover{background-color:var(--th-c2-lt, #EBD9A8);}
+  body.th-on .cal-today-btn.is-current{
+    opacity:1;
+    background-color:transparent;
+    border-color:rgba(var(--panel-line-rgb),0.30);
+    color:var(--panel-text-dim);
   }
   body.th-on .cal-day-head.cal-day-today{
     background:rgba(var(--gold-rgb),0.15);
@@ -3782,7 +3789,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-06 · 59';
+        window.__APP_BUILD = '2026-10-06 · 60';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9418,14 +9425,14 @@
     root.style.setProperty('--th-c1-lt', themeShade(th.primary, g.l1lt, g.s1lt));
     root.style.setProperty('--th-c2', themeShade(th.secondary, g.l2, g.s2));
     root.style.setProperty('--th-c2-lt', themeShade(th.secondary, g.l2lt, g.s2lt));
-    root.style.setProperty('--th-card', themeShade(th.primary, 0.955, 0.42));
+    root.style.setProperty('--th-card', themeShade(th.primary, 0.945, 0.62));
     root.style.setProperty('--th-card-2', themeShade(th.secondary, 0.945, 0.38));
     root.style.setProperty('--th-c1-pale', themeShade(th.primary, 0.935, 0.55));
     root.style.setProperty('--th-c2-pale', themeShade(th.secondary, 0.93, 0.5));
     root.style.setProperty('--th-c3', themeMidTone(th.primary, th.secondary, g.l2));
     root.style.setProperty('--th-c3-lt', themeMidTone(th.primary, th.secondary, g.l2lt));
-    root.style.setProperty('--th-panel-bg', themeShade(th.primary, 0.955, 0.55));
-    root.style.setProperty('--th-panel-card-bg', themeShade(th.primary, 0.979, 0.55));
+    root.style.setProperty('--th-panel-bg', themeShade(th.primary, 0.925, 0.8));
+    root.style.setProperty('--th-panel-card-bg', themeShade(th.primary, 0.962, 0.72));
     root.style.setProperty('--th-panel-gold', themeShade(th.secondary, 0.26));
     const prgb = (hexToHsl(th.primary) ? hslToRgbString(hexToHsl(th.primary).h, hexToHsl(th.primary).s, hexToHsl(th.primary).l) : '');
     const nums = prgb ? prgb.match(/\d+/g) : null;
