@@ -18,7 +18,7 @@
 <link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js">
 <link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js">
 <link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js">
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&family=Assistant:wght@200;300;400;600;700&family=Secular+One&family=Frank+Ruhl+Libre:wght@300;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/1.66.0/iconfont/tabler-icons.min.css">
 
 <style>
@@ -39,7 +39,7 @@
   unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
 }
 </style>
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&family=Assistant:wght@200;300;400;600;700&family=Secular+One&family=Frank+Ruhl+Libre:wght@300;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/1.66.0/iconfont/tabler-icons.min.css">
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
@@ -85,13 +85,19 @@
     --ink-2:#1D171C;
     --ivory:#F5EEE4;
     --ivory-dim:#C9C0B4;
-    --wine:#9B2C42;
-    --wine-deep:#6E1F30;
-    --gold:#C9A227;
-    --gold-soft:#E8CE7A;
+    --th-primary:#9B2C42;
+    --th-primary-deep:#6E1F30;
+    --th-secondary:#C9A227;
+    --th-secondary-soft:#E8CE7A;
+    --wine:var(--th-primary);
+    --wine-deep:var(--th-primary-deep);
+    --gold:var(--th-secondary);
+    --gold-soft:var(--th-secondary-soft);
     --sage:#7C9473;
     --rose:#D98CA6;
     --terracotta:#B8632F;
+    --th-c1:#C96B7E; --th-c1-lt:#E6B3BE;
+    --th-c2:#E3C892; --th-c2-lt:#F0DFBB;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth; -webkit-text-size-adjust:100%; text-size-adjust:100%;}
@@ -117,6 +123,246 @@
       var(--ink);
     border-bottom:1px solid rgba(245,238,228,0.08);
   }
+
+  .hero-ground{position:absolute; inset:0; overflow:hidden; z-index:0; pointer-events:none;}
+  .hero > *:not(.hero-ground){position:relative; z-index:1;}
+  body.th-diag .hero-ground{background:linear-gradient(180deg,var(--th-c2-lt),var(--th-c2));}
+  body.th-diag .hero-ground::after{content:''; position:absolute; inset:0;
+    background:linear-gradient(180deg,var(--th-c1-lt),var(--th-c1));
+    clip-path:polygon(0 0,64% 0,36% 100%,0 100%);}
+  body.th-band .hero-ground{background:linear-gradient(180deg,var(--th-c1-lt),var(--th-c1));}
+  body.th-band .hero-ground::after{content:''; position:absolute; inset:auto 0 0 0; height:46%;
+    background:linear-gradient(180deg,var(--th-c2-lt),var(--th-c2));}
+  body.th-arc .hero-ground{background:linear-gradient(180deg,var(--th-c1-lt),var(--th-c1));}
+  body.th-arc .hero-ground::after{content:''; position:absolute; inset:-18% -22% auto -22%; height:52%;
+    background:linear-gradient(180deg,var(--th-c2-lt),var(--th-c2)); border-radius:0 0 58% 58%;}
+  body.th-calm .hero-ground{background:var(--th-c1-lt);}
+  body.th-calm .hero-ground::after{content:''; position:absolute; inset:0;
+    background:radial-gradient(ellipse at 50% 16%,var(--th-c2-lt),transparent 64%);}
+  body.th-on .hero{background:transparent;}
+  body.th-on .hero h1, body.th-on .hero .hero-name-text{color:#3A2E2E;}
+  body.th-on .hero .eyebrow{color:#5E3B38; border-color:rgba(94,59,56,0.4); background:rgba(255,255,255,0.4);}
+  body.th-on .hero-platform-line{color:#5E3B38;}
+  body.th-on .hero-platform-line .accent{color:var(--th-primary-deep);}
+  .hero-ground > i{display:none; position:absolute;}
+  body.th-tri .hero-ground{background:linear-gradient(180deg,var(--th-c2-lt),var(--th-c2));}
+  body.th-tri .hero-ground > i{display:block;}
+  body.th-tri .hero-ground > i:nth-child(1){inset:0;
+    background:linear-gradient(160deg,var(--th-c1-lt),var(--th-c1));
+    clip-path:polygon(0 0, 92% 0, 0 46%);}
+  body.th-tri .hero-ground > i:nth-child(2){inset:0;
+    background:var(--th-c3);
+    clip-path:polygon(100% 10%, 100% 86%, 8% 100%);}
+  body.th-tri .hero-ground > i:nth-child(3){inset:0;
+    background:var(--th-c1); opacity:0.92;
+    clip-path:polygon(0 70%, 54% 100%, 0 100%);}
+  body.th-rings .hero-ground{background:linear-gradient(170deg,var(--th-c2-lt),var(--th-c1-lt));}
+  body.th-rings .hero-ground > i{display:block; border-radius:50%;}
+  body.th-rings .hero-ground > i:nth-child(1){
+    width:150vw; height:150vw; inset-inline-start:-46vw; top:-74vw;
+    background:linear-gradient(180deg,var(--th-c1-lt),var(--th-c1)); opacity:0.9;}
+  body.th-rings .hero-ground > i:nth-child(2){
+    width:104vw; height:104vw; inset-inline-end:-40vw; top:34vh;
+    background:var(--th-c2); opacity:0.72;}
+  body.th-rings .hero-ground > i:nth-child(3){
+    width:62vw; height:62vw; inset-inline-start:-18vw; bottom:-14vh;
+    background:var(--th-c3); opacity:0.6;}
+  body.th-on .hero-platform-line .inline-logo{stroke:var(--th-primary-deep);}
+  body.th-on .scroll-hint{color:#6E4A47;}
+  body.th-on .scroll-hint .line{background:rgba(94,59,56,0.5);}
+  .hero-medallion{width:min(46vw,190px); height:min(46vw,190px); border-radius:50%;
+    background:#fff; display:none; align-items:center; justify-content:center;
+    padding:min(8vw,32px); margin:0 auto 22px;
+    box-shadow:0 0 0 3px var(--th-secondary), 0 0 0 9px rgba(255,255,255,0.55),
+               0 16px 36px rgba(60,40,40,0.24);}
+  .hero-medallion img{width:100%; height:100%; object-fit:contain; display:block;}
+  body.th-on .hero-medallion.has-logo{display:flex;}
+
+  .theme-style-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:9px; max-width:420px;}
+  .theme-style-opt{border:2px solid rgba(var(--panel-line-rgb),0.16); border-radius:12px;
+    overflow:hidden; background:var(--panel-card-bg); cursor:pointer; padding:0;}
+  .theme-style-opt.sel{border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,162,39,0.22);}
+  .theme-style-opt .tsp{height:62px; position:relative; overflow:hidden; display:block;}
+  .theme-style-opt .tsd{position:absolute; inset-inline-start:50%; top:52%; transform:translate(50%,-50%);
+    width:22px; height:22px; border-radius:50%; background:#fff; box-shadow:0 0 0 2px rgba(255,255,255,0.6);}
+  .theme-style-opt .tsn{display:block; text-align:center; font-size:11.5px; padding:7px 2px;
+    color:var(--panel-text); font-family:'Heebo';}
+  .theme-style-opt.sel .tsn{font-weight:700;}
+
+  .theme-font-row{display:flex; gap:9px; flex-wrap:wrap;}
+  .theme-font-opt{border:2px solid rgba(var(--panel-line-rgb),0.16); border-radius:12px;
+    background:var(--panel-card-bg); cursor:pointer; padding:10px 16px; text-align:center;
+    color:var(--panel-text); min-width:92px;}
+  .theme-font-opt.sel{border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,162,39,0.22);}
+  .theme-font-opt b{display:block; font-size:19px; font-weight:600; line-height:1.2;}
+  .theme-font-opt span{display:block; font-size:11px; color:var(--panel-text-dim); margin-top:3px;
+    font-family:'Heebo',sans-serif;}
+  .theme-swatch-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .theme-swatch{width:42px; height:42px; border-radius:11px; cursor:pointer; padding:0;
+    border:2px solid rgba(var(--panel-line-rgb),0.18); position:relative;}
+  .theme-swatch.sel{border-color:var(--panel-text); box-shadow:0 0 0 3px rgba(34,27,30,0.14);}
+  .theme-swatch .tmark{position:absolute; top:-8px; inset-inline-end:-3px; font-size:12px; color:var(--gold);}
+  .theme-swatch-add{width:42px; height:42px; border-radius:11px; cursor:pointer;
+    border:1.5px dashed rgba(201,162,39,0.7); background:none; color:var(--panel-gold); font-size:21px;
+    display:flex; align-items:center; justify-content:center;}
+
+  body.th-on{background:transparent;}
+  body.th-on .hero-ground{position:fixed; inset:0;}
+  body.th-on .hero{
+    min-height:auto;
+    padding:3.4vh 6vw 0;
+    border-bottom:none;
+    justify-content:flex-start;
+  }
+  body.th-on .scroll-hint{display:none;}
+  body.th-on .hero h1{font-size:clamp(25px, 6.4vw, 40px); line-height:1.15; margin-top:4px;}
+  body.th-on .hero .eyebrow{display:none;}
+  body.th-on .hero-platform-line{font-size:12.5px; margin-top:6px;}
+  body.th-on .hero-medallion{margin-bottom:14px;}
+
+  .hero-contact{display:none; gap:12px; justify-content:center; margin-top:16px;}
+  body.th-on .hero-contact.has-links{display:flex;}
+  .hero-contact a{
+    width:44px; height:44px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:#fff; border:1px solid rgba(255,255,255,0.9);
+    box-shadow:0 5px 14px rgba(120,80,75,0.22);
+  }
+  .hero-contact svg{width:21px; height:21px;}
+  .hero-contact .wa{color:#25D366;}
+  .hero-contact .ph{color:var(--th-primary);}
+  .hero-contact .ml{color:var(--th-primary-deep);}
+
+  body.th-on .stage{padding:18px 5vw 26px;}
+  body.th-on:not(.owner-signed) .switcher{display:none;}
+  body.th-on .switcher{
+    margin-bottom:16px;
+    background:var(--th-card);
+    border-color:var(--th-c1-pale);
+    backdrop-filter:blur(2px);
+  }
+  .hero-back{display:none; align-items:center; gap:6px; margin:14px auto 18px;
+    background:var(--th-card); border:1px solid var(--th-c1-pale);
+    border-radius:999px; padding:7px 15px 7px 13px; cursor:pointer;
+    color:#5E3B38; font-size:13px; font-weight:600;}
+  body.th-on:not(.th-entry) .hero-back{display:inline-flex;}
+  body.th-on .switcher button{color:#5E3B38; font-weight:600;}
+  body.th-on .switcher button.active{background:var(--th-primary); color:#fff;}
+  body.th-on .phone{
+    background:var(--th-card);
+    border:1px solid var(--th-c1-pale);
+    box-shadow:0 18px 44px rgba(110,70,65,0.18);
+  }
+  body.th-on #phoneBrand{display:none;}
+  body.th-on .phone-screen{padding-top:18px; background:var(--th-c1-pale);}
+  body.th-on footer{background:transparent; color:#5E3B38; border-top:1px solid rgba(94,59,56,0.18);}
+  body.th-on footer a{color:var(--th-primary-deep);}
+
+  body.th-on, body.th-on h1, body.th-on h2, body.th-on h3, body.th-on h4,
+  body.th-on p, body.th-on span, body.th-on div, body.th-on a, body.th-on li,
+  body.th-on td, body.th-on th, body.th-on label, body.th-on small, body.th-on b, body.th-on em,
+  body.th-on button, body.th-on input, body.th-on select, body.th-on textarea,
+  body.th-on .serif{font-family:var(--th-font), 'Heebo', sans-serif;}
+  body.th-on .mono, body.th-on .mono *{font-family:'JetBrains Mono', monospace;}
+  body.th-on .ti, body.th-on [class*=" ti-"], body.th-on [class^="ti-"]{
+    font-family:'tabler-icons' !important;}
+
+  .hero-entry{display:none; flex-direction:column; gap:11px; width:100%; max-width:330px; margin-top:auto;}
+  .hero-entry-row{display:flex; gap:9px;}
+  .hero-entry-row .hero-ghost{flex:1;}
+  .hero-cta{
+    border:none; border-radius:999px; padding:16px;
+    font-size:16.5px; font-weight:700; letter-spacing:0.02em; cursor:pointer;
+    background:var(--th-primary); color:#fff;
+    box-shadow:0 10px 26px rgba(120,55,50,0.28);
+  }
+  .hero-ghost{
+    border:1.5px solid rgba(94,59,56,0.3); border-radius:999px; padding:12px;
+    background:var(--th-card); color:#5E3B38;
+    font-size:14px; font-weight:600; cursor:pointer;
+  }
+  .hero-cats{display:none; font-size:11.5px; color:#6E4A47; letter-spacing:0.03em;
+    margin-top:16px; line-height:1.9;}
+  body.th-on.th-entry .hero-entry{display:flex;}
+  body.th-on.th-entry .hero-cats{display:block;}
+  body.th-on.th-entry .hero{min-height:100vh; min-height:100dvh; padding-bottom:3vh; justify-content:flex-start;}
+  body.th-on.th-entry .hero-contact{margin-top:16px; margin-bottom:auto;}
+  body.th-on.th-entry .stage{display:none;}
+  body.th-on.th-entry footer{
+    position:fixed; inset-inline:0; bottom:0; z-index:2;
+    background:transparent; border-top:none; padding:0 0 8px;
+    font-size:10.5px; pointer-events:none;
+  }
+  body.th-on.th-entry footer{font-size:0;}
+  body.th-on.th-entry footer #ownerLoginFooterLink{font-size:11px; margin:0;}
+  body.th-on footer #ownerLoginFooterLink a{
+    pointer-events:auto; color:#2A2122 !important; font-size:12.5px !important; font-weight:600;}
+  body.th-on.th-entry .hero{padding-bottom:9vh;}
+  body.th-on .hero-medallion.has-logo{cursor:pointer;}
+  body.th-on:not(.th-entry) .hero{padding:2.2vh 6vw 0;}
+  body.th-on:not(.th-entry) .hero-medallion{width:62px; height:62px; padding:9px; margin-bottom:12px;
+    box-shadow:0 0 0 2px var(--th-secondary), 0 6px 16px rgba(60,40,40,0.2);}
+  body.th-on:not(.th-entry) .hero h1{font-size:clamp(19px, 5vw, 26px); margin-top:0; margin-bottom:2px;}
+  body.th-on:not(.th-entry) .stage{padding-top:4px;}
+  body.th-on:not(.th-entry) .hero-contact{display:none;}
+  body.th-on:not(.th-entry) .hero-platform-line{display:none;}
+
+  body.th-on .new-card{
+    background:var(--th-card);
+    border-color:var(--th-c1-pale);
+    color:#3A2E2E;
+    box-shadow:0 10px 26px rgba(110,70,65,0.14);
+  }
+  body.th-on .new-card *{color:inherit;}
+  body.th-on .about-switcher{
+    background:var(--th-card);
+    border-color:var(--th-c1-pale);
+  }
+  body.th-on .about-switcher button{color:#5E3B38; font-weight:600;}
+  body.th-on .about-switcher button.active{background:var(--th-primary); color:#fff;}
+  body.th-on .about-text{color:#3A2E2E;}
+  body.th-on .about-tab .label{color:#5E3B38;}
+  body.th-on .rec-card{box-shadow:0 10px 26px rgba(110,70,65,0.16);}
+  body.th-on #panel-whatsnew, body.th-on #panel-hours{color:#3A2E2E;}
+  body.th-on .about-empty{color:#6E4A47;}
+  body.th-on .hours-staff-detail{
+    background:var(--th-card);
+    border-color:var(--th-c1-pale);
+    box-shadow:0 10px 26px rgba(110,70,65,0.14);
+  }
+  body.th-on .hours-staff-tab-name{color:#5E3B38;}
+  body.th-on .hours-staff-tab.active .hours-staff-tab-name{color:var(--th-primary-deep); font-weight:700;}
+  body.th-on .hours-staff-tab-avatar{background:var(--th-card-2); color:var(--th-primary-deep);}
+  body.th-on .hours-staff-tab.active .hours-staff-tab-avatar{
+    border-color:var(--th-secondary); background:var(--th-c2-pale);}
+  body.th-on .hours-today-tag{background:var(--th-card-2); color:var(--th-primary-deep);}
+  body.th-on .myday-overlay, body.th-on .overlay, body.th-on [id$="Overlay"]{
+    background:rgba(90,60,58,0.42);
+  }
+  body.th-on #panel-business .myday-overlay, body.th-on #panel-business [id$="Overlay"]{
+    background:rgba(60,40,50,0.45);
+  }
+  body.th-on .hero-platform-line{font-size:10.5px; opacity:0.72; margin-top:10px; font-weight:400;}
+  body.th-on .hero-platform-line .accent{font-weight:600;}
+  body.th-on .hero-platform-line .inline-logo{width:11px; height:11px;}
+
+  body.th-petal .hero-ground{
+    background:linear-gradient(200deg, var(--th-c1-lt) 0%, var(--th-c1) 58%, var(--th-c2-lt) 100%);}
+  body.th-petal .hero-ground > i{display:block;}
+  body.th-petal .hero-ground > i:nth-child(1){
+    width:132vw; height:132vw; top:-50vw; inset-inline-start:-36vw;
+    background:linear-gradient(170deg, var(--th-c1-pale), var(--th-c1-lt));
+    border-radius:58% 42% 46% 54% / 52% 46% 54% 48%;
+    opacity:0.92;}
+  body.th-petal .hero-ground > i:nth-child(2){
+    width:150vw; height:150vw; top:-42vw; inset-inline-start:-58vw;
+    border:2px solid var(--th-secondary); border-radius:50%;
+    opacity:0.6; background:none;}
+  body.th-petal .hero-ground > i:nth-child(3){
+    width:128vw; height:128vw; top:14vh; inset-inline-end:-56vw;
+    border:1.5px solid var(--th-secondary); border-radius:50%;
+    opacity:0.45; background:none;}
+
   .eyebrow{
     font-family:'JetBrains Mono', monospace;
     font-size:13px;
@@ -356,6 +602,8 @@
   .cat-tile:hover{transform:translateY(-3px); box-shadow:0 8px 20px rgba(0,0,0,0.22);}
   .cat-tile:active{transform:translateY(-1px);}
   .cat-tile-name{font-family:'Suez One'; font-weight:400; font-size:17px; color:#fff;}
+  .cat-tile[style*='color'] .cat-tile-name,
+  .cat-tile[style*='color'] .cat-tile-count{color:inherit;}
   .cat-tile-count{font-size:11.5px; color:rgba(255,255,255,0.8);}
   #svcManageCatGrid.cat-grid{grid-template-columns:repeat(3, 1fr); gap:8px;}
   #svcManageCatGrid .cat-tile{padding:6px; border-radius:12px; gap:2px;}
@@ -2307,12 +2555,12 @@
   }
 
   #panel-business, #apptDetailOverlay, #manualBookingOverlay, #personalTimeOverlay, #openHoursOverlay, #clientProfileOverlay, #specialRequestDetailOverlay, #bizTopbar{
-    --panel-bg:#FBEFF3;
-    --panel-card-bg:#FFF8FA;
+    --panel-bg:var(--th-panel-bg,#FBEFF3);
+    --panel-card-bg:var(--th-panel-card-bg,#FFF8FA);
     --panel-text:#221B1E;
     --panel-text-dim:#6E625C;
-    --panel-line-rgb:155,44,66;
-    --panel-gold:#7A5E0C;
+    --panel-line-rgb:var(--th-panel-line-rgb,155,44,66);
+    --panel-gold:var(--th-panel-gold,#7A5E0C);
     --panel-sage:#3E5C36;
   }
   #panel-business{
@@ -2579,8 +2827,8 @@
   </div>
 </div>
 <section class="hero">
-  
-  
+  <div class="hero-ground" id="heroGround" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="hero-medallion" id="heroMedallion" aria-hidden="true"></div>
   <h1 class="serif" id="heroBizName">
     
     <span class="hero-name-icon" id="heroBizNameIcon" role="button" tabindex="0" aria-label="הצג את שם העסק" onclick="onHeroIconTap()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();onHeroIconTap();}">
@@ -2608,6 +2856,17 @@
     <span class="hero-name-text" id="heroBizNameText"></span>
   </h1>
   
+  <div class="hero-entry" id="heroEntry">
+    <button type="button" class="hero-cta" onclick="enterSiteTab('customer')">קביעת תור</button>
+    <button type="button" class="hero-ghost" onclick="heroApptLookup()">יש לי תור קיים</button>
+    <div class="hero-entry-row">
+      <button type="button" class="hero-ghost" onclick="enterSiteTab('whatsnew')">🎁 פינוקים חדשים</button>
+      <button type="button" class="hero-ghost" onclick="enterSiteTab('hours')">קצת עלינו</button>
+    </div>
+  </div>
+  <button type="button" class="hero-back" id="heroBackBtn" onclick="setSiteEntryMode(true)">‹ חזרה למסך הראשי</button>
+  <div class="hero-contact" id="heroContact" aria-label="יצירת קשר"></div>
+  <div class="hero-cats" id="heroCatsLine" aria-hidden="true"></div>
   <p class="hero-platform-line" id="heroPlatformLine"><span class="accent">הכל בקליק</span> <span class="tagline-rest"><svg class="click-logo inline-logo" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#E8CE7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg> הכל במקום אחד, בלי מאמץ</span></p>
   <div class="scroll-hint">
     <span>גלילה למטה</span>
@@ -3127,6 +3386,8 @@
           <input type="tel" id="bizPhoneInput" class="field-dark" placeholder="050-0000000" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ פרטי העסק נשמרו בהצלחה')">
           <div class="label" style="margin:12px 0 6px;">מספר וואטסאפ<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">אם מספר הוואטסאפ שלך שונה ממספר הטלפון להתייעצות שמעליו — אפשר להזין אותו כאן. לקוחה שתלחץ על קישור הוואטסאפ תופנה למספר הזה; אם נשאר ריק, הקישור יפנה למספר הטלפון הרגיל.</span></span></div>
           <input type="tel" id="bizWhatsappInput" class="field-dark" placeholder="050-0000000 (אם שונה מהטלפון למעלה)" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ פרטי העסק נשמרו בהצלחה')">
+          <div class="label" style="margin:12px 0 6px;">מייל ליצירת קשר<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">מופיע ללקוחה כאייקון מייל במסך הפותח, לצד וואטסאפ והטלפון. אם נשאר ריק — האייקון פשוט לא מוצג.</span></span></div>
+          <input type="email" id="bizEmailInput" class="field-dark" placeholder="salon@example.com" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ פרטי העסק נשמרו בהצלחה')">
           <div class="label" style="margin:12px 0 6px;">כתובת העסק<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">הכתובת שתופיע ללקוחה במייל אישור התור ובמייל התזכורת, כדי שתדע לאן להגיע — אם נשאר ריק, השורה הזו פשוט לא תופיע במיילים.</span></span></div>
           <input type="text" id="bizAddressInput" class="field-dark" placeholder="לדוגמה: הרצל 12, תל אביב" oninput="updateBranding()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ פרטי העסק נשמרו בהצלחה')">
           </div>
@@ -3216,6 +3477,31 @@
           <button class="template-btn" style="width:fit-content;" onclick="openNewBusinessWizard()">➕ הקמת עסק חדש</button>
           
           <button class="template-btn" style="width:fit-content; margin-top:10px;" onclick="openAttachDomainDialog()">🌐 חיבור דומיין לעסק קיים</button>
+        </div>
+      </div>
+      <div class="settings-section" data-settings-section="design" id="designSection" style="display:none;">
+        <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
+          <span class="settings-section-title">🎨 עיצוב האתר</span>
+          <span class="settings-section-sub">סגנון וצבעים — נקבע פעם אחת בהקמת העסק</span>
+          <span class="settings-section-chevron">▾</span>
+        </button>
+        <div class="settings-section-body">
+          <div style="font-size:12.5px; color:var(--panel-text-dim); max-width:520px; line-height:1.7; margin-bottom:14px;">הצבעים נשאבים מהלוגו של העסק וצובעים את כל האתר — גם מה שהלקוחה רואה וגם את צד הניהול. הקטע הזה מוצג רק לחשבון שמתחזק את המערכת.</div>
+          <div class="label" style="margin-bottom:10px;">סגנון המסך הפותח</div>
+          <div id="themeStyleGrid" class="theme-style-grid"></div>
+          <div class="label" style="margin:22px 0 10px;">עוצמת הצבעים<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">אותם צבעים בדיוק, בשלוש עוצמות. "פסטל" מתאים למכון יופי או קוסמטיקה, "חזק" לעסק שרוצה צבעים בולטים.</span></span></div>
+          <div id="themeToneRow" class="theme-font-row"></div>
+          <div class="label" style="margin:22px 0 10px;">גופן<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">הגופן של כל הכתב באתר. כדאי לבחור את זה שהכי דומה לכיתוב בעברית שעל הלוגו של העסק.</span></span></div>
+          <div id="themeFontRow" class="theme-font-row"></div>
+          <div class="label" style="margin:22px 0 10px;">צבע ראשי<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">הצבע של כל הכפתורים הראשיים באתר — אצל הלקוחה ואצל בעלת העסק. הצבעים המסומנים ב-◆ נשאבו מהלוגו שהועלה בקטע "העסק שלי".</span></span></div>
+          <div id="themePrimaryRow" class="theme-swatch-row"></div>
+          <div class="label" style="margin:18px 0 10px;">צבע משני</div>
+          <div id="themeSecondaryRow" class="theme-swatch-row"></div>
+          <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:12px; line-height:1.8;">◆ נשאב מהלוגו. בכפתור + אפשר להוסיף כל צבע אחר.</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:18px;">
+            <button type="button" class="template-btn" onclick="rereadLogoColors()">🔄 שאיבת הצבעים מהלוגו מחדש</button>
+            <button type="button" class="template-btn" onclick="clearSiteTheme()">הסרת העיצוב (חזרה לברירת המחדל)</button>
+          </div>
         </div>
       </div>
       <div class="settings-section" data-settings-section="security">
@@ -3336,7 +3622,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-05 · 30';
+        window.__APP_BUILD = '2026-10-06 · 38';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -3411,7 +3697,7 @@
 </section>
 <footer>
   <span class="brand">הכל בקליק</span> — ניהול תורים, לקוחות וצוות במקום אחד
-  <div style="margin-top:10px;"><a href="#" onclick="openLoginOverlayDirect(); return false;" style="color:var(--ivory-dim); font-size:11px; text-decoration:underline;">כניסת בעלת עסק</a></div>
+  <div id="ownerLoginFooterLink" style="margin-top:10px;"><a href="#" onclick="openLoginOverlayDirect(); return false;" style="color:var(--ivory-dim); font-size:11px; text-decoration:underline;">כניסת בעלת עסק</a></div>
   
   <div style="display:none;" data-build="17.09-v45-blocked-booking"></div>
 </footer>
@@ -8043,6 +8329,8 @@
     branding.whatsapp = waInputEl ? waInputEl.value.trim() : '';
     const addressInputEl = document.getElementById('bizAddressInput');
     branding.address = addressInputEl ? addressInputEl.value.trim() : '';
+    const emailInputEl = document.getElementById('bizEmailInput');
+    if (emailInputEl) branding.email = emailInputEl.value.trim();
     const smsSenderInputEl = document.getElementById('bizSmsSenderInput');
     if (smsSenderInputEl){
       const sanitizedSender = smsSenderInputEl.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 11);
@@ -8139,6 +8427,17 @@
       document.getElementById('logoPlaceholder').style.display = 'none';
       renderBranding();
       if (typeof saveState === 'function') saveState();
+      extractLogoColors(dataUrl, function(colors){
+        if (!colors.length) return;
+        const th = currentSiteTheme();
+        const hadTheme = !!th.style;
+        writeTheme({
+          logoColors: colors,
+          primary: hadTheme ? th.primary : colors[0],
+          secondary: hadTheme ? th.secondary : themeSecondaryFrom(colors),
+          style: th.style,
+        });
+      });
     }, { maxDim: 500, mime: 'image/png', storageFolder: 'public/branding' });
   }
   function handleAboutPhotoUpload(event){
@@ -8276,7 +8575,7 @@
     const u = auth && auth.currentUser;
     return !!(u && !u.isAnonymous && String(u.email || '').trim().toLowerCase() === PLATFORM_ADMIN_EMAIL);
   }
-  const PLATFORM_ONLY_SECTION_IDS = ['platformSection', 'clientImportSection', 'clientMergeSection', 'backupsSection'];
+  const PLATFORM_ONLY_SECTION_IDS = ['platformSection', 'clientImportSection', 'clientMergeSection', 'backupsSection', 'designSection'];
   function applyPlatformAdminUi(){
     const show = isPlatformAdmin();
     PLATFORM_ONLY_SECTION_IDS.forEach(id => {
@@ -8351,7 +8650,7 @@
     return {
       siteUrl: opts.siteUrl,
       branding: {
-        name: opts.name, logo: null, phone: '', whatsapp: '', address: '',
+        name: opts.name, logo: null, phone: '', whatsapp: '', address: '', theme: null,
         smsSenderId: opts.smsSender || '',
         inforuIvrCampaignId: opts.campaign || '',
         maintainerEmail: PLATFORM_ADMIN_EMAIL,
@@ -8370,7 +8669,7 @@
   }
   function blankPublicDoc(opts){
     return {
-      branding: { name: opts.name, logo: null, phone: '', whatsapp: '', address: '' },
+      branding: { name: opts.name, logo: null, phone: '', whatsapp: '', address: '', theme: null },
       staff: [], services: [], categories: [], categoryMessages: {}, categoryColors: {},
       holidayOverrides: [], whatsNewItems: [], recommendations: [],
       about: { photo: null, text: '' },
@@ -8685,7 +8984,474 @@
     const fp = (window.__suezFontPromise && typeof window.__suezFontPromise.then === 'function') ? window.__suezFontPromise : Promise.resolve();
     fp.then(doReveal);
   }
+
+  const THEME_STYLES = [
+    { key: 'diag',  name: 'אלכסוני' },
+    { key: 'band',  name: 'רוחבי' },
+    { key: 'arc',   name: 'קשת' },
+    { key: 'calm',  name: 'רך' },
+    { key: 'tri',   name: 'משולשים' },
+    { key: 'rings', name: 'עיגולים' },
+    { key: 'petal', name: 'פסי זהב' },
+  ];
+  const THEME_STYLE_KEYS = THEME_STYLES.map(function(s){ return s.key; });
+  const THEME_FONTS = [
+    { key: 'assistant', name: 'נקי ומודרני', css: "'Assistant'" },
+    { key: 'frank',     name: 'קלאסי',       css: "'Frank Ruhl Libre'" },
+    { key: 'secular',   name: 'בולט ועגול',  css: "'Secular One'" },
+  ];
+  const THEME_FONT_KEYS = THEME_FONTS.map(function(f){ return f.key; });
+  const THEME_TONES = [
+    { key: 'pastel', name: 'פסטל',
+      ground: { l1: 0.83, s1: 0.68, l1lt: 0.92, s1lt: 0.56, l2: 0.85, s2: 0.56, l2lt: 0.93, s2lt: 0.46 },
+      tile: { shift: 0.14, sat: 0.74 } },
+    { key: 'mid', name: 'רגיל',
+      ground: { l1: 0.72, s1: 0.85, l1lt: 0.86, s1lt: 0.80, l2: 0.73, s2: 0.80, l2lt: 0.86, s2lt: 0.75 },
+      tile: { shift: 0, sat: 1 } },
+    { key: 'bold', name: 'חזק',
+      ground: { l1: 0.62, s1: 1, l1lt: 0.77, s1lt: 0.95, l2: 0.63, s2: 0.95, l2lt: 0.79, s2lt: 0.9 },
+      tile: { shift: -0.08, sat: 1.18 } },
+  ];
+  const THEME_TONE_KEYS = THEME_TONES.map(function(t){ return t.key; });
+  function currentTone(){
+    const raw = (typeof branding !== 'undefined' && branding && branding.theme) || {};
+    const key = THEME_TONE_KEYS.indexOf(raw.tone) !== -1 ? raw.tone : 'pastel';
+    return THEME_TONES.filter(function(t){ return t.key === key; })[0];
+  }
+  const THEME_FALLBACK = { primary: '#9B2C42', secondary: '#C9A227' };
+
+  function normaliseThemeHex(raw){
+    const m = /^#?([0-9a-fA-F]{6})$/.exec(String(raw || '').trim());
+    return m ? ('#' + m[1].toLowerCase()) : null;
+  }
+  function hslToHex(h, s, l){
+    const str = hslToRgbString(((h % 360) + 360) % 360, Math.max(0, Math.min(1, s)), Math.max(0, Math.min(1, l)));
+    const nums = str.match(/\d+/g).map(Number);
+    return '#' + nums.map(function(n){ return n.toString(16).padStart(2, '0'); }).join('');
+  }
+  function themeMidTone(a, b, lightness){
+    const A = hexToHsl(a), B = hexToHsl(b);
+    if (!A || !B) return a;
+    let d = B.h - A.h;
+    if (d > 180) d -= 360;
+    if (d < -180) d += 360;
+    return hslToHex(A.h + d / 2, Math.min(0.62, (A.s + B.s) / 2), lightness);
+  }
+  function themeShade(hex, lightness, satScale){
+    const hsl = hexToHsl(hex);
+    if (!hsl) return hex;
+    return hslToHex(hsl.h, hsl.s * (satScale === undefined ? 1 : satScale), lightness);
+  }
+
+  function currentSiteTheme(){
+    const raw = (typeof branding !== 'undefined' && branding && branding.theme) || {};
+    const primary = normaliseThemeHex(raw.primary) || THEME_FALLBACK.primary;
+    const secondary = normaliseThemeHex(raw.secondary) || THEME_FALLBACK.secondary;
+    const style = THEME_STYLE_KEYS.indexOf(raw.style) !== -1 ? raw.style : '';
+    const palette = (Array.isArray(raw.palette) ? raw.palette : [])
+      .map(normaliseThemeHex).filter(Boolean);
+    const logoColors = (Array.isArray(raw.logoColors) ? raw.logoColors : [])
+      .map(normaliseThemeHex).filter(Boolean);
+    const font = THEME_FONT_KEYS.indexOf(raw.font) !== -1 ? raw.font : 'assistant';
+    const tone = THEME_TONE_KEYS.indexOf(raw.tone) !== -1 ? raw.tone : 'pastel';
+    return { style: style, font: font, tone: tone, primary: primary, secondary: secondary, palette: palette, logoColors: logoColors };
+  }
+
+  function applySiteTheme(){
+    const root = document.documentElement;
+    const body = document.body;
+    if (!root) return;
+    const th = currentSiteTheme();
+    const hasTheme = !!th.style;
+
+    const THEME_VARS = ['--th-primary', '--th-primary-deep', '--th-secondary', '--th-secondary-soft',
+      '--th-c1', '--th-c1-lt', '--th-c2', '--th-c2-lt',
+      '--th-panel-bg', '--th-panel-card-bg', '--th-panel-gold', '--th-panel-line-rgb', '--th-font',
+      '--th-c1-pale', '--th-c2-pale', '--th-c3', '--th-c3-lt', '--th-card', '--th-card-2'];
+    if (!hasTheme){
+      THEME_VARS.forEach(function(v){ root.style.removeProperty(v); });
+      if (body){
+        THEME_STYLE_KEYS.forEach(function(k){ body.classList.remove('th-' + k); });
+        body.classList.remove('th-on');
+      }
+      renderHeroMedallion(false);
+      renderHeroContact(false);
+      renderHeroCatsLine(false);
+      setSiteEntryMode(false);
+      return;
+    }
+
+    const fontDef = THEME_FONTS.filter(function(f){ return f.key === th.font; })[0] || THEME_FONTS[0];
+    root.style.setProperty('--th-font', fontDef.css);
+    root.style.setProperty('--th-primary', th.primary);
+    root.style.setProperty('--th-primary-deep', themeShade(th.primary, Math.max(0.16, (hexToHsl(th.primary) || { l: 0.4 }).l - 0.14)));
+    root.style.setProperty('--th-secondary', th.secondary);
+    root.style.setProperty('--th-secondary-soft', themeShade(th.secondary, 0.70));
+    const g = currentTone().ground;
+    root.style.setProperty('--th-c1', themeShade(th.primary, g.l1, g.s1));
+    root.style.setProperty('--th-c1-lt', themeShade(th.primary, g.l1lt, g.s1lt));
+    root.style.setProperty('--th-c2', themeShade(th.secondary, g.l2, g.s2));
+    root.style.setProperty('--th-c2-lt', themeShade(th.secondary, g.l2lt, g.s2lt));
+    root.style.setProperty('--th-card', themeShade(th.primary, 0.955, 0.42));
+    root.style.setProperty('--th-card-2', themeShade(th.secondary, 0.945, 0.38));
+    root.style.setProperty('--th-c1-pale', themeShade(th.primary, 0.935, 0.55));
+    root.style.setProperty('--th-c2-pale', themeShade(th.secondary, 0.93, 0.5));
+    root.style.setProperty('--th-c3', themeMidTone(th.primary, th.secondary, g.l2));
+    root.style.setProperty('--th-c3-lt', themeMidTone(th.primary, th.secondary, g.l2lt));
+    root.style.setProperty('--th-panel-bg', themeShade(th.primary, 0.955, 0.55));
+    root.style.setProperty('--th-panel-card-bg', themeShade(th.primary, 0.979, 0.55));
+    root.style.setProperty('--th-panel-gold', themeShade(th.secondary, 0.26));
+    const prgb = (hexToHsl(th.primary) ? hslToRgbString(hexToHsl(th.primary).h, hexToHsl(th.primary).s, hexToHsl(th.primary).l) : '');
+    const nums = prgb ? prgb.match(/\d+/g) : null;
+    if (nums) root.style.setProperty('--th-panel-line-rgb', nums.join(','));
+
+    if (body){
+      THEME_STYLE_KEYS.forEach(function(k){ body.classList.remove('th-' + k); });
+      body.classList.toggle('th-on', hasTheme);
+      if (hasTheme) body.classList.add('th-' + th.style);
+    }
+    renderHeroMedallion(hasTheme);
+    renderHeroContact(hasTheme);
+    renderHeroCatsLine(hasTheme);
+    if (!window.__siteEntryDecided){
+      window.__siteEntryDecided = true;
+      setSiteEntryMode(true);
+    }
+  }
+  window.__applySiteTheme = applySiteTheme;
+
+  const HERO_ICONS = {
+    wa: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.2-.7.1s-.8 1-.9 1.2c-.2.2-.3.2-.6.1-1.7-.9-2.9-1.6-4-3.6-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5s-.7-1.6-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.2-.3-.3-.6-.4z"/><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>',
+    ph: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z"/></svg>',
+    ml: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg>',
+  };
+  function digitsOnlyPhone(raw){ return String(raw || '').replace(/[^0-9]/g, ''); }
+  function renderHeroContact(hasTheme){
+    const el = document.getElementById('heroContact');
+    if (!el) return;
+    if (!hasTheme){ el.classList.remove('has-links'); el.innerHTML = ''; return; }
+    const b = (typeof branding !== 'undefined' && branding) || {};
+    const phone = digitsOnlyPhone(b.phone);
+    const wa = digitsOnlyPhone(b.whatsapp) || phone;
+    const mail = String(b.email || '').trim();
+    const out = [];
+    if (wa){
+      const intl = wa.charAt(0) === '0' ? ('972' + wa.slice(1)) : wa;
+      out.push('<a class="wa" href="https://wa.me/' + intl + '" target="_blank" rel="noopener" aria-label="וואטסאפ">' + HERO_ICONS.wa + '</a>');
+    }
+    if (phone) out.push('<a class="ph" href="tel:' + phone + '" aria-label="שיחת טלפון">' + HERO_ICONS.ph + '</a>');
+    if (mail) out.push('<a class="ml" href="mailto:' + mail + '" aria-label="מייל">' + HERO_ICONS.ml + '</a>');
+    el.innerHTML = out.join('');
+    el.classList.toggle('has-links', out.length > 0);
+  }
+
+  function renderHeroMedallion(hasTheme){
+    const el = document.getElementById('heroMedallion');
+    if (!el) return;
+    const logo = (typeof branding !== 'undefined' && branding && branding.logo) || null;
+    if (hasTheme && logo){
+      if (el.dataset.src !== logo){
+        el.innerHTML = '<img alt="">';
+        el.firstChild.src = logo;
+        el.dataset.src = logo;
+      }
+      if (!el.dataset.wired){
+        el.dataset.wired = '1';
+        el.addEventListener('click', function(){ if (siteEntryModeAvailable()) setSiteEntryMode(true); });
+      }
+      el.classList.add('has-logo');
+    } else {
+      el.classList.remove('has-logo');
+    }
+  }
+
+  function extractLogoColors(dataUrl, callback){
+    const done = function(list){ try { callback(list || []); } catch (e) {} };
+    if (!dataUrl){ done([]); return; }
+    let img;
+    try { img = new Image(); } catch (e) { done([]); return; }
+    img.onerror = function(){ done([]); };
+    img.onload = function(){
+      try {
+        const SIDE = 120;
+        const cv = document.createElement('canvas');
+        cv.width = SIDE; cv.height = SIDE;
+        const ctx = cv.getContext('2d');
+        if (!ctx){ done([]); return; }
+        ctx.drawImage(img, 0, 0, SIDE, SIDE);
+        const data = ctx.getImageData(0, 0, SIDE, SIDE).data;
+        const BUCKETS = 15;
+        const buckets = [];
+        for (let i = 0; i < data.length; i += 4){
+          if (data[i + 3] < 160) continue;                  // שקוף — רקע הלוגו
+          const hex = '#' + [data[i], data[i + 1], data[i + 2]]
+            .map(function(n){ return n.toString(16).padStart(2, '0'); }).join('');
+          const hsl = hexToHsl(hex);
+          if (!hsl) continue;
+          if (hsl.s < 0.18) continue;                       // אפור, לבן או שחור
+          if (hsl.l > 0.93 || hsl.l < 0.10) continue;        // קצוות, בלי גוון של ממש
+          const k = Math.floor((((hsl.h % 360) + 360) % 360) / (360 / BUCKETS)) % BUCKETS;
+          const bk = buckets[k] || (buckets[k] = { n: 0, x: 0, y: 0, s: 0, l: 0, maxS: 0 });
+          const rad = hsl.h * Math.PI / 180;
+          bk.n++; bk.x += Math.cos(rad); bk.y += Math.sin(rad);
+          bk.s += hsl.s; bk.l += hsl.l;
+          if (hsl.s > bk.maxS) bk.maxS = hsl.s;
+        }
+        const hueOf = function(bk){
+          let h = Math.atan2(bk.y / bk.n, bk.x / bk.n) * 180 / Math.PI;
+          return h < 0 ? h + 360 : h;
+        };
+        const hueGap = function(a2, b2){
+          const d = Math.abs(a2 - b2) % 360;
+          return d > 180 ? 360 - d : d;
+        };
+        const totalPx = buckets.reduce(function(a2, b2){ return a2 + (b2 ? b2.n : 0); }, 0) || 1;
+        const ranked = buckets.filter(Boolean)
+          .filter(function(bk){ return bk.n / totalPx >= 0.02; })
+          .sort(function(a2, b2){ return b2.n - a2.n; });
+        const toHex = function(bk){
+          const avgS = bk.s / bk.n, avgL = bk.l / bk.n;
+          return hslToHex(hueOf(bk), Math.min(bk.maxS, avgS * 1.3), avgL);
+        };
+        const onArcBetween = function(h, a2, b2){
+          const span = (b2 - a2 + 360) % 360;
+          if (span > 200) return false;
+          return ((h - a2 + 360) % 360) < span;
+        };
+        const out = [], taken = [];
+        ranked.forEach(function(bk){
+          if (out.length >= 4) return;
+          const h = hueOf(bk), sat = bk.maxS;
+          if (taken.some(function(t){ return hueGap(t.h, h) < 24; })) return;
+          const isSeam = taken.some(function(a2){
+            return taken.some(function(b2){
+              if (a2 === b2) return false;
+              if (!onArcBetween(h, a2.h, b2.h) && !onArcBetween(h, b2.h, a2.h)) return false;
+              return sat < Math.min(a2.s, b2.s) * 0.8;
+            });
+          });
+          if (isSeam) return;
+          taken.push({ h: h, s: sat });
+          out.push(toHex(bk));
+        });
+        done(out);
+      } catch (e) { done([]); }
+    };
+    img.src = dataUrl;
+  }
+  window.__extractLogoColors = extractLogoColors;
+
+
+  function themeStylePreviewHtml(key){
+    const c1 = 'var(--th-c1)', c1l = 'var(--th-c1-lt)', c2 = 'var(--th-c2)', c2l = 'var(--th-c2-lt)';
+    if (key === 'diag'){
+      return `<span class="tsp" style="background:linear-gradient(180deg,${c2l},${c2})">
+        <span style="position:absolute;inset:0;background:linear-gradient(180deg,${c1l},${c1});clip-path:polygon(0 0,64% 0,36% 100%,0 100%)"></span>
+        <span class="tsd"></span></span>`;
+    }
+    if (key === 'band'){
+      return `<span class="tsp" style="background:linear-gradient(180deg,${c1l},${c1})">
+        <span style="position:absolute;inset:auto 0 0 0;height:46%;background:linear-gradient(180deg,${c2l},${c2})"></span>
+        <span class="tsd"></span></span>`;
+    }
+    if (key === 'arc'){
+      return `<span class="tsp" style="background:linear-gradient(180deg,${c1l},${c1})">
+        <span style="position:absolute;inset:-18% -22% auto -22%;height:52%;background:linear-gradient(180deg,${c2l},${c2});border-radius:0 0 58% 58%"></span>
+        <span class="tsd"></span></span>`;
+    }
+    return `<span class="tsp" style="background:${c1l}">
+      <span style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 16%,${c2l},transparent 64%)"></span>
+      <span class="tsd"></span></span>`;
+  }
+
+  function themeChoices(th){
+    const seen = {}, out = [];
+    th.logoColors.forEach(function(c){ if (!seen[c]){ seen[c] = 1; out.push({ hex: c, fromLogo: true }); } });
+    th.palette.forEach(function(c){ if (!seen[c]){ seen[c] = 1; out.push({ hex: c, fromLogo: false }); } });
+    [th.primary, th.secondary].forEach(function(c){ if (!seen[c]){ seen[c] = 1; out.push({ hex: c, fromLogo: false }); } });
+    return out;
+  }
+
+  function renderThemeSettings(){
+    const grid = document.getElementById('themeStyleGrid');
+    if (!grid) return;
+    const th = currentSiteTheme();
+    grid.innerHTML = THEME_STYLES.map(function(st){
+      return `<button type="button" class="theme-style-opt ${th.style === st.key ? 'sel' : ''}"
+        onclick="setThemeStyle('${st.key}')">${themeStylePreviewHtml(st.key)}<span class="tsn">${st.name}</span></button>`;
+    }).join('');
+    const toneRow = document.getElementById('themeToneRow');
+    if (toneRow){
+      toneRow.innerHTML = THEME_TONES.map(function(t){
+        const c1 = themeShade(th.primary, t.ground.l1, t.ground.s1);
+        const c2 = themeShade(th.secondary, t.ground.l2, t.ground.s2);
+        return `<button type="button" class="theme-font-opt ${th.tone === t.key ? 'sel' : ''}"
+          onclick="setThemeTone('${t.key}')"><b style="display:flex;gap:4px;justify-content:center">
+            <i style="width:17px;height:17px;border-radius:50%;background:${c1};display:block"></i>
+            <i style="width:17px;height:17px;border-radius:50%;background:${c2};display:block"></i>
+          </b><span>${t.name}</span></button>`;
+      }).join('');
+    }
+    const fontRow = document.getElementById('themeFontRow');
+    if (fontRow){
+      fontRow.innerHTML = THEME_FONTS.map(function(f){
+        return `<button type="button" class="theme-font-opt ${th.font === f.key ? 'sel' : ''}"
+          style="font-family:${f.css},'Heebo',sans-serif" onclick="setThemeFont('${f.key}')"
+          ><b>אבגד</b><span>${f.name}</span></button>`;
+      }).join('');
+    }
+    const choices = themeChoices(th);
+    [['themePrimaryRow', 'primary'], ['themeSecondaryRow', 'secondary']].forEach(function(pair){
+      const row = document.getElementById(pair[0]);
+      if (!row) return;
+      const current = th[pair[1]];
+      row.innerHTML = choices.map(function(c){
+        return `<button type="button" class="theme-swatch ${c.hex === current ? 'sel' : ''}"
+          style="background:${c.hex}" title="${c.hex}" onclick="setThemeColor('${pair[1]}','${c.hex}')"
+          >${c.fromLogo ? '<span class="tmark">◆</span>' : ''}</button>`;
+      }).join('') + `<button type="button" class="theme-swatch-add" onclick="addThemeColor('${pair[1]}')">+</button>`;
+    });
+  }
+  window.__renderThemeSettings = renderThemeSettings;
+
+  function writeTheme(patch){
+    const th = currentSiteTheme();
+    if (!branding.theme) branding.theme = {};
+    const next = Object.assign({}, th, patch || {});
+    branding.theme = {
+      style: next.style || th.style || '',
+      font: next.font || th.font || 'assistant',
+      tone: next.tone || th.tone || 'pastel',
+      primary: next.primary,
+      secondary: next.secondary,
+      palette: next.palette || [],
+      logoColors: next.logoColors || [],
+    };
+    applySiteTheme();
+    renderThemeSettings();
+    if (typeof saveState === 'function') saveState();
+  }
+  function setThemeStyle(key){
+    if (THEME_STYLE_KEYS.indexOf(key) === -1) return;
+    writeTheme({ style: key });
+    if (typeof showAdminToast === 'function') showAdminToast('✓ הסגנון נשמר');
+  }
+  function setThemeFont(key){
+    if (THEME_FONT_KEYS.indexOf(key) === -1) return;
+    writeTheme({ font: key });
+    if (typeof showAdminToast === 'function') showAdminToast('✓ הגופן נשמר');
+  }
+  function setThemeTone(key){
+    if (THEME_TONE_KEYS.indexOf(key) === -1) return;
+    writeTheme({ tone: key });
+    if (typeof renderCategoryGrid === 'function') renderCategoryGrid();
+    if (typeof renderServices === 'function') renderServices();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ עוצמת הצבעים נשמרה');
+  }
+  function setThemeColor(which, hex){
+    const clean = normaliseThemeHex(hex);
+    if (!clean || (which !== 'primary' && which !== 'secondary')) return;
+    const patch = {}; patch[which] = clean;
+    writeTheme(patch);
+    if (typeof showAdminToast === 'function') showAdminToast('✓ הצבע נשמר');
+  }
+  function addThemeColor(which){
+    const inp = document.createElement('input');
+    inp.type = 'color';
+    inp.value = currentSiteTheme()[which === 'secondary' ? 'secondary' : 'primary'];
+    inp.style.position = 'fixed'; inp.style.opacity = '0'; inp.style.pointerEvents = 'none';
+    document.body.appendChild(inp);
+    const pick = function(){
+      const clean = normaliseThemeHex(inp.value);
+      inp.removeEventListener('change', pick);
+      try { document.body.removeChild(inp); } catch (e) {}
+      if (!clean) return;
+      const th = currentSiteTheme();
+      const palette = th.palette.slice();
+      if (palette.indexOf(clean) === -1) palette.push(clean);
+      const patch = { palette: palette };
+      patch[which === 'secondary' ? 'secondary' : 'primary'] = clean;
+      writeTheme(patch);
+      if (typeof showAdminToast === 'function') showAdminToast('✓ הצבע נוסף ונשמר');
+    };
+    inp.addEventListener('change', pick);
+    inp.click();
+  }
+  function themeSecondaryFrom(colors){
+    if (colors && colors[1]) return colors[1];
+    return THEME_FALLBACK.secondary;
+  }
+  function rereadLogoColors(){
+    if (!branding || !branding.logo){
+      if (typeof showAdminToast === 'function') showAdminToast('אין לוגו לשאוב ממנו צבעים');
+      return;
+    }
+    extractLogoColors(branding.logo, function(colors){
+      if (!colors.length){
+        if (typeof showAdminToast === 'function') showAdminToast('לא נמצאו צבעים בלוגו — אפשר להוסיף ידנית בכפתור +');
+        return;
+      }
+      const th = currentSiteTheme();
+      writeTheme({
+        logoColors: colors,
+        primary: colors[0],
+        secondary: themeSecondaryFrom(colors),
+        style: th.style || 'diag',
+      });
+      if (typeof showAdminToast === 'function') showAdminToast('✓ הצבעים נשאבו מהלוגו');
+    });
+  }
+  function clearSiteTheme(){
+    if (!confirm('להסיר את העיצוב ולחזור לצבעים הרגילים של המערכת?')) return;
+    branding.theme = null;
+    applySiteTheme();
+    renderThemeSettings();
+    if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ העיצוב הוסר');
+  }
+
+
+  function siteEntryModeAvailable(){
+    return !!(document.body && document.body.classList.contains('th-on')
+      && !document.body.classList.contains('admin-mode'));
+  }
+  function setSiteEntryMode(on){
+    if (!document.body) return;
+    document.body.classList.toggle('th-entry', !!on && siteEntryModeAvailable());
+    if (on) try { window.scrollTo(0, 0); } catch (e) {}
+  }
+  window.__setSiteEntryMode = setSiteEntryMode;
+  function enterSiteTab(name){
+    const byName = {
+      customer: 'bookingTabBtn',
+      whatsnew: '.switcher button[onclick*="whatsnew"]',
+      hours: '.switcher button[onclick*="hours"]',
+    };
+    const sel = byName[name];
+    const btn = sel && sel.charAt(0) === '.' ? document.querySelector(sel) : document.getElementById(sel);
+    setSiteEntryMode(false);
+    if (btn && typeof showPanel === 'function') showPanel(name, btn);
+  }
+  function heroApptLookup(){
+    setSiteEntryMode(false);
+    const btn = document.getElementById('bookingTabBtn');
+    if (btn && typeof showPanel === 'function') showPanel('customer', btn);
+    if (typeof openApptLookup === 'function') openApptLookup();
+  }
+  function renderHeroCatsLine(hasTheme){
+    const el = document.getElementById('heroCatsLine');
+    if (!el) return;
+    if (!hasTheme || typeof categories === 'undefined' || !Array.isArray(categories)){ el.textContent = ''; return; }
+    const shown = categories.filter(function(c){
+      return c && (typeof availableServicesOf !== 'function' || availableServicesOf(c).length);
+    });
+    el.textContent = shown.join('  ·  ');
+  }
+
   function renderBranding(){
+    applySiteTheme();
+    renderThemeSettings();
     const logoHtml = branding.logo
       ? `<img src="${branding.logo}">`
       : branding.name.trim().charAt(0);
@@ -8736,6 +9502,8 @@
     if (waInputEl2 && document.activeElement !== waInputEl2) waInputEl2.value = branding.whatsapp || branding.phone || '';
     const addressInputEl2 = document.getElementById('bizAddressInput');
     if (addressInputEl2 && document.activeElement !== addressInputEl2) addressInputEl2.value = branding.address || '';
+    const emailInputEl2 = document.getElementById('bizEmailInput');
+    if (emailInputEl2 && document.activeElement !== emailInputEl2) emailInputEl2.value = branding.email || '';
     const smsSenderInputEl2 = document.getElementById('bizSmsSenderInput');
     if (smsSenderInputEl2 && document.activeElement !== smsSenderInputEl2) smsSenderInputEl2.value = branding.smsSenderId || '';
     const ivrInputEl2 = document.getElementById('bizIvrCampaignInput');
@@ -11867,11 +12635,30 @@
     if (typeof showAdminToast === 'function') showAdminToast('✓ הקטגוריה נוספה בהצלחה');
   }
   const catTilePalette = ['#C9A227', '#6E8E5E', '#9B2C42', '#B5654B', '#5B7C99', '#8B5FA3'];
+  function themeCategoryPalette(){
+    const th = currentSiteTheme();
+    if (!th.style) return null;
+    const A = hexToHsl(th.primary), B = hexToHsl(th.secondary);
+    if (!A || !B) return null;
+    const t = currentTone().tile;
+    const sat = h => Math.max(0.22, Math.min(0.68, h.s * t.sat));
+    const L = v => Math.max(0.28, Math.min(0.82, v + t.shift));
+    return [
+      hslToHex(A.h,        sat(A), L(0.58)),
+      hslToHex(B.h,        sat(B), L(0.52)),
+      hslToHex(A.h + 24,   sat(A) * 0.86, L(0.44)),
+      hslToHex(B.h - 20,   sat(B) * 0.78, L(0.63)),
+      hslToHex(A.h - 26,   sat(A) * 0.72, L(0.50)),
+      hslToHex(B.h + 30,   sat(B) * 0.66, L(0.38)),
+    ];
+  }
   function categoryBaseColor(cat){
     if (!cat) return null;
     if (categoryColors && categoryColors[cat]) return categoryColors[cat];
     const idx = defaultCategoryColorIndex(cat);
     if (idx === -1) return null;
+    const themed = themeCategoryPalette();
+    if (themed) return themed[idx % themed.length];
     return catTilePalette[idx % catTilePalette.length];
   }
   function defaultCategoryColorIndex(cat){
@@ -11952,6 +12739,17 @@
     if (!m) return 1;
     return (0.2126 * +m[1] + 0.7152 * +m[2] + 0.0722 * +m[3]) / 255;
   }
+  function tileTextColor(bg){
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(bg || '').trim());
+    let r, g, b;
+    if (m){ r = parseInt(m[1], 16); g = parseInt(m[2], 16); b = parseInt(m[3], 16); }
+    else {
+      const n = /(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(String(bg || ''));
+      if (!n) return '#FFFFFF';
+      r = +n[1]; g = +n[2]; b = +n[3];
+    }
+    return contrastWithInk(r, g, b) >= contrastWithWhite(r, g, b) ? '#2E2522' : '#FFFFFF';
+  }
   function appointmentBlockStyle(a){
     const bg = appointmentCategoryColor(a);
     if (!bg) return null;
@@ -11986,6 +12784,7 @@
       const tile = document.createElement('div');
       tile.className = 'cat-tile';
       tile.style.background = categoryBaseColor(cat) || catTilePalette[colorIdx % catTilePalette.length];
+      tile.style.color = tileTextColor(tile.style.background);
       void colorIdx;
       colorIdx++;
       const selectedCount = catServices.filter(s => bkSelectedServices.some(sel => sel.svcIndex === services.indexOf(s))).length;
@@ -12102,6 +12901,7 @@
       const tile = document.createElement('div');
       tile.className = 'cat-tile';
       tile.style.background = categoryBaseColor(cat) || catTilePalette[colorIdx % catTilePalette.length];
+      tile.style.color = tileTextColor(tile.style.background);
       void colorIdx;
       colorIdx++;
       tile.innerHTML = `<span class="cat-tile-name">${cat}</span><span class="cat-tile-count">${catServices.length} שירות${catServices.length === 1 ? '' : 'ים'}</span>`;
@@ -15229,6 +16029,7 @@
     const heroEl = document.querySelector('.hero');
     if (heroEl) heroEl.style.display = isAdmin ? 'none' : '';
     document.body.classList.toggle('admin-mode', isAdmin);
+    if (typeof setSiteEntryMode === 'function') setSiteEntryMode(false);
     if (isAdmin && !window.__adminOnlyPanelsRenderedOnce && typeof rerenderEverything === 'function'){
       window.__adminOnlyPanelsRenderedOnce = true;
       rerenderEverything();
@@ -16269,6 +17070,8 @@
         phone: (branding && branding.phone) || '',
         whatsapp: (branding && branding.whatsapp) || '',
         address: (branding && branding.address) || '',
+        email: (branding && branding.email) || '',
+        theme: (branding && branding.theme) || null,
       },
       staff: (staff || []).map(s => ({
         name: (s && s.name) || '',
@@ -16422,6 +17225,7 @@
   }
   function applyCloudData(data){
     if (data.branding) branding = data.branding;
+    if (typeof applySiteTheme === 'function') applySiteTheme();
     if (data.clients) clients = data.clients;
     if (Array.isArray(data.customTemplates)) customTemplates = data.customTemplates;
     else if (data.customTemplates) console.warn('customTemplates arrived in an unexpected shape and was ignored:', data.customTemplates);
@@ -16770,7 +17574,7 @@
   let runningOnPublicData = false;
   function applyPublicData(data){
     runningOnPublicData = true;
-    if (data.branding) branding = Object.assign({ name: '', logo: null, phone: '', whatsapp: '', address: '' }, data.branding);
+    if (data.branding) branding = Object.assign({ name: '', logo: null, phone: '', whatsapp: '', address: '', email: '', theme: null }, data.branding);
     if (Array.isArray(data.staff)){
       staff = data.staff;
       staff.forEach(s => {
@@ -16801,6 +17605,7 @@
     specialRequests = [];
     lateCancellations = [];
     cancellationLog = [];
+    if (typeof applySiteTheme === 'function') applySiteTheme();
   }
   function refreshPublicDataQuietly(){
     if (!runningOnPublicData) return Promise.resolve(false);
@@ -17051,6 +17856,8 @@
       if (typeof scheduleNextRemoteUpdatePoll === 'function') scheduleNextRemoteUpdatePoll();
       const btn = document.getElementById('businessTabBtn');
       if (btn) btn.style.display = isLoggedIn ? '' : 'none';
+      if (isLoggedIn && typeof setSiteEntryMode === 'function') setSiteEntryMode(false);
+      if (document.body) document.body.classList.toggle('owner-signed', !!isLoggedIn);
       const bookingBtn = document.getElementById('bookingTabBtn');
       if (bookingBtn) bookingBtn.style.display = isLoggedIn ? 'none' : '';
       if (typeof applyPlatformAdminUi === 'function') applyPlatformAdminUi();
