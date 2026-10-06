@@ -203,6 +203,16 @@
   .theme-font-opt span{display:block; font-size:11px; color:var(--panel-text-dim); margin-top:3px;
     font-family:'Heebo',sans-serif;}
   .theme-swatch-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .theme-shade-row{display:flex; align-items:center; gap:9px; width:100%; margin-top:12px;
+    font-size:11.5px; color:var(--panel-text-dim);}
+  .theme-shade-row input[type="range"]{flex:1; accent-color:var(--gold); min-width:0;}
+  .theme-swatch-row{flex-wrap:wrap;}
+  .theme-swatch-wrap{position:relative; display:inline-flex;}
+  .theme-swatch-del{position:absolute; top:-7px; inset-inline-start:-7px; width:20px; height:20px;
+    border-radius:50%; border:1px solid rgba(var(--panel-line-rgb),0.35); background:var(--panel-card-bg);
+    color:var(--panel-text); font-size:11px; line-height:1; cursor:pointer; padding:0;
+    display:flex; align-items:center; justify-content:center;}
+  .theme-swatch-del:hover{background:var(--wine); color:#fff; border-color:var(--wine);}
   .theme-swatch{width:42px; height:42px; border-radius:11px; cursor:pointer; padding:0;
     border:2px solid rgba(var(--panel-line-rgb),0.18); position:relative;}
   .theme-swatch.sel{border-color:var(--panel-text); box-shadow:0 0 0 3px rgba(34,27,30,0.14);}
@@ -1271,19 +1281,21 @@
   .biz-topbar-cal-filters #calStaffFilterSelect.cal-mini-btn{
     background-color:var(--panel-card-bg);
     color:var(--panel-gold);
-    border-color:rgba(122,94,12,0.5);
+    border-color:rgba(var(--gold-rgb),0.5);
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A5E0C' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
   .biz-topbar-cal-filters .cal-mini-btn-primary{
-    background-color:var(--sage);
-    background-image:linear-gradient(135deg, var(--sage), #5F7856);
+    background-color:var(--gold);
+    background-image:linear-gradient(135deg, var(--gold-soft), var(--gold));
     color:var(--ink);
-    border-color:rgba(255,255,255,0.35);
+    border-color:rgba(255,255,255,0.4);
     font-weight:700;
   }
   .biz-topbar-cal-filters .cal-mini-btn-primary{
-    background-image:linear-gradient(135deg, var(--sage), #5F7856), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23141014' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-image:linear-gradient(135deg, var(--gold-soft), var(--gold)), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23141014' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
+  .biz-topbar-cal-filters select option,
+  #panel-business select option{background:#FFFFFF; color:#221B1E;}
   .cal-topbar-icons{display:flex; gap:6px; flex-shrink:0; margin-inline-start:auto;}
   .cal-icon-btn{
     width:38px; height:38px; border-radius:10px; border:1.5px solid rgba(var(--panel-line-rgb),0.2);
@@ -2667,8 +2679,8 @@
   }
   .cal-mini-btn:focus{outline:none; border-color:var(--wine);}
   #calStaffFilterSelect.cal-mini-btn{
-    background-color:rgba(122,94,12,0.10);
-    border-color:rgba(122,94,12,0.32);
+    background-color:rgba(var(--gold-rgb),0.12);
+    border-color:rgba(var(--gold-rgb),0.38);
     color:var(--panel-gold);
     background-position:left 9px center;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A5E0C' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -3710,7 +3722,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-06 · 48';
+        window.__APP_BUILD = '2026-10-06 · 51';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9578,12 +9590,21 @@
       const row = document.getElementById(pair[0]);
       if (!row) return;
       const current = th[pair[1]];
+      const hslNow = hexToHsl(current) || { l: 0.5 };
+      const shadeHtml = `<div class="theme-shade-row">
+        <span>כהה</span>
+        <input type="range" min="18" max="86" value="${Math.round(hslNow.l * 100)}"
+          oninput="setThemeShade('${pair[1]}', this.value)">
+        <span>בהיר</span></div>`;
       row.innerHTML = choices.map(function(c){
-        return `<button type="button" class="theme-swatch ${c.hex === current ? 'sel' : ''}"
+        const removable = !c.fromLogo && c.hex !== th.primary && c.hex !== th.secondary;
+        return `<span class="theme-swatch-wrap"><button type="button" class="theme-swatch ${c.hex === current ? 'sel' : ''}"
           style="background:${c.hex}" title="${c.hex}" onclick="setThemeColor('${pair[1]}','${c.hex}')"
-          >${c.fromLogo ? '<span class="tmark">◆</span>' : ''}</button>`;
+          >${c.fromLogo ? '<span class="tmark">◆</span>' : ''}</button>${removable
+            ? `<button type="button" class="theme-swatch-del" title="הסרת הצבע מהרשימה"
+                 onclick="removeThemeColor('${c.hex}')">✕</button>` : ''}</span>`;
       }).join('') + `<label class="theme-swatch-add" title="בחירת צבע"><span>+</span>
-        <input type="color" value="${current}" oninput="addThemeColorFromInput('${pair[1]}', this.value)"></label>`;
+        <input type="color" value="${current}" oninput="addThemeColorFromInput('${pair[1]}', this.value)"></label>` + shadeHtml;
     });
   }
   window.__renderThemeSettings = renderThemeSettings;
@@ -9642,6 +9663,29 @@
       return;
     }
     writeTheme({ logoFill: true });
+  }
+  function removeThemeColor(hex){
+    const clean = normaliseThemeHex(hex);
+    if (!clean) return;
+    const th = currentSiteTheme();
+    if (clean === th.primary || clean === th.secondary){
+      if (typeof showAdminToast === 'function') showAdminToast('הצבע הזה בשימוש — קודם לבחור צבע אחר, ואז אפשר להסיר אותו');
+      return;
+    }
+    writeTheme({ palette: th.palette.filter(function(c){ return c !== clean; }) });
+    if (typeof showAdminToast === 'function') showAdminToast('✓ הצבע הוסר מהרשימה');
+  }
+  function setThemeShade(which, pct){
+    const th = currentSiteTheme();
+    const base = hexToHsl(which === 'secondary' ? th.secondary : th.primary);
+    if (!base) return;
+    const l = Math.max(0.18, Math.min(0.86, Number(pct) / 100));
+    const next = hslToHex(base.h, base.s, l);
+    const patch = {}; patch[which === 'secondary' ? 'secondary' : 'primary'] = next;
+    writeTheme(patch);
+    if (typeof renderCategoryGrid === 'function') renderCategoryGrid();
+    if (typeof renderCategories === 'function') renderCategories();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
   }
   function setThemeFont(key){
     if (THEME_FONT_KEYS.indexOf(key) === -1) return;
@@ -12875,26 +12919,51 @@
     { hex: '#5C6B7A', name: 'אפור כחלחל' },
     { hex: '#8E6F3E', name: 'חרדל' },
     { hex: '#3F7D5A', name: 'ירוק כהה' },
+    { hex: '#D64545', name: 'אדום' },
+    { hex: '#1F7A6B', name: 'ירוק ים' },
+    { hex: '#9C7BC4', name: 'לילך' },
+    { hex: '#C46A94', name: 'ורוד עתיק' },
+    { hex: '#4A5D23', name: 'ירוק זית כהה' },
+    { hex: '#B08968', name: 'קרמל' },
+    { hex: '#2F5D8C', name: 'כחול כהה' },
+    { hex: '#8C8C8C', name: 'אפור' },
   ];
+  function parseFreeColor(raw){
+    const t = String(raw || '').trim().replace(/^#/, '');
+    if (/^[0-9a-fA-F]{6}$/.test(t)) return '#' + t.toLowerCase();
+    if (/^[0-9a-fA-F]{3}$/.test(t)) return '#' + t.split('').map(function(c){ return c + c; }).join('').toLowerCase();
+    return null;
+  }
   function openCategoryColorPicker(cat){
     const current = categoryBaseColor(cat);
     const lines = CATEGORY_COLOR_CHOICES.map((c, i) => `${i + 1}. ${c.name}`).join('\n');
     const answer = prompt(
-      `באיזה צבע להציג את "${cat}"?\n\nהצבע חל גם על האריח שהלקוחה רואה וגם על התורים ביומן.\n\n${lines}\n\nלהקליד מספר, או 0 כדי לחזור לברירת המחדל:`,
+      `באיזה צבע להציג את "${cat}"?\n\nהצבע חל גם על האריח שהלקוחה רואה וגם על התורים ביומן.\n\n${lines}\n\nלהקליד מספר, 0 כדי לחזור לברירת המחדל, או קוד צבע משלך (למשל #A1B2C3):`,
       ''
     );
     if (answer === null) return;
-    const n = parseInt(String(answer).trim(), 10);
-    if (Number.isNaN(n) || n < 0 || n > CATEGORY_COLOR_CHOICES.length) return;
-    if (n === 0) delete categoryColors[cat];
-    else categoryColors[cat] = CATEGORY_COLOR_CHOICES[n - 1].hex;
+    const raw = String(answer).trim();
+    const free = parseFreeColor(raw);
+    let chosenName = '';
+    if (free){
+      categoryColors[cat] = free;
+      chosenName = free;
+    } else {
+      const n = parseInt(raw, 10);
+      if (Number.isNaN(n) || n < 0 || n > CATEGORY_COLOR_CHOICES.length){
+        if (typeof showAdminToast === 'function') showAdminToast('לא זיהיתי את הבחירה — מספר מהרשימה, או קוד צבע כמו ‎#A1B2C3');
+        return;
+      }
+      if (n === 0) delete categoryColors[cat];
+      else { categoryColors[cat] = CATEGORY_COLOR_CHOICES[n - 1].hex; chosenName = CATEGORY_COLOR_CHOICES[n - 1].name; }
+    }
     if (typeof saveState === 'function') saveState();
     renderCategories();
     if (typeof renderCategoryGrid === 'function') renderCategoryGrid();
     if (typeof renderSvcManageCategoryGrid === 'function') renderSvcManageCategoryGrid();
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof showAdminToast === 'function'){
-      showAdminToast(n === 0 ? `"${cat}" חזרה לצבע ברירת המחדל` : `"${cat}" מוצגת עכשיו ב${CATEGORY_COLOR_CHOICES[n - 1].name}`);
+      showAdminToast(chosenName ? `"${cat}" מוצגת עכשיו ב${chosenName}` : `"${cat}" חזרה לצבע ברירת המחדל`);
     }
     void current;
   }
@@ -13098,12 +13167,23 @@
   const CAL_TONE_LIGHTNESS = 0.69;
   const CAL_TONE_SATURATION_MIN = 0.30;
   const CAL_TONE_SATURATION_MAX = 0.78;
+  const CAL_TONE_BY_INTENSITY = {
+    pastel: { l: 0.80, sMin: 0.22, sMax: 0.62 },
+    mid:    { l: CAL_TONE_LIGHTNESS, sMin: CAL_TONE_SATURATION_MIN, sMax: CAL_TONE_SATURATION_MAX },
+    bold:   { l: 0.60, sMin: 0.38, sMax: 0.88 },
+  };
+  function calendarTone(){
+    const th = (typeof currentSiteTheme === 'function') ? currentSiteTheme() : null;
+    if (!th || !th.style) return CAL_TONE_BY_INTENSITY.mid;
+    return CAL_TONE_BY_INTENSITY[th.tone] || CAL_TONE_BY_INTENSITY.mid;
+  }
   function calendarToneOf(hex){
     const hsl = hexToHsl(hex);
     if (!hsl) return hex;
-    if (hsl.s === 0) return hslToRgbString(0, 0, CAL_TONE_LIGHTNESS);
-    const s = Math.max(CAL_TONE_SATURATION_MIN, Math.min(CAL_TONE_SATURATION_MAX, hsl.s));
-    return hslToRgbString(hsl.h, s, CAL_TONE_LIGHTNESS);
+    const t = calendarTone();
+    if (hsl.s === 0) return hslToRgbString(0, 0, t.l);
+    const s = Math.max(t.sMin, Math.min(t.sMax, hsl.s));
+    return hslToRgbString(hsl.h, s, t.l);
   }
   function colorLuminance(cssColor){
     const m = /(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(String(cssColor || ''));
