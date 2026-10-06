@@ -454,6 +454,18 @@
     border-color:rgba(var(--panel-line-rgb),0.30);
     color:var(--panel-text-dim);
   }
+  body.th-on .biz-topbar .cal-today-btn{
+    background-color:#FFFFFF;
+    color:var(--th-ink-brand, var(--wine-deep));
+    border-color:#FFFFFF;
+  }
+  body.th-on .biz-topbar .cal-today-btn:hover{background-color:#fff;}
+  body.th-on .biz-topbar .cal-today-btn.is-current{
+    opacity:1;
+    background-color:rgba(255,255,255,0.26);
+    border-color:rgba(255,255,255,0.6);
+    color:var(--th-on-primary, #fff);
+  }
   body.th-on .cal-day-head.cal-day-today{
     background:rgba(var(--gold-rgb),0.15);
     border-bottom:3px solid var(--gold);
@@ -3789,7 +3801,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-06 · 60';
+        window.__APP_BUILD = '2026-10-06 · 61';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9248,6 +9260,7 @@
   const THEME_FALLBACK = { primary: '#9B2C42', secondary: '#C9A227' };
 
   const THEME_ACTION_MIN_CONTRAST = 3.1;
+  const THEME_TEXT_MIN_CONTRAST = 4.5;
   function themeActionColor(hex){
     const hsl = hexToHsl(hex);
     if (!hsl) return hex;
@@ -9261,6 +9274,20 @@
       l -= 0.02;
     }
     return hslToHex(hsl.h, s, Math.max(0.30, l));
+  }
+  function themeBrandInk(hex){
+    const hsl = hexToHsl(hex);
+    if (!hsl) return hex;
+    const s = Math.max(hsl.s, 0.30);
+    let l = hsl.l;
+    for (let i = 0; i < 50 && l > 0.14; i++){
+      const t = hexToRgbTriplet(hslToHex(hsl.h, s, l));
+      if (!t) break;
+      const [r, g, b] = t.split(',').map(Number);
+      if (contrastWithWhite(r, g, b) >= THEME_TEXT_MIN_CONTRAST) break;
+      l -= 0.02;
+    }
+    return hslToHex(hsl.h, s, Math.max(0.14, l));
   }
 
   function normaliseThemeHex(raw){
@@ -9365,7 +9392,7 @@
       '--th-c1', '--th-c1-lt', '--th-c2', '--th-c2-lt',
       '--th-panel-bg', '--th-panel-card-bg', '--th-panel-gold', '--th-panel-line-rgb', '--th-font',
       '--th-primary-rgb', '--th-primary-deep-rgb', '--th-secondary-rgb', '--th-secondary-soft-rgb',
-      '--th-on-primary', '--th-on-secondary', '--th-action', '--th-action-press', '--th-action-rgb', '--th-on-action',
+      '--th-on-primary', '--th-on-secondary', '--th-action', '--th-action-press', '--th-action-rgb', '--th-on-action', '--th-ink-brand',
       '--th-c1-pale', '--th-c2-pale', '--th-c3', '--th-c3-lt', '--th-card', '--th-card-2'];
     if (!hasTheme){
       if (window.__themeFromCache && !window.__themeDataKnown){
@@ -9405,6 +9432,7 @@
     const action = themeActionColor(th.primary);
     const actionHsl = hexToHsl(action);
     root.style.setProperty('--th-action', action);
+    root.style.setProperty('--th-ink-brand', themeBrandInk(th.primary));
     root.style.setProperty('--th-action-press',
       actionHsl ? hslToHex(actionHsl.h, actionHsl.s, Math.max(0.16, actionHsl.l - 0.09)) : action);
     const at = hexToRgbTriplet(action);
@@ -9459,7 +9487,7 @@
     '--th-c1-pale', '--th-c2-pale', '--th-card', '--th-card-2',
     '--th-panel-bg', '--th-panel-card-bg', '--th-panel-gold', '--th-panel-line-rgb', '--th-font',
     '--th-primary-rgb', '--th-primary-deep-rgb', '--th-secondary-rgb', '--th-secondary-soft-rgb',
-    '--th-on-primary', '--th-on-secondary', '--th-action', '--th-action-press', '--th-action-rgb', '--th-on-action'];
+    '--th-on-primary', '--th-on-secondary', '--th-action', '--th-action-press', '--th-action-rgb', '--th-on-action', '--th-ink-brand'];
   function rememberThemeForNextLoad(root, body){
     try {
       const vars = {};
