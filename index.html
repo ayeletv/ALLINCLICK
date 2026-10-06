@@ -416,6 +416,49 @@
     transition:transform .12s ease, box-shadow .15s ease;
   }
   .cat-color-dot:hover{transform:scale(1.12); box-shadow:0 4px 10px rgba(40,25,30,0.26);}
+
+  .catcolor-preview{display:flex; gap:10px; align-items:stretch;}
+  .catcolor-tile{flex:1; border-radius:16px; min-height:86px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:4px; box-shadow:0 4px 14px rgba(0,0,0,0.12);}
+  .catcolor-tile b{font-size:15px; font-weight:700;}
+  .catcolor-tile em{font-style:normal; font-size:11.5px; opacity:0.85;}
+  .catcolor-cal{flex:1; border-radius:8px; min-height:86px; padding:8px 10px;
+    display:flex; flex-direction:column; gap:3px; border:2px solid rgba(var(--panel-line-rgb),0.18);}
+  .catcolor-cal b{font-size:12px; font-weight:700;}
+  .catcolor-cal span{font-size:10.5px; opacity:0.75;}
+  .catcolor-shade{display:flex; align-items:center; gap:10px; font-size:11.5px; color:var(--panel-text-dim);}
+  .catcolor-shade input[type="range"]{flex:1; accent-color:var(--gold); min-width:0;}
+  .catcolor-grid{display:grid; grid-template-columns:repeat(8, 1fr); gap:7px;}
+  @media (max-width:480px){ .catcolor-grid{grid-template-columns:repeat(6, 1fr);} }
+  .catcolor-grid button{aspect-ratio:1; border-radius:9px; border:2px solid rgba(var(--panel-line-rgb),0.16);
+    cursor:pointer; padding:0;}
+  .catcolor-grid button.sel{border-color:var(--panel-text); box-shadow:0 0 0 3px rgba(34,27,30,0.16);}
+  .catcolor-free{display:flex; align-items:center; gap:10px; margin-top:12px;}
+  .catcolor-free-chip{position:relative; width:38px; height:38px; border-radius:10px; overflow:hidden;
+    border:1.5px dashed rgba(var(--gold-rgb),0.7); color:var(--panel-gold); font-size:19px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;}
+  .catcolor-free-chip input[type="color"]{position:absolute; inset:-6px; width:calc(100% + 12px);
+    height:calc(100% + 12px); min-width:calc(100% + 12px); min-height:calc(100% + 12px);
+    opacity:0; cursor:pointer; border:none; padding:0; margin:0;}
+  .catcolor-free-text{font-size:12px; color:var(--panel-text-dim);}
+
+  body.th-on .inner-switcher button.active{
+    background:var(--gold); border-color:var(--gold); color:var(--ink);
+  }
+  body.th-on .cal-today-btn{
+    background-color:rgba(var(--gold-rgb),0.16);
+    color:var(--panel-gold);
+    border-color:rgba(var(--gold-rgb),0.55);
+  }
+  body.th-on .cal-day-head.cal-day-today{
+    background:rgba(var(--gold-rgb),0.15);
+    border-bottom:3px solid var(--gold);
+  }
+  body.th-on .cal-day-head.cal-day-today .cal-day-name,
+  body.th-on .cal-day-head.cal-day-today .cal-day-num{color:var(--panel-gold);}
+  body.th-on .cal-now-fill{background:rgba(var(--gold-rgb),0.16);}
+  body.th-on .cal-now-pin{color:var(--panel-gold);}
+  body.th-on .cal-now-pin i{background:var(--panel-gold); box-shadow:0 0 0 2px rgba(var(--gold-rgb),0.3);}
   .eyebrow{
     font-family:'JetBrains Mono', monospace;
     font-size:13px;
@@ -3722,7 +3765,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-06 · 51';
+        window.__APP_BUILD = '2026-10-06 · 56';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -3927,6 +3970,41 @@
   </div>
 </div>
 
+<div id="catColorOverlay" class="myday-overlay add-modal-overlay">
+  <div class="myday-sheet add-modal">
+    <div class="myday-header">
+      <h3 id="catColorTitle">צבע הקטגוריה</h3>
+      <div class="myday-actions">
+        <button type="button" onclick="closeCategoryColorPicker()">✕ סגירה</button>
+      </div>
+    </div>
+    <div class="add-modal-body">
+      <div class="add-modal-label">כך זה ייראה</div>
+      <div class="catcolor-preview">
+        <div class="catcolor-tile" id="catColorTilePreview"><b id="catColorTileName">קטגוריה</b><em>5 טיפולים</em></div>
+        <div class="catcolor-cal" id="catColorCalPreview"><b>09:30 דנה כהן</b><span>ביומן</span></div>
+      </div>
+      <div class="add-modal-label" style="margin-top:14px;">בהירות</div>
+      <div class="catcolor-shade">
+        <span>כהה</span>
+        <input type="range" id="catColorShade" min="20" max="88" value="55" oninput="onCatColorShade(this.value)">
+        <span>בהיר</span>
+      </div>
+      <div class="add-modal-label" style="margin-top:14px;">גוון</div>
+      <div class="catcolor-grid" id="catColorGrid"></div>
+      <div class="catcolor-free">
+        <label class="catcolor-free-chip" title="כל צבע אחר">
+          <span>+</span><input type="color" id="catColorFree" oninput="onCatColorPick(this.value)">
+        </label>
+        <span class="catcolor-free-text">אפשר לבחור כל צבע אחר</span>
+      </div>
+    </div>
+    <div class="add-modal-footer">
+      <button type="button" class="cta" onclick="saveCategoryColor()">שמירה</button>
+      <button type="button" class="template-btn" onclick="clearCategoryColor()">חזרה לצבע ברירת המחדל</button>
+    </div>
+  </div>
+</div>
 <div id="addCategoryOverlay" class="myday-overlay add-modal-overlay">
   <div class="myday-sheet add-modal">
     <div class="myday-header">
@@ -12934,38 +13012,105 @@
     if (/^[0-9a-fA-F]{3}$/.test(t)) return '#' + t.split('').map(function(c){ return c + c; }).join('').toLowerCase();
     return null;
   }
+  let catColorEditing = null;
+  let catColorValue = null;
   function openCategoryColorPicker(cat){
-    const current = categoryBaseColor(cat);
-    const lines = CATEGORY_COLOR_CHOICES.map((c, i) => `${i + 1}. ${c.name}`).join('\n');
-    const answer = prompt(
-      `באיזה צבע להציג את "${cat}"?\n\nהצבע חל גם על האריח שהלקוחה רואה וגם על התורים ביומן.\n\n${lines}\n\nלהקליד מספר, 0 כדי לחזור לברירת המחדל, או קוד צבע משלך (למשל #A1B2C3):`,
-      ''
-    );
-    if (answer === null) return;
-    const raw = String(answer).trim();
-    const free = parseFreeColor(raw);
-    let chosenName = '';
-    if (free){
-      categoryColors[cat] = free;
-      chosenName = free;
-    } else {
-      const n = parseInt(raw, 10);
-      if (Number.isNaN(n) || n < 0 || n > CATEGORY_COLOR_CHOICES.length){
-        if (typeof showAdminToast === 'function') showAdminToast('לא זיהיתי את הבחירה — מספר מהרשימה, או קוד צבע כמו ‎#A1B2C3');
-        return;
-      }
-      if (n === 0) delete categoryColors[cat];
-      else { categoryColors[cat] = CATEGORY_COLOR_CHOICES[n - 1].hex; chosenName = CATEGORY_COLOR_CHOICES[n - 1].name; }
+    catColorEditing = cat;
+    catColorValue = normaliseThemeHex(categoryBaseColor(cat)) || '#c9a227';
+    const title = document.getElementById('catColorTitle');
+    if (title) title.textContent = `צבע הקטגוריה "${cat}"`;
+    const name = document.getElementById('catColorTileName');
+    if (name) name.textContent = cat;
+    const grid = document.getElementById('catColorGrid');
+    if (grid){
+      grid.innerHTML = CATEGORY_COLOR_CHOICES.map(function(c){
+        return `<button type="button" class="${c.hex.toLowerCase() === catColorValue ? 'sel' : ''}"
+          style="background:${c.hex}" title="${c.name}" aria-label="${c.name}"
+          onclick="onCatColorPick('${c.hex}')"></button>`;
+      }).join('');
     }
+    const hsl = hexToHsl(catColorValue);
+    const shade = document.getElementById('catColorShade');
+    if (shade && hsl) shade.value = String(Math.round(hsl.l * 100));
+    const free = document.getElementById('catColorFree');
+    if (free) free.value = catColorValue;
+    refreshCatColorPreview();
+    const ov = document.getElementById('catColorOverlay');
+    if (ov) ov.classList.add('show');
+  }
+  function closeCategoryColorPicker(){
+    const ov = document.getElementById('catColorOverlay');
+    if (ov) ov.classList.remove('show');
+    catColorEditing = null;
+  }
+  function onCatColorPick(hex){
+    const clean = normaliseThemeHex(hex);
+    if (!clean) return;
+    catColorValue = clean;
+    const hsl = hexToHsl(clean);
+    const shade = document.getElementById('catColorShade');
+    if (shade && hsl) shade.value = String(Math.round(hsl.l * 100));
+    const grid = document.getElementById('catColorGrid');
+    if (grid){
+      Array.from(grid.children).forEach(function(b){
+        b.classList.toggle('sel', (b.style.backgroundColor || '') && colorsMatch(b.style.backgroundColor, clean));
+      });
+    }
+    refreshCatColorPreview();
+  }
+  function colorsMatch(cssColor, hex){
+    const m = /(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(String(cssColor || ''));
+    const h = normaliseThemeHex(hex);
+    if (!m || !h) return false;
+    const want = [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+    return +m[1] === want[0] && +m[2] === want[1] && +m[3] === want[2];
+  }
+  function onCatColorShade(pct){
+    const hsl = hexToHsl(catColorValue || '#c9a227');
+    if (!hsl) return;
+    catColorValue = hslToHex(hsl.h, hsl.s, Math.max(0.2, Math.min(0.88, Number(pct) / 100)));
+    refreshCatColorPreview();
+  }
+  function refreshCatColorPreview(){
+    const tile = document.getElementById('catColorTilePreview');
+    const cal = document.getElementById('catColorCalPreview');
+    if (!catColorValue) return;
+    if (tile){
+      tile.style.background = catColorValue;
+      tile.style.color = tileTextColor(catColorValue);
+    }
+    if (cal){
+      const tone = catColorValue;
+      cal.style.background = tone;
+      const style = appointmentBlockStyleFromColor(tone);
+      cal.style.color = style;
+    }
+    const free = document.getElementById('catColorFree');
+    if (free) free.value = catColorValue;
+  }
+  function appointmentBlockStyleFromColor(cssColor){
+    const m = /(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(String(cssColor || ''));
+    if (!m) return '#241B1E';
+    return contrastWithInk(+m[1], +m[2], +m[3]) >= contrastWithWhite(+m[1], +m[2], +m[3]) ? '#241B1E' : '#FFFFFF';
+  }
+  function saveCategoryColor(){
+    if (!catColorEditing || !catColorValue) return closeCategoryColorPicker();
+    categoryColors[catColorEditing] = catColorValue;
+    applyCategoryColorChange(`"${catColorEditing}" מוצגת עכשיו בצבע שבחרת`);
+  }
+  function clearCategoryColor(){
+    if (!catColorEditing) return closeCategoryColorPicker();
+    delete categoryColors[catColorEditing];
+    applyCategoryColorChange(`"${catColorEditing}" חזרה לצבע ברירת המחדל`);
+  }
+  function applyCategoryColorChange(message){
+    closeCategoryColorPicker();
     if (typeof saveState === 'function') saveState();
     renderCategories();
     if (typeof renderCategoryGrid === 'function') renderCategoryGrid();
     if (typeof renderSvcManageCategoryGrid === 'function') renderSvcManageCategoryGrid();
     if (typeof renderWeekCal === 'function') renderWeekCal();
-    if (typeof showAdminToast === 'function'){
-      showAdminToast(chosenName ? `"${cat}" מוצגת עכשיו ב${chosenName}` : `"${cat}" חזרה לצבע ברירת המחדל`);
-    }
-    void current;
+    if (typeof showAdminToast === 'function') showAdminToast(message);
   }
   function renderCategories(){
     const listEl = document.getElementById('categoryList');
@@ -13125,8 +13270,13 @@
     return categoryOfServiceName(String(a.service || '').split(' + ')[0].trim());
   }
   function appointmentCategoryColor(a){
-    const base = categoryBaseColor(categoryOfAppointment(a));
-    return base ? calendarToneOf(base) : null;
+    const cat = categoryOfAppointment(a);
+    const base = categoryBaseColor(cat);
+    if (!base) return null;
+    const pickedByHand = !!(categoryColors && categoryColors[cat]);
+    if (!pickedByHand) return calendarToneOf(base);
+    const hsl = hexToHsl(base);
+    return hsl ? hslToRgbString(hsl.h, hsl.s, hsl.l) : calendarToneOf(base);
   }
   function srgbChannel(v){ v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
   function contrastWithWhite(r, g, b){
@@ -13168,7 +13318,7 @@
   const CAL_TONE_SATURATION_MIN = 0.30;
   const CAL_TONE_SATURATION_MAX = 0.78;
   const CAL_TONE_BY_INTENSITY = {
-    pastel: { l: 0.80, sMin: 0.22, sMax: 0.62 },
+    pastel: { l: 0.82, sMin: 0.26, sMax: 0.58 },
     mid:    { l: CAL_TONE_LIGHTNESS, sMin: CAL_TONE_SATURATION_MIN, sMax: CAL_TONE_SATURATION_MAX },
     bold:   { l: 0.60, sMin: 0.38, sMax: 0.88 },
   };
