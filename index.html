@@ -390,11 +390,20 @@
   }
 
   .owner-entry-row{display:none; text-align:center; margin:10px 0 6px; padding-top:30px;}
-  .owner-entry-row a{font-size:11.5px; font-weight:500; letter-spacing:0.02em;
-    color:rgba(58,46,46,0.5); text-decoration:underline; text-underline-offset:3px;}
-  .owner-entry-row a:hover{color:rgba(58,46,46,0.8);}
+  .owner-entry-row a{font-size:12px; font-weight:600; letter-spacing:0.02em;
+    color:#241B1E; text-decoration:underline; text-underline-offset:3px;}
+  .owner-entry-row a:hover{color:#000;}
   body.th-on .owner-entry-row{display:block;}
   body.owner-signed .owner-entry-row, body.admin-mode .owner-entry-row{display:none;}
+
+  .cat-color-dot{
+    width:26px; height:26px; min-width:26px; border-radius:50%;
+    display:inline-block; flex-shrink:0; cursor:pointer;
+    border:2px solid rgba(var(--panel-line-rgb),0.25);
+    box-shadow:0 2px 6px rgba(40,25,30,0.18);
+    transition:transform .12s ease, box-shadow .15s ease;
+  }
+  .cat-color-dot:hover{transform:scale(1.12); box-shadow:0 4px 10px rgba(40,25,30,0.26);}
   .eyebrow{
     font-family:'JetBrains Mono', monospace;
     font-size:13px;
@@ -673,7 +682,7 @@
   .billing-notice b{display:block; margin-bottom:2px;}
   .notice-phone-link{
     display:inline-block; margin-top:6px;
-    color:#9B2C42; font-weight:600; text-decoration:none;
+    color:var(--wine); font-weight:600; text-decoration:none;
   }
   .notice-phone-link:hover{text-decoration:underline;}
   .svc-card{
@@ -798,7 +807,7 @@
   .appt-edit-step{
     width:38px; height:38px; flex:0 0 auto;
     border-radius:10px; border:1.5px solid rgba(var(--wine-rgb),0.35);
-    background:rgba(var(--wine-rgb),0.08); color:#9B2C42;
+    background:rgba(var(--wine-rgb),0.08); color:var(--wine);
     font-size:20px; font-weight:700; line-height:1; cursor:pointer;
   }
   .appt-edit-step:hover{background:rgba(var(--wine-rgb),0.16);}
@@ -1222,10 +1231,10 @@
     border:1px solid rgba(62,92,54,.45); background:rgba(62,92,54,.12); color:#3E5C36;
     border-radius:999px; padding:3px 10px; margin-inline-end:8px;
   }
-  .svc-availability.off{ border-color:rgba(var(--wine-rgb),.45); background:rgba(var(--wine-rgb),.12); color:#9B2C42; }
+  .svc-availability.off{ border-color:rgba(var(--wine-rgb),.45); background:rgba(var(--wine-rgb),.12); color:var(--wine); }
   .svc-manage-row-off{ opacity:.62; }
   .svc-card-off{ opacity:.55; filter:grayscale(1); }
-  .svc-off-tag{ font-size:11px; color:#9B2C42; font-weight:600; }
+  .svc-off-tag{ font-size:11px; color:var(--wine); font-weight:600; }
   .biz-topbar{
     display:none;
     position:fixed; top:var(--top-banner-h, 0px); left:0; right:0; z-index:910;
@@ -2731,7 +2740,7 @@
   .sr-block-main{min-width:0; display:flex; flex-direction:column; gap:1px;}
   .sr-block-name{display:block; width:100%; font-weight:700; font-size:12px; line-height:1.2; color:#1C1719; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .sr-block-meta{display:block; width:100%; font-weight:400; font-size:9.5px; line-height:1.15; opacity:0.72; color:#1C1719; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .sr-block-flexible{background:#E8CE7A;}
+  .sr-block-flexible{background:var(--gold-soft);}
   .sr-block-manual{background:#D7CDBC;}
   .sr-block-waitlist{background:#E2A8B9;}
   .detail-field-label{display:block; font-size:12px; color:var(--panel-text-dim); margin-bottom:4px;}
@@ -3500,7 +3509,7 @@
             <div style="font-size:13.5px; line-height:1.6;">🔒 ההגדרות האלה נעולות. שינוי בטעות באחת מהן עלול להשבית את ההודעות והתזכורות לכל הלקוחות, ולכן הפתיחה דורשת את המייל והסיסמה של מי שאחראית עליהן.</div>
             <input type="email" id="sensUnlockEmail" class="field-dark" placeholder="מייל" autocomplete="off" style="margin-top:10px;">
             <input type="password" id="sensUnlockPassword" class="field-dark" placeholder="סיסמה" autocomplete="off" style="margin-top:8px;">
-            <div id="sensUnlockError" style="display:none; color:#9B2C42; font-size:12.5px; margin-top:6px;"></div>
+            <div id="sensUnlockError" style="display:none; color:var(--wine); font-size:12.5px; margin-top:6px;"></div>
             <button type="button" class="btn" id="sensUnlockBtn" style="margin-top:10px;" onclick="unlockSensitiveSettings()">פתיחה</button>
           </div>
           <div style="max-width:480px;"><div class="label" style="margin:12px 0 6px;">שם השולח בהודעות SMS<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">זה מה שיופיע כ"שולח" בתזכורות ה-SMS שהלקוחות מקבלות. חייב להיות עד 11 תווים באנגלית ו/או מספרים בלבד, בלי רווחים ובלי עברית (מגבלה של ספק ה-SMS) — לדוגמה SalonRuti. אם נשאר ריק, תזכורות ה-SMS לא יישלחו.</span></span></div>
@@ -3699,7 +3708,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-06 · 44';
+        window.__APP_BUILD = '2026-10-06 · 46';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -4747,6 +4756,10 @@
     if (typeof renderMbCategoryGrid === 'function') renderMbCategoryGrid();
   }
   const mbCatTilePalette = ['#9B2C42', '#C9A227', '#3F6B5C', '#B5654B', '#5B7C99', '#8B5FA3'];
+  function mbTilePalette(){
+    const themed = (typeof themeCategoryPalette === 'function') ? themeCategoryPalette() : null;
+    return themed || mbCatTilePalette;
+  }
   function renderMbCategoryGrid(){
     const gridEl = document.getElementById('mbCatGrid');
     if (!gridEl) return;
@@ -4757,7 +4770,9 @@
       if (!catServices.length) return;
       const tile = document.createElement('div');
       tile.className = 'cat-tile';
-      tile.style.background = mbCatTilePalette[colorIdx % mbCatTilePalette.length];
+      const mbPal = mbTilePalette();
+      tile.style.background = mbPal[colorIdx % mbPal.length];
+      tile.style.color = tileTextColor(tile.style.background);
       colorIdx++;
       const selectedCount = catServices.filter(s => mbSelectedServices.some(sel => sel.svcIndex === services.indexOf(s))).length;
       tile.innerHTML = `<span class="cat-tile-name">${cat}</span><span class="cat-tile-count">${catServices.length} טיפולים${selectedCount ? ` · ${selectedCount} נבחרו` : ''}</span>`;
@@ -4912,7 +4927,9 @@
       if (!catServices.length) return;
       const tile = document.createElement('div');
       tile.className = 'cat-tile';
-      tile.style.background = mbCatTilePalette[colorIdx % mbCatTilePalette.length];
+      const mbPal = mbTilePalette();
+      tile.style.background = mbPal[colorIdx % mbPal.length];
+      tile.style.color = tileTextColor(tile.style.background);
       colorIdx++;
       const selectedCount = catServices.filter(s => frSelectedServices.some(sel => sel.svcIndex === services.indexOf(s))).length;
       tile.innerHTML = `<span class="cat-tile-name">${cat}</span><span class="cat-tile-count">${catServices.length} טיפולים${selectedCount ? ` · ${selectedCount} נבחרו` : ''}</span>`;
@@ -8703,7 +8720,7 @@
     if (!box) return;
     box.style.display = 'block';
     const line = document.createElement('div');
-    line.style.cssText = 'font-size:12.5px; line-height:1.7;' + (kind === 'bad' ? ' color:#9B2C42;' : (kind === 'good' ? ' color:#3E5C36;' : ''));
+    line.style.cssText = 'font-size:12.5px; line-height:1.7;' + (kind === 'bad' ? ' color:var(--wine);' : (kind === 'good' ? ' color:#3E5C36;' : ''));
     line.textContent = (kind === 'bad' ? '✗ ' : (kind === 'good' ? '✓ ' : '• ')) + text;
     box.appendChild(line);
   }
@@ -8873,7 +8890,7 @@
     if (!box) return;
     box.style.display = 'block';
     const line = document.createElement('div');
-    line.style.cssText = 'font-size:12.5px; line-height:1.7;' + (kind === 'bad' ? ' color:#9B2C42;' : (kind === 'good' ? ' color:#3E5C36;' : ''));
+    line.style.cssText = 'font-size:12.5px; line-height:1.7;' + (kind === 'bad' ? ' color:var(--wine);' : (kind === 'good' ? ' color:#3E5C36;' : ''));
     line.textContent = (kind === 'bad' ? '✗ ' : (kind === 'good' ? '✓ ' : '• ')) + text;
     box.appendChild(line);
   }
@@ -9182,6 +9199,7 @@
         done({ fills: fills, zoom: fills ? Math.min(1.7, Math.max(1, 1 / span)) : 1 });
       } catch (e) { done(null); }
     };
+    if (/^https?:/i.test(String(dataUrl))) img.crossOrigin = 'anonymous';
     img.src = dataUrl;
   }
   window.__logoFrameInfo = logoFrameInfo;
@@ -9354,10 +9372,21 @@
       el.classList.toggle('logo-fill', !!thNow.logoFill);
       const im = el.querySelector('img');
       if (im) im.style.transform = thNow.logoFill && thNow.logoZoom > 1 ? ('scale(' + thNow.logoZoom.toFixed(3) + ')') : '';
+      const th0 = currentSiteTheme();
+      const onPublic = (typeof runningOnPublicData !== 'undefined') && runningOnPublicData;
+      if (th0.style && !th0.logoColors.length && !window.__logoColorsBackfilled && !onPublic){
+        window.__logoColorsBackfilled = true;
+        extractLogoColors(logo, function(colors){
+          if (!colors.length) return;
+          writeTheme({ logoColors: colors, primary: colors[0], secondary: themeSecondaryFrom(colors) });
+          if (typeof renderCategoryGrid === 'function') renderCategoryGrid();
+          if (typeof renderWeekCal === 'function') renderWeekCal();
+          if (typeof showAdminToast === 'function') showAdminToast('✓ הצבעים נשאבו מהלוגו');
+        });
+      }
       const needsMeasure = branding.theme
         && (branding.theme.logoFill === undefined || branding.theme.logoFillV !== LOGO_FIT_VERSION);
-      if (needsMeasure && !window.__logoFrameMeasured
-          && typeof isLoggedIn !== 'undefined' && isLoggedIn){
+      if (needsMeasure && !window.__logoFrameMeasured && !onPublic){
         window.__logoFrameMeasured = true;
         logoFrameInfo(logo, function(info){
           writeTheme({ logoFill: info.fills, logoZoom: info.zoom, logoFillV: LOGO_FIT_VERSION });
@@ -9440,6 +9469,7 @@
         done(out);
       } catch (e) { done([]); }
     };
+    if (/^https?:/i.test(String(dataUrl))) img.crossOrigin = 'anonymous';
     img.src = dataUrl;
   }
   window.__extractLogoColors = extractLogoColors;
@@ -9544,7 +9574,8 @@
         return `<button type="button" class="theme-swatch ${c.hex === current ? 'sel' : ''}"
           style="background:${c.hex}" title="${c.hex}" onclick="setThemeColor('${pair[1]}','${c.hex}')"
           >${c.fromLogo ? '<span class="tmark">◆</span>' : ''}</button>`;
-      }).join('') + `<button type="button" class="theme-swatch-add" onclick="addThemeColor('${pair[1]}')">+</button>`;
+      }).join('') + `<label class="theme-swatch-add" title="בחירת צבע"><span>+</span>
+        <input type="color" value="${current}" oninput="addThemeColorFromInput('${pair[1]}', this.value)"></label>`;
     });
   }
   window.__renderThemeSettings = renderThemeSettings;
@@ -9624,6 +9655,19 @@
     writeTheme(patch);
     if (typeof showAdminToast === 'function') showAdminToast('✓ הצבע נשמר');
   }
+  function addThemeColorFromInput(which, value){
+    const clean = normaliseThemeHex(value);
+    if (!clean || (which !== 'primary' && which !== 'secondary')) return;
+    const th = currentSiteTheme();
+    const palette = th.palette.slice();
+    if (palette.indexOf(clean) === -1) palette.push(clean);
+    const patch = { palette: palette };
+    patch[which === 'secondary' ? 'secondary' : 'primary'] = clean;
+    writeTheme(patch);
+    if (typeof renderCategoryGrid === 'function') renderCategoryGrid();
+    if (typeof renderCategories === 'function') renderCategories();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+  }
   function addThemeColor(which){
     const inp = document.createElement('input');
     inp.type = 'color';
@@ -9658,7 +9702,7 @@
     logoFrameInfo(branding.logo, function(info){ writeTheme({ logoFill: info.fills, logoZoom: info.zoom, logoFillV: LOGO_FIT_VERSION }); });
     extractLogoColors(branding.logo, function(colors){
       if (!colors.length){
-        if (typeof showAdminToast === 'function') showAdminToast('לא נמצאו צבעים בלוגו — אפשר להוסיף ידנית בכפתור +');
+        if (typeof showAdminToast === 'function') showAdminToast('לא הצלחתי לקרוא את הצבעים מהלוגו. אפשר לבחור צבע ידנית בכפתור +, או להעלות את הלוגו מחדש.');
         return;
       }
       const th = currentSiteTheme();
@@ -17358,7 +17402,7 @@
     if (document.getElementById('ownerMappingBanner')) return;
     const banner = document.createElement('div');
     banner.id = 'ownerMappingBanner';
-    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#9B2C42; color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
+    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:var(--wine); color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
     banner.textContent = '⚠ לא הצלחנו לאמת את ההרשאות שלך מול הענן. נא לרענן את הדף.';
     document.body.prepend(banner);
   }
@@ -17437,14 +17481,14 @@
     if (existing) existing.remove();
     const banner = document.createElement('div');
     banner.id = 'saveErrorBanner';
-    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#9B2C42; color:#fff; text-align:center; padding:10px 40px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
+    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:var(--wine); color:#fff; text-align:center; padding:10px 40px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
     banner.textContent = message;
     if (opts && opts.retry){
       const retryBtn = document.createElement('button');
       retryBtn.id = 'saveRetryBtn';
       retryBtn.type = 'button';
       retryBtn.textContent = '↻ לנסות לשמור שוב';
-      retryBtn.style.cssText = 'margin-inline-start:12px; background:#fff; color:#9B2C42; border:none; border-radius:8px; font-size:13px; font-weight:700; padding:4px 12px; cursor:pointer;';
+      retryBtn.style.cssText = 'margin-inline-start:12px; background:#fff; color:var(--wine); border:none; border-radius:8px; font-size:13px; font-weight:700; padding:4px 12px; cursor:pointer;';
       retryBtn.onclick = () => {
         retryBtn.disabled = true;
         retryBtn.textContent = 'שומרת...';
@@ -17686,7 +17730,7 @@
     if (document.getElementById('cloudErrorBanner')) return;
     const banner = document.createElement('div');
     banner.id = 'cloudErrorBanner';
-    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#9B2C42; color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
+    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:var(--wine); color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
     banner.textContent = '⚠ אין כרגע חיבור לענן — שינויים לא יישמרו עד שהחיבור יחזור. מומלץ לרענן את הדף.';
     document.body.prepend(banner);
     syncTopBannerOffset();
@@ -17985,7 +18029,7 @@
     if (document.getElementById('bizUnconfiguredBanner')) return;
     const banner = document.createElement('div');
     banner.id = 'bizUnconfiguredBanner';
-    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:#9B2C42; color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
+    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:var(--wine); color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
     banner.textContent = '⚠ הכתובת הזו עדיין לא מחוברת לעסק. נא לפנות למי שהקימה עבורך את האתר.';
     document.body.prepend(banner);
     syncTopBannerOffset();
