@@ -333,11 +333,8 @@
   body.th-on .hours-staff-tab.active .hours-staff-tab-avatar{
     border-color:var(--th-secondary); background:var(--th-c2-pale);}
   body.th-on .hours-today-tag{background:var(--th-card-2); color:var(--th-primary-deep);}
-  body.th-on .myday-overlay, body.th-on .overlay, body.th-on [id$="Overlay"]{
-    background:rgba(90,60,58,0.42);
-  }
-  body.th-on #panel-business .myday-overlay, body.th-on #panel-business [id$="Overlay"]{
-    background:rgba(60,40,50,0.45);
+  body.th-on .myday-overlay, body.th-on .add-modal-overlay{
+    background:rgba(42,28,30,0.86);
   }
   body.th-on .hero-platform-line{font-size:10.5px; opacity:0.72; margin-top:10px; font-weight:400;}
   body.th-on .hero-platform-line .accent{font-weight:600;}
@@ -459,6 +456,26 @@
   body.th-on .cal-now-fill{background:rgba(var(--gold-rgb),0.16);}
   body.th-on .cal-now-pin{color:var(--panel-gold);}
   body.th-on .cal-now-pin i{background:var(--panel-gold); box-shadow:0 0 0 2px rgba(var(--gold-rgb),0.3);}
+
+  body.th-on .cta{
+    background:var(--th-action, var(--wine));
+    color:var(--th-on-action, var(--ivory));
+  }
+  body.th-on .cta:hover{background:var(--th-action-press, var(--wine-deep));}
+  body.th-on .cta:active{background:var(--th-action-press, var(--wine-deep));}
+  body.th-on .cta:disabled, body.th-on .cta[disabled]{
+    background:var(--th-c1-lt, #D9C4C8);
+    color:rgba(36,27,30,0.45);
+    cursor:not-allowed;
+  }
+  body.th-on .hero-cta{background:var(--th-action, var(--wine));}
+  body.th-on .switcher button.active{color:var(--th-on-primary, var(--ivory));}
+  body.th-on .about-switcher button.active{color:var(--th-on-primary, var(--ivory));}
+  body.th-on .subswitcher button.active{color:var(--th-on-secondary, var(--ink));}
+  body.th-on .inner-switcher button.active{color:var(--th-on-secondary, var(--ink));}
+  body.th-on .biz-topbar-cal-filters .cal-mini-btn-primary{color:var(--th-on-secondary, var(--ink));}
+  body.th-on .hero-cta{color:var(--th-on-action, var(--th-on-primary, #fff));}
+  body.th-on #overviewMonthWrap .cal-day-cell.selected{color:var(--th-on-primary, var(--ivory));}
   .eyebrow{
     font-family:'JetBrains Mono', monospace;
     font-size:13px;
@@ -3765,7 +3782,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-06 · 56';
+        window.__APP_BUILD = '2026-10-06 · 59';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9223,6 +9240,22 @@
   }
   const THEME_FALLBACK = { primary: '#9B2C42', secondary: '#C9A227' };
 
+  const THEME_ACTION_MIN_CONTRAST = 3.1;
+  function themeActionColor(hex){
+    const hsl = hexToHsl(hex);
+    if (!hsl) return hex;
+    const s = Math.max(hsl.s, 0.34);
+    let l = hsl.l;
+    for (let i = 0; i < 40 && l > 0.30; i++){
+      const t = hexToRgbTriplet(hslToHex(hsl.h, s, l));
+      if (!t) break;
+      const [r, g, b] = t.split(',').map(Number);
+      if (contrastWithWhite(r, g, b) >= THEME_ACTION_MIN_CONTRAST) break;
+      l -= 0.02;
+    }
+    return hslToHex(hsl.h, s, Math.max(0.30, l));
+  }
+
   function normaliseThemeHex(raw){
     const m = /^#?([0-9a-fA-F]{6})$/.exec(String(raw || '').trim());
     return m ? ('#' + m[1].toLowerCase()) : null;
@@ -9325,6 +9358,7 @@
       '--th-c1', '--th-c1-lt', '--th-c2', '--th-c2-lt',
       '--th-panel-bg', '--th-panel-card-bg', '--th-panel-gold', '--th-panel-line-rgb', '--th-font',
       '--th-primary-rgb', '--th-primary-deep-rgb', '--th-secondary-rgb', '--th-secondary-soft-rgb',
+      '--th-on-primary', '--th-on-secondary', '--th-action', '--th-action-press', '--th-action-rgb', '--th-on-action',
       '--th-c1-pale', '--th-c2-pale', '--th-c3', '--th-c3-lt', '--th-card', '--th-card-2'];
     if (!hasTheme){
       if (window.__themeFromCache && !window.__themeDataKnown){
@@ -9355,6 +9389,24 @@
       const t = hexToRgbTriplet(pair[1]);
       if (t) root.style.setProperty(pair[0], t);
     });
+    [['--th-on-primary', th.primary], ['--th-on-secondary', th.secondary]].forEach(function(pair){
+      const t = hexToRgbTriplet(pair[1]);
+      if (!t) return;
+      const [r, g, b] = t.split(',').map(Number);
+      root.style.setProperty(pair[0], contrastWithInk(r, g, b) >= contrastWithWhite(r, g, b) ? '#241B1E' : '#F5EEE4');
+    });
+    const action = themeActionColor(th.primary);
+    const actionHsl = hexToHsl(action);
+    root.style.setProperty('--th-action', action);
+    root.style.setProperty('--th-action-press',
+      actionHsl ? hslToHex(actionHsl.h, actionHsl.s, Math.max(0.16, actionHsl.l - 0.09)) : action);
+    const at = hexToRgbTriplet(action);
+    if (at){
+      const [ar, ag, ab] = at.split(',').map(Number);
+      root.style.setProperty('--th-action-rgb', at);
+      root.style.setProperty('--th-on-action',
+        contrastWithInk(ar, ag, ab) >= contrastWithWhite(ar, ag, ab) ? '#241B1E' : '#F5EEE4');
+    }
     const fontDef = THEME_FONTS.filter(function(f){ return f.key === th.font; })[0] || THEME_FONTS[0];
     root.style.setProperty('--th-font', fontDef.css);
     root.style.setProperty('--th-primary', th.primary);
@@ -9399,7 +9451,8 @@
     '--th-c1', '--th-c1-lt', '--th-c2', '--th-c2-lt', '--th-c3', '--th-c3-lt',
     '--th-c1-pale', '--th-c2-pale', '--th-card', '--th-card-2',
     '--th-panel-bg', '--th-panel-card-bg', '--th-panel-gold', '--th-panel-line-rgb', '--th-font',
-    '--th-primary-rgb', '--th-primary-deep-rgb', '--th-secondary-rgb', '--th-secondary-soft-rgb'];
+    '--th-primary-rgb', '--th-primary-deep-rgb', '--th-secondary-rgb', '--th-secondary-soft-rgb',
+    '--th-on-primary', '--th-on-secondary', '--th-action', '--th-action-press', '--th-action-rgb', '--th-on-action'];
   function rememberThemeForNextLoad(root, body){
     try {
       const vars = {};
@@ -13105,7 +13158,16 @@
   }
   function applyCategoryColorChange(message){
     closeCategoryColorPicker();
-    if (typeof saveState === 'function') saveState();
+    if (typeof saveState === 'function'){
+      const p = saveState();
+      if (p && typeof p.then === 'function'){
+        p.then(function(){
+          if (typeof unsavedChangePending !== 'undefined' && unsavedChangePending){
+            if (typeof showAdminToast === 'function') showAdminToast('הצבע נקבע, אבל עוד לא נשמר — ננסה שוב בעוד רגע');
+          }
+        });
+      }
+    }
     renderCategories();
     if (typeof renderCategoryGrid === 'function') renderCategoryGrid();
     if (typeof renderSvcManageCategoryGrid === 'function') renderSvcManageCategoryGrid();
@@ -17407,6 +17469,8 @@
       return Promise.resolve();
     }
     if (!cloudLoadComplete || !lastLoadedSnapshot){
+      unsavedChangePending = true;
+      scheduleUnsavedRetry();
       if (!silent) showSaveStatus('⚠ עוד לא נשמר — הדף עדיין נטען', 6000, 'bad');
       return Promise.resolve();
     }
