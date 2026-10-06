@@ -389,12 +389,14 @@
     .th-reveal{opacity:1; transform:none; transition:none;}
   }
 
-  .owner-entry-row{display:none; text-align:center; margin:10px 0 6px; padding-top:30px;}
-  .owner-entry-row a{font-size:12px; font-weight:600; letter-spacing:0.02em;
-    color:#241B1E; text-decoration:underline; text-underline-offset:3px;}
-  .owner-entry-row a:hover{color:#000;}
+  .owner-entry-row{display:none; text-align:center; margin:10px 0 8px; padding-top:40px;
+    position:relative; z-index:1;}
+  .owner-entry-row a{display:inline-block; font-size:12px; font-weight:600; letter-spacing:0.02em;
+    color:#241B1E; text-decoration:none; padding:8px 18px; border-radius:999px;
+    border:1px solid rgba(36,27,30,0.3); background:rgba(255,255,255,0.45);}
+  .owner-entry-row a:hover{background:rgba(255,255,255,0.8); border-color:rgba(36,27,30,0.55);}
   body.th-on .owner-entry-row{display:block;}
-  body.owner-signed .owner-entry-row, body.admin-mode .owner-entry-row{display:none;}
+  body.admin-mode .owner-entry-row{display:none;}
 
   .cat-color-dot{
     width:26px; height:26px; min-width:26px; border-radius:50%;
@@ -3708,7 +3710,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-06 · 46';
+        window.__APP_BUILD = '2026-10-06 · 48';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -8505,12 +8507,12 @@
           dataUrl = e.target.result;
         }
         if (storageFolder){
-          uploadImageAndGetUrl(dataUrl, storageFolder, mime).then(url => callback(url || dataUrl));
+          uploadImageAndGetUrl(dataUrl, storageFolder, mime).then(url => callback(url || dataUrl, dataUrl));
         } else {
-          callback(dataUrl);
+          callback(dataUrl, dataUrl);
         }
       };
-      img.onerror = () => callback(e.target.result);
+      img.onerror = () => callback(e.target.result, e.target.result);
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
@@ -8518,8 +8520,9 @@
   function handleLogoUpload(event){
     const file = event.target.files[0];
     if (!file) return;
-    readImageCompressed(file, (dataUrl) => {
+    readImageCompressed(file, (dataUrl, localDataUrl) => {
       branding.logo = dataUrl;
+      const forPixels = localDataUrl || dataUrl;
       ['logoPreview', 'themeLogoPreview'].forEach(function(id){
         const el = document.getElementById(id);
         if (el){ el.src = dataUrl; el.style.display = 'block'; }
@@ -8530,8 +8533,8 @@
       });
       renderBranding();
       if (typeof saveState === 'function') saveState();
-      logoFrameInfo(dataUrl, function(info){ writeTheme({ logoFill: info.fills, logoZoom: info.zoom, logoFillV: LOGO_FIT_VERSION }); });
-      extractLogoColors(dataUrl, function(colors){
+      logoFrameInfo(forPixels, function(info){ writeTheme({ logoFill: info.fills, logoZoom: info.zoom, logoFillV: LOGO_FIT_VERSION }); });
+      extractLogoColors(forPixels, function(colors){
         if (!colors.length) return;
         const th = currentSiteTheme();
         const hadTheme = !!th.style;
@@ -9377,7 +9380,12 @@
       if (th0.style && !th0.logoColors.length && !window.__logoColorsBackfilled && !onPublic){
         window.__logoColorsBackfilled = true;
         extractLogoColors(logo, function(colors){
-          if (!colors.length) return;
+          if (!colors.length){
+            if (typeof showAdminToast === 'function'){
+              showAdminToast('העיצוב עדיין בצבעי ברירת המחדל. להעלות את הלוגו מחדש בהגדרות ← עיצוב, והצבעים יישאבו ממנו.');
+            }
+            return;
+          }
           writeTheme({ logoColors: colors, primary: colors[0], secondary: themeSecondaryFrom(colors) });
           if (typeof renderCategoryGrid === 'function') renderCategoryGrid();
           if (typeof renderWeekCal === 'function') renderWeekCal();
@@ -9702,7 +9710,7 @@
     logoFrameInfo(branding.logo, function(info){ writeTheme({ logoFill: info.fills, logoZoom: info.zoom, logoFillV: LOGO_FIT_VERSION }); });
     extractLogoColors(branding.logo, function(colors){
       if (!colors.length){
-        if (typeof showAdminToast === 'function') showAdminToast('לא הצלחתי לקרוא את הצבעים מהלוגו. אפשר לבחור צבע ידנית בכפתור +, או להעלות את הלוגו מחדש.');
+        if (typeof showAdminToast === 'function') showAdminToast('אי אפשר לקרוא צבעים מלוגו שכבר שמור בענן. להעלות את הלוגו מחדש כאן למעלה — אז הצבעים נשאבים ממנו מיד.');
         return;
       }
       const th = currentSiteTheme();
