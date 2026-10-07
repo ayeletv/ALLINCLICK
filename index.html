@@ -398,10 +398,12 @@
 
   .owner-entry-row{display:none; text-align:center; margin:10px 0 8px; padding-top:40px;
     position:relative; z-index:1;}
-  .owner-entry-row a{display:inline-block; font-size:12px; font-weight:600; letter-spacing:0.02em;
-    color:#241B1E; text-decoration:none; padding:8px 18px; border-radius:999px;
-    border:1px solid rgba(36,27,30,0.3); background:rgba(255,255,255,0.45);}
-  .owner-entry-row a:hover{background:rgba(255,255,255,0.8); border-color:rgba(36,27,30,0.55);}
+  .owner-entry-row a{display:inline-flex; align-items:center; gap:5px;
+    font-size:11.5px; font-weight:500; letter-spacing:0.02em;
+    color:#5A4F4A; text-decoration:none;
+    padding:0; border:none; background:none;}
+  .owner-entry-row a:hover{color:#241B1E;}
+  .owner-entry-row a .inline-logo{width:12px; height:12px; flex-shrink:0; vertical-align:-2px;}
   body.th-on .owner-entry-row{display:block;}
   body.admin-mode .owner-entry-row{display:none;}
 
@@ -3801,7 +3803,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-06 · 61';
+        window.__APP_BUILD = '2026-10-07 · 62';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -3875,12 +3877,13 @@
   </div>
   
   <div class="owner-entry-row">
-    <a href="#" id="ownerEntryLink" onclick="openLoginOverlayDirect(); return false;">כניסת בעלת עסק</a>
+    <a href="#" id="ownerEntryLink" onclick="openLoginOverlayDirect(); return false;"><svg class="click-logo inline-logo" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>הכל בקליק — לעסקים</a>
   </div>
 </section>
 <footer>
   <span class="brand">הכל בקליק</span> — ניהול תורים, לקוחות וצוות במקום אחד
-  <div id="ownerLoginFooterLink" style="margin-top:10px;"><a href="#" onclick="openLoginOverlayDirect(); return false;" style="color:var(--ivory-dim); font-size:11px; text-decoration:underline;">כניסת בעלת עסק</a></div>
+  
+  <div id="ownerLoginFooterLink" style="margin-top:10px;"><a href="#" onclick="openLoginOverlayDirect(); return false;" style="color:var(--ivory-dim); font-size:11px; text-decoration:none;">הכל בקליק — לעסקים</a></div>
   
   <div style="display:none;" data-build="17.09-v45-blocked-booking"></div>
 </footer>
