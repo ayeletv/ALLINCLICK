@@ -2229,6 +2229,9 @@
   #weekNavRow{touch-action:pan-y;}
   .week-cal-wrap{border:1px solid rgba(var(--panel-line-rgb),0.12); border-radius:16px; overflow-x:auto; scroll-behavior:smooth; overflow-anchor:none;}
   .week-cal{display:flex; min-width:820px; scroll-snap-type:x proximity;}
+  .ov-day-cal{min-width:0; width:100%;}
+  .ov-day-cal .cal-day-col{flex:1 1 auto;}
+  .ov-day-count{font-size:12.5px; color:var(--panel-text-dim); margin:0 0 8px;}
   .cal-hours-col{width:46px; flex-shrink:0;}
   .cal-hours-spacer{position:sticky; top:0; z-index:5; background:var(--panel-bg);}
   .cal-hour-lbl{
@@ -3803,7 +3806,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-07 · 62';
+        window.__APP_BUILD = '2026-10-07 · 64';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -6366,10 +6369,21 @@
       forced.textContent = mbForcedTime;
       gridEl.insertBefore(forced, gridEl.firstChild);
     }
+    mbDroppedSlot = null;
+    if (previousTimeGotDropped && !(mbForcedTime && timeInput.value === mbForcedTime)){
+      const why = mbConflictAt(previouslySelected);
+      mbDroppedSlot = {
+        time: previouslySelected,
+        taken: !!(why && why.kind === 'appt'),
+        by: (why && why.clash && why.clash.client) || '',
+      };
+    }
     if (hint){
       const canOverride = ' אפשר תמיד לבחור שעה אחרת לגמרי בכפתור שלמטה — גם שעה תפוסה — ואז תוצג אזהרה ותידרש אישור.';
       if (mbForcedTime && timeInput.value === mbForcedTime){
         hint.textContent = `נבחרה השעה ${mbForcedTime} ידנית, מחוץ לרשימת השעות הפנויות.`;
+      } else if (mbDroppedSlot && mbDroppedSlot.taken){
+        hint.textContent = `⚠️ השעה ${mbDroppedSlot.time} נתפסה הרגע על ידי תור אחר${mbDroppedSlot.by ? ' (' + mbDroppedSlot.by + ')' : ''} — יש לבחור שעה אחרת מהרשימה.` + canOverride;
       } else if (previousTimeGotDropped && anyAvailable){
         hint.textContent = `השעה ${previouslySelected} שנבחרה לא מתאימה למשך הטיפול הנוכחי — יש לבחור שעה אחרת מהרשימה.` + canOverride;
       } else {
@@ -7593,6 +7607,7 @@
     };
     historyEl.innerHTML = allEntries.map(rowHtml).join('');
   }
+  let mbLastSubmitSig = null;
   function submitManualBooking(){
     const firstNameOk = document.getElementById('mbClientFirstName').value.trim();
     const lastNameOk = document.getElementById('mbClientLastName').value.trim();
@@ -7603,6 +7618,13 @@
     const dateVal = document.getElementById('mbDate').value;
     const timeVal = document.getElementById('mbTime').value;
     const errorEl = document.getElementById('mbError');
+    if (!timeVal && mbDroppedSlot){
+      errorEl.style.display = 'block';
+      errorEl.textContent = mbDroppedSlot.taken
+        ? `השעה ${mbDroppedSlot.time} נתפסה בינתיים על ידי תור אחר${mbDroppedSlot.by ? ' (' + mbDroppedSlot.by + ')' : ''}, ולכן היא ירדה מהרשימה. כל שאר הפרטים נשמרו — יש לבחור שעה פנויה אחרת ולשמור שוב.`
+        : `השעה ${mbDroppedSlot.time} כבר אינה פנויה לפי מה שנבחר, ולכן ירדה מהרשימה. כל שאר הפרטים נשמרו — יש לבחור שעה אחרת ולשמור שוב.`;
+      return;
+    }
     if (!firstNameOk || !lastNameOk || !dateVal || !timeVal || !mbSelectedServices.length || !staffValRaw){
       errorEl.style.display = 'block';
       errorEl.textContent = 'יש למלא שם פרטי, שם משפחה, תאריך, שעה, טיפול/ים ועובדת.';
@@ -7779,6 +7801,12 @@
     const assignedTz = idDigits
       || (existingByIdOrPhone && String(existingByIdOrPhone.teudatZehut || ''))
       || nextMigrationNumber();
+    const mbSig = [name, dateVal, timeVal, staffIdx].join('|');
+    if (mbLastSubmitSig && mbLastSubmitSig.sig === mbSig && Date.now() - mbLastSubmitSig.at < 8000){
+      console.warn('Manual booking: identical submit ignored (double click).');
+      return;
+    }
+    mbLastSubmitSig = { sig: mbSig, at: Date.now() };
     const manualAppointment = {
       id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000),
       day: dayKey,
@@ -11624,8 +11652,9 @@
     if (minutesIn <= 0) return 0;
     return Math.min(totalPx, Math.round(minutesIn / 60 * hourBandHeight));
   }
-  function calNowPinTopPx(hourBandHeight){
-    if (!weekDays || !weekDays.some(d => d && typeof sameDate === 'function'
+  function calNowPinTopPx(hourBandHeight, daysShown){
+    const days = Array.isArray(daysShown) ? daysShown : weekDays;
+    if (!days || !days.some(d => d && typeof sameDate === 'function'
       && sameDate(d.fullDate, getTodayDateOnly()))) return null;
     const now = new Date();
     const minutesIn = (now.getHours() * 60 + now.getMinutes()) - (calStartHour * 60);
@@ -11937,20 +11966,23 @@
     });
     return allClosed ? { reason } : null;
   }
-  function renderWeekCal(){
+  function renderWeekCal(opts){
+    const __o = opts || {};
+    const __days = Array.isArray(__o.days) ? __o.days : weekDays;
+    const __isSingleDay = Array.isArray(__o.days);
     refreshTodayMidnight();
     const __rwcDiagStart = Array.isArray(panelRenderCallLog) ? (typeof performance !== 'undefined' ? performance.now() : Date.now()) : null;
-    const calEl = document.getElementById('weekCal');
+    const calEl = document.getElementById(__o.elId || 'weekCal');
     if (!calEl) return;
-    const navLabelEl = document.getElementById('weekNavLabel');
+    const navLabelEl = __isSingleDay ? null : document.getElementById('weekNavLabel');
     if (navLabelEl){
-      const first = weekDays[0].fullDate, last = weekDays[weekDays.length - 1].fullDate;
+      const first = __days[0].fullDate, last = __days[__days.length - 1].fullDate;
       const rangeTxt = first.getMonth() === last.getMonth()
         ? `${first.getDate()}-${last.getDate()} ב${hebrewMonths[first.getMonth()]}`
         : `${first.getDate()}.${first.getMonth() + 1} - ${last.getDate()}.${last.getMonth() + 1}`;
       navLabelEl.textContent = rangeTxt + (weekOffset === 0 ? ' (השבוע)' : '');
     }
-    const calTodayBtnEl = document.getElementById('calTodayBtn');
+    const calTodayBtnEl = __isSingleDay ? null : document.getElementById('calTodayBtn');
     if (calTodayBtnEl) calTodayBtnEl.classList.toggle('is-current', weekOffset === 0);
     calEl.innerHTML = '';
     const calFragment = document.createDocumentFragment();
@@ -11969,7 +12001,7 @@
       lbl.textContent = String(h).padStart(2, '0');
       hoursCol.appendChild(lbl);
     }
-    const nowPinTop = calNowPinTopPx(hourBandHeight);
+    const nowPinTop = calNowPinTopPx(hourBandHeight, __days);
     if (nowPinTop !== null){
       const pin = document.createElement('div');
       pin.className = 'cal-now-pin';
@@ -11981,10 +12013,10 @@
       hoursCol.appendChild(pin);
     }
     calFragment.appendChild(hoursCol);
-    weekDays.forEach((day, dayIdx) => {
+    __days.forEach((day, dayIdx) => {
       const col = document.createElement('div');
       col.className = 'cal-day-col';
-      col.id = 'weekcol-' + dayIdx;
+      if (!__isSingleDay) col.id = 'weekcol-' + dayIdx;
       const head = document.createElement('div');
       const isTodayCol = typeof sameDate === 'function' && typeof getTodayDateOnly === 'function' && sameDate(day.fullDate, getTodayDateOnly());
       head.className = 'cal-day-head' + (isTodayCol ? ' cal-day-today' : '');
@@ -12997,14 +13029,29 @@
       .filter(a => a.date === formatDateKey(date) && (selectedStaffFilter === 'all' || a.staff === selectedStaffFilter))
       .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
     const listEl = document.getElementById('ovDayList');
-    if (!dayAppts.length){
-      listEl.innerHTML = '<p style="color:var(--panel-text-dim); font-size:14px;">אין תורים ביום זה.</p>';
-      return;
+    if (!listEl) return;
+    const dayHost = listEl.querySelector('#ovDayCal') ? listEl : null;
+    if (!dayHost){
+      listEl.innerHTML = '<div id="ovDayCount" class="ov-day-count"></div>' +
+        '<div id="ovDayCal" class="week-cal ov-day-cal"></div>';
     }
-    listEl.innerHTML = '<div class="board">' + dayAppts.map(a => {
-      const empName = (staff[a.staff] && staff[a.staff].name) || '';
-      return `<div class="ov-agenda-row"><span class="t">${a.time}</span><span>${a.client} · ${a.service}</span><span style="color:var(--panel-text-dim); font-size:12px;">${empName}</span></div>`;
-    }).join('') + '</div>';
+    const countEl = document.getElementById('ovDayCount');
+    if (countEl){
+      countEl.textContent = dayAppts.length
+        ? `${dayAppts.length} תורים ביום זה`
+        : 'אין תורים ביום זה — אפשר לקבוע בלחיצה על שעה פנויה.';
+    }
+    const dow2 = date.getDay();
+    renderWeekCal({
+      elId: 'ovDayCal',
+      days: [{
+        key: weekdayKeys[dow2],
+        label: days[dow2].name,
+        date: String(date.getDate()),
+        dowIndex: dow2,
+        fullDate: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
+      }],
+    });
   }
   function ovCalShiftMonth(delta){
     ovCalViewMonth += delta;
@@ -14416,6 +14463,7 @@
   let mbSelectedStaffIndex = 'any';
   let mbSlotStaffAssignment = {};
   let mbRequestedTime = null;
+  let mbDroppedSlot = null;
   function renderMbStaffPicker(){
     const pickerEl = document.getElementById('mbStaffPicker');
     if (!pickerEl) return;
@@ -15632,7 +15680,23 @@
   const SMS_FUNCTION_URL = 'https://sendqueuedsms-737599524118.me-west1.run.app';
   const SMS_APP_KEY = 'rz-sms-9f3k2m8x-2026';
   const SMS_DUPLICATE_WINDOW_MS = 5 * 60 * 1000;
-  const lastSmsPerPhone = {};
+  const SMS_DEDUPE_STORAGE_KEY = 'hbk.sms.sent.v1';
+  const lastSmsPerPhone = (function(){
+    try {
+      const raw = localStorage.getItem(SMS_DEDUPE_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (!parsed || typeof parsed !== 'object') return {};
+      const fresh = {};
+      Object.keys(parsed).forEach(function(k){
+        const v = parsed[k];
+        if (v && typeof v.at === 'number' && Date.now() - v.at <= SMS_DUPLICATE_WINDOW_MS) fresh[k] = v;
+      });
+      return fresh;
+    } catch (e) { return {}; }
+  })();
+  function persistSmsDedupe(){
+    try { localStorage.setItem(SMS_DEDUPE_STORAGE_KEY, JSON.stringify(lastSmsPerPhone)); } catch (e) {}
+  }
   function smsPhoneKey(phone){ return String(phone || '').replace(/[^0-9]/g, ''); }
   function smsAlreadySentRecently(phone, message){
     const last = lastSmsPerPhone[smsPhoneKey(phone)];
@@ -15642,6 +15706,7 @@
   }
   function rememberSmsSend(phone, message){
     lastSmsPerPhone[smsPhoneKey(phone)] = { message: String(message || ''), at: Date.now() };
+    persistSmsDedupe();
   }
   function queueApptSms(appt, message){
     try {
