@@ -64,14 +64,31 @@
     db = firebase.firestore();
     if (typeof firebase.storage === 'function') storage = firebase.storage();
     auth = firebase.auth();
-    const anonAuthStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
-    anonAuthPromise = auth.signInAnonymously().then(() => {
-      const anonElapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - anonAuthStartedAt) / 1000;
-      window.__lastAnonAuthDiag = { elapsedSec: Math.round(anonElapsedSec * 10) / 10 };
-      console.log(`Anonymous sign-in took ${anonElapsedSec.toFixed(1)}s.`);
-    }).catch(err => {
-      console.error('Anonymous sign-in failed (only matters once Firestore rules require auth):', err);
-    });
+    try {
+      if (firebase.auth.Auth && firebase.auth.Auth.Persistence){
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){});
+      }
+    } catch (e) {}
+    let anonAuthAttempts = 0;
+    window.__anonAuthState = 'pending';
+    window.__ensureAnonAuth = function(){
+      if (auth.currentUser) { window.__anonAuthState = 'ok'; return Promise.resolve(auth.currentUser); }
+      const startedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+      anonAuthAttempts++;
+      return auth.signInAnonymously().then(function(cred){
+        const elapsed = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt) / 1000;
+        window.__lastAnonAuthDiag = { elapsedSec: Math.round(elapsed * 10) / 10, attempts: anonAuthAttempts };
+        window.__anonAuthState = 'ok';
+        console.log('Anonymous sign-in succeeded after ' + anonAuthAttempts + ' attempt(s), ' + elapsed.toFixed(1) + 's.');
+        return cred && cred.user;
+      }).catch(function(err){
+        window.__anonAuthState = 'failed';
+        window.__lastAnonAuthError = String((err && err.code) || err);
+        console.error('Anonymous sign-in failed (attempt ' + anonAuthAttempts + '):', err);
+        return null;
+      });
+    };
+    anonAuthPromise = window.__ensureAnonAuth();
   } catch (e) {
     console.error('Firebase failed to initialize — cloud sync and login will be unavailable:', e);
     const unavailable = () => Promise.reject(new Error('Firebase unavailable'));
@@ -3011,6 +3028,11 @@
     Object.keys(t.vars).forEach(function(k){ root.style.setProperty(k, t.vars[k]); });
     if (t.classes) document.body.className = (document.body.className + ' ' + t.classes).trim();
     if (t.name) window.__cachedBizName = t.name;
+    if (t.logo){
+      window.__cachedLogo = t.logo;
+      window.__cachedLogoFill = !!t.logoFill;
+      window.__cachedLogoZoom = Number(t.logoZoom) || 1;
+    }
     window.__themeFromCache = true;
   } catch (e) {}
 })();
@@ -3100,6 +3122,21 @@
   <script>
   (function(){
     try {
+      if (window.__cachedLogo){
+        var med = document.getElementById('heroMedallion');
+        if (med && !med.dataset.src){
+          var im = document.createElement('img');
+          im.alt = '';
+          im.src = window.__cachedLogo;
+          if (window.__cachedLogoFill && window.__cachedLogoZoom > 1){
+            im.style.transform = 'scale(' + window.__cachedLogoZoom.toFixed(3) + ')';
+          }
+          med.appendChild(im);
+          med.dataset.src = window.__cachedLogo;
+          med.classList.add('has-logo');
+          if (window.__cachedLogoFill) med.classList.add('logo-fill');
+        }
+      }
       if (!window.__cachedBizName) return;
       var h = document.getElementById('heroBizName'), t = document.getElementById('heroBizNameText');
       if (!h || !t) return;
@@ -3909,7 +3946,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-08 · 67';
+        window.__APP_BUILD = '2026-10-08 · 70';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -6737,7 +6774,7 @@
       if (!confirmed) return;
     }
     const matches = getWaitlistMatchesForAppointment(appt);
-    logCancellation(appt);
+    logCancellation(appt, 'client');
     if (lateStatus){
       logLateCancellation(appt, 'cancel');
       const updatedStatus = getLateCancelStatusForAppt(appt);
@@ -8201,11 +8238,17 @@
       cancelEl.innerHTML = '<div class="cancel-row" style="color:#8A8178;">אין ביטולים בטווח זה</div>';
     }
     const CANCEL_LIST_PAGE_SIZE = 3;
+    const CANCEL_BY_LABEL = {
+      client: '👤 הלקוחה באתר',
+      ivr: '📞 הלקוחה בשיחה',
+      owner: '✎ הסלון',
+    };
     function buildCancelRow(c){
       const row = document.createElement('div');
       row.className = 'cancel-row';
       const dateLbl = c.date ? c.date.split('-').reverse().join('/') : '';
-      row.innerHTML = `<span class="c-date">${dateLbl}${c.time ? ' · ' + c.time : ''}</span><span class="c-client">${c.client || 'לקוחה'}</span><span class="c-detail">${c.service || ''}${c.staffName ? ' · ' + c.staffName : ''}</span><span class="c-cancelled">בוטל: ${formatCancelledAtLabel(c)}</span>`;
+      const byLbl = CANCEL_BY_LABEL[c.by] || '';
+      row.innerHTML = `<span class="c-date">${dateLbl}${c.time ? ' · ' + c.time : ''}</span><span class="c-client">${c.client || 'לקוחה'}</span><span class="c-detail">${c.service || ''}${c.staffName ? ' · ' + c.staffName : ''}</span><span class="c-cancelled">בוטל: ${formatCancelledAtLabel(c)}${byLbl ? ' · ' + byLbl : ''}</span>`;
       return row;
     }
     if (data.cancellations.length > CANCEL_LIST_PAGE_SIZE){
@@ -9718,9 +9761,15 @@
         if (window.__themeDataKnown) localStorage.removeItem('hbk.theme.v1');
         return;
       }
+      const logoRaw = (typeof branding !== 'undefined' && branding && branding.logo) || '';
+      const logoSmallEnough = typeof logoRaw === 'string' && logoRaw.length > 0 && logoRaw.length < 700000;
+      const thNow = (typeof currentSiteTheme === 'function') ? currentSiteTheme() : {};
       localStorage.setItem('hbk.theme.v1', JSON.stringify({
         vars: vars, classes: classes,
         name: (typeof branding !== 'undefined' && branding && branding.name) || '',
+        logo: logoSmallEnough ? logoRaw : '',
+        logoFill: !!thNow.logoFill,
+        logoZoom: (typeof thNow.logoZoom === 'number') ? thNow.logoZoom : 1,
       }));
     } catch (e) {}
   }
@@ -15336,9 +15385,10 @@
       document.getElementById('waitlistBox').innerHTML = `<div class="waitlist-prompt">אין כרגע שעות פנויות ביום הזה. אם תרצי, אפשר להצטרף לרשימת ההמתנה ולקבל עדכון אם יתפנה מקום.<div style="margin-top:8px;"><button onclick="showWaitlistPrompt('${wlTime}', 'אין כרגע שעות פנויות ביום הזה.')">הצטרפות לרשימת ההמתנה</button></div></div>`;
     }
   }
-  function logCancellation(appt){
+  function logCancellation(appt, by){
     if (!appt) return;
     cancellationLog.push({
+      by: by || 'owner',
       id: 'cancel_' + Date.now() + '_' + Math.floor(Math.random()*10000),
       date: appt.date,
       time: appt.time || '',
@@ -18119,6 +18169,14 @@
     const silent = !!(opts && opts.silent);
     if (runningOnPublicData){
       console.warn('saveState was called while running on public data — refused.');
+      const uHere = auth && auth.currentUser;
+      if (uHere && !uHere.isAnonymous && uHere.email){
+        unsavedChangePending = true;
+        if (typeof scheduleUnsavedRetry === 'function') scheduleUnsavedRetry();
+        if (typeof scheduleOwnerMappingRetry === 'function') scheduleOwnerMappingRetry();
+        if (!silent) showSaveStatus('⚠ לא נשמר — מתחברים מחדש, הפעולה תישמר מיד כשנתחבר', 6000, 'bad');
+        return Promise.resolve();
+      }
       if (!silent) showSaveStatus('⚠ לא נשמר — צריך להתחבר מחדש', 6000, 'bad');
       return Promise.resolve();
     }
@@ -18184,8 +18242,9 @@
       if (!silent) showSaveStatus('שומר... (ניסיון נוסף)');
       return new Promise(r => setTimeout(r, 900)).then(runSaveTransaction);
     }).then(committedPayload => {
-      if (!committedPayload) { unsavedChangePending = false; hideSaveErrorBanner(); if (!silent) showSaveStatus('נשמר ✓', 1800); else hideSaveStatus(); return; }
+      if (!committedPayload) { unsavedChangePending = false; if (__unsavedAlarmTimer){ clearTimeout(__unsavedAlarmTimer); __unsavedAlarmTimer = null; } hideSaveErrorBanner(); if (!silent) showSaveStatus('נשמר ✓', 1800); else hideSaveStatus(); return; }
       unsavedChangePending = false;
+      if (__unsavedAlarmTimer){ clearTimeout(__unsavedAlarmTimer); __unsavedAlarmTimer = null; }
       hideSaveErrorBanner();
       if (!silent) showSaveStatus('נשמר ✓', 2600);
       checkSaveSizeHeadroom();
@@ -18348,11 +18407,34 @@
       return ownerBizId;
     }).catch(err => {
       console.error('Reading the owner mapping failed:', err);
+      noteCloudError(err);
       ownerBizId = null;
       ownerBizIdForEmail = '';
       ownerMappingFailed = true;
+      scheduleOwnerMappingRetry();
       return null;
     });
+  }
+  let __ownerMappingRetryTimer = null;
+  let __ownerMappingRetries = 0;
+  function scheduleOwnerMappingRetry(){
+    if (__ownerMappingRetryTimer) return;
+    if (__ownerMappingRetries >= 8) return;
+    const delay = Math.min(20000, 2000 * (__ownerMappingRetries + 1));
+    __ownerMappingRetryTimer = setTimeout(function(){
+      __ownerMappingRetryTimer = null;
+      __ownerMappingRetries++;
+      const u = auth && auth.currentUser;
+      if (!u || u.isAnonymous || !u.email) return;
+      resolveOwnerBusiness().then(function(bizId){
+        if (!bizId) { scheduleOwnerMappingRetry(); return; }
+        __ownerMappingRetries = 0;
+        console.log('Owner mapping resolved after a retry — reloading as the owner.');
+        if (typeof runningOnPublicData !== 'undefined' && runningOnPublicData && typeof loadCloudData === 'function'){
+          loadCloudData();
+        }
+      });
+    }, delay);
   }
   function showOwnerMappingErrorBanner(){
     if (document.getElementById('ownerMappingBanner')) return;
@@ -18471,7 +18553,18 @@
     if (el) el.remove();
   }
   let __unsavedRetryTimer = null;
+  let __unsavedAlarmTimer = null;
+  function armUnsavedAlarm(){
+    if (__unsavedAlarmTimer) return;
+    __unsavedAlarmTimer = setTimeout(function(){
+      __unsavedAlarmTimer = null;
+      if (!unsavedChangePending) return;
+      if (document.getElementById('saveErrorBanner')) return;
+      showSaveErrorBanner('⚠ שינוי שביצעת עדיין לא נשמר בענן — התור או הביטול לא קיימים עדיין אצל אף אחד אחר.', { retry: true });
+    }, 10000);
+  }
   function scheduleUnsavedRetry(){
+    armUnsavedAlarm();
     if (__unsavedRetryTimer) return;
     __unsavedRetryTimer = setTimeout(() => {
       __unsavedRetryTimer = null;
@@ -18690,12 +18783,17 @@
     }
   }
   let cloudLoadRetryCount = 0;
+  let lastCloudErrorCode = '';
+  function noteCloudError(err){
+    lastCloudErrorCode = String((err && (err.code || err.message)) || '').slice(0, 60);
+  }
   function showCloudErrorBanner(){
     if (document.getElementById('cloudErrorBanner')) return;
     const banner = document.createElement('div');
     banner.id = 'cloudErrorBanner';
     banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:var(--wine); color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
-    banner.textContent = '⚠ אין כרגע חיבור לענן — שינויים לא יישמרו עד שהחיבור יחזור. מומלץ לרענן את הדף.';
+    banner.textContent = '⚠ אין כרגע חיבור לענן — שינויים לא יישמרו עד שהחיבור יחזור. מומלץ לרענן את הדף.'
+      + (lastCloudErrorCode ? '  [' + lastCloudErrorCode + ']' : '');
     document.body.prepend(banner);
     syncTopBannerOffset();
   }
@@ -19110,17 +19208,26 @@
         if (typeof window.__resolveBrandingReady === 'function') window.__resolveBrandingReady();
       }).catch(err => {
         console.error('Public data load failed:', err);
+        noteCloudError(err);
         return retryPublicLoadLater();
       });
     }
     return loadPrivateCloudData(cloudLoadStartedAt);
   }
-  function retryPublicLoadLater(){
-    showCloudErrorBanner();
+  function retryCloudLoadLater(){
     cloudLoadRetryCount++;
+    const ownerIsWatching = (typeof isLoggedIn !== 'undefined' && isLoggedIn)
+      || (typeof isOwnerSession === 'function' && isOwnerSession())
+      || !runningOnPublicData;
+    if (ownerIsWatching || cloudLoadRetryCount >= 2) showCloudErrorBanner();
     const delay = Math.min(30000, 3000 * cloudLoadRetryCount);
-    setTimeout(loadCloudData, delay);
+    setTimeout(function(){
+      const ensure = (typeof window.__ensureAnonAuth === 'function')
+        ? window.__ensureAnonAuth() : Promise.resolve();
+      ensure.then(loadCloudData, loadCloudData);
+    }, delay);
   }
+  function retryPublicLoadLater(){ return retryCloudLoadLater(); }
   function loadPrivateCloudData(cloudLoadStartedAt){
     runningOnPublicData = false;
     return CLOUD_DOC.get().then(doc => {
@@ -19159,10 +19266,8 @@
       if (typeof window.__resolveBrandingReady === 'function') window.__resolveBrandingReady();
     }).catch(err => {
       console.error('Cloud load failed — will keep retrying, autosave stays OFF until it succeeds:', err);
-      showCloudErrorBanner();
-      cloudLoadRetryCount++;
-      const delay = Math.min(30000, 3000 * cloudLoadRetryCount);
-      setTimeout(loadCloudData, delay);
+      noteCloudError(err);
+      retryCloudLoadLater();
     });
   }
   if (typeof anonAuthPromise !== 'undefined' && anonAuthPromise && typeof anonAuthPromise.finally === 'function'){
@@ -19232,7 +19337,8 @@
   });
   function pollForRemoteUpdates(){
     if (document.hidden || !cloudLoadComplete || !lastLoadedSnapshot) return;
-    if (typeof isOwnerSession === 'function' && !isOwnerSession()) return;
+    const __u = auth && auth.currentUser;
+    if (!__u || __u.isAnonymous) return;
     const activeTag = document.activeElement && document.activeElement.tagName;
     const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
     const overlayOpen = document.querySelector('[id$="Overlay"].show');
