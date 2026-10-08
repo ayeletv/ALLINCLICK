@@ -2514,6 +2514,93 @@
   .myday-row:last-child{border-bottom:none;}
   .myday-row .t{font-family:'JetBrains Mono'; font-weight:500; color:var(--wine);}
   .myday-row .who{color:#8A8178; font-size:12px;}
+  .cal-offer{
+    background:
+      repeating-linear-gradient(135deg,
+        rgba(var(--gold-rgb),0.16) 0 7px,
+        rgba(var(--gold-rgb),0.05) 7px 14px) !important;
+    border:2px dashed rgba(var(--gold-rgb),0.85) !important;
+    color:var(--panel-gold) !important;
+    box-shadow:none !important;
+  }
+  .cal-offer .cal-appt-name{font-weight:700;}
+  .cal-offer .cal-appt-meta{opacity:0.85;}
+  .cal-offer-pulse{
+    position:absolute; top:5px; inset-inline-end:5px;
+    width:9px; height:9px; border-radius:50%;
+    background:var(--panel-gold);
+    box-shadow:0 0 0 0 rgba(var(--gold-rgb),0.7);
+    animation:calOfferPulse 1.8s ease-out infinite;
+  }
+  @keyframes calOfferPulse{
+    0%{box-shadow:0 0 0 0 rgba(var(--gold-rgb),0.65);}
+    70%{box-shadow:0 0 0 9px rgba(var(--gold-rgb),0);}
+    100%{box-shadow:0 0 0 0 rgba(var(--gold-rgb),0);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .cal-offer-pulse{animation:none;}
+  }
+  .offer-head{display:flex; align-items:center; gap:14px; margin-bottom:14px;}
+  .offer-head-time{
+    font-family:'JetBrains Mono', monospace; font-size:30px; font-weight:600;
+    color:var(--panel-gold); line-height:1;
+  }
+  .offer-head-date{font-size:15px; font-weight:700; color:var(--panel-text);}
+  .offer-head-meta{font-size:12.5px; color:var(--panel-text-dim); margin-top:3px;}
+  .offer-note{font-size:12.5px; color:var(--panel-text-dim); margin-bottom:10px;}
+  .offer-countdown{
+    background:rgba(var(--gold-rgb),0.14);
+    border:1px dashed rgba(var(--gold-rgb),0.7);
+    border-radius:10px; padding:10px 12px; font-size:13.5px;
+    color:var(--panel-gold); margin-bottom:12px;
+  }
+  .offer-countdown-soon{
+    background:rgba(var(--wine-rgb),0.12);
+    border-color:rgba(var(--wine-rgb),0.6);
+    color:var(--wine-deep);
+  }
+  .offer-why{
+    font-size:13px; line-height:1.75; color:var(--panel-text);
+    background:var(--panel-card-bg); border-radius:10px; padding:12px 14px;
+    margin-bottom:16px;
+  }
+  .offer-list-title{font-size:13px; font-weight:700; margin-bottom:8px; color:var(--panel-text);}
+  .offer-rec-list{display:flex; flex-direction:column; gap:8px;}
+  .offer-rec-row{
+    display:flex; align-items:center; gap:10px;
+    background:var(--panel-card-bg); border-radius:10px; padding:10px 12px;
+    border:1px solid rgba(var(--panel-line-rgb),0.12);
+  }
+  .offer-rec-num{
+    width:24px; height:24px; flex-shrink:0; border-radius:50%;
+    background:rgba(var(--gold-rgb),0.22); color:var(--panel-gold);
+    font-size:12px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .offer-rec-main{flex:1; min-width:0;}
+  .offer-rec-name{font-size:14px; font-weight:600; color:var(--panel-text);}
+  .offer-rec-phone{
+    font-family:'JetBrains Mono', monospace; font-size:12.5px;
+    color:var(--panel-gold); text-decoration:none; direction:ltr; display:inline-block;
+  }
+  .offer-rec-phone:hover{text-decoration:underline;}
+  .offer-rec-nophone{color:var(--panel-text-dim); font-family:inherit;}
+  .offer-rec-status{font-size:11.5px; color:var(--panel-text-dim); white-space:nowrap;}
+  .offer-foot{font-size:12px; color:var(--panel-text-dim); line-height:1.7; margin-top:14px;}
+  .claim-time{font-family:'JetBrains Mono', monospace; font-size:38px; font-weight:600; color:var(--wine); text-align:center; line-height:1;}
+  .claim-date{font-size:16px; font-weight:700; text-align:center; margin-top:6px; color:var(--ink);}
+  .claim-meta{font-size:13px; color:#8A8178; text-align:center; margin-top:4px;}
+  .claim-timer{
+    background:rgba(var(--gold-rgb),0.16); border:1px dashed rgba(var(--gold-rgb),0.7);
+    border-radius:10px; padding:9px 12px; font-size:13.5px; text-align:center;
+    margin:14px 0 8px; color:var(--wine-deep);
+  }
+  .claim-note{font-size:12px; color:#8A8178; text-align:center; line-height:1.6;}
+  .claim-error{color:var(--wine); font-size:12.5px; margin-top:8px;}
+  .claim-done{font-size:18px; font-weight:700; text-align:center; color:var(--wine); line-height:1.8;}
+  .claim-done span{font-size:14px; font-weight:400; color:#8A8178;}
+  .claim-gone{font-size:16px; font-weight:700; text-align:center; color:var(--ink); line-height:1.8;}
+  .claim-gone span{font-size:13.5px; font-weight:400; color:#8A8178;}
   .appt-detail-overlay{
     display:none; position:fixed; inset:0; z-index:1001;
     background:var(--panel-bg); color:var(--panel-text);
@@ -2693,7 +2780,7 @@
     border-color:rgba(var(--panel-line-rgb),0.3); background:var(--panel-card-bg);
   }
 
-  #panel-business, #apptDetailOverlay, #manualBookingOverlay, #personalTimeOverlay, #openHoursOverlay, #clientProfileOverlay, #specialRequestDetailOverlay, #bizTopbar{
+  #panel-business, #apptDetailOverlay, #manualBookingOverlay, #personalTimeOverlay, #openHoursOverlay, #clientProfileOverlay, #specialRequestDetailOverlay, #offerDetailOverlay, #bizTopbar{
     --panel-bg:var(--th-panel-bg,#FBEFF3);
     --panel-card-bg:var(--th-panel-card-bg,#FFF8FA);
     --panel-text:#221B1E;
@@ -3596,6 +3683,22 @@
       
         </div>
       </div>
+      <div class="settings-section" data-settings-section="evening">
+        <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
+          <span class="settings-section-title">🌙 משמרת ערב</span>
+          <span class="settings-section-sub">אורך מקסימלי לתור שלקוחה קובעת בערב</span>
+          <span class="settings-section-chevron">▾</span>
+        </button>
+        <div class="settings-section-body">
+          <div class="label" style="margin:10px 0;">עד כמה דקות לתור שלקוחה קובעת בעצמה במשמרת ערב<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">"ערב" הוא טווח השעות השני באותו יום, לפי מה שמוגדר בטאב צוות. יום עם רצף שעות אחד אינו מוגבל כלל. ההגבלה היא על כל טיפול בנפרד, והיא חלה רק על מסך הלקוחה — בקביעה ידנית תופיע אזהרה שאפשר לאשר ולהמשיך. 0 = בלי הגבלה.</span></span></div>
+          <input type="number" id="eveningMaxDurationInput" min="0" max="480" step="5" class="field-dark" style="max-width:160px;"
+                 placeholder="30" onfocus="this.dataset.prevVal=this.value"
+                 onblur="saveEveningMaxDuration(this)">
+          <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:6px;">
+            ברירת המחדל היא 30 דקות. זה נקבע פעם אחת ועובד מעצמו — אין צורך להדליק ולכבות קטגוריות כל יום.
+          </div>
+        </div>
+      </div>
       <div class="settings-section" data-settings-section="messages">
         <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
           <span class="settings-section-title">✉️ הודעות ותזכורות</span>
@@ -3806,7 +3909,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-07 · 64';
+        window.__APP_BUILD = '2026-10-08 · 67';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -4178,6 +4281,14 @@
         </div>
       </div>
       <div id="frDateRangeEcho" class="reminder-choice-notice" style="display:none;"></div>
+      
+      <div class="label" style="margin:14px 0 6px;">אם יתפנה תור פתאום — כמה זמן מראש את צריכה?<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">כשמתפנה תור ברגע האחרון אנחנו שולחות הודעה למי שביקשה. אם את גרה קרוב ויכולה לקפוץ — בחרי חצי שעה ותקבלי הצעות שאחרות לא יקבלו. אם את צריכה להתארגן — בחרי יותר, ולא נטריד אותך בהצעות שאין בהן טעם בשבילך.</span></span></div>
+      <div class="reminder-choice" id="frLeadRadios">
+        <label><input type="radio" name="frLead" value="30"> חצי שעה</label>
+        <label><input type="radio" name="frLead" value="60"> שעה</label>
+        <label><input type="radio" name="frLead" value="120" checked> שעתיים</label>
+        <label><input type="radio" name="frLead" value="1440"> רק מחר והלאה</label>
+      </div>
       <textarea id="frNote" class="client-note" style="min-height:50px;" placeholder="הערה נוספת (אופציונלי) — כל דבר שלא נכנס לשדות למעלה"></textarea>
       <div class="label" style="margin-top:6px;">פרטי קשר</div>
       <input type="tel" inputmode="numeric" maxlength="10" id="frId" class="field" placeholder="תעודת זהות או מספר טלפון">
@@ -4422,6 +4533,34 @@
   <div class="appt-detail-body">
     <div class="appt-detail-card" id="srDetailCard"></div>
     <div class="appt-detail-actions" id="srDetailActions"></div>
+  </div>
+</div>
+
+
+
+<div id="claimOfferOverlay" class="myday-overlay add-modal-overlay">
+  <div class="myday-sheet" style="max-width:360px;">
+    <div class="myday-header">
+      <h3>התפנה תור</h3>
+      <div class="myday-actions">
+        <button onclick="document.getElementById('claimOfferOverlay').classList.remove('show')">✕ סגירה</button>
+      </div>
+    </div>
+    <div id="claimOfferBody"></div>
+    <div id="claimOfferActions" style="margin-top:14px;">
+      <button type="button" class="cta" id="claimOfferBtn" onclick="submitClaimOffer()">✓ אני מגיעה — לאשר את התור</button>
+    </div>
+  </div>
+</div>
+
+<div id="offerDetailOverlay" class="appt-detail-overlay">
+  <div class="appt-detail-topbar">
+    <button type="button" class="appt-detail-back" onclick="closeOfferDetail()" aria-label="חזרה ליומן">→ חזרה</button>
+    <span class="appt-detail-topbar-title">שעה שהתפנתה</span>
+  </div>
+  <div class="appt-detail-body">
+    <div class="appt-detail-card" id="offerDetailCard"></div>
+    <div class="appt-detail-actions" id="offerDetailActions"></div>
   </div>
 </div>
 
@@ -5268,10 +5407,12 @@
     const timeOfDay = (document.querySelector('input[name="frTimeOfDay"]:checked') || {}).value || 'any';
     const timeFromVal = document.getElementById('frTimeFrom').value;
     const timeToVal = document.getElementById('frTimeTo').value;
+    const frLeadEl = document.querySelector('input[name="frLead"]:checked');
     const preference = {
       days: anyDay ? [] : checkedDays,
       dateFrom: frDateFromValue() || null,
-      dateTo: frDateToValue() || null
+      dateTo: frDateToValue() || null,
+      leadMinutes: frLeadEl ? Number(frLeadEl.value) : 120
     };
     if (timeOfDay === 'custom'){
       if (!timeFromVal || !timeToVal){
@@ -7608,6 +7749,7 @@
     historyEl.innerHTML = allEntries.map(rowHtml).join('');
   }
   let mbLastSubmitSig = null;
+  let mbEveningOverride;
   function submitManualBooking(){
     const firstNameOk = document.getElementById('mbClientFirstName').value.trim();
     const lastNameOk = document.getElementById('mbClientLastName').value.trim();
@@ -7727,6 +7869,29 @@
         return;
       }
     }
+    (function warnOnEveningLength(){
+      const max = typeof eveningMaxDuration === 'function' ? eveningMaxDuration() : 0;
+      if (!max || mbRescheduleApptId) return;
+      const parts = dateVal.split('-').map(Number);
+      const dObj = new Date(parts[0], parts[1] - 1, parts[2]);
+      let wins = [];
+      try {
+        const info = dayInfoForDate(staffIdx, dObj);
+        wins = mergeWindows(getEffectiveDayWindows(info, dObj));
+      } catch (e) { return; }
+      const longOnes = mbSelectedServices.filter(sv => sv && (sv.duration || 0) > max);
+      if (!longOnes.length) return;
+      if (!breaksEveningLimit(wins, startMin, Math.max.apply(null, longOnes.map(sv => sv.duration || 0)))) return;
+      mbEveningOverride = confirm(`⚠️ במשמרת ערב לקוחה יכולה להזמין טיפול של עד ${max} דקות.\n\n` +
+        `${longOnes.map(sv => sv.name + ' (' + sv.duration + ' דקות)').join(', ')} ארוך מזה.\n\nלקבוע בכל זאת?`);
+    })();
+    if (typeof mbEveningOverride !== 'undefined' && mbEveningOverride === false){
+      errorEl.style.display = 'block';
+      errorEl.textContent = 'התור לא נקבע. אפשר לבחור שעה במשמרת הבוקר, או טיפול קצר יותר.';
+      mbEveningOverride = undefined;
+      return;
+    }
+    mbEveningOverride = undefined;
     if (clientHasOverlappingAppointment(name, dateVal, startMin, endMin, mbRescheduleApptId)){
       errorEl.style.display = 'block';
       errorEl.textContent = `ל${name} כבר יש תור אחר שחופף לשעה הזו — נא לבדוק ביומן לפני שממשיכים.`;
@@ -8511,6 +8676,7 @@
     showReportActionStatus(`הדוח בדרך למייל ${to}.`);
   }
   let branding = { name: '', logo: null, phone: '', address: '' };
+  const EVENING_MAX_DURATION_DEFAULT = 30;
   let invAlertEmail = '';
   let holidayOverrides = [];
   function migrateLegacyTishaBavFlag(){
@@ -8611,6 +8777,25 @@
     if (!el || el.dataset.prevVal === el.value) return;
     if (typeof saveState === 'function') saveState();
     if (typeof showAdminToast === 'function') showAdminToast(message);
+  }
+  function saveEveningMaxDuration(el){
+    if (!el || el.dataset.prevVal === el.value) return;
+    const raw = String(el.value || '').trim();
+    const n = raw === '' ? EVENING_MAX_DURATION_DEFAULT : Number(raw);
+    if (isNaN(n) || n < 0){
+      el.value = el.dataset.prevVal || String(EVENING_MAX_DURATION_DEFAULT);
+      if (typeof showAdminToast === 'function') showAdminToast('⚠ יש להזין מספר דקות (0 = בלי הגבלה)');
+      return;
+    }
+    branding.eveningMaxDuration = n;
+    el.value = String(n);
+    if (typeof saveState === 'function') saveState();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof showAdminToast === 'function'){
+      showAdminToast(n === 0
+        ? '✓ אין יותר הגבלת אורך במשמרת ערב'
+        : `✓ במשמרת ערב לקוחה תוכל להזמין עד ${n} דקות`);
+    }
   }
   function saveSmsSenderFieldOnBlur(el){
     if (!el || el.dataset.prevVal === el.value) return;
@@ -9426,7 +9611,7 @@
       '--th-on-primary', '--th-on-secondary', '--th-action', '--th-action-press', '--th-action-rgb', '--th-on-action', '--th-ink-brand',
       '--th-c1-pale', '--th-c2-pale', '--th-c3', '--th-c3-lt', '--th-card', '--th-card-2'];
     if (!hasTheme){
-      if (window.__themeFromCache && !window.__themeDataKnown){
+      if (!window.__themeDataKnown){
         if (!window.__siteEntryDecided){
           window.__siteEntryDecided = true;
           setSiteEntryMode(true);
@@ -9530,7 +9715,7 @@
         .filter(function(c){ return c === 'th-on' || c.indexOf('th-') === 0; })
         .filter(function(c){ return c !== 'th-entry'; }).join(' ');
       if (!classes || classes.indexOf('th-on') === -1){
-        localStorage.removeItem('hbk.theme.v1');
+        if (window.__themeDataKnown) localStorage.removeItem('hbk.theme.v1');
         return;
       }
       localStorage.setItem('hbk.theme.v1', JSON.stringify({
@@ -10120,6 +10305,11 @@
     if (smsSenderInputEl2 && document.activeElement !== smsSenderInputEl2) smsSenderInputEl2.value = branding.smsSenderId || '';
     const ivrInputEl2 = document.getElementById('bizIvrCampaignInput');
     if (ivrInputEl2 && document.activeElement !== ivrInputEl2) ivrInputEl2.value = branding.inforuIvrCampaignId || '';
+    const eveningMaxEl = document.getElementById('eveningMaxDurationInput');
+    if (eveningMaxEl && document.activeElement !== eveningMaxEl){
+      const v = branding.eveningMaxDuration;
+      eveningMaxEl.value = (v === null || v === undefined || v === '') ? String(EVENING_MAX_DURATION_DEFAULT) : String(v);
+    }
     const maintainerInputEl2 = document.getElementById('bizMaintainerEmailInput');
     if (maintainerInputEl2 && document.activeElement !== maintainerInputEl2) maintainerInputEl2.value = branding.maintainerEmail || '';
     if (typeof applySensitiveSettingsLock === 'function') applySensitiveSettingsLock();
@@ -11797,6 +11987,7 @@
   let pendingCalHighlightApptId = null;
   let personalBlocks = [];
   let specialRequests = [];
+  let pendingOffers = [];
   let waitlist = [];
   let selectedStaffFilter = 'all';
   function timeToMinutes(t){
@@ -12234,6 +12425,37 @@
         };
         body.appendChild(block);
       });
+      const dayOffers = (typeof pendingOffers !== 'undefined' && Array.isArray(pendingOffers) ? pendingOffers : [])
+        .filter(o => o && offerIsLive(o) && o.date === formatDateKey(day.fullDate)
+          && (selectedStaffFilter === 'all' || o.staff === selectedStaffFilter));
+      dayOffers.forEach(o => {
+        const mins = timeToMinutes(o.time);
+        const hourIdx = Math.floor(mins / 60) - calStartHour;
+        if (hourIdx < 0 || hourIdx >= (calEndHour - calStartHour)) return;
+        const topPx = ((mins - calStartHour * 60) / 60) * hourBandHeight;
+        const heightPx = Math.max(MIN_APPT_BLOCK_PX, ((o.dur || 30) / 60) * hourBandHeight);
+        const block = document.createElement('div');
+        block.className = 'cal-appt cal-offer';
+        block.dataset.offerId = o.id || '';
+        block.style.top = topPx + 'px';
+        block.style.height = heightPx + 'px';
+        const left = Math.max(0, Math.round((new Date(o.expiresAt).getTime() - Date.now()) / 60000));
+        const howMany = Array.isArray(o.requestIds) ? o.requestIds.length : 0;
+        block.innerHTML =
+          '<span class="cal-offer-pulse" aria-hidden="true"></span>' +
+          '<span class="cal-appt-name">⏳ מוצע' + (howMany ? ' ל-' + howMany : '') + '</span>' +
+          '<span class="cal-appt-meta">' + o.time.slice(0, 5) +
+            (left > 0 ? ' · ' + left + ' דק׳' : ' · פג') + '</span>';
+        block.title = 'השעה הזו התפנתה והוצעה ל' + (howMany || 0) + ' לקוחות. היא נשמרת עד ' +
+          (o.expiresAt ? new Date(o.expiresAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '') +
+          ' — אם אף אחת לא תאשר, היא תחזור להיות פנויה. לחיצה לפרטים.';
+        block.onclick = (e) => {
+          e.stopPropagation();
+          if (typeof openOfferDetail === 'function') openOfferDetail(o.id);
+        };
+        body.appendChild(block);
+      });
+
       const dayBlocks = personalBlocks
         .filter(b => b.date === formatDateKey(day.fullDate) && (selectedStaffFilter === 'all' || b.staff === 'all' || b.staff === selectedStaffFilter))
         .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
@@ -12502,10 +12724,273 @@
     }
     return appt;
   }
+  const OFFER_DEFAULTS = {
+    floorMin: 30,        // מתחת לזה לא מציעים כלל — אף אחת לא תספיק
+    broadcastHours: 3,   // מתחת לזה מציעים לכולן יחד; מעליו אחת בכל פעם
+    windowMin: 20,       // כמה זמן השעה שמורה עד שחוזרת להיות פנויה
+    maxDaysAhead: 3,     // מעבר לזה ממשיכים לשבץ אוטומטית כמו קודם
+  };
+  function offerSetting(key){
+    const raw = branding && branding.offerSettings && branding.offerSettings[key];
+    const n = Number(raw);
+    return (!isNaN(n) && n >= 0) ? n : OFFER_DEFAULTS[key];
+  }
+  function requestLeadMinutes(req){
+    const raw = req && req.preference && req.preference.leadMinutes;
+    const n = Number(raw);
+    return (!isNaN(n) && n > 0) ? n : 120;
+  }
+  function offerMinutesUntil(dateKey, timeStr, now){
+    const [y, mo, d] = String(dateKey || '').split('-').map(Number);
+    const [h, mi] = String(timeStr || '').split(':').map(Number);
+    if (!y || !mo || !d || isNaN(h) || isNaN(mi)) return null;
+    return Math.round((new Date(y, mo - 1, d, h, mi).getTime() - (now || new Date()).getTime()) / 60000);
+  }
+  function eligibleRequestsForSlot(slot, now){
+    const minutesAway = offerMinutesUntil(slot.date, slot.time, now);
+    if (minutesAway === null) return [];
+    const parts = slot.date.split('-').map(Number);
+    const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+    const dow = dateObj.getDay();
+    const startMin = timeToMinutes(slot.time);
+    return (specialRequests || []).filter(function(r){
+      if (!r || r.mode !== 'flexible' || r.status !== 'pending') return false;
+      if (typeof specialRequestIsExpired === 'function' && specialRequestIsExpired(r, now)) return false;
+      if (minutesAway < requestLeadMinutes(r)) return false;
+      const pref = r.preference || {};
+      if (pref.dateFrom && slot.date < pref.dateFrom) return false;
+      if (pref.dateTo && slot.date > pref.dateTo) return false;
+      if (Array.isArray(pref.days) && pref.days.length && pref.days.indexOf(dow) === -1) return false;
+      if (pref.timeFrom && startMin < timeToMinutes(pref.timeFrom)) return false;
+      if (pref.timeTo && startMin > timeToMinutes(pref.timeTo)) return false;
+      if (typeof r.preferredStaffIdx === 'number' && r.preferredStaffIdx !== slot.staff) return false;
+      const dur = (r.services || []).reduce(function(a, sv){ return a + (sv.duration || 0); }, 0) || 30;
+      if (dur > (slot.dur || 30)) return false;
+      const cats = (r.services || []).map(function(sv){ return sv.category; }).filter(Boolean);
+      if (cats.some(function(c){ return !isStaffCapableOf(slot.staff, c); })) return false;
+      const end = startMin + dur;
+      const clash = (weekAppointments || []).some(function(a){
+        if (!a || a.date !== slot.date || a.status === 'cancelled') return false;
+        if (String(a.client || '') !== String(r.name || '')) return false;
+        const s = timeToMinutes(a.time), e = s + (a.dur || 30);
+        return startMin < e && end > s;
+      });
+      return !clash;
+    }).sort(function(a, b){ return String(a.createdAt || '').localeCompare(String(b.createdAt || '')); });
+  }
+  function offerById(id){ return (pendingOffers || []).filter(function(o){ return o && o.id === id; })[0] || null; }
+  function offerIsLive(o, now){
+    if (!o || o.status !== 'offered') return false;
+    return new Date(o.expiresAt).getTime() > (now || new Date()).getTime();
+  }
+  function slotIsHeldByOffer(dateKey, staffIdx, startMin, endMin, now){
+    return (pendingOffers || []).some(function(o){
+      if (!offerIsLive(o, now)) return false;
+      if (o.date !== dateKey || o.staff !== staffIdx) return false;
+      const s = timeToMinutes(o.time), e = s + (o.dur || 30);
+      return startMin < e && endMin > s;
+    });
+  }
+  function expireStaleOffers(){
+    const now = new Date();
+    let changed = false;
+    (pendingOffers || []).forEach(function(o){
+      if (o && o.status === 'offered' && !offerIsLive(o, now)){
+        o.status = 'expired';
+        o.closedAt = now.toISOString();
+        changed = true;
+      }
+    });
+    if (changed && typeof saveState === 'function') saveState({ silent: true });
+    return changed;
+  }
+  function createOfferForFreedSlot(slot){
+    const now = new Date();
+    const minutesAway = offerMinutesUntil(slot.date, slot.time, now);
+    if (minutesAway === null) return null;
+    if (minutesAway > offerSetting('maxDaysAhead') * 24 * 60) return null;
+    if (minutesAway < offerSetting('floorMin')) return null;
+    const eligible = eligibleRequestsForSlot(slot, now);
+    if (!eligible.length) return null;
+    const broadcast = minutesAway <= offerSetting('broadcastHours') * 60;
+    const chosen = broadcast ? eligible : eligible.slice(0, 1);
+    const offer = {
+      id: 'offer_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+      date: slot.date, time: slot.time, dur: slot.dur || 30, staff: slot.staff,
+      serviceName: slot.serviceName || '',
+      requestIds: chosen.map(function(r){ return r.id; }),
+      recipients: chosen.map(function(r){
+        return { requestId: r.id, name: r.name || '', phone: r.phone || '', status: 'notified' };
+      }),
+      broadcast: broadcast,
+      freedFrom: slot.freedFrom || '',
+      createdAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + offerSetting('windowMin') * 60000).toISOString(),
+      status: 'offered',
+    };
+    pendingOffers.push(offer);
+    notifyOfferRecipients(offer, chosen);
+    if (typeof saveState === 'function') saveState();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof showAdminToast === 'function'){
+      showAdminToast('✓ השעה ' + offer.time + ' הוצעה ל-' + chosen.length +
+        (chosen.length === 1 ? ' לקוחה' : ' לקוחות'));
+    }
+    return offer;
+  }
+  function offerSmsText(offer){
+    const [y, mo, d] = offer.date.split('-').map(Number);
+    const when = (offerMinutesUntil(offer.date, offer.time, new Date()) < 24 * 60)
+      ? 'היום' : (d + '/' + mo);
+    const link = (typeof siteBaseUrl === 'function' ? siteBaseUrl() : location.origin + location.pathname) +
+      '?offer=' + offer.id;
+    const race = offer.broadcast
+      ? ' ההודעה נשלחה לכמה לקוחות — הראשונה שתאשר מקבלת.'
+      : '';
+    return 'התפנה תור ' + when + ' ב-' + offer.time + (offer.serviceName ? ' (' + offer.serviceName + ')' : '') +
+      '. לאישור: ' + link + race;
+  }
+  function notifyOfferRecipients(offer, requests){
+    requests.forEach(function(r){
+      try {
+        const fake = { id: offer.id, client: r.name, teudatZehut: r.teudatZehut,
+                       reminderChannels: r.reminderChannels || ['sms'] };
+        if (typeof queueApptSms === 'function') queueApptSms(fake, offerSmsText(offer));
+      } catch (e){ console.error('Offer SMS failed for', r.name, e); }
+    });
+  }
+
+  let offerDetailCurrentId = null;
+  function offerHebDate(dateKey){
+    const [y, mo, d] = String(dateKey || '').split('-').map(Number);
+    if (!y) return dateKey || '';
+    const dt = new Date(y, mo - 1, d);
+    return days[dt.getDay()].name + ', ' + d + ' ב' + hebrewMonths[mo - 1];
+  }
+  function offerMinutesLeft(o){
+    return Math.max(0, Math.round((new Date(o.expiresAt).getTime() - Date.now()) / 60000));
+  }
+  function offerRecipientRow(rec, idx){
+    const phone = rec.phone || '';
+    const tel = phone.replace(/[^0-9+]/g, '');
+    const label = rec.status === 'claimed' ? '✓ אישרה' :
+                  rec.status === 'declined' ? '✕ סירבה' : '⏳ ממתינה לתשובה';
+    return '<div class="offer-rec-row">' +
+      '<div class="offer-rec-num">' + (idx + 1) + '</div>' +
+      '<div class="offer-rec-main">' +
+        '<div class="offer-rec-name">' + (rec.name || 'ללא שם') + '</div>' +
+        (phone ? '<a class="offer-rec-phone" href="tel:' + tel + '">' + phone + '</a>'
+               : '<div class="offer-rec-phone offer-rec-nophone">אין טלפון בכרטיס</div>') +
+      '</div>' +
+      '<div class="offer-rec-status">' + label + '</div>' +
+    '</div>';
+  }
+  function openOfferDetail(id){
+    const o = offerById(id);
+    if (!o) return;
+    offerDetailCurrentId = id;
+    const card = document.getElementById('offerDetailCard');
+    const actions = document.getElementById('offerDetailActions');
+    const left = offerMinutesLeft(o);
+    const staffName = (staff[o.staff] && staff[o.staff].name) || '';
+    const until = o.expiresAt
+      ? new Date(o.expiresAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '';
+    const n = (o.recipients || []).length;
+    const why = o.broadcast
+      ? 'מכיוון שהתור הזה מתחיל ב-' + o.time + ' ב' + offerHebDate(o.date) +
+        ' — כלומר בעוד פחות מ-' + offerSetting('broadcastHours') + ' שעות — לא היה זמן להציע אותו ' +
+        'ללקוחה אחת בכל פעם. לכן ההצעה נשלחה לכל ' + n + ' הלקוחות המתאימות יחד, ' +
+        '<b>הראשונה שתאשר מקבלת את התור</b>. כתוב להן את זה במפורש בהודעה.'
+      : 'התור מתחיל ב-' + o.time + ' ב' + offerHebDate(o.date) + ', ויש מספיק זמן — לכן ההצעה ' +
+        'נשלחה ללקוחה אחת בלבד, זו שנרשמה ראשונה מבין המתאימות. אם היא לא תענה עד ' + until +
+        ', ההצעה תעבור לבאה בתור.';
+    card.innerHTML =
+      '<div class="offer-head">' +
+        '<div class="offer-head-time">' + o.time + '</div>' +
+        '<div class="offer-head-rest">' +
+          '<div class="offer-head-date">' + offerHebDate(o.date) + '</div>' +
+          '<div class="offer-head-meta">' + (o.dur || 30) + ' דקות' +
+            (staffName ? ' · אצל ' + staffName : '') +
+            (o.serviceName ? ' · ' + o.serviceName : '') + '</div>' +
+        '</div>' +
+      '</div>' +
+      (o.freedFrom ? '<div class="offer-note">השעה התפנתה אחרי ביטול של ' + o.freedFrom + '.</div>' : '') +
+      '<div class="offer-countdown' + (left <= 5 ? ' offer-countdown-soon' : '') + '">' +
+        (left > 0
+          ? '⏳ השעה שמורה עוד <b>' + left + ' דקות</b> — עד ' + until
+          : 'פג הזמן. השעה חזרה להיות פנויה.') +
+      '</div>' +
+      '<div class="offer-why">' + why + '</div>' +
+      '<div class="offer-list-title">ההצעה נשלחה ל-' + n +
+        (n === 1 ? ' לקוחה' : ' לקוחות') + ', לפי סדר ההרשמה:</div>' +
+      '<div class="offer-rec-list">' +
+        (o.recipients || []).map(offerRecipientRow).join('') +
+      '</div>' +
+      '<div class="offer-foot">ההודעה נשלחה ב-' +
+        new Date(o.createdAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) +
+        '. אם אף אחת לא תאשר, השעה תחזור להיות פנויה לכולן ותוצג שוב באתר.</div>';
+    actions.innerHTML = '';
+    const take = document.createElement('button');
+    take.type = 'button';
+    take.className = 'cta';
+    take.textContent = '📅 לקחת את השעה — קביעה ידנית';
+    take.onclick = function(){ ownerTakeOffer(id); };
+    actions.appendChild(take);
+    const drop = document.createElement('button');
+    drop.type = 'button';
+    drop.className = 'cta';
+    drop.style.background = 'var(--wine-deep)';
+    drop.textContent = '✕ ביטול ההצעה — השעה חוזרת להיות פנויה';
+    drop.onclick = function(){ ownerCancelOffer(id); };
+    actions.appendChild(drop);
+    document.getElementById('offerDetailOverlay').classList.add('show');
+  }
+  function closeOfferDetail(){
+    offerDetailCurrentId = null;
+    const ov = document.getElementById('offerDetailOverlay');
+    if (ov) ov.classList.remove('show');
+  }
+  function ownerTakeOffer(id){
+    const o = offerById(id);
+    if (!o) return;
+    o.status = 'takenByOwner';
+    o.closedAt = new Date().toISOString();
+    closeOfferDetail();
+    if (typeof saveState === 'function') saveState();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof openManualBooking === 'function'){
+      openManualBooking({ date: o.date, time: o.time, staff: o.staff });
+    }
+  }
+  function ownerCancelOffer(id){
+    const o = offerById(id);
+    if (!o) return;
+    if (!confirm('לבטל את ההצעה?\n\nהשעה ' + o.time + ' תחזור להיות פנויה לכולן, ' +
+                 'והלקוחות שקיבלו את ההודעה כבר לא יוכלו לאשר דרכה.')) return;
+    o.status = 'cancelledByOwner';
+    o.closedAt = new Date().toISOString();
+    closeOfferDetail();
+    if (typeof saveState === 'function') saveState();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ ההצעה בוטלה והשעה פנויה');
+  }
+
   async function attemptMatchFlexibleRequest(req){
     if (!req || req.mode !== 'flexible' || req.status === 'matched') return false;
     const match = tryFindFlexibleSlot(req);
     if (!match) return false;
+    const now = new Date();
+    const away = offerMinutesUntil(match.date, match.time, now);
+    if (away !== null && away <= offerSetting('maxDaysAhead') * 24 * 60){
+      if (away < offerSetting('floorMin')) return false;   // אף אחת לא תספיק
+      const dur = (req.services || []).reduce(function(a, sv){ return a + (sv.duration || 0); }, 0) || 30;
+      const startMin = timeToMinutes(match.time);
+      if (slotIsHeldByOffer(match.date, match.staffIdx, startMin, startMin + dur, now)) return false;
+      return !!createOfferForFreedSlot({
+        date: match.date, time: match.time, dur: dur, staff: match.staffIdx,
+        serviceName: (req.services || []).map(function(sv){ return sv.name; }).filter(Boolean).join(' + '),
+      });
+    }
     const appt = await bookFlexibleRequest(req, match);
     return !!appt;
   }
@@ -12670,8 +13155,36 @@
     }
     return matchedAny;
   }
+  function latestClosingMinuteOn(dateObj){
+    let latest = null;
+    (staff || []).forEach((emp, idx) => {
+      if (!emp || emp.deleted) return;
+      try {
+        if (typeof isDateClosedForStaff === 'function' && isDateClosedForStaff(idx, dateObj)) return;
+        const dayInfo = typeof dayInfoForDate === 'function' ? dayInfoForDate(idx, dateObj) : null;
+        const windows = typeof getEffectiveDayWindows === 'function' ? getEffectiveDayWindows(dayInfo, dateObj) : [];
+        windows.forEach(w => { if (Array.isArray(w) && (latest === null || w[1] > latest)) latest = w[1]; });
+      } catch (e) {}
+    });
+    return latest;
+  }
+  function specialRequestIsExpired(req, nowDate){
+    const pref = (req && req.preference) || {};
+    const last = pref.dateTo || pref.dateFrom || null;
+    if (!last) return false;                       // בקשה פתוחה — אינה פגה
+    const now = nowDate || new Date();
+    const todayKey = formatDateKey(now);
+    if (last < todayKey) return true;
+    if (last > todayKey) return false;
+    const parts = last.split('-').map(Number);
+    const closing = latestClosingMinuteOn(new Date(parts[0], parts[1] - 1, parts[2]));
+    if (closing === null) return true;             // אף אחת לא עובדת היום — אין מה לממש
+    return (now.getHours() * 60 + now.getMinutes()) >= closing;
+  }
   function specialColumnPendingRequests(){
-    return specialRequests.filter(r => !(r.mode === 'flexible' && r.status === 'matched'));
+    const now = new Date();
+    return specialRequests.filter(r => !(r.mode === 'flexible' && r.status === 'matched')
+      && !specialRequestIsExpired(r, now));
   }
   function renderSpecialRequestsColumn(bodyHeight){
     const col = document.createElement('div');
@@ -12702,6 +13215,19 @@
         const isFlexible = r.mode === 'flexible';
         const block = document.createElement('div');
         block.className = 'sr-block ' + (isFlexible ? 'sr-block-flexible' : 'sr-block-manual');
+        const srCat = ((r.services || [])[0] || {}).category
+          || (services.find(x => x && x.name === ((r.services || [])[0] || {}).name) || {}).category || '';
+        const srColor = srCat && typeof categoryBaseColor === 'function' ? categoryBaseColor(srCat) : null;
+        if (srColor){
+          block.style.background = srColor;
+          block.dataset.srCategory = srCat;
+          if (typeof appointmentBlockStyleFromColor === 'function'){
+            const rgb = (typeof hexToHsl === 'function' && hexToHsl(srColor))
+              ? hslToRgbString(hexToHsl(srColor).h, hexToHsl(srColor).s, hexToHsl(srColor).l)
+              : srColor;
+            block.style.color = appointmentBlockStyleFromColor(rgb);
+          }
+        }
         const srSvcText = describeRequestServices(r);
         block.appendChild((function(){
           const main = document.createElement('span');
@@ -14589,6 +15115,25 @@
     }
   }
   let slotStaffAssignment = {};
+  function eveningMaxDuration(){
+    const raw = branding && branding.eveningMaxDuration;
+    if (raw === null || raw === undefined || raw === '') return EVENING_MAX_DURATION_DEFAULT;
+    const n = Number(raw);
+    return (!isNaN(n) && n > 0) ? n : 0;         // 0 = בלי הגבלה
+  }
+  function eveningStartMinute(windows){
+    if (!Array.isArray(windows) || windows.length < 2) return null;
+    const sorted = windows.slice().sort((a, b) => a[0] - b[0]);
+    return sorted[1][0];
+  }
+  function breaksEveningLimit(windows, start, dur){
+    const max = eveningMaxDuration();
+    if (!max) return false;
+    const evening = eveningStartMinute(windows);
+    if (evening === null) return false;
+    return start >= evening && dur > max;
+  }
+
   function renderAvailableSlots(){
     refreshTodayMidnight();
     slotStaffAssignment = {};
@@ -14626,6 +15171,9 @@
     const fits = (start, dur) => {
       const end = start + dur;
       if (!windows.some(([s, e]) => start >= s && end <= e)) return false;
+      if (breaksEveningLimit(windows, start, dur)) return false;
+      if (typeof slotIsHeldByOffer === 'function'
+        && slotIsHeldByOffer(formatDateKey(bookingSelectedDate), selectedStaffIndex, start, end)) return false;
       return busy.every(([bStart, bEnd]) => end <= bStart || start >= bEnd);
     };
     const findConflict = (start, dur) => {
@@ -14732,6 +15280,9 @@
         const wins = perStaffWindows[idx];
         if (!wins) continue;
         if (!wins.some(([s, e]) => start >= s && end <= e)) continue;
+        if (breaksEveningLimit(mergeWindows(wins), start, dur)) continue;
+        if (typeof slotIsHeldByOffer === 'function'
+          && slotIsHeldByOffer(formatDateKey(bookingSelectedDate), idx, start, end)) continue;
         if ((perStaffBusy[idx] || []).every(([bStart, bEnd]) => end <= bStart || start >= bEnd)) return idx;
       }
       return null;
@@ -17582,7 +18133,7 @@
       branding, customTemplates, staff,
       categories, services, whatsNewItems, invAlertEmail, inventory,
       ownerAccessCode, gatedTabsConfig, personalBlocks, specialRequests,
-      categoryMessages, categoryColors, holidayOverrides,
+      categoryMessages, categoryColors, holidayOverrides, pendingOffers,
       about: aboutMe, recommendations
     };
     unsavedChangePending = true;
@@ -17841,6 +18392,8 @@
         address: (branding && branding.address) || '',
         email: (branding && branding.email) || '',
         theme: (branding && branding.theme) || null,
+        eveningMaxDuration: (branding && branding.eveningMaxDuration !== undefined && branding.eveningMaxDuration !== null)
+          ? branding.eveningMaxDuration : null,
       },
       staff: (staff || []).map(s => ({
         name: (s && s.name) || '',
@@ -17860,6 +18413,11 @@
         photo: (s && s.photo) || null,
       })),
       categories: (categories || []).slice(),
+      pendingOffers: (pendingOffers || []).filter(o => o && o.status === 'offered').map(o => ({
+        id: o.id, date: o.date, time: o.time, dur: o.dur, staff: o.staff,
+        serviceName: o.serviceName || '', expiresAt: o.expiresAt || '',
+        status: 'offered',
+      })),
       categoryMessages: cloneJSON(categoryMessages) || {},
       categoryColors: cloneJSON(categoryColors) || {},
       holidayOverrides: (holidayOverrides || []).slice(),
@@ -18023,6 +18581,7 @@
     if (data.lateCancellations) lateCancellations = data.lateCancellations;
     if (data.personalBlocks) personalBlocks = data.personalBlocks;
     if (data.specialRequests) specialRequests = data.specialRequests;
+    if (Array.isArray(data.pendingOffers)) pendingOffers = data.pendingOffers;
     if (data.about && typeof data.about === 'object') aboutMe = Object.assign({ photo: null, text: '' }, data.about);
     if (Array.isArray(data.recommendations)) recommendations = data.recommendations.slice();
     if (typeof data.ownerAccessCode === 'string') ownerAccessCode = data.ownerAccessCode;
@@ -18145,6 +18704,79 @@
     if (banner) banner.remove();
     syncTopBannerOffset();
   }
+  let autoOfferFromUrlDone = false;
+  function handleOfferFromUrl(){
+    if (autoOfferFromUrlDone) return;
+    autoOfferFromUrlDone = true;
+    let offerId = '';
+    try { offerId = new URLSearchParams(window.location.search).get('offer') || ''; } catch (e) { return; }
+    if (!offerId) return;
+    const show = function(){
+      const o = (pendingOffers || []).filter(function(x){ return x && x.id === offerId; })[0];
+      const ov = document.getElementById('claimOfferOverlay');
+      const body = document.getElementById('claimOfferBody');
+      if (!ov || !body) return;
+      if (!o || !offerIsLive(o)){
+        body.innerHTML = '<div class="claim-gone">התור הזה כבר לא זמין.<br><span>או שמישהי אחרת הספיקה לאשר, או שפג הזמן. ' +
+          'אנחנו נעדכן אותך בפעם הבאה שמתפנה משהו שמתאים לך.</span></div>';
+        document.getElementById('claimOfferActions').innerHTML = '';
+      } else {
+        const left = Math.max(0, Math.round((new Date(o.expiresAt).getTime() - Date.now()) / 60000));
+        const [y, mo, d] = o.date.split('-').map(Number);
+        const dt = new Date(y, mo - 1, d);
+        const isToday = formatDateKey(new Date()) === o.date;
+        body.innerHTML =
+          '<div class="claim-time">' + o.time + '</div>' +
+          '<div class="claim-date">' + (isToday ? 'היום' : days[dt.getDay()].name) + ', ' + d + ' ב' + hebrewMonths[mo - 1] + '</div>' +
+          '<div class="claim-meta">' + (o.serviceName || 'תור') + ' · ' + (o.dur || 30) + ' דקות</div>' +
+          '<div class="claim-timer">⏳ התור שמור לך עוד ' + left + ' דקות</div>' +
+          '<div class="claim-note">ההודעה נשלחה לכמה לקוחות — הראשונה שתאשר מקבלת את התור.</div>' +
+          '<label class="label" style="margin:16px 0 6px; display:block;">תעודת זהות או טלפון</label>' +
+          '<input id="claimOfferId" class="field-dark" inputmode="numeric" placeholder="לזיהוי" style="width:100%;">' +
+          '<div id="claimOfferError" class="claim-error" style="display:none;"></div>';
+      }
+      ov.classList.add('show');
+    };
+    let waited = 0;
+    const tick = setInterval(function(){
+      waited += 250;
+      if ((pendingOffers && pendingOffers.length) || waited >= 6000){
+        clearInterval(tick);
+        show();
+      }
+    }, 250);
+  }
+  async function submitClaimOffer(){
+    const idEl = document.getElementById('claimOfferId');
+    const errEl = document.getElementById('claimOfferError');
+    const offerId = new URLSearchParams(window.location.search).get('offer') || '';
+    const raw = (idEl && idEl.value || '').trim();
+    if (!raw){
+      if (errEl){ errEl.style.display = 'block'; errEl.textContent = 'יש להזין תעודת זהות או טלפון לזיהוי.'; }
+      return;
+    }
+    const btn = document.getElementById('claimOfferBtn');
+    if (btn){ btn.disabled = true; btn.textContent = 'רגע...'; }
+    let res = null;
+    try {
+      res = await callClientApi('claimOffer', { id: raw, offerId: offerId, siteUrl: getSiteUrl() });
+    } catch (e){
+      res = { ok: false, error: 'לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.' };
+    }
+    if (btn){ btn.disabled = false; btn.textContent = '✓ אני מגיעה — לאשר את התור'; }
+    if (!res || !res.ok){
+      if (errEl){ errEl.style.display = 'block'; errEl.textContent = (res && res.error) || 'לא הצלחנו לאשר את התור.'; }
+      return;
+    }
+    const body = document.getElementById('claimOfferBody');
+    const actions = document.getElementById('claimOfferActions');
+    if (body){
+      body.innerHTML = '<div class="claim-done">✓ התור שלך נקבע!<br><span>' +
+        res.appointment.time + ' · ' + res.appointment.service + '. נתראה!</span></div>';
+    }
+    if (actions) actions.innerHTML = '';
+  }
+
   let autoLookupFromUrlDone = false;
   function handleAppointmentLookupFromUrl(){
     if (autoLookupFromUrlDone) return;
@@ -18357,6 +18989,7 @@
     if (data.categoryMessages && typeof data.categoryMessages === 'object') categoryMessages = data.categoryMessages;
     if (data.categoryColors && typeof data.categoryColors === 'object') categoryColors = data.categoryColors;
     if (Array.isArray(data.holidayOverrides)) holidayOverrides = data.holidayOverrides.slice();
+    if (Array.isArray(data.pendingOffers)) pendingOffers = data.pendingOffers;
     if (Array.isArray(data.whatsNewItems)) whatsNewItems = data.whatsNewItems;
     if (data.about && typeof data.about === 'object') aboutMe = Object.assign({ photo: null, text: '' }, data.about);
     if (Array.isArray(data.recommendations)) recommendations = data.recommendations.slice();
@@ -18471,6 +19104,7 @@
         lastLoadedSnapshot = null;   // אין מה לשמור מכאן, ולכן גם אין ממה למזג
         rerenderEverything();
         if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
+        handleOfferFromUrl();
         handleAppointmentLookupFromUrl();
         handleWaitlistCancelFromUrl();
         if (typeof window.__resolveBrandingReady === 'function') window.__resolveBrandingReady();
@@ -18500,6 +19134,7 @@
         reportCloudLoadTiming(cloudLoadStartedAt, null);
         if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
         if (typeof attemptRestoreAdminView === 'function') attemptRestoreAdminView();
+        handleOfferFromUrl();
         handleAppointmentLookupFromUrl();
         handleWaitlistCancelFromUrl();
         if (typeof window.__resolveBrandingReady === 'function') window.__resolveBrandingReady();
@@ -18518,6 +19153,7 @@
       reportCloudLoadTiming(cloudLoadStartedAt, rawCloudData);
       if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
       if (typeof attemptRestoreAdminView === 'function') attemptRestoreAdminView();
+      handleOfferFromUrl();
       handleAppointmentLookupFromUrl();
       handleWaitlistCancelFromUrl();
       if (typeof window.__resolveBrandingReady === 'function') window.__resolveBrandingReady();
@@ -18534,9 +19170,25 @@
   } else {
     loadCloudData();
   }
+  function hasUnsavedLocalChanges(){
+    if (!lastLoadedSnapshot) return false;
+    const fields = {
+      branding, customTemplates, staff, categories, services, whatsNewItems,
+      invAlertEmail, inventory, ownerAccessCode, gatedTabsConfig, personalBlocks,
+      specialRequests, categoryMessages, categoryColors, holidayOverrides, pendingOffers,
+      about: aboutMe, recommendations,
+      weekAppointments, waitlist, clients, cancellationLog, lateCancellations,
+    };
+    return Object.keys(fields).some(function(k){
+      try { return JSON.stringify(lastLoadedSnapshot[k]) !== JSON.stringify(fields[k]); }
+      catch (e) { return true; }   // ספק — שומרים. עדיף קריאה מיותרת מאשר שינוי שאבד.
+    });
+  }
   setInterval(() => {
     if (!isOwnerSession()) return;
-    if (!document.hidden) saveState({ silent: true });
+    if (document.hidden) return;
+    if (!unsavedChangePending && !hasUnsavedLocalChanges()) return;
+    saveState({ silent: true });
   }, 4000);
   window.addEventListener('beforeunload', (e) => {
     if (!isOwnerSession()) return;
@@ -18566,8 +19218,21 @@
       rerenderEverything();
     }).catch(err => console.error('Refresh on tab return failed:', err));
   });
+  let __idlePolls = 0;
+  function pollIntervalMs(){
+    const isAdminActive = (typeof isLoggedIn !== 'undefined' && isLoggedIn) ||
+      (typeof document !== 'undefined' && document.body && document.body.classList.contains('admin-mode'));
+    if (!isAdminActive) return 60000;
+    if (__idlePolls >= 40) return 60000;   // אחרי כארבע דקות של שקט
+    if (__idlePolls >= 10) return 20000;   // אחרי כדקה
+    return 6000;
+  }
+  ['click', 'keydown', 'touchstart'].forEach(function(ev){
+    document.addEventListener(ev, function(){ __idlePolls = 0; }, { passive: true, capture: true });
+  });
   function pollForRemoteUpdates(){
     if (document.hidden || !cloudLoadComplete || !lastLoadedSnapshot) return;
+    if (typeof isOwnerSession === 'function' && !isOwnerSession()) return;
     const activeTag = document.activeElement && document.activeElement.tagName;
     const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
     const overlayOpen = document.querySelector('[id$="Overlay"].show');
@@ -18577,7 +19242,8 @@
     CLOUD_DOC.get().then(doc => {
       if (!doc.exists) return;
       const rawCloudData = doc.data();
-      if (rawCloudData.savedAt === lastLoadedSnapshot.savedAt) return; // שום דבר לא השתנה בענן מאז הבדיקה הקודמת
+      if (rawCloudData.savedAt === lastLoadedSnapshot.savedAt){ __idlePolls++; return; } // שום דבר לא השתנה
+      __idlePolls = 0;
       backfillMissingListIds(rawCloudData);
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       applyCloudData(rawCloudData);
@@ -18588,9 +19254,7 @@
   }
   let __pendingRemoteUpdatePollTimeout = null;
   function scheduleNextRemoteUpdatePoll(){
-    const isAdminActive = (typeof isLoggedIn !== 'undefined' && isLoggedIn) ||
-      (typeof document !== 'undefined' && document.body && document.body.classList.contains('admin-mode'));
-    const delay = isAdminActive ? 6000 : 30000;
+    const delay = pollIntervalMs();
     if (__pendingRemoteUpdatePollTimeout) clearTimeout(__pendingRemoteUpdatePollTimeout);
     __pendingRemoteUpdatePollTimeout = setTimeout(function pollForRemoteUpdatesTick(){
       pollForRemoteUpdates();
