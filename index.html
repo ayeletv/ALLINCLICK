@@ -259,6 +259,9 @@
 
   .hero-contact{display:none; gap:12px; justify-content:center; margin-top:16px;}
   body.th-on .hero-contact.has-links{display:flex;}
+  body.th-on .hero-contact.contact-pending,
+  html.contact-expected body.th-on .hero-contact:not(.has-links){display:flex; visibility:hidden; min-height:44px;}
+  body.th-on .hero-contact.has-links{visibility:visible;}
   .hero-contact a{
     width:44px; height:44px; border-radius:50%;
     display:flex; align-items:center; justify-content:center;
@@ -422,6 +425,9 @@
 
   .owner-entry-row{display:none; text-align:center; margin:10px 0 8px; padding-top:40px;
     position:relative; z-index:1;}
+  .owner-entry-row #joinUsLink{display:block; margin:9px auto 0; max-width:420px;
+    color:#1B1517; font-size:12.5px; font-weight:600; text-decoration:underline;
+    text-underline-offset:3px; line-height:1.7;}
   .owner-entry-row a{display:inline-flex; align-items:center; gap:5px;
     font-size:11.5px; font-weight:500; letter-spacing:0.02em;
     color:#5A4F4A; text-decoration:none;
@@ -884,6 +890,11 @@
   .slot.selected::before{background:var(--wine);}
   .slot.booked{color:#B8AFA2; background:#F3EEE6;}
   .slot.booked::before{background:#D8CFC0;}
+  .slot.evening-limited{color:#8A6D3B; background:#FBF6EC; border-style:dashed; border-color:#D9C79A;}
+  .slot.evening-limited::before{background:#D9C79A;}
+  .slot.evening-limited::after{content:'🌙'; position:absolute; top:2px; inset-inline-end:5px; font-size:10px;}
+  .evening-limit-note{grid-column:1/-1; margin-top:10px; padding:11px 13px; border-radius:12px;
+    background:#FBF6EC; border:1px solid #E6D9B8; color:#6E5A33; font-size:12.5px; line-height:1.75;}
   .field{
     width:100%;
     border:1.5px solid #E4DACB;
@@ -2397,6 +2408,20 @@
   .cal-appt b{font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .cal-appt-name{font-weight:700; font-size:12px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;}
   .cal-appt-meta{font-weight:400; font-size:9.5px; line-height:1.15; opacity:0.72; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;}
+  .cal-search{display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+    margin:8px auto 0; max-width:420px;}
+  .cal-search-icon{font-size:13px; opacity:0.75;}
+  .cal-search input{flex:1; min-width:120px; border:1px solid rgba(var(--panel-line-rgb),0.3);
+    border-radius:10px; padding:7px 11px; font-family:'Heebo'; font-size:13px;
+    background:var(--panel-card-bg); color:var(--panel-text);}
+  .cal-search input::placeholder{color:var(--panel-text-dim);}
+  .cal-search button{background:none; border:none; cursor:pointer; font-size:13px;
+    color:var(--panel-text-dim); padding:4px 6px;}
+  .cal-search-count{font-size:11.5px; color:var(--panel-text-dim); min-width:54px;}
+  .cal-searching .cal-appt{opacity:0.22; filter:grayscale(0.65);}
+  .cal-searching .cal-appt.cal-search-hit{opacity:1; filter:none;
+    outline:2.5px solid var(--gold); outline-offset:1px; z-index:6;
+    box-shadow:0 4px 14px rgba(0,0,0,0.28);}
   .cal-appt.cal-block{
     background:repeating-linear-gradient(45deg,
       rgba(var(--wine-rgb),0.30), rgba(var(--wine-rgb),0.30) 5px,
@@ -3046,6 +3071,10 @@
     if (t.name) window.__cachedBizName = t.name;
     if (t.phone) window.__cachedPhone = t.phone;
     if (t.hasLogo) window.__cachedHasLogo = true;
+    if (t.hasContact){
+      window.__cachedHasContact = true;
+      document.documentElement.classList.add('contact-expected');
+    }
     if (t.logo){
       window.__cachedLogo = t.logo;
       window.__cachedLogoFill = !!t.logoFill;
@@ -3484,6 +3513,15 @@
           <span id="weekNavLabel"></span>
           <button type="button" onclick="shiftWeek(1)" aria-label="שבוע הבא">›</button>
         </div>
+        
+        <div class="cal-search" id="calSearchRow">
+          <span class="cal-search-icon" aria-hidden="true">🔍</span>
+          <input type="search" id="calSearchInput" placeholder="חיפוש שם ביומן" aria-label="חיפוש שם ביומן"
+                 autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();applyCalSearch(this.value);}"
+                 oninput="applyCalSearch(this.value)">
+          <button type="button" id="calSearchClear" onclick="clearCalSearch()" aria-label="ניקוי החיפוש" style="display:none;">✕</button>
+          <span class="cal-search-count" id="calSearchCount"></span>
+        </div>
       </div>
       <div class="week-cal-wrap" id="weekCalWrap">
         <div class="week-cal" id="weekCal"></div>
@@ -3765,6 +3803,12 @@
           <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:6px;">
             ברירת המחדל היא 30 דקות. זה נקבע פעם אחת ועובד מעצמו — אין צורך להדליק ולכבות קטגוריות כל יום.
           </div>
+          
+          <div class="label" style="margin:16px 0 8px;">על מי ההגבלה חלה</div>
+          <div id="eveningStaffPicker" style="display:flex; flex-direction:column; gap:7px; max-width:420px;"></div>
+          <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:8px;">
+            בלי סימון כלל — ההגבלה חלה על כולן, כפי שהיה עד היום.
+          </div>
         </div>
       </div>
       <div class="settings-section" data-settings-section="messages">
@@ -4001,7 +4045,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-08 · 78';
+        window.__APP_BUILD = '2026-10-08 · 82';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -4076,6 +4120,8 @@
   
   <div class="owner-entry-row">
     <a href="#" id="ownerEntryLink" onclick="openLoginOverlayDirect(); return false;"><svg class="click-logo inline-logo" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>הכל בקליק — לעסקים</a>
+    
+    <a href="#" id="joinUsLink" onclick="openJoinUsMail(); return false;">רוצה מערכת כזו לעסק שלך? לפרטים</a>
   </div>
 </section>
 <footer>
@@ -7971,11 +8017,14 @@
         const info = dayInfoForDate(staffIdx, dObj);
         wins = mergeWindows(getEffectiveDayWindows(info, dObj));
       } catch (e) { return; }
-      const longOnes = mbSelectedServices.filter(sv => sv && (sv.duration || 0) > max);
-      if (!longOnes.length) return;
-      if (!breaksEveningLimit(wins, startMin, Math.max.apply(null, longOnes.map(sv => sv.duration || 0)))) return;
-      mbEveningOverride = confirm(`⚠️ במשמרת ערב לקוחה יכולה להזמין טיפול של עד ${max} דקות.\n\n` +
-        `${longOnes.map(sv => sv.name + ' (' + sv.duration + ' דקות)').join(', ')} ארוך מזה.\n\nלקבוע בכל זאת?`);
+      const totalDur = Math.max(0, endMin - startMin);
+      if (!breaksEveningLimit(wins, startMin, totalDur, staffIdx)) return;
+      const whichServices = (mbSelectedServices || [])
+        .filter(sv => sv && sv.name)
+        .map(sv => sv.name + ' (' + (sv.duration || 0) + ' דק\')').join(' + ');
+      mbEveningOverride = confirm(`⚠️ התור הזה הוא ${totalDur} דקות במשמרת ערב.\n\n` +
+        (whichServices ? whichServices + '\n\n' : '') +
+        `לקוחה שקובעת בעצמה מוגבלת ל-${max} דקות בערב. הקביעה מכאן אינה מוגבלת.\n\nלהמשיך ולקבוע?`);
     })();
     if (typeof mbEveningOverride !== 'undefined' && mbEveningOverride === false){
       errorEl.style.display = 'block';
@@ -8876,6 +8925,40 @@
     if (typeof saveState === 'function') saveState();
     if (typeof showAdminToast === 'function') showAdminToast(message);
   }
+  function renderEveningStaffPicker(){
+    const box = document.getElementById('eveningStaffPicker');
+    if (!box) return;
+    const list = (branding && Array.isArray(branding.eveningMaxStaff)) ? branding.eveningMaxStaff : [];
+    let live = [];
+    try { live = Array.isArray(staff) ? staff : []; } catch (e) { return; }
+    const shown = live.filter(sv => sv && sv.name && !sv.deleted);
+    if (!shown.length){ box.innerHTML = '<div style="font-size:12.5px; color:var(--panel-text-dim);">אין עדיין עובדות.</div>'; return; }
+    box.innerHTML = shown.map(sv =>
+      '<label style="display:flex; align-items:center; gap:9px; font-size:13.5px; cursor:pointer;">'
+      + '<input type="checkbox" data-evening-staff="' + String(sv.name).replace(/"/g, '&quot;') + '"'
+      + (list.indexOf(sv.name) !== -1 ? ' checked' : '') + ' style="width:auto;">'
+      + '<span>' + sv.name + '</span></label>').join('');
+    box.querySelectorAll('[data-evening-staff]').forEach(cb => {
+      cb.onchange = function(){ saveEveningStaffPick(); };
+    });
+  }
+  function saveEveningStaffPick(){
+    const box = document.getElementById('eveningStaffPicker');
+    if (!box) return;
+    const picked = [];
+    box.querySelectorAll('[data-evening-staff]').forEach(cb => {
+      if (cb.checked) picked.push(cb.dataset.eveningStaff);
+    });
+    branding.eveningMaxStaff = picked;
+    if (typeof saveState === 'function') saveState();
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof showAdminToast === 'function'){
+      const n = eveningMaxDuration();
+      showAdminToast(!picked.length
+        ? '✓ ההגבלה במשמרת ערב חלה על כל העובדות'
+        : ('✓ ההגבלה (' + n + ' דק\') חלה על: ' + picked.join(', ')));
+    }
+  }
   function saveEveningMaxDuration(el){
     if (!el || el.dataset.prevVal === el.value) return;
     const raw = String(el.value || '').trim();
@@ -9519,6 +9602,13 @@
       if (medHere && hasLogoNow && !medHere.classList.contains('has-logo')){
         medHere.classList.add('logo-pending');
       }
+      const contactHere = document.getElementById('heroContact');
+      const hasContactNow = !!(typeof branding !== 'undefined' && branding
+        && (branding.phone || branding.whatsapp || branding.email));
+      if (contactHere && hasContactNow && !contactHere.classList.contains('has-links')){
+        contactHere.classList.add('contact-pending');
+      }
+      if (hasContactNow) document.documentElement.classList.add('contact-expected');
     } catch (e) {}
     const textEl = document.getElementById('heroBizNameText');
     const doReveal = function(){
@@ -9883,6 +9973,8 @@
         name: (typeof branding !== 'undefined' && branding && branding.name) || '',
         phone: (typeof branding !== 'undefined' && branding && branding.phone) || '',
         hasLogo: !!logoRaw,
+        hasContact: !!((typeof branding !== 'undefined' && branding)
+          && (branding.phone || branding.whatsapp || branding.email)),
         logo: logoForCache,
         logoFill: !!thNow.logoFill,
         logoZoom: (typeof thNow.logoZoom === 'number') ? thNow.logoZoom : 1,
@@ -9900,6 +9992,8 @@
     const el = document.getElementById('heroContact');
     if (!el) return;
     if (!hasTheme){ el.classList.remove('has-links'); el.innerHTML = ''; return; }
+    el.classList.remove('contact-pending');
+    try { document.documentElement.classList.remove('contact-expected'); } catch (e2) {}
     const b = (typeof branding !== 'undefined' && branding) || {};
     const phone = digitsOnlyPhone(b.phone);
     const wa = digitsOnlyPhone(b.whatsapp) || phone;
@@ -10492,6 +10586,7 @@
       const v = branding.eveningMaxDuration;
       eveningMaxEl.value = (v === null || v === undefined || v === '') ? String(EVENING_MAX_DURATION_DEFAULT) : String(v);
     }
+    if (typeof renderEveningStaffPicker === 'function') renderEveningStaffPicker();
     const maintainerInputEl2 = document.getElementById('bizMaintainerEmailInput');
     if (maintainerInputEl2 && document.activeElement !== maintainerInputEl2) maintainerInputEl2.value = branding.maintainerEmail || '';
     if (typeof applySensitiveSettingsLock === 'function') applySensitiveSettingsLock();
@@ -12406,6 +12501,45 @@
     });
     return allClosed ? { reason } : null;
   }
+  let calSearchTerm = '';
+  function normaliseSearchText(v){
+    return String(v || '').replace(/[\u0591-\u05C7]/g, '').replace(/["'`־–—]/g, '').toLowerCase().trim();
+  }
+  function calSearchMatches(a){
+    if (!calSearchTerm || !a) return false;
+    const digits = calSearchTerm.replace(/[^0-9]/g, '');
+    if (digits.length >= 3){
+      const phone = String(a.phone || '').replace(/[^0-9]/g, '');
+      const tz = String(a.teudatZehut || '').replace(/[^0-9]/g, '');
+      if (phone.indexOf(digits) !== -1 || tz.indexOf(digits) !== -1) return true;
+    }
+    return normaliseSearchText(a.client).indexOf(calSearchTerm) !== -1;
+  }
+  function applyCalSearch(raw){
+    calSearchTerm = normaliseSearchText(raw);
+    const clearBtn = document.getElementById('calSearchClear');
+    if (clearBtn) clearBtn.style.display = calSearchTerm ? 'inline-block' : 'none';
+    document.body.classList.toggle('cal-searching', !!calSearchTerm);
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    updateCalSearchCount();
+  }
+  function clearCalSearch(){
+    const input = document.getElementById('calSearchInput');
+    if (input) input.value = '';
+    applyCalSearch('');
+  }
+  function updateCalSearchCount(){
+    const el = document.getElementById('calSearchCount');
+    if (!el) return;
+    if (!calSearchTerm){ el.textContent = ''; return; }
+    const all = (typeof weekAppointments !== 'undefined' && Array.isArray(weekAppointments)) ? weekAppointments : [];
+    const hits = all.filter(calSearchMatches);
+    const shown = document.querySelectorAll('.cal-appt.cal-search-hit').length;
+    if (!hits.length){ el.textContent = 'לא נמצא'; return; }
+    el.textContent = shown === hits.length
+      ? (hits.length + ' תורים')
+      : (shown + ' מתוך ' + hits.length + ' — השאר בשבועות אחרים');
+  }
   function renderWeekCal(opts){
     const __o = opts || {};
     const __days = Array.isArray(__o.days) ? __o.days : weekDays;
@@ -12645,6 +12779,7 @@
         block.className = 'cal-appt';
         block.dataset.apptId = a.id || '';
         if (pendingCalHighlightApptId && a.id === pendingCalHighlightApptId) block.classList.add('cal-appt-highlight');
+        if (calSearchMatches(a)) block.classList.add('cal-search-hit');
         if (a.confirmedByClient) block.classList.add('cal-appt-confirmed');
         block.style.top = topPx + 'px';
         block.style.height = heightPx + 'px';
@@ -15375,14 +15510,44 @@
     const sorted = windows.slice().sort((a, b) => a[0] - b[0]);
     return sorted[1][0];
   }
-  function breaksEveningLimit(windows, start, dur){
+  function eveningLimitAppliesTo(staffIdx){
+    const list = branding && branding.eveningMaxStaff;
+    if (!Array.isArray(list) || !list.length) return true;
+    let sv = null;
+    try { sv = Array.isArray(staff) ? staff[staffIdx] : null; } catch (e) { return true; }
+    if (!sv || !sv.name) return true;
+    return list.indexOf(sv.name) !== -1;
+  }
+  function breaksEveningLimit(windows, start, dur, staffIdx){
     const max = eveningMaxDuration();
     if (!max) return false;
+    if (staffIdx !== undefined && staffIdx !== null && staffIdx !== 'any'
+        && !eveningLimitAppliesTo(staffIdx)) return false;
     const evening = eveningStartMinute(windows);
     if (evening === null) return false;
     return start >= evening && dur > max;
   }
 
+  function showEveningLimitNote(timeStr, duration, max){
+    const box = document.getElementById('waitlistBox');
+    if (!box) return;
+    box.innerHTML = '<div class="evening-limit-note">'
+      + '<b>' + timeStr + ' פנויה</b> — אבל בשעות הערב אפשר לקבוע טיפול של עד ' + max
+      + ' דקות, והטיפול שבחרת הוא ' + duration + ' דקות.<br>'
+      + 'אפשר לבחור שעה מוקדמת יותר באותו יום, לבחור טיפול קצר יותר, או להתקשר אלינו ונמצא פתרון.'
+      + '</div>';
+    try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+  }
+  function appendEveningLimitNote(slotsEl, duration, max){
+    if (!slotsEl) return;
+    const note = document.createElement('div');
+    note.className = 'evening-limit-note';
+    note.id = 'eveningLimitNote';
+    note.innerHTML = '🌙 השעות המקווקוות <b>אינן תפוסות</b>. '
+      + 'בשעות הערב אפשר לקבוע אצלנו טיפול של עד <b>' + max + ' דקות</b>, והטיפול שבחרת הוא '
+      + duration + ' דקות. אפשר לבחור שעה מוקדמת יותר באותו יום, טיפול קצר יותר — או להתקשר אלינו ונסדר.';
+    slotsEl.appendChild(note);
+  }
   function renderAvailableSlots(){
     refreshTodayMidnight();
     slotStaffAssignment = {};
@@ -15420,7 +15585,7 @@
     const fits = (start, dur) => {
       const end = start + dur;
       if (!windows.some(([s, e]) => start >= s && end <= e)) return false;
-      if (breaksEveningLimit(windows, start, dur)) return false;
+      if (breaksEveningLimit(windows, start, dur, selectedStaffIndex)) return false;
       if (typeof slotIsHeldByOffer === 'function'
         && slotIsHeldByOffer(formatDateKey(bookingSelectedDate), selectedStaffIndex, start, end)) return false;
       return busy.every(([bStart, bEnd]) => end <= bStart || start >= bEnd);
@@ -15428,6 +15593,17 @@
     const findConflict = (start, dur) => {
       const end = start + dur;
       return busy.find(([bStart, bEnd]) => !(end <= bStart || start >= bEnd));
+    };
+    const eveningMaxNow = (typeof eveningMaxDuration === 'function') ? eveningMaxDuration() : 0;
+    let eveningBlockedCount = 0;
+    const eveningOnlyBlock = (start, dur) => {
+      if (!eveningMaxNow) return false;
+      if (!windows.some(([s2, e2]) => start >= s2 && start + dur <= e2)) return false;
+      if (!breaksEveningLimit(windows, start, dur, selectedStaffIndex)) return false;
+      if (findConflict(start, dur)) return false;
+      if (typeof slotIsHeldByOffer === 'function'
+        && slotIsHeldByOffer(formatDateKey(bookingSelectedDate), selectedStaffIndex, start, start + dur)) return false;
+      return true;
     };
     const minutesToTime = (m) => String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0');
     let firstFree = null;
@@ -15456,6 +15632,11 @@
             selectedSlot = timeStr;
             document.getElementById('waitlistBox').innerHTML = '';
           };
+        } else if (eveningOnlyBlock(t, duration)){
+          eveningBlockedCount++;
+          d.className = 'slot evening-limited';
+          d.title = 'ארוך מדי למשמרת ערב';
+          d.onclick = () => showEveningLimitNote(timeStr, duration, eveningMaxNow);
         } else {
           const conflict = findConflict(t, duration);
           let reason;
@@ -15474,6 +15655,7 @@
         slotsEl.appendChild(d);
       }
     });
+    if (eveningBlockedCount) appendEveningLimitNote(slotsEl, duration, eveningMaxNow);
     if (firstFree){
       const prevStillFree = prevSelectedSlot && freeSlotTimes.indexOf(prevSelectedSlot) !== -1;
       const toSelect = prevStillFree ? prevSelectedSlot : (prevSelectedSlot ? null : firstFree);
@@ -15529,7 +15711,7 @@
         const wins = perStaffWindows[idx];
         if (!wins) continue;
         if (!wins.some(([s, e]) => start >= s && end <= e)) continue;
-        if (breaksEveningLimit(mergeWindows(wins), start, dur)) continue;
+        if (breaksEveningLimit(mergeWindows(wins), start, dur, idx)) continue;
         if (typeof slotIsHeldByOffer === 'function'
           && slotIsHeldByOffer(formatDateKey(bookingSelectedDate), idx, start, end)) continue;
         if ((perStaffBusy[idx] || []).every(([bStart, bEnd]) => end <= bStart || start >= bEnd)) return idx;
@@ -15539,6 +15721,23 @@
     const minutesToTime = (m) => String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0');
     let firstFree = null;
     const freeSlotTimes = []; // ר' ההערה הגדולה ליד renderAvailableSlots — לשמר בחירה קיימת
+    const anyEveningMax = (typeof eveningMaxDuration === 'function') ? eveningMaxDuration() : 0;
+    let anyEveningBlocked = 0;
+    const anyEveningOnlyBlock = (start, dur) => {
+      if (!anyEveningMax) return false;
+      const end = start + dur;
+      let sawLimited = false;
+      for (const idx of candidateIndices){
+        const wins = perStaffWindows[idx];
+        if (!wins || !wins.some(([s2, e2]) => start >= s2 && end <= e2)) continue;
+        if (!(perStaffBusy[idx] || []).every(([bStart, bEnd]) => end <= bStart || start >= bEnd)) continue;
+        if (typeof slotIsHeldByOffer === 'function'
+          && slotIsHeldByOffer(formatDateKey(bookingSelectedDate), idx, start, end)) continue;
+        if (breaksEveningLimit(mergeWindows(wins), start, dur, idx)) { sawLimited = true; continue; }
+        return false;   // יש מישהי שכן יכולה — אז זו אינה חסימת ערב
+      }
+      return sawLimited;
+    };
     const mergedWindows = mergeWindows(allWindows);
     mergedWindows.forEach(([openMin, closeMin]) => {
       const firstBucket = Math.ceil(openMin / slotStepMinutes) * slotStepMinutes;
@@ -15565,12 +15764,18 @@
             selectedSlot = timeStr;
             document.getElementById('waitlistBox').innerHTML = '';
           };
+        } else if (anyEveningOnlyBlock(t, duration)){
+          anyEveningBlocked++;
+          d.className = 'slot evening-limited';
+          d.title = 'ארוך מדי למשמרת ערב';
+          d.onclick = () => showEveningLimitNote(timeStr, duration, anyEveningMax);
         } else {
           d.onclick = () => showWaitlistPrompt(timeStr, 'אף עובדת מתאימה לא פנויה בשעה זו למשך הטיפול שנבחר.');
         }
         slotsEl.appendChild(d);
       }
     });
+    if (anyEveningBlocked) appendEveningLimitNote(slotsEl, duration, anyEveningMax);
     if (firstFree){
       const prevStillFree = prevSelectedSlot && freeSlotTimes.indexOf(prevSelectedSlot) !== -1;
       const toSelect = prevStillFree ? prevSelectedSlot : (prevSelectedSlot ? null : firstFree);
@@ -18264,6 +18469,29 @@
     'rutizolberg.com': 'default',
   };
   const PLATFORM_ADMIN_EMAIL = 'agor678@gmail.com';
+  function joinUsMailtoUrl(){
+    const to = ((typeof maintainerEmailOf === 'function' && maintainerEmailOf()) || PLATFORM_ADMIN_EMAIL);
+    const bizName = (typeof branding !== 'undefined' && branding && branding.name) ? branding.name : '';
+    const subject = 'אני גם מעוניינת לצרף את העסק שלי';
+    const body = [
+      'היי,',
+      bizName ? ('ראיתי את "הכל בקליק" באתר של ' + bizName + ' ואשמח לפרטים.')
+              : 'ראיתי את "הכל בקליק" ואשמח לפרטים.',
+      '',
+      'שם העסק:',
+      'שם מלא:',
+      'טלפון:',
+      'מייל:',
+      '',
+      'תודה!'
+    ].join('\n');
+    return 'mailto:' + encodeURIComponent(to).replace(/%40/g, '@')
+      + '?subject=' + encodeURIComponent(subject)
+      + '&body=' + encodeURIComponent(body);
+  }
+  function openJoinUsMail(){
+    try { window.location.href = joinUsMailtoUrl(); } catch (e) {}
+  }
   const BIZ_LOCAL_HOSTS = ['', 'localhost', '127.0.0.1', 'null'];
   function isPreviewHost(host){
     return host === 'allinklik.web.app' || host === 'allinklik.firebaseapp.com'
@@ -18831,6 +19059,7 @@
         theme: (branding && branding.theme) || null,
         eveningMaxDuration: (branding && branding.eveningMaxDuration !== undefined && branding.eveningMaxDuration !== null)
           ? branding.eveningMaxDuration : null,
+        eveningMaxStaff: (branding && Array.isArray(branding.eveningMaxStaff)) ? branding.eveningMaxStaff : [],
       },
       staff: (staff || []).map(s => ({
         name: (s && s.name) || '',
