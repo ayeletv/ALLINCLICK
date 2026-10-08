@@ -3028,6 +3028,7 @@
     Object.keys(t.vars).forEach(function(k){ root.style.setProperty(k, t.vars[k]); });
     if (t.classes) document.body.className = (document.body.className + ' ' + t.classes).trim();
     if (t.name) window.__cachedBizName = t.name;
+    if (t.phone) window.__cachedPhone = t.phone;
     if (t.logo){
       window.__cachedLogo = t.logo;
       window.__cachedLogoFill = !!t.logoFill;
@@ -3122,27 +3123,35 @@
   <script>
   (function(){
     try {
-      if (window.__cachedLogo){
-        var med = document.getElementById('heroMedallion');
-        if (med && !med.dataset.src){
-          var im = document.createElement('img');
-          im.alt = '';
-          im.src = window.__cachedLogo;
-          if (window.__cachedLogoFill && window.__cachedLogoZoom > 1){
-            im.style.transform = 'scale(' + window.__cachedLogoZoom.toFixed(3) + ')';
-          }
-          med.appendChild(im);
-          med.dataset.src = window.__cachedLogo;
-          med.classList.add('has-logo');
-          if (window.__cachedLogoFill) med.classList.add('logo-fill');
-        }
-      }
-      if (!window.__cachedBizName) return;
       var h = document.getElementById('heroBizName'), t = document.getElementById('heroBizNameText');
-      if (!h || !t) return;
-      t.textContent = window.__cachedBizName;
-      h.classList.add('biz-name-visible', 'name-settled');
-      window.__heroBizNameWillShow = true;
+      var nameShown = false;
+      var showName = function(){
+        if (nameShown || !window.__cachedBizName || !h || !t) return;
+        nameShown = true;
+        t.textContent = window.__cachedBizName;
+        h.classList.add('biz-name-visible', 'name-settled');
+      };
+      if (window.__cachedBizName) window.__heroBizNameWillShow = true;
+
+      var med = window.__cachedLogo ? document.getElementById('heroMedallion') : null;
+      if (med && !med.dataset.src){
+        var im = document.createElement('img');
+        im.alt = '';
+        if (window.__cachedLogoFill && window.__cachedLogoZoom > 1){
+          im.style.transform = 'scale(' + window.__cachedLogoZoom.toFixed(3) + ')';
+        }
+        med.appendChild(im);
+        med.dataset.src = window.__cachedLogo;
+        if (window.__cachedLogoFill) med.classList.add('logo-fill');
+        var revealBoth = function(){ med.classList.add('has-logo'); showName(); };
+        im.onload = revealBoth;
+        im.onerror = function(){ med.removeAttribute('data-src'); showName(); };
+        im.src = window.__cachedLogo;
+        if (im.complete && im.naturalWidth) revealBoth();
+        else setTimeout(showName, 250);   // רשת ביטחון: שם בלי לוגו עדיף על כלום
+      } else {
+        showName();
+      }
     } catch (e) {}
   })();
   </script>
@@ -3773,6 +3782,30 @@
           <div id="holidayOverridesList" style="font-size:13.5px; color:var(--panel-text-dim);"></div></div>
         </div>
       </div>
+      
+      <div class="settings-section" data-settings-section="nochannel" id="noChannelSection">
+        <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
+          <span class="settings-section-title">📣 לקוחות בלי אופן תקשורת</span>
+          <span class="settings-section-sub">מי שלא תקבל תזכורת בכלל</span>
+          <span class="settings-section-chevron">▾</span>
+        </button>
+        <div class="settings-section-body">
+          <div style="font-size:13px; color:var(--panel-text-dim); line-height:1.7; margin-bottom:12px; max-width:600px;">
+            לקוחה שאין עליה אף אופן תקשורת לא מקבלת תזכורת ולא שיחת אישור — גם אם נקבע לה תור.
+            כאן אפשר לראות בדיוק מי הן, ולסמן לכולן בבת אחת.
+            <b>מי שבחרה במפורש לא לקבל SMS לא תיגע כאן</b> — הכלי מטפל רק במי שאין לה כלום.
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="template-btn" onclick="scanClientsWithoutChannel()">🔍 בדיקה מי בלי אופן תקשורת</button>
+          </div>
+          <div id="noChannelList" style="margin-top:14px; max-width:720px;"></div>
+          <div id="noChannelActions" style="display:none; margin-top:12px; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="cta" onclick="fillMissingChannel('call')">📞 לסמן לכולן שיחת טלפון</button>
+            <button type="button" class="template-btn" onclick="fillMissingChannel('sms')">✉️ לסמן לכולן SMS</button>
+          </div>
+          <div id="noChannelResult" style="display:none; font-size:13.5px; margin-top:12px; max-width:600px;"></div>
+        </div>
+      </div>
       <div class="settings-section" data-settings-section="platform" id="platformSection" style="display:none;">
         <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
           <span class="settings-section-title">🏢 ניהול עסקים</span>
@@ -3946,7 +3979,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-08 · 72';
+        window.__APP_BUILD = '2026-10-08 · 76';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9816,6 +9849,7 @@
       localStorage.setItem('hbk.theme.v1', JSON.stringify({
         vars: vars, classes: classes,
         name: (typeof branding !== 'undefined' && branding && branding.name) || '',
+        phone: (typeof branding !== 'undefined' && branding && branding.phone) || '',
         logo: logoForCache,
         logoFill: !!thNow.logoFill,
         logoZoom: (typeof thNow.logoZoom === 'number') ? thNow.logoZoom : 1,
@@ -9853,20 +9887,34 @@
     if (!el) return;
     const logo = (typeof branding !== 'undefined' && branding && branding.logo) || null;
     if (hasTheme && logo){
+      const thNow = currentSiteTheme();
+      const applyLook = function(){
+        el.classList.toggle('logo-fill', !!thNow.logoFill);
+        const im0 = el.querySelector('img');
+        if (im0) im0.style.transform = thNow.logoFill && thNow.logoZoom > 1 ? ('scale(' + thNow.logoZoom.toFixed(3) + ')') : '';
+      };
       if (el.dataset.src !== logo){
-        el.innerHTML = '<img alt="">';
-        el.firstChild.src = logo;
-        el.dataset.src = logo;
+        const next = new Image();
+        next.alt = '';
+        const swapIn = function(){
+          if (el.dataset.src === logo) return;
+          el.dataset.src = logo;
+          el.innerHTML = '';
+          el.appendChild(next);
+          applyLook();
+          el.classList.add('has-logo');
+        };
+        next.onload = swapIn;
+        next.onerror = function(){};
+        next.src = logo;
+        if (next.complete && next.naturalWidth) swapIn();
       }
       if (!el.dataset.wired){
         el.dataset.wired = '1';
         el.addEventListener('click', function(){ if (siteEntryModeAvailable()) setSiteEntryMode(true); });
       }
-      el.classList.add('has-logo');
-      const thNow = currentSiteTheme();
-      el.classList.toggle('logo-fill', !!thNow.logoFill);
-      const im = el.querySelector('img');
-      if (im) im.style.transform = thNow.logoFill && thNow.logoZoom > 1 ? ('scale(' + thNow.logoZoom.toFixed(3) + ')') : '';
+      if (el.querySelector('img')) el.classList.add('has-logo');
+      applyLook();
       const th0 = currentSiteTheme();
       const onPublic = (typeof runningOnPublicData !== 'undefined') && runningOnPublicData;
       if (th0.style && !th0.logoColors.length && !window.__logoColorsBackfilled && !onPublic){
@@ -11396,6 +11444,73 @@
       }
     });
     return pairs;
+  }
+  function clientHasNoChannel(c){
+    if (!c) return false;
+    const known = (typeof lastChannelsForClient === 'function') ? lastChannelsForClient(c) : [];
+    return !(known && known.length);
+  }
+  function clientsWithoutChannel(){
+    const out = [];
+    (clients || []).forEach((c, i) => {
+      if (!c || !clientHasNoChannel(c)) return;
+      const phone = String(c.phone || '').replace(/[^0-9]/g, '');
+      out.push({ index: i, name: c.name || '—', phone: c.phone || '', hasPhone: phone.length >= 9,
+                 hasEmail: !!String(c.email || '').trim() });
+    });
+    return out;
+  }
+  let noChannelPlan = [];
+  function scanClientsWithoutChannel(){
+    noChannelPlan = clientsWithoutChannel();
+    const listEl = document.getElementById('noChannelList');
+    const actions = document.getElementById('noChannelActions');
+    const resEl = document.getElementById('noChannelResult');
+    if (resEl) resEl.style.display = 'none';
+    if (!listEl) return;
+    if (!noChannelPlan.length){
+      listEl.innerHTML = '<div style="font-size:13.5px; color:var(--panel-text-dim); padding:10px 2px;">לכל הלקוחות יש אופן תקשורת. אין מה לתקן.</div>';
+      if (actions) actions.style.display = 'none';
+      return;
+    }
+    const fixable = noChannelPlan.filter(r => r.hasPhone);
+    const unfixable = noChannelPlan.filter(r => !r.hasPhone);
+    listEl.innerHTML =
+      '<div style="font-size:13.5px; font-weight:700; margin-bottom:10px;">נמצאו ' + noChannelPlan.length +
+      ' לקוחות בלי אופן תקשורת.' + (unfixable.length ? ' מתוכן ' + unfixable.length + ' גם בלי מספר טלפון תקין — אותן אי אפשר לסמן אוטומטית.' : '') + '</div>' +
+      noChannelPlan.slice(0, 60).map(r =>
+        '<div style="display:flex; gap:10px; align-items:center; padding:7px 10px; border:1px solid rgba(var(--panel-line-rgb),0.2); border-radius:9px; margin-bottom:6px; font-size:13px;">' +
+          '<span style="flex:1; min-width:0;">' + (r.name || '—') + '</span>' +
+          '<span style="color:var(--panel-text-dim);">' + (r.phone || 'אין טלפון') + '</span>' +
+          (r.hasPhone ? '' : '<span style="color:var(--wine); font-size:12px;">צריך טלפון</span>') +
+        '</div>').join('') +
+      (noChannelPlan.length > 60 ? '<div style="font-size:12.5px; color:var(--panel-text-dim); padding:6px 2px;">(מוצגות 60 הראשונות מתוך ' + noChannelPlan.length + ')</div>' : '');
+    if (actions) actions.style.display = fixable.length ? 'flex' : 'none';
+  }
+  function fillMissingChannel(channel){
+    const ch = (channel === 'sms') ? 'sms' : 'call';
+    if (!noChannelPlan || !noChannelPlan.length) scanClientsWithoutChannel();
+    let fixed = 0;
+    (noChannelPlan || []).forEach(r => {
+      const c = clients[r.index];
+      if (!c || !clientHasNoChannel(c)) return;
+      if (!r.hasPhone) return;
+      c.reminderChannelPref = [ch];
+      fixed++;
+    });
+    const resEl = document.getElementById('noChannelResult');
+    if (!fixed){
+      if (resEl){ resEl.style.display = 'block'; resEl.textContent = 'לא היה מה לסמן.'; }
+      return;
+    }
+    saveState();
+    if (typeof renderClients === 'function') { try { renderClients(); } catch (e) {} }
+    scanClientsWithoutChannel();
+    if (resEl){
+      resEl.style.display = 'block';
+      resEl.textContent = '✓ סומן ' + (ch === 'sms' ? 'SMS' : 'שיחת טלפון') + ' ל-' + fixed +
+        ' לקוחות. מעכשיו הן יקבלו תזכורת לתור הבא שלהן.';
+    }
   }
   function findDuplicateClientPairs(){
     clientMergeShowError('');
@@ -16023,8 +16138,28 @@
       })
       .catch(err => {
         console.error('Identifying through the server failed:', err);
-        return null;
+        return { __failed: true, id: digits, found: false };
       });
+  }
+  function setIdentityUnavailableNotice(anchorId, show, onRetry){
+    const anchor = document.getElementById(anchorId);
+    if (!anchor) return;
+    const noticeId = anchorId + '__idNotice';
+    const existing = document.getElementById(noticeId);
+    if (!show){ if (existing) existing.remove(); return; }
+    if (existing) return;
+    const box = document.createElement('div');
+    box.id = noticeId;
+    box.className = 'reminder-choice-notice';
+    box.style.cssText = 'margin-bottom:10px; line-height:1.55;';
+    box.textContent = 'לא הצלחנו לבדוק כרגע אם את כבר רשומה אצלנו. אם יש לך כרטיס קיים, כדאי לנסות שוב בעוד רגע כדי שלא ייפתח כרטיס כפול. ';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '↻ לנסות שוב';
+    btn.style.cssText = 'margin-inline-start:6px; background:none; border:none; text-decoration:underline; cursor:pointer; color:inherit; font:inherit; padding:0;';
+    btn.onclick = function(){ box.remove(); if (typeof onRetry === 'function') onRetry(); };
+    box.appendChild(btn);
+    anchor.parentNode.insertBefore(box, anchor);
   }
   function clearServerIdentity(){ serverIdentity = null; serverIdentityPick = null; }
   function renderIdentityChoice(candidates, onPick){
@@ -16081,7 +16216,15 @@
       const rawTyped = document.getElementById('bookingIdInput')?.value || '';
       const ambiguous = !!(serverIdentity && serverIdentity.ambiguousPhone);
       renderIdentityChoice(ambiguous ? serverIdentity.candidates : null, pickSharedPhoneIdentity);
-      regEl.style.display = (!ambiguous && identifierComplete(rawTyped)) ? 'block' : 'none';
+      const showReg = (!ambiguous && identifierComplete(rawTyped));
+      regEl.style.display = showReg ? 'block' : 'none';
+      setIdentityUnavailableNotice('newClientRegistration',
+        showReg && !!(serverIdentity && serverIdentity.__failed),
+        function(){
+          const d = (document.getElementById('bookingIdInput')?.value || '').replace(/[^0-9]/g, '');
+          try { delete serverIdentityCache[d]; } catch (e) {}
+          if (typeof lookupIdentityOnServer === 'function') lookupIdentityOnServer(d);
+        });
       prepareNewClientRegistration(rawTyped);
     }
     if (known && Array.isArray(serverIdentity.reminderChannels) && serverIdentity.reminderChannels.length
@@ -16167,6 +16310,9 @@
     const complete = frIdentifierComplete((document.getElementById('frId') || {}).value || '');
     detailsEl.style.display = complete ? 'flex' : 'none';
     emailWrap.style.display = complete ? 'block' : 'none';
+    setIdentityUnavailableNotice('frContactDetails',
+      complete && !!(frServerIdentity && frServerIdentity.__failed),
+      function(){ if (typeof frLookupIdentity === 'function') frLookupIdentity(); });
   }
   function frLookupIdentity(){
     clearTimeout(frIdentityTimer);
@@ -18989,8 +19135,22 @@
     const banner = document.createElement('div');
     banner.id = 'cloudErrorBanner';
     banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:var(--wine); color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
-    banner.textContent = '⚠ אין כרגע חיבור לענן — שינויים לא יישמרו עד שהחיבור יחזור. מומלץ לרענן את הדף.'
-      + (lastCloudErrorCode ? '  [' + lastCloudErrorCode + ']' : '');
+    const visitor = !(typeof isOwnerSession === 'function' && isOwnerSession())
+                 && !(typeof isLoggedIn !== 'undefined' && isLoggedIn);
+    if (visitor){
+      banner.style.background = '#8a6212';
+      const phone = (typeof branding !== 'undefined' && branding && branding.phone)
+        || window.__cachedPhone || '';
+      banner.textContent = 'רגע אחד — האתר מתחבר מחדש, וזה בדרך כלל נפתר תוך כמה שניות. אין צורך לרענן. '
+        + 'אפשר כבר עכשיו לראות או לבטל תור קיים דרך "יש לי תור קיים".'
+        + (phone ? ' לקביעת תור חדש אפשר גם להתקשר: ' + phone : '');
+    } else {
+      banner.textContent = '⚠ אין כרגע חיבור לענן — שינויים לא יישמרו עד שהחיבור יחזור.'
+        + ((typeof unsavedChangePending !== 'undefined' && unsavedChangePending)
+            ? ' יש שינוי שעדיין לא נשמר, ולכן בשום אופן לא לרענן את הדף.'
+            : ' המערכת מנסה שוב לבד.')
+        + (lastCloudErrorCode ? '  [' + lastCloudErrorCode + ']' : '');
+    }
     document.body.prepend(banner);
     syncTopBannerOffset();
   }
