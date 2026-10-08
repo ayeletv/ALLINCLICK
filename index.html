@@ -145,6 +145,10 @@
     border-bottom:1px solid rgba(245,238,228,0.08);
   }
 
+  html.theme-unknown .hero{background:#f7f2ec; border-bottom-color:transparent;}
+  html.theme-unknown .hero-ground{opacity:0;}
+  html.theme-unknown .hero > *:not(.hero-ground){opacity:0;}
+
   .hero-ground{position:absolute; inset:0; overflow:hidden; z-index:0; pointer-events:none;}
   .hero > *:not(.hero-ground){position:relative; z-index:1;}
   body.th-diag .hero-ground{background:linear-gradient(180deg,var(--th-c2-lt),var(--th-c2));}
@@ -386,9 +390,10 @@
     body.th-on .hero > *:not(.hero-ground){max-width:640px; margin-inline:auto;}
   }
 
-  .hero-medallion.logo-fill{padding:0; background:none;
+  body.th-on .hero-medallion.logo-fill,
+  .hero-medallion.logo-fill{padding:0; background:none; overflow:hidden;
     box-shadow:0 0 0 3px var(--th-secondary), 0 14px 32px rgba(60,40,40,0.24);}
-  .hero-medallion.logo-fill{overflow:hidden;}
+  body.th-on .hero-medallion.logo-fill img,
   .hero-medallion.logo-fill img{width:100%; height:100%; object-fit:cover; border-radius:50%;
     transform-origin:center;}
 
@@ -3021,11 +3026,20 @@
 <body>
 <script>
 (function(){
+  var markUnknown = function(){
+    try {
+      document.documentElement.classList.add('theme-unknown');
+      window.__clearThemeUnknown = function(){
+        try { document.documentElement.classList.remove('theme-unknown'); } catch (e) {}
+      };
+      setTimeout(window.__clearThemeUnknown, 2000);
+    } catch (e) {}
+  };
   try {
     var raw = localStorage.getItem('hbk.theme.v1');
-    if (!raw) return;
+    if (!raw){ markUnknown(); return; }
     var t = JSON.parse(raw);
-    if (!t || !t.vars) return;
+    if (!t || !t.vars){ markUnknown(); return; }
     var root = document.documentElement;
     Object.keys(t.vars).forEach(function(k){ root.style.setProperty(k, t.vars[k]); });
     if (t.classes) document.body.className = (document.body.className + ' ' + t.classes).trim();
@@ -3987,7 +4001,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-08 · 77';
+        window.__APP_BUILD = '2026-10-08 · 78';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9694,6 +9708,9 @@
     if (!root) return;
     const th = currentSiteTheme();
     const hasTheme = !!th.style;
+    if ((window.__themeDataKnown || window.__themeFromCache) && typeof window.__clearThemeUnknown === 'function'){
+      window.__clearThemeUnknown();
+    }
 
     const THEME_VARS = ['--th-primary', '--th-primary-deep', '--th-secondary', '--th-secondary-soft',
       '--th-c1', '--th-c1-lt', '--th-c2', '--th-c2-lt',
