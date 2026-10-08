@@ -2408,9 +2408,12 @@
   .cal-appt b{font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .cal-appt-name{font-weight:700; font-size:12px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;}
   .cal-appt-meta{font-weight:400; font-size:9.5px; line-height:1.15; opacity:0.72; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;}
-  .cal-search{display:flex; align-items:center; gap:6px; flex-wrap:wrap;
-    margin:8px auto 0; max-width:420px;}
-  .cal-search-icon{font-size:13px; opacity:0.75;}
+  .cal-search-toggle{flex:0 0 auto; width:32px; height:32px; border-radius:9px;
+    border:1px solid rgba(var(--panel-line-rgb),0.2); background:var(--panel-card-bg);
+    cursor:pointer; font-size:14px; line-height:1; padding:0;}
+  .cal-search-toggle[aria-expanded="true"]{border-color:var(--gold); box-shadow:0 0 0 2px rgba(var(--gold-rgb),0.2);}
+  .cal-search{display:flex; align-items:center; gap:6px;
+    margin:0 0 10px; width:100%;}
   .cal-search input{flex:1; min-width:120px; border:1px solid rgba(var(--panel-line-rgb),0.3);
     border-radius:10px; padding:7px 11px; font-family:'Heebo'; font-size:13px;
     background:var(--panel-card-bg); color:var(--panel-text);}
@@ -3514,14 +3517,15 @@
           <button type="button" onclick="shiftWeek(1)" aria-label="שבוע הבא">›</button>
         </div>
         
-        <div class="cal-search" id="calSearchRow">
-          <span class="cal-search-icon" aria-hidden="true">🔍</span>
-          <input type="search" id="calSearchInput" placeholder="חיפוש שם ביומן" aria-label="חיפוש שם ביומן"
-                 autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();applyCalSearch(this.value);}"
-                 oninput="applyCalSearch(this.value)">
-          <button type="button" id="calSearchClear" onclick="clearCalSearch()" aria-label="ניקוי החיפוש" style="display:none;">✕</button>
-          <span class="cal-search-count" id="calSearchCount"></span>
-        </div>
+        <button type="button" class="cal-search-toggle" id="calSearchToggle"
+                onclick="toggleCalSearch()" aria-label="חיפוש שם ביומן" aria-expanded="false">🔍</button>
+      </div>
+      <div class="cal-search" id="calSearchRow" style="display:none;">
+        <input type="search" id="calSearchInput" placeholder="חיפוש שם, טלפון או ת״ז" aria-label="חיפוש שם ביומן"
+               autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();applyCalSearch(this.value);}"
+               oninput="applyCalSearch(this.value)">
+        <button type="button" id="calSearchClear" onclick="clearCalSearch()" aria-label="ניקוי החיפוש" style="display:none;">✕</button>
+        <span class="cal-search-count" id="calSearchCount"></span>
       </div>
       <div class="week-cal-wrap" id="weekCalWrap">
         <div class="week-cal" id="weekCal"></div>
@@ -3796,12 +3800,13 @@
           <span class="settings-section-chevron">▾</span>
         </button>
         <div class="settings-section-body">
-          <div class="label" style="margin:10px 0;">עד כמה דקות לתור שלקוחה קובעת בעצמה במשמרת ערב<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">"ערב" הוא טווח השעות השני באותו יום, לפי מה שמוגדר בטאב צוות. יום עם רצף שעות אחד אינו מוגבל כלל. ההגבלה היא על כל טיפול בנפרד, והיא חלה רק על מסך הלקוחה — בקביעה ידנית תופיע אזהרה שאפשר לאשר ולהמשיך. 0 = בלי הגבלה.</span></span></div>
+          <div class="label" style="margin:10px 0;">עד כמה דקות לתור שלקוחה קובעת בעצמה במשמרת ערב<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">המספר כולל: 30 פירושו שתור של 30 דקות עדיין מותר, ו-31 ומעלה נחסם. "ערב" הוא טווח השעות השני באותו יום, לפי מה שמוגדר בטאב צוות. יום עם רצף שעות אחד אינו מוגבל כלל. ההגבלה היא על כל טיפול בנפרד, והיא חלה רק על מסך הלקוחה — בקביעה ידנית תופיע אזהרה שאפשר לאשר ולהמשיך. 0 = בלי הגבלה.</span></span></div>
           <input type="number" id="eveningMaxDurationInput" min="0" max="480" step="5" class="field-dark" style="max-width:160px;"
                  placeholder="30" onfocus="this.dataset.prevVal=this.value"
                  onblur="saveEveningMaxDuration(this)">
           <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:6px;">
-            ברירת המחדל היא 30 דקות. זה נקבע פעם אחת ועובד מעצמו — אין צורך להדליק ולכבות קטגוריות כל יום.
+            ברירת המחדל היא 30 דקות — כלומר תור של חצי שעה בדיוק עדיין מותר, וארוך ממנו נחסם.
+            זה נקבע פעם אחת ועובד מעצמו — אין צורך להדליק ולכבות קטגוריות כל יום.
           </div>
           
           <div class="label" style="margin:16px 0 8px;">על מי ההגבלה חלה</div>
@@ -4045,7 +4050,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-08 · 82';
+        window.__APP_BUILD = '2026-10-08 · 83';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -12527,6 +12532,20 @@
     const input = document.getElementById('calSearchInput');
     if (input) input.value = '';
     applyCalSearch('');
+  }
+  function toggleCalSearch(){
+    const row = document.getElementById('calSearchRow');
+    const btn = document.getElementById('calSearchToggle');
+    if (!row) return;
+    const open = row.style.display === 'none';
+    row.style.display = open ? 'flex' : 'none';
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open){
+      const input = document.getElementById('calSearchInput');
+      if (input) { try { input.focus(); } catch (e) {} }
+    } else {
+      clearCalSearch();
+    }
   }
   function updateCalSearchCount(){
     const el = document.getElementById('calSearchCount');
