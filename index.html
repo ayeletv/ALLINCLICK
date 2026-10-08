@@ -3946,7 +3946,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-08 · 70';
+        window.__APP_BUILD = '2026-10-08 · 71';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -18078,6 +18078,10 @@
   let lastLoadedSnapshot = null;
   let pendingSaveCount = 0;
   let unsavedChangePending = false;
+  let __cloudDocWasMissing = false;
+  let __staleBaselineDetected = false;
+  let __lastWriteRepairs = [];
+  let __moreRemovalsPending = false;
   function cloneJSON(v){ return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
   function backfillMissingListIds(data){
     if (!data) return;
@@ -18165,6 +18169,52 @@
     });
     return merged;
   }
+  const WIPE_PROTECTED_LISTS = ['clients', 'categories', 'staff'];
+  const WIPE_FIELD_LABELS = { clients: 'כרטסת הלקוחות', categories: 'הקטגוריות', staff: 'הצוות' };
+  function listLength(v){ return Array.isArray(v) ? v.length : 0; }
+  function itemIdentity(item){
+    if (item === null || typeof item !== 'object') return String(item);
+    if (item.id) return 'id:' + item.id;
+    if (item.teudatZehut) return 'tz:' + item.teudatZehut;
+    if (item.phone) return 'ph:' + String(item.phone).replace(/[^0-9]/g, '');
+    if (item.name) return 'nm:' + item.name;
+    try { return 'js:' + JSON.stringify(item); } catch (e) { return 'js:?'; }
+  }
+  function serverHasRealContent(server){
+    if (!server) return false;
+    return listLength(server.clients) > 0
+        || listLength(server.staff) > 0
+        || listLength(server.weekAppointments) > 0
+        || !!(server.branding && String(server.branding.name || ''));
+  }
+  function repairPayloadBeforeWrite(payload, server, changedKeys){
+    const fixed = [];
+    let moreToRemove = false;
+    const serverName = String((server && server.branding && server.branding.name) || '');
+    if (payload.branding && serverName && !String(payload.branding.name || '')){
+      delete payload.branding;
+      changedKeys.delete('branding');
+      try { if (branding && typeof branding === 'object') Object.assign(branding, server.branding); } catch (e) {}
+      fixed.push('פרטי העסק');
+    }
+    WIPE_PROTECTED_LISTS.forEach(key => {
+      if (!Object.prototype.hasOwnProperty.call(payload, key)) return;
+      const beforeLen = listLength(server && server[key]);
+      const afterLen = listLength(payload[key]);
+      if (beforeLen === 0 || afterLen >= beforeLen - 1) return;
+      delete payload[key];
+      changedKeys.delete(key);
+      const live = (key === 'clients') ? clients : (key === 'categories') ? categories : staff;
+      if (Array.isArray(live)){
+        const fresh = cloneJSON(server[key]) || [];
+        live.length = 0;
+        fresh.forEach(x => live.push(x));
+      }
+      if (lastLoadedSnapshot) lastLoadedSnapshot[key] = cloneJSON(server[key]);
+      fixed.push((WIPE_FIELD_LABELS[key] || key) + ' (' + beforeLen + ' במקום ' + afterLen + ')');
+    });
+    return { fixed: fixed, moreToRemove: moreToRemove };
+  }
   function saveState(opts){
     const silent = !!(opts && opts.silent);
     if (runningOnPublicData){
@@ -18198,34 +18248,38 @@
     pendingSaveCount++;
     const runSaveTransaction = () => db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
       const server = doc.exists ? doc.data() : {};
+      if (__cloudDocWasMissing && doc.exists && serverHasRealContent(server)) return { __stale: true };
       backfillMissingListIds(server);
       const payload = { savedAt: nowIso };
-      let hasChange = false;
+      const changedKeys = new Set();
       Object.keys(simpleFields).forEach(key => {
         const beforeJson = JSON.stringify(lastLoadedSnapshot[key]);
         const nowJson = JSON.stringify(simpleFields[key]);
-        if (beforeJson !== nowJson){ payload[key] = simpleFields[key]; hasChange = true; }
+        if (beforeJson !== nowJson){ payload[key] = simpleFields[key]; changedKeys.add(key); }
       });
       const mergedAppts = mergeListField(server.weekAppointments, lastLoadedSnapshot.weekAppointments, weekAppointments, a => a && a.id);
-      if (JSON.stringify(mergedAppts) !== JSON.stringify(server.weekAppointments || [])) hasChange = true;
+      if (JSON.stringify(mergedAppts) !== JSON.stringify(server.weekAppointments || [])) changedKeys.add('weekAppointments');
       payload.weekAppointments = mergedAppts;
       const mergedWaitlist = mergeListField(server.waitlist, lastLoadedSnapshot.waitlist, waitlist, w => w && w.id);
-      if (JSON.stringify(mergedWaitlist) !== JSON.stringify(server.waitlist || [])) hasChange = true;
+      if (JSON.stringify(mergedWaitlist) !== JSON.stringify(server.waitlist || [])) changedKeys.add('waitlist');
       payload.waitlist = mergedWaitlist;
       const mergedClients = mergeListField(server.clients, lastLoadedSnapshot.clients, clients, c => c && c.teudatZehut ? 'tz:' + c.teudatZehut : (c && c.phone ? 'p:' + String(c.phone).replace(/[^0-9]/g, '') : null));
-      if (JSON.stringify(mergedClients) !== JSON.stringify(server.clients || [])) hasChange = true;
+      if (JSON.stringify(mergedClients) !== JSON.stringify(server.clients || [])) changedKeys.add('clients');
       payload.clients = mergedClients;
       const mergedCancellationLog = mergeListField(server.cancellationLog, lastLoadedSnapshot.cancellationLog, cancellationLog, c => c && c.id);
       const cancelLogCutoff = new Date();
       cancelLogCutoff.setDate(cancelLogCutoff.getDate() - 400);
       const cancelLogCutoffKey = formatDateKey(cancelLogCutoff);
       const trimmedCancellationLog = mergedCancellationLog.filter(c => c && c.cancelledAt >= cancelLogCutoffKey);
-      if (JSON.stringify(trimmedCancellationLog) !== JSON.stringify(server.cancellationLog || [])) hasChange = true;
+      if (JSON.stringify(trimmedCancellationLog) !== JSON.stringify(server.cancellationLog || [])) changedKeys.add('cancellationLog');
       payload.cancellationLog = trimmedCancellationLog;
       const mergedLateCancellations = mergeListField(server.lateCancellations, lastLoadedSnapshot.lateCancellations, lateCancellations, c => c && c.id);
-      if (JSON.stringify(mergedLateCancellations) !== JSON.stringify(server.lateCancellations || [])) hasChange = true;
+      if (JSON.stringify(mergedLateCancellations) !== JSON.stringify(server.lateCancellations || [])) changedKeys.add('lateCancellations');
       payload.lateCancellations = mergedLateCancellations;
-      if (!hasChange) return null; // nothing this tab needs to write right now
+      const repairs = repairPayloadBeforeWrite(payload, server, changedKeys);
+      __lastWriteRepairs = repairs.fixed;
+      __moreRemovalsPending = repairs.moreToRemove;
+      if (!changedKeys.size) return repairs.fixed.length ? { __repairedOnly: true, fixed: repairs.fixed } : null;
       if (!silent) showSaveStatus('שומר...');
       lastSavePayloadBytes = measurePayloadBytes(payload);
       tx.set(CLOUD_DOC, payload, { merge: true });
@@ -18242,19 +18296,49 @@
       if (!silent) showSaveStatus('שומר... (ניסיון נוסף)');
       return new Promise(r => setTimeout(r, 900)).then(runSaveTransaction);
     }).then(committedPayload => {
+      __deniedSaveRetried = false;
+      if (committedPayload && committedPayload.__stale){
+        console.warn('Save aborted: this tab holds starter data while the cloud holds a real business. Reloading.');
+        unsavedChangePending = false;
+        if (__unsavedAlarmTimer){ clearTimeout(__unsavedAlarmTimer); __unsavedAlarmTimer = null; }
+        __cloudDocWasMissing = false;
+        __staleBaselineDetected = true;
+        cloudLoadComplete = false;
+        lastLoadedSnapshot = null;
+        hideSaveStatus();
+        showSaveErrorBanner('⚠ הדף הציג נתונים חלקיים ולכן השמירה נעצרה לפני שמחקה משהו. הנתונים האמיתיים נטענים עכשיו מחדש — רגע אחד.');
+        setTimeout(function(){ loadCloudData(); }, 50);
+        return;
+      }
+      if (committedPayload && committedPayload.__repairedOnly){
+        unsavedChangePending = false;
+        if (__unsavedAlarmTimer){ clearTimeout(__unsavedAlarmTimer); __unsavedAlarmTimer = null; }
+        hideSaveErrorBanner();
+        __lastWriteRepairs = [];
+        rerenderEverything();
+        showSaveErrorBanner('✓ הנתונים בענן שלמים. הדף הזה החזיק רשימה חלקית (' + committedPayload.fixed.join(', ') + ') והמערכת מנעה את המחיקה — הרשימה המלאה חזרה למסך.', { tone: 'info' });
+        hideSaveStatus();
+        return;
+      }
       if (!committedPayload) { unsavedChangePending = false; if (__unsavedAlarmTimer){ clearTimeout(__unsavedAlarmTimer); __unsavedAlarmTimer = null; } hideSaveErrorBanner(); if (!silent) showSaveStatus('נשמר ✓', 1800); else hideSaveStatus(); return; }
       unsavedChangePending = false;
       if (__unsavedAlarmTimer){ clearTimeout(__unsavedAlarmTimer); __unsavedAlarmTimer = null; }
       hideSaveErrorBanner();
       if (!silent) showSaveStatus('נשמר ✓', 2600);
       checkSaveSizeHeadroom();
-      weekAppointments = committedPayload.weekAppointments;
-      waitlist = committedPayload.waitlist;
-      clients = committedPayload.clients;
-      cancellationLog = committedPayload.cancellationLog;
-      lateCancellations = committedPayload.lateCancellations;
+      if (Array.isArray(committedPayload.weekAppointments)) weekAppointments = committedPayload.weekAppointments;
+      if (Array.isArray(committedPayload.waitlist)) waitlist = committedPayload.waitlist;
+      if (Array.isArray(committedPayload.clients)) clients = committedPayload.clients;
+      if (Array.isArray(committedPayload.cancellationLog)) cancellationLog = committedPayload.cancellationLog;
+      if (Array.isArray(committedPayload.lateCancellations)) lateCancellations = committedPayload.lateCancellations;
       lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(committedPayload));
       publishPublicView(); // כל שינוי שנשמר מתעדכן גם במסמך הציבורי
+      if (__lastWriteRepairs.length){
+        const whatWasKept = __lastWriteRepairs.join(', ');
+        __lastWriteRepairs = [];
+        rerenderEverything();
+        showSaveErrorBanner('✓ נשמר. הדף הזה החזיק רשימה חלקית (' + whatWasKept + '), והמערכת שמרה על הגרסה שבענן במקום למחוק — הרשימה המלאה חזרה למסך. אם רצית למחוק פריט, אפשר למחוק אותו עכשיו.', { tone: 'info' });
+      }
       const backupDateKey = committedPayload.savedAt.slice(0, 10);
       if (backupDateKey !== lastBackupDateKey){
         lastBackupDateKey = backupDateKey;
@@ -18271,9 +18355,50 @@
       console.error('Cloud save failed:', err);
       hideSaveStatus();
       unsavedChangePending = true;
+      const failCode = String((err && err.code) || '').toLowerCase();
+      if (failCode.indexOf('permission') !== -1 || failCode.indexOf('unauthenticated') !== -1){
+        return diagnoseDeniedSave(err, silent);
+      }
       showSaveErrorBanner(describeSaveFailure(err), { retry: true });
       scheduleUnsavedRetry();
     }).finally(() => { pendingSaveCount--; });
+  }
+  let __deniedSaveRetried = false;
+  function whoamiSuffix(){
+    const u = auth && auth.currentUser;
+    const mail = (u && u.email) ? u.email : 'לא מחוברת';
+    return '  [מחוברת כ: ' + mail + ' · יומן: ' + (BIZ_ID || '—') + ']';
+  }
+  function diagnoseDeniedSave(err, silent){
+    return CLOUD_DOC.get().then(doc => {
+      if (doc && doc.exists){
+        const fresh = doc.data();
+        backfillMissingListIds(fresh);
+        lastLoadedSnapshot = cloneJSON(fresh);
+        __cloudDocWasMissing = false;
+        if (fresh.branding && String(fresh.branding.name || '') && branding && !String(branding.name || '')){
+          Object.assign(branding, fresh.branding);
+        }
+      }
+      if (__deniedSaveRetried){
+        __deniedSaveRetried = false;
+        showSaveErrorBanner('⚠ הענן דחה את השמירה כדי להגן על הנתונים — הדף הזה מחזיק רשימה חלקית של הלקוחות או של הצוות. מה שהוקלד לא אבד. נא לרענן את הדף פעם אחת ולבדוק ביומן שהתור או הביטול אכן מופיעים; אם לא — לבצע שוב.' + whoamiSuffix(), { retry: true });
+        scheduleUnsavedRetry();
+        return;
+      }
+      __deniedSaveRetried = true;
+      if (!silent) showSaveStatus('שומר... (מסנכרנים מול הענן)');
+      return saveState({ silent: true });
+    }).catch(readErr => {
+      const rc = String((readErr && readErr.code) || readErr || '').toLowerCase();
+      if (rc.indexOf('permission') !== -1 || rc.indexOf('unauthenticated') !== -1){
+        if (typeof scheduleOwnerMappingRetry === 'function') scheduleOwnerMappingRetry();
+        showSaveErrorBanner('⚠ השינוי לא נשמר — המערכת אינה מזהה את החשבון הזה כבעל הרשאה ליומן הזה. לא לרענן: אנחנו מנסים לזהות מחדש לבד. אם ההודעה נשארת, צריך לצאת ולהיכנס שוב עם המייל והסיסמה של היומן.' + whoamiSuffix(), { retry: true });
+      } else {
+        showSaveErrorBanner(describeSaveFailure(err), { retry: true });
+      }
+      scheduleUnsavedRetry();
+    });
   }
   let lastSavePayloadBytes = 0;
   const FIRESTORE_DOC_LIMIT = 1048576;   // מגבלה קשיחה של Firestore למסמך אחד
@@ -18313,7 +18438,7 @@
       return '⚠ השינוי האחרון לא נשמר — הדפדפן לא הצליח להשלים את השמירה מול הענן. השינוי לא אבד: אפשר ללחוץ כאן על "לנסות לשמור שוב", והמערכת גם מנסה לבד כל חצי דקה. בשום אופן לא לרענן את הדף עד שייכתב "נשמר ✓".' + tail;
     }
     if (code.indexOf('permission') !== -1 || code.indexOf('unauthenticated') !== -1){
-      return '⚠ השינוי האחרון לא נשמר — ההתחברות פגה. נא לצאת ולהיכנס מחדש בלשונית אחרת, ואז לחזור לכאן ולשמור שוב. לא לרענן את הדף, אחרת השינוי יאבד.' + tail;
+      return '⚠ השינוי האחרון לא נשמר — הענן סירב לכתיבה. זה קורה או כשהחשבון אינו מזוהה כבעל היומן, או כשהכתיבה נראתה לענן כמו מחיקת נתונים. המערכת בודקת עכשיו מה משניהם ומנסה שוב לבד. לא לרענן את הדף בינתיים.' + tail + whoamiSuffix();
     }
     if (code.indexOf('aborted') !== -1){
       return '⚠ השינוי האחרון לא נשמר — מישהי אחרת (או לשונית אחרת של היומן) שמרה בדיוק באותו רגע. נא ללחוץ שוב על השמירה; בדרך כלל זה עובר בניסיון השני.' + tail;
@@ -18526,7 +18651,8 @@
     if (existing) existing.remove();
     const banner = document.createElement('div');
     banner.id = 'saveErrorBanner';
-    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:var(--wine); color:#fff; text-align:center; padding:10px 40px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
+    const bg = (opts && opts.tone === 'info') ? '#8a6212' : 'var(--wine)';
+    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:' + bg + '; color:#fff; text-align:center; padding:10px 40px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
     banner.textContent = message;
     if (opts && opts.retry){
       const retryBtn = document.createElement('button');
@@ -19237,6 +19363,7 @@
       if (!doc.exists){
         console.log('No saved data yet in the cloud — using demo starter data.');
         lastLoadedSnapshot = {};
+        __cloudDocWasMissing = true;
         cloudLoadComplete = true;
         reportCloudLoadTiming(cloudLoadStartedAt, null);
         if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
@@ -19250,6 +19377,7 @@
       const rawCloudData = doc.data();
       backfillMissingListIds(rawCloudData);
       lastLoadedSnapshot = cloneJSON(rawCloudData);
+      __cloudDocWasMissing = false;
       applyCloudData(rawCloudData);
       pruneExpiredWaitlistEntries();
       rebindOpenRecords();
