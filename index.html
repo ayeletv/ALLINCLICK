@@ -860,10 +860,14 @@
     margin-top:6px; display:inline-block; font-weight:700;
   }
   .bk-continue-bottom-btn{
-    background:rgba(224,120,143,0.16); border:1px solid rgba(224,120,143,0.45);
-    color:#E7A8B8;
+    background:var(--th-action, var(--wine));
+    border:none;
+    color:var(--th-on-action, var(--ivory));
+    border-radius:999px; padding:10px 20px;
   }
-  .bk-continue-bottom-btn:hover, .bk-continue-bottom-btn:active{background:rgba(224,120,143,0.28);}
+  .bk-continue-bottom-btn:hover, .bk-continue-bottom-btn:active{
+    background:var(--th-action-press, var(--wine-deep));
+  }
   .slot-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:22px;}
   .slot{
     position:relative;
@@ -4050,7 +4054,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-08 · 83';
+        window.__APP_BUILD = '2026-10-08 · 86';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9208,7 +9212,8 @@
   }
   function isPlatformAdmin(){
     const u = auth && auth.currentUser;
-    return !!(u && !u.isAnonymous && String(u.email || '').trim().toLowerCase() === PLATFORM_ADMIN_EMAIL);
+    if (!u || u.isAnonymous) return false;
+    return PLATFORM_ADMIN_EMAILS.indexOf(String(u.email || '').trim().toLowerCase()) !== -1;
   }
   const PLATFORM_ONLY_SECTION_IDS = ['platformSection', 'clientImportSection', 'clientMergeSection', 'backupsSection', 'designSection'];
   function applyPlatformAdminUi(){
@@ -12302,13 +12307,26 @@
     return days;
   }
   weekDays = computeWeekDays();
+  function scrollerFor(el){
+    let n = el;
+    for (let i = 0; i < 4 && n; i++){
+      if (n.scrollWidth - n.clientWidth > 4){
+        let ox = '';
+        try { ox = getComputedStyle(n).overflowX; } catch (e) {}
+        if (ox === 'auto' || ox === 'scroll') return n;
+      }
+      n = n.parentElement;
+    }
+    return null;
+  }
   function wireWeekSwipe(el){
     if (!el || el.__swipeWired) return;
     el.__swipeWired = true;
-    let x0 = null, y0 = null;
+    let x0 = null, y0 = null, s0 = 0;
     el.addEventListener('touchstart', (e) => {
       if (!e.touches || e.touches.length !== 1){ x0 = null; return; }
       x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+      s0 = scrollerFor(el) ? scrollerFor(el).scrollLeft : 0;
     }, { passive: true });
     el.addEventListener('touchend', (e) => {
       if (x0 === null || !e.changedTouches || !e.changedTouches.length) return;
@@ -12316,6 +12334,8 @@
       const dy = e.changedTouches[0].clientY - y0;
       x0 = null;
       if (Math.abs(dx) < 60 || Math.abs(dx) <= Math.abs(dy)) return;
+      const sc = scrollerFor(el);
+      if (sc && Math.abs(sc.scrollLeft - s0) > 4) return;
       if (e.cancelable) e.preventDefault();
       shiftWeek(dx < 0 ? 1 : -1);
     }, { passive: false });
@@ -12897,6 +12917,7 @@
     calFragment.appendChild(renderSpecialRequestsColumn((calEndHour - calStartHour) * hourBandHeight));
     calEl.appendChild(calFragment);
     wireWeekSwipe(document.getElementById('weekNavRow'));
+    wireWeekSwipe(document.getElementById('weekCalWrap'));
     renderOverviewStats();
     if (typeof fitWeekCalToViewport === 'function') fitWeekCalToViewport();
     if (__rwcDiagStart !== null && Array.isArray(panelRenderCallLog)){
@@ -18488,6 +18509,7 @@
     'rutizolberg.com': 'default',
   };
   const PLATFORM_ADMIN_EMAIL = 'agor678@gmail.com';
+  const PLATFORM_ADMIN_EMAILS = ['agor678@gmail.com', 'agor678+test@gmail.com'];
   function joinUsMailtoUrl(){
     const to = ((typeof maintainerEmailOf === 'function' && maintainerEmailOf()) || PLATFORM_ADMIN_EMAIL);
     const bizName = (typeof branding !== 'undefined' && branding && branding.name) ? branding.name : '';
