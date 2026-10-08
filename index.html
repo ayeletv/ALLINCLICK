@@ -198,6 +198,8 @@
                0 16px 36px rgba(60,40,40,0.24);}
   .hero-medallion img{width:100%; height:100%; object-fit:contain; display:block;}
   body.th-on .hero-medallion.has-logo{display:flex;}
+  body.th-on .hero-medallion.logo-pending{display:flex; visibility:hidden;}
+  body.th-on .hero-medallion.has-logo{visibility:visible;}
 
   .theme-style-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:9px; max-width:460px;}
   @media (max-width:480px){ .theme-style-grid{grid-template-columns:repeat(3,1fr);} }
@@ -3029,6 +3031,7 @@
     if (t.classes) document.body.className = (document.body.className + ' ' + t.classes).trim();
     if (t.name) window.__cachedBizName = t.name;
     if (t.phone) window.__cachedPhone = t.phone;
+    if (t.hasLogo) window.__cachedHasLogo = true;
     if (t.logo){
       window.__cachedLogo = t.logo;
       window.__cachedLogoFill = !!t.logoFill;
@@ -3133,7 +3136,12 @@
       };
       if (window.__cachedBizName) window.__heroBizNameWillShow = true;
 
-      var med = window.__cachedLogo ? document.getElementById('heroMedallion') : null;
+      var medEl = document.getElementById('heroMedallion');
+      if (medEl && (window.__cachedLogo || window.__cachedHasLogo)){
+        medEl.classList.add('logo-pending');
+        if (window.__cachedLogoFill) medEl.classList.add('logo-fill');
+      }
+      var med = window.__cachedLogo ? medEl : null;
       if (med && !med.dataset.src){
         var im = document.createElement('img');
         im.alt = '';
@@ -3979,7 +3987,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-08 · 76';
+        window.__APP_BUILD = '2026-10-08 · 77';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9491,6 +9499,13 @@
   function revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, name, skipFontWait){
     const alreadyShown = heroBizNameEl.classList.contains('biz-name-visible');
     window.__heroBizNameWillShow = true;
+    try {
+      const medHere = document.getElementById('heroMedallion');
+      const hasLogoNow = !!(typeof branding !== 'undefined' && branding && branding.logo);
+      if (medHere && hasLogoNow && !medHere.classList.contains('has-logo')){
+        medHere.classList.add('logo-pending');
+      }
+    } catch (e) {}
     const textEl = document.getElementById('heroBizNameText');
     const doReveal = function(){
       if (textEl) textEl.textContent = name;
@@ -9850,6 +9865,7 @@
         vars: vars, classes: classes,
         name: (typeof branding !== 'undefined' && branding && branding.name) || '',
         phone: (typeof branding !== 'undefined' && branding && branding.phone) || '',
+        hasLogo: !!logoRaw,
         logo: logoForCache,
         logoFill: !!thNow.logoFill,
         logoZoom: (typeof thNow.logoZoom === 'number') ? thNow.logoZoom : 1,
@@ -9893,6 +9909,9 @@
         const im0 = el.querySelector('img');
         if (im0) im0.style.transform = thNow.logoFill && thNow.logoZoom > 1 ? ('scale(' + thNow.logoZoom.toFixed(3) + ')') : '';
       };
+      if (!el.querySelector('img') || !el.classList.contains('has-logo')){
+        el.classList.add('logo-pending');
+      }
       if (el.dataset.src !== logo){
         const next = new Image();
         next.alt = '';
