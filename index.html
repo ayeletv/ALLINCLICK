@@ -4054,7 +4054,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-08 · 86';
+        window.__APP_BUILD = '2026-10-08 · 87';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -12337,7 +12337,7 @@
       const sc = scrollerFor(el);
       if (sc && Math.abs(sc.scrollLeft - s0) > 4) return;
       if (e.cancelable) e.preventDefault();
-      shiftWeek(dx < 0 ? 1 : -1);
+      shiftWeek(dx > 0 ? 1 : -1);
     }, { passive: false });
   }
   function shiftWeek(delta){
