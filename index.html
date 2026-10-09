@@ -4054,7 +4054,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-08 · 87';
+        window.__APP_BUILD = '2026-10-09 · 88';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9785,6 +9785,32 @@
   }
   window.__logoFrameInfo = logoFrameInfo;
 
+  const THEME_CACHE_KEY = 'hbk.theme.v1';
+  const THEME_VAULT_KEY = 'hbk.theme.lastgood.v1';
+
+  function themeRemovalWasDeliberate(){
+    try { return !!(branding && branding.themeRemoved === true); } catch (e) { return false; }
+  }
+  function haveRememberedTheme(){
+    if (document.body && document.body.classList.contains('th-on')) return true;
+    try { return !!localStorage.getItem(THEME_CACHE_KEY); } catch (e) { return false; }
+  }
+  function vaultTheme(theme){
+    try {
+      if (!theme || !theme.style) return;
+      localStorage.setItem(THEME_VAULT_KEY, JSON.stringify({ theme: theme, at: Date.now() }));
+    } catch (e) {}
+  }
+  function vaultedTheme(){
+    try {
+      const raw = localStorage.getItem(THEME_VAULT_KEY);
+      if (!raw) return null;
+      const v = JSON.parse(raw);
+      return (v && v.theme && v.theme.style) ? v.theme : null;
+    } catch (e) { return null; }
+  }
+  window.__vaultedTheme = vaultedTheme;
+
   function currentSiteTheme(){
     const raw = (typeof branding !== 'undefined' && branding && branding.theme) || {};
     const primary = normaliseThemeHex(raw.primary) || THEME_FALLBACK.primary;
@@ -9820,6 +9846,37 @@
       '--th-c1-pale', '--th-c2-pale', '--th-c3', '--th-c3-lt', '--th-card', '--th-card-2'];
     if (!hasTheme){
       if (!window.__themeDataKnown){
+        if (!window.__siteEntryDecided){
+          window.__siteEntryDecided = true;
+          setSiteEntryMode(true);
+        }
+        return;
+      }
+      if (!themeRemovalWasDeliberate() && !haveRememberedTheme() && !window.__themeVaultRestoring){
+        const vault = vaultedTheme();
+        if (vault){
+          window.__themeVaultRestoring = true;
+          try {
+            if (branding && typeof branding === 'object') branding.theme = JSON.parse(JSON.stringify(vault));
+            console.warn('theme restored from the local vault');
+            applySiteTheme();
+          } catch (e) {}
+          window.__themeVaultRestoring = false;
+          return;
+        }
+      }
+      if (haveRememberedTheme() && !themeRemovalWasDeliberate()){
+        if (!window.__themelessDataWarned){
+          window.__themelessDataWarned = true;
+          console.warn('branding arrived without a theme — keeping the remembered one');
+          try {
+            if (typeof isOwnerSession === 'function' && isOwnerSession()
+                && typeof showSaveErrorBanner === 'function'){
+              showSaveErrorBanner('⚠ הנתונים שהגיעו מהענן הגיעו בלי העיצוב של העסק. האתר ממשיך להציג את העיצוב השמור ולא מוחק אותו — העיצוב שלך בטוח. אם ההודעה הזו חוזרת, תגידי לי.',
+                                  { id: 'themeMissingBanner', tone: 'info' });
+            }
+          } catch (e) {}
+        }
         if (!window.__siteEntryDecided){
           window.__siteEntryDecided = true;
           setSiteEntryMode(true);
@@ -9898,6 +9955,7 @@
     renderHeroMedallion(hasTheme);
     renderHeroContact(hasTheme);
     renderHeroCatsLine(hasTheme);
+    if (hasTheme && branding && branding.theme) vaultTheme(branding.theme);
     rememberThemeForNextLoad(root, body);
     if (!window.__siteEntryDecided){
       window.__siteEntryDecided = true;
@@ -9965,7 +10023,9 @@
         .filter(function(c){ return c === 'th-on' || c.indexOf('th-') === 0; })
         .filter(function(c){ return c !== 'th-entry'; }).join(' ');
       if (!classes || classes.indexOf('th-on') === -1){
-        if (window.__themeDataKnown) localStorage.removeItem('hbk.theme.v1');
+        if (window.__themeDataKnown && themeRemovalWasDeliberate()){
+          localStorage.removeItem(THEME_CACHE_KEY);
+        }
         return;
       }
       const logoRaw = (typeof branding !== 'undefined' && branding && branding.logo) || '';
@@ -10279,6 +10339,7 @@
 
   function writeTheme(patch){
     const th = currentSiteTheme();
+    if (branding.themeRemoved) delete branding.themeRemoved;
     if (!branding.theme) branding.theme = {};
     const next = Object.assign({}, th, patch || {});
     branding.theme = {
@@ -10454,6 +10515,7 @@
   function clearSiteTheme(){
     if (!confirm('להסיר את העיצוב ולחזור לצבעים הרגילים של המערכת?')) return;
     branding.theme = null;
+    branding.themeRemoved = true;
     applySiteTheme();
     renderThemeSettings();
     if (typeof saveState === 'function') saveState();
@@ -18697,6 +18759,15 @@
       try { if (branding && typeof branding === 'object') Object.assign(branding, server.branding); } catch (e) {}
       fixed.push('פרטי העסק');
     }
+    const serverTheme = (server && server.branding && server.branding.theme) || null;
+    const payloadHasBranding = !!(payload.branding && typeof payload.branding === 'object');
+    const payloadTheme = payloadHasBranding ? (payload.branding.theme || null) : null;
+    const removalRequested = !!(payloadHasBranding && payload.branding.themeRemoved === true);
+    if (payloadHasBranding && serverTheme && serverTheme.style && !payloadTheme && !removalRequested){
+      payload.branding.theme = cloneJSON(serverTheme);
+      try { if (branding && typeof branding === 'object') branding.theme = cloneJSON(serverTheme); } catch (e) {}
+      fixed.push('העיצוב של העסק');
+    }
     WIPE_PROTECTED_LISTS.forEach(key => {
       if (!Object.prototype.hasOwnProperty.call(payload, key)) return;
       const beforeLen = listLength(server && server[key]);
@@ -19139,6 +19210,24 @@
   function publishPublicView(){
     if (!isOwnerSession()) return Promise.resolve();
     const view = buildPublicView();
+    const removalRequested = themeRemovalWasDeliberate();
+    const viewHasTheme = !!(view.branding && view.branding.theme && view.branding.theme.style);
+    if (!viewHasTheme && !removalRequested){
+      return PUBLIC_DOC.get().then(function(doc){
+        const live = doc && doc.exists ? doc.data() : null;
+        const liveTheme = (live && live.branding && live.branding.theme) || null;
+        const rescue = (liveTheme && liveTheme.style) ? liveTheme : vaultedTheme();
+        if (rescue && rescue.style && view.branding){
+          view.branding.theme = cloneJSON(rescue);
+          try { if (branding && typeof branding === 'object' && !branding.theme) branding.theme = cloneJSON(rescue); } catch (e) {}
+          console.warn('public view was about to publish without a theme — kept the published one');
+        }
+        return __writePublicView(view);
+      }).catch(function(){ return __writePublicView(view); });
+    }
+    return __writePublicView(view);
+  }
+  function __writePublicView(view){
     const json = JSON.stringify(view);
     if (json === lastPublishedPublicJson) return Promise.resolve(); // שום דבר לא השתנה — אין מה לכתוב
     view.savedAt = new Date().toISOString();
