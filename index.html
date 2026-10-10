@@ -3087,6 +3087,7 @@
       window.__cachedLogoFill = !!t.logoFill;
       window.__cachedLogoZoom = Number(t.logoZoom) || 1;
     }
+    if (t.theme && t.theme.style) window.__cachedTheme = t.theme;
     window.__themeFromCache = true;
   } catch (e) {}
 })();
@@ -3794,7 +3795,22 @@
         <button type="button" class="template-btn" id="recAdminToggleBtn" style="display:none;" onclick="toggleRecAdminExpanded()"></button>
         <button type="button" class="template-btn" style="color:var(--wine); border-color:rgba(var(--wine-rgb),0.4);" onclick="deleteAllRecommendations()">🗑 מחיקת כל ההמלצות</button>
       </div>
+
       
+      <div class="label" style="margin:28px 0 10px;">מה ייכתב כשלוחצים על וואטסאפ או מייל<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">הכפתורים העגולים שמתחת ללוגו במסך הפותח. מה שנכתוב כאן יופיע ללקוחה כהודעה מוכנה, והיא רק תשלים ותשלח. שדה שנשאר ריק — הכפתור שלו ייפתח ריק בדיוק כמו היום.</span></span></div>
+      <div style="font-size:12px; color:var(--panel-text-dim); margin:-4px 0 10px;">הכול אופציונלי. ריק = הודעה ריקה, בלי שום כיתוב.</div>
+
+      <div class="label" style="margin:14px 0 6px;">וואטסאפ — ההודעה שתופיע מוכנה</div>
+      <textarea id="contactWaText" class="client-note" style="min-height:70px; margin:0;" placeholder="למשל: היי, אני רוצה להתייעץ בנושא..." oninput="updateContactIntro()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ ההודעה נשמרה')"></textarea>
+
+      <div class="label" style="margin:18px 0 6px;">מייל — נושא ההודעה</div>
+      <input class="field" id="contactMailSubject" type="text" placeholder="למשל: התייעצות" oninput="updateContactIntro()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ הנושא נשמר')">
+
+      <div class="label" style="margin:14px 0 6px;">מייל — גוף ההודעה</div>
+      <textarea id="contactMailBody" class="client-note" style="min-height:90px; margin:0;" placeholder="למשל: היי, אני רוצה להתייעץ בנושא..." oninput="updateContactIntro()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ ההודעה נשמרה')"></textarea>
+
+      <div id="contactIntroPreview" style="font-size:12px; color:var(--panel-text-dim); margin-top:10px; line-height:1.6;"></div>
+
         </div>
       </div>
       <div class="settings-section" data-settings-section="evening">
@@ -4054,7 +4070,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-09 · 88';
+        window.__APP_BUILD = '2026-10-10 · 89';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9107,6 +9123,37 @@
     aboutMe.text = el ? el.value : '';
     renderAboutWho();
   }
+  function updateContactIntro(){
+    const g = (id) => { const e = document.getElementById(id); return e ? e.value : ''; };
+    if (!branding.contactIntro || typeof branding.contactIntro !== 'object') branding.contactIntro = {};
+    branding.contactIntro.waText = g('contactWaText');
+    branding.contactIntro.mailSubject = g('contactMailSubject');
+    branding.contactIntro.mailBody = g('contactMailBody');
+    renderContactIntroPreview();
+    try { renderHeroContact(document.body.classList.contains('th-on')); } catch (e) {}
+  }
+  function renderContactIntroSettings(){
+    const s = (id, v) => { const e = document.getElementById(id); if (e) e.value = v || ''; };
+    const c = (branding && branding.contactIntro) || {};
+    s('contactWaText', c.waText);
+    s('contactMailSubject', c.mailSubject);
+    s('contactMailBody', c.mailBody);
+    renderContactIntroPreview();
+  }
+  function renderContactIntroPreview(){
+    const el = document.getElementById('contactIntroPreview');
+    if (!el) return;
+    const m = (typeof heroContactMessages === 'function') ? heroContactMessages() : {};
+    const lines = [];
+    lines.push(m.waText ? ('וואטסאפ ייפתח עם: "' + m.waText + '"') : 'וואטסאפ ייפתח ריק.');
+    if (m.mailSubject || m.mailBody){
+      lines.push('מייל ייפתח עם נושא "' + (m.mailSubject || '(ריק)') + '"'
+        + (m.mailBody ? (' ובגוף: "' + m.mailBody.replace(/\s+/g, ' ').slice(0, 60) + (m.mailBody.length > 60 ? '…' : '') + '"') : ''));
+    } else {
+      lines.push('מייל ייפתח ריק.');
+    }
+    el.textContent = lines.join('  ·  ');
+  }
   function renderAboutSettings(){
     const prev = document.getElementById('aboutPhotoPreview');
     const ph = document.getElementById('aboutPhotoPlaceholder');
@@ -9811,8 +9858,17 @@
   }
   window.__vaultedTheme = vaultedTheme;
 
+  function provisionalTheme(){
+    if (themeRemovalWasDeliberate()) return null;
+    try {
+      if (window.__cachedTheme && window.__cachedTheme.style) return window.__cachedTheme;
+    } catch (e) {}
+    return vaultedTheme();
+  }
+
   function currentSiteTheme(){
-    const raw = (typeof branding !== 'undefined' && branding && branding.theme) || {};
+    let raw = (typeof branding !== 'undefined' && branding && branding.theme) || null;
+    if (!raw || !raw.style) raw = provisionalTheme() || raw || {};
     const primary = normaliseThemeHex(raw.primary) || THEME_FALLBACK.primary;
     const secondary = normaliseThemeHex(raw.secondary) || THEME_FALLBACK.secondary;
     const style = THEME_STYLE_KEYS.indexOf(raw.style) !== -1 ? raw.style : '';
@@ -10048,6 +10104,7 @@
         logo: logoForCache,
         logoFill: !!thNow.logoFill,
         logoZoom: (typeof thNow.logoZoom === 'number') ? thNow.logoZoom : 1,
+        theme: (typeof branding !== 'undefined' && branding && branding.theme) || null,
       }));
     } catch (e) {}
   }
@@ -10058,6 +10115,31 @@
     ml: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg>',
   };
   function digitsOnlyPhone(raw){ return String(raw || '').replace(/[^0-9]/g, ''); }
+
+  function heroContactMessages(){
+    let c = {};
+    try { c = (branding && branding.contactIntro) || {}; } catch (e) { c = {}; }
+    const clean = (v) => String(v || '').replace(/\u0000/g, '').trim();
+    return {
+      waText: clean(c.waText),
+      mailSubject: clean(c.mailSubject),
+      mailBody: clean(c.mailBody),
+    };
+  }
+  function heroWaUrl(intl){
+    const t = heroContactMessages().waText;
+    return 'https://wa.me/' + intl + (t ? ('?text=' + encodeURIComponent(t)) : '');
+  }
+  function heroMailUrl(mail){
+    const m = heroContactMessages();
+    const parts = [];
+    if (m.mailSubject) parts.push('subject=' + encodeURIComponent(m.mailSubject));
+    if (m.mailBody) parts.push('body=' + encodeURIComponent(m.mailBody));
+    return 'mailto:' + mail + (parts.length ? ('?' + parts.join('&')) : '');
+  }
+  window.__heroWaUrl = heroWaUrl;
+  window.__heroMailUrl = heroMailUrl;
+
   function renderHeroContact(hasTheme){
     const el = document.getElementById('heroContact');
     if (!el) return;
@@ -10071,10 +10153,10 @@
     const out = [];
     if (wa){
       const intl = wa.charAt(0) === '0' ? ('972' + wa.slice(1)) : wa;
-      out.push('<a class="wa" href="https://wa.me/' + intl + '" target="_blank" rel="noopener" aria-label="וואטסאפ">' + HERO_ICONS.wa + '</a>');
+      out.push('<a class="wa" href="' + heroWaUrl(intl) + '" target="_blank" rel="noopener" aria-label="וואטסאפ">' + HERO_ICONS.wa + '</a>');
     }
     if (phone) out.push('<a class="ph" href="tel:' + phone + '" aria-label="שיחת טלפון">' + HERO_ICONS.ph + '</a>');
-    if (mail) out.push('<a class="ml" href="mailto:' + mail + '" aria-label="מייל">' + HERO_ICONS.ml + '</a>');
+    if (mail) out.push('<a class="ml" href="' + heroMailUrl(mail) + '" aria-label="מייל">' + HERO_ICONS.ml + '</a>');
     el.innerHTML = out.join('');
     el.classList.toggle('has-links', out.length > 0);
   }
@@ -10516,6 +10598,8 @@
     if (!confirm('להסיר את העיצוב ולחזור לצבעים הרגילים של המערכת?')) return;
     branding.theme = null;
     branding.themeRemoved = true;
+    try { localStorage.removeItem(THEME_VAULT_KEY); } catch (e) {}
+    try { window.__cachedTheme = null; } catch (e) {}
     applySiteTheme();
     renderThemeSettings();
     if (typeof saveState === 'function') saveState();
@@ -10551,8 +10635,10 @@
   function renderHeroCatsLine(hasTheme){
     const el = document.getElementById('heroCatsLine');
     if (!el) return;
-    if (!hasTheme || typeof categories === 'undefined' || !Array.isArray(categories)){ el.textContent = ''; return; }
-    const shown = categories.filter(function(c){
+    let cats = null;
+    try { cats = Array.isArray(categories) ? categories : null; } catch (e) { cats = null; }
+    if (!hasTheme || !cats){ el.textContent = ''; return; }
+    const shown = cats.filter(function(c){
       return c && (typeof availableServicesOf !== 'function' || availableServicesOf(c).length);
     });
     el.textContent = shown.join('  ·  ');
@@ -10597,6 +10683,7 @@
   function renderBranding(){
     applySiteTheme();
     renderThemeSettings();
+    try { renderContactIntroSettings(); } catch (e) {}
     const logoHtml = branding.logo
       ? `<img src="${branding.logo}">`
       : branding.name.trim().charAt(0);
@@ -12250,7 +12337,14 @@
     if (typeof showAdminToast === 'function') showAdminToast('✓ העובדת נוספה בהצלחה');
   }
   renderStaff();
-  const staffColors = ['#E8CE7A', '#A6C29B', '#E2A8B9', '#D9AAB8', '#D9B27C'];
+  const staffColorsFallback = ['#E8CE7A', '#A6C29B', '#E2A8B9', '#D9AAB8', '#D9B27C'];
+  function staffStripeColor(idx){
+    const i = Math.abs(Number(idx) || 0);
+    let themed = null;
+    try { themed = (typeof themeCategoryPalette === 'function') ? themeCategoryPalette() : null; } catch (e) { themed = null; }
+    const list = (themed && themed.length) ? themed : staffColorsFallback;
+    return list[i % list.length];
+  }
   function calNowFillHeightPx(hourBandHeight){
     const now = new Date();
     const totalPx = (calEndHour - calStartHour) * hourBandHeight;
@@ -12956,7 +13050,7 @@
         block.style.top = (hourIdx * hourBandHeight + quarterOffset * quarterHeight + 2) + 'px';
         block.style.height = (durationQuarters * quarterHeight - 3) + 'px';
         if (b.staff !== 'all' && staff[b.staff]){
-          block.style.borderInlineStart = `5px solid ${staffColors[b.staff % staffColors.length]}`;
+          block.style.borderInlineStart = `5px solid ${staffStripeColor(b.staff)}`;
         }
         const staffLabel = b.staff === 'all' ? 'כל הצוות' : ((staff[b.staff] && staff[b.staff].name) || '');
         block.title = `חסום${b.reason ? ' — ' + b.reason : ''} · ${staffLabel} · ${b.time} (${b.duration} דק') — לחיצה מסירה את החסימה`;
@@ -18572,8 +18666,14 @@
   };
   const PLATFORM_ADMIN_EMAIL = 'agor678@gmail.com';
   const PLATFORM_ADMIN_EMAILS = ['agor678@gmail.com', 'agor678+test@gmail.com'];
+  const PLATFORM_JOIN_EMAIL = 'allclick2027@gmail.com';
+  function joinUsEmailAddress(){
+    let fromSettings = '';
+    try { fromSettings = String((branding && branding.joinUsEmail) || '').trim(); } catch (e) {}
+    return fromSettings || PLATFORM_JOIN_EMAIL || PLATFORM_ADMIN_EMAIL;
+  }
   function joinUsMailtoUrl(){
-    const to = ((typeof maintainerEmailOf === 'function' && maintainerEmailOf()) || PLATFORM_ADMIN_EMAIL);
+    const to = joinUsEmailAddress();
     const bizName = (typeof branding !== 'undefined' && branding && branding.name) ? branding.name : '';
     const subject = 'אני גם מעוניינת לצרף את העסק שלי';
     const body = [
@@ -19169,6 +19269,7 @@
         address: (branding && branding.address) || '',
         email: (branding && branding.email) || '',
         theme: (branding && branding.theme) || null,
+        contactIntro: (branding && branding.contactIntro) || null,
         eveningMaxDuration: (branding && branding.eveningMaxDuration !== undefined && branding.eveningMaxDuration !== null)
           ? branding.eveningMaxDuration : null,
         eveningMaxStaff: (branding && Array.isArray(branding.eveningMaxStaff)) ? branding.eveningMaxStaff : [],
