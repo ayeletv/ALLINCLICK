@@ -145,6 +145,8 @@
     border-bottom:1px solid rgba(245,238,228,0.08);
   }
 
+  html.ground-unknown{background:#F6F1EA;}
+  html.ground-unknown body{background:transparent; color:#2E2522;}
   html.theme-unknown .hero{background:#f7f2ec; border-bottom-color:transparent;}
   html.theme-unknown .hero-ground{opacity:0;}
   html.theme-unknown .hero > *:not(.hero-ground){opacity:0;}
@@ -704,8 +706,8 @@
   .cloud-loading-overlay{
     display:none; position:absolute; inset:0; z-index:40;
     flex-direction:column; align-items:center; justify-content:center; gap:14px;
-    background:rgba(20,16,20,0.82);
-    color:var(--ivory);
+    background:var(--th-panel-bg, rgba(20,16,20,0.82));
+    color:var(--th-ink-brand, var(--ivory));
     font-size:14.5px;
     text-align:center;
     border-radius:10px;
@@ -714,13 +716,13 @@
   .cloud-loading-overlay.show{display:flex;}
   .cloud-spinner{
     width:34px; height:34px; border-radius:50%;
-    border:3px solid rgba(245,238,228,0.22);
-    border-top-color:var(--gold-soft);
+    border:3px solid rgba(var(--th-primary-rgb, 245,238,228),0.22);
+    border-top-color:var(--th-primary, var(--gold-soft));
     animation:cloudSpin 0.8s linear infinite;
   }
   @keyframes cloudSpin{ to{ transform:rotate(360deg); } }
   @media (prefers-reduced-motion: reduce){
-    .cloud-spinner{ animation:none; border-top-color:rgba(245,238,228,0.22); }
+    .cloud-spinner{ animation:none; border-top-color:rgba(var(--th-primary-rgb, 245,238,228),0.22); }
   }
   .phone{
     max-width:380px;
@@ -3061,10 +3063,16 @@
   var markUnknown = function(){
     try {
       document.documentElement.classList.add('theme-unknown');
+      document.documentElement.classList.add('ground-unknown');
       window.__clearThemeUnknown = function(){
-        try { document.documentElement.classList.remove('theme-unknown'); } catch (e) {}
+        try {
+          document.documentElement.classList.remove('theme-unknown');
+          document.documentElement.classList.remove('ground-unknown');
+        } catch (e) {}
       };
-      setTimeout(window.__clearThemeUnknown, 2000);
+      setTimeout(function(){
+        try { document.documentElement.classList.remove('theme-unknown'); } catch (e) {}
+      }, 2000);
     } catch (e) {}
   };
   try {
@@ -3088,6 +3096,7 @@
       window.__cachedLogoZoom = Number(t.logoZoom) || 1;
     }
     if (t.theme && t.theme.style) window.__cachedTheme = t.theme;
+    if (t.bizId) window.__cachedThemeBizId = t.bizId;
     window.__themeFromCache = true;
   } catch (e) {}
 })();
@@ -4070,7 +4079,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-10 · 89';
+        window.__APP_BUILD = '2026-10-11 · 91';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9861,7 +9870,10 @@
   function provisionalTheme(){
     if (themeRemovalWasDeliberate()) return null;
     try {
-      if (window.__cachedTheme && window.__cachedTheme.style) return window.__cachedTheme;
+      const sameBiz = !window.__cachedThemeBizId || !window.__BIZ_ID
+        || window.__cachedThemeBizId === window.__BIZ_ID;
+      if (sameBiz && window.__cachedTheme && window.__cachedTheme.style) return window.__cachedTheme;
+      if (!sameBiz) return null;
     } catch (e) {}
     return vaultedTheme();
   }
@@ -10105,6 +10117,7 @@
         logoFill: !!thNow.logoFill,
         logoZoom: (typeof thNow.logoZoom === 'number') ? thNow.logoZoom : 1,
         theme: (typeof branding !== 'undefined' && branding && branding.theme) || null,
+        bizId: (typeof window.__BIZ_ID === 'string') ? window.__BIZ_ID : '',
       }));
     } catch (e) {}
   }
@@ -19248,7 +19261,9 @@
   function isOwnerSession(){
     const u = auth && auth.currentUser;
     if (!u || u.isAnonymous) return false;
-    return !!BIZ_ID && ownerBizId === BIZ_ID;
+    if (!BIZ_ID) return false;
+    if (ownerBizId === BIZ_ID) return true;
+    try { return isPlatformAdmin(); } catch (e) { return false; }
   }
   function buildPublicView(){
     const busy = [];
