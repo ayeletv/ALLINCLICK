@@ -4158,7 +4158,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-11 · 95';
+        window.__APP_BUILD = '2026-10-11 · 96';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -7623,6 +7623,17 @@
     const bizBtn = document.getElementById('businessTabBtn');
     if (typeof showPanel === 'function' && bizBtn) showPanel('business', bizBtn);
     if (typeof setOverviewView === 'function') setOverviewView('week');
+    try {
+      if (selectedStaffFilter !== 'all' && appt.staff !== undefined
+          && appt.staff !== null && selectedStaffFilter !== appt.staff){
+        selectedStaffFilter = 'all';
+        const sel = document.getElementById('calStaffFilterSelect');
+        if (sel) sel.value = 'all';
+        if (typeof showAdminToast === 'function'){
+          showAdminToast('הוצג היומן המלא, כי התור הזה אינו של העובדת שסוננה');
+        }
+      }
+    } catch (e) {}
     if (typeof weekOffsetForDate === 'function') weekOffset = weekOffsetForDate(apptDate);
     if (typeof computeWeekDays === 'function') weekDays = computeWeekDays();
     pendingCalHighlightApptId = appt.id || null;
@@ -11110,6 +11121,11 @@
               <button class="visit-cancel-btn" data-cancel-appt-id="${a.id || ''}" title="ביטול התור הזה" style="margin-inline-start:auto; background:none; border:1px solid rgba(var(--wine-rgb),0.4); color:var(--wine); border-radius:8px; font-size:12px; padding:3px 8px; cursor:pointer;">✕ ביטול</button>
             </div>
             <div class="upcoming-meta">${a.staff !== undefined && staff[a.staff] ? 'אצל ' + staff[a.staff].name + ' · ' : ''}${formatAppointmentStatus(a)}</div>
+            ${(typeof isAppointmentToday === 'function' && isAppointmentToday(a)) ? `
+            <div class="visit-status-actions">
+              <button class="visit-status-btn${a.status === 'completed' ? ' active-yes' : ''}" data-status="completed">✓ הגיעה</button>
+              <button class="visit-status-btn${a.status === 'no-show' ? ' active-no' : ''}" data-status="no-show">✗ לא הגיעה</button>
+            </div>` : ''}
             ${a.note ? `<div style="font-size:12px; color:var(--panel-text-dim); margin-top:5px; white-space:pre-wrap;">${escapeApptText(a.note)}</div>` : ''}
           </div>`;
       }
@@ -11448,6 +11464,15 @@
         const appt = apptForRowEl(visitEl, apptById);
         if (!appt) return;
         wireRowJumpToCalendar(visitEl, appt);
+        visitEl.querySelectorAll('.visit-status-btn').forEach(btn => {
+          btn.onclick = () => {
+            setApptStatus(appt, appt.status === btn.dataset.status ? 'pending' : btn.dataset.status);
+            visitEl.querySelectorAll('.visit-status-btn').forEach(b => b.classList.remove('active-yes', 'active-no'));
+            if (appt.status === 'completed') btn.classList.add('active-yes');
+            if (appt.status === 'no-show') btn.classList.add('active-no');
+            if (typeof saveState === 'function') saveState();
+          };
+        });
         const cancelBtn = visitEl.querySelector('[data-cancel-appt-id]');
         if (cancelBtn) cancelBtn.onclick = () => cancelAdminAppointment(appt);
       });
