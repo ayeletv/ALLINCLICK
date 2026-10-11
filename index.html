@@ -4153,7 +4153,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-11 · 93';
+        window.__APP_BUILD = '2026-10-11 · 94';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -20186,12 +20186,36 @@
       || !runningOnPublicData;
     if (ownerIsWatching || cloudLoadRetryCount >= 2) showCloudErrorBanner();
     const delay = Math.min(30000, 3000 * cloudLoadRetryCount);
+    __cloudRetryAt = Date.now() + delay;
     setTimeout(function(){
       const ensure = (typeof window.__ensureAnonAuth === 'function')
         ? window.__ensureAnonAuth() : Promise.resolve();
       ensure.then(loadCloudData, loadCloudData);
     }, delay);
   }
+  let __cloudRetryAt = 0;
+  let __cloudWakeBusy = false;
+  function retryCloudNow(reason){
+    if (__cloudWakeBusy) return;
+    if (typeof cloudLoadComplete !== 'undefined' && cloudLoadComplete
+        && !document.getElementById('cloudErrorBanner')) return;
+    if (!document.getElementById('cloudErrorBanner')) return;   // אין תקלה פתוחה
+    __cloudWakeBusy = true;
+    cloudLoadRetryCount = 0;
+    console.log('retrying cloud load now (' + reason + ')');
+    const ensure = (typeof window.__ensureAnonAuth === 'function')
+      ? window.__ensureAnonAuth() : Promise.resolve();
+    ensure.then(loadCloudData, loadCloudData)
+      .then(function(){ __cloudWakeBusy = false; }, function(){ __cloudWakeBusy = false; });
+    setTimeout(function(){ __cloudWakeBusy = false; }, 4000);
+  }
+  window.__retryCloudNow = retryCloudNow;
+  try {
+    window.addEventListener('online', function(){ retryCloudNow('הרשת חזרה'); });
+    document.addEventListener('visibilitychange', function(){
+      if (!document.hidden) retryCloudNow('חזרו למסך');
+    });
+  } catch (e) {}
   function retryPublicLoadLater(){ return retryCloudLoadLater(); }
   function loadPrivateCloudData(cloudLoadStartedAt){
     runningOnPublicData = false;
