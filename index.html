@@ -55,6 +55,73 @@
     messagingSenderId: "737599524118",
     appId: "1:737599524118:web:d0cf35be864f1e773c9437"
   };
+  window.__BIZ_BY_DOMAIN = {
+    'rutizolberg.com': 'default',
+  };
+(function(){
+  if (window.__themeFromCache) return;            // יש זיכרון מקומי, אין צורך
+  var cfg = (typeof firebaseConfig !== 'undefined') ? firebaseConfig : null;
+  if (!cfg || !cfg.projectId || !cfg.apiKey) return;
+  var host = '';
+  try { host = String(location.hostname || '').toLowerCase().replace(/^www\./, ''); } catch (e) { return; }
+  if (!host) return;
+  var base = 'https://firestore.googleapis.com/v1/projects/' + cfg.projectId
+           + '/databases/(default)/documents/';
+  var get = function(path){
+    return fetch(base + path + '?key=' + encodeURIComponent(cfg.apiKey), { cache: 'no-store' })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .catch(function(){ return null; });
+  };
+  var str = function(doc, field){
+    try { return doc.fields[field].stringValue; } catch (e) { return ''; }
+  };
+  var paint = function(doc){
+    if (!doc || window.__themeFromCache) return;   // הזיכרון המקומי קודם תמיד
+    var t = null;
+    try { t = JSON.parse(str(doc, 'snapshot') || 'null'); } catch (e) { t = null; }
+    if (!t || !t.vars) return;
+    try {
+      var root = document.documentElement;
+      Object.keys(t.vars).forEach(function(k){ root.style.setProperty(k, t.vars[k]); });
+      if (t.classes){
+        window.__pendingThemeClasses = t.classes;
+        var applyClasses = function(){
+          try {
+            if (!document.body || !window.__pendingThemeClasses) return;
+            document.body.className = (document.body.className + ' ' + window.__pendingThemeClasses).trim();
+            window.__pendingThemeClasses = '';
+          } catch (e) {}
+        };
+        applyClasses();
+        if (window.__pendingThemeClasses){
+          document.addEventListener('DOMContentLoaded', applyClasses);
+          var tick = setInterval(function(){ applyClasses(); if (!window.__pendingThemeClasses) clearInterval(tick); }, 20);
+        }
+      }
+      if (t.name) window.__cachedBizName = t.name;
+      if (t.phone) window.__cachedPhone = t.phone;
+      if (t.hasContact) root.classList.add('contact-expected');
+      if (t.theme && t.theme.style) window.__cachedTheme = t.theme;
+      if (t.bizId) window.__cachedThemeBizId = t.bizId;
+      window.__themeFromCache = true;
+      window.__themeFromCloudSnapshot = true;
+      root.classList.remove('theme-unknown');
+      root.classList.remove('ground-unknown');
+      if (typeof window.__applySiteTheme === 'function') window.__applySiteTheme();
+    } catch (e) {}
+  };
+  var known = (window.__BIZ_BY_DOMAIN || {})[host];
+  if (known){
+    get('siteTheme/' + encodeURIComponent(known)).then(paint);
+    return;
+  }
+  get('domains/' + encodeURIComponent(host)).then(function(d){
+    var biz = str(d, 'bizId');
+    if (!biz) return null;
+    return get('siteTheme/' + encodeURIComponent(biz)).then(paint);
+  });
+})();
+
   let db, auth, storage;
   let panelRenderCallLog = null;
   let clientsRenderCallLog = null;
@@ -151,6 +218,10 @@
   html.ground-unknown .hero-ground{opacity:0;}
   html.ground-unknown .hero, html.ground-unknown .hero *{color:#3A2E2E;}
   html.theme-unknown .hero > *:not(.hero-ground){opacity:0;}
+  .hero, .hero-ground{transition:background-color .28s ease, opacity .28s ease;}
+  @media (prefers-reduced-motion: reduce){
+    .hero, .hero-ground{transition:none;}
+  }
 
   .hero-ground{position:absolute; inset:0; overflow:hidden; z-index:0; pointer-events:none;}
   .hero > *:not(.hero-ground){position:relative; z-index:1;}
@@ -3099,7 +3170,9 @@
     if (t.theme && t.theme.style) window.__cachedTheme = t.theme;
     if (t.bizId) window.__cachedThemeBizId = t.bizId;
     window.__themeFromCache = true;
+    return;
   } catch (e) {}
+  markUnknown();
 })();
 </script>
 
@@ -4080,7 +4153,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-11 · 92';
+        window.__APP_BUILD = '2026-10-11 · 93';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -18675,9 +18748,7 @@
     if (typeof showAdminToast === 'function') showAdminToast('✓ המוצר נוסף למלאי בהצלחה');
   }
   let cloudLoadComplete = false;
-  const BIZ_BY_DOMAIN = {
-    'rutizolberg.com': 'default',
-  };
+  const BIZ_BY_DOMAIN = window.__BIZ_BY_DOMAIN || { 'rutizolberg.com': 'default' };
   const PLATFORM_ADMIN_EMAIL = 'agor678@gmail.com';
   const PLATFORM_ADMIN_EMAILS = ['agor678@gmail.com', 'agor678+test@gmail.com'];
   const PLATFORM_JOIN_EMAIL = 'allclick2027@gmail.com';
@@ -19324,7 +19395,32 @@
       busy,
     };
   }
+  let lastPublishedSiteThemeJson = null;
+  function publishSiteTheme(){
+    if (!isOwnerSession() || !BIZ_ID) return Promise.resolve();
+    let snap = null;
+    try { snap = JSON.parse(localStorage.getItem(THEME_CACHE_KEY) || 'null'); } catch (e) { snap = null; }
+    if (!snap || !snap.vars || !snap.classes || snap.classes.indexOf('th-on') === -1) return Promise.resolve();
+    const lite = {
+      vars: snap.vars, classes: snap.classes,
+      name: snap.name || '', phone: snap.phone || '',
+      hasContact: !!snap.hasContact,
+      theme: snap.theme || null,
+      bizId: BIZ_ID,
+    };
+    const json = JSON.stringify(lite);
+    if (json === lastPublishedSiteThemeJson) return Promise.resolve();
+    return db.collection('siteTheme').doc(BIZ_ID)
+      .set({ snapshot: json, savedAt: new Date().toISOString() })
+      .then(function(){ lastPublishedSiteThemeJson = json; })
+      .catch(function(err){
+        console.error('siteTheme publish failed:', err);
+      });
+  }
+  window.__publishSiteTheme = publishSiteTheme;
+
   function publishPublicView(){
+    try { publishSiteTheme(); } catch (e) {}
     if (!isOwnerSession()) return Promise.resolve();
     const view = buildPublicView();
     const removalRequested = themeRemovalWasDeliberate();
