@@ -129,6 +129,11 @@
   try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
+    try {
+      if (typeof db.settings === 'function'){
+        db.settings({ experimentalAutoDetectLongPolling: true, merge: true });
+      }
+    } catch (e) { console.warn('firestore settings not applied:', e); }
     if (typeof firebase.storage === 'function') storage = firebase.storage();
     auth = firebase.auth();
     try {
@@ -4153,7 +4158,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-11 · 94';
+        window.__APP_BUILD = '2026-10-11 · 95';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -20091,7 +20096,7 @@
     });
   }
   function loadPublicData(){
-    return PUBLIC_DOC.get().then(doc => {
+    return getDocWithRetry(PUBLIC_DOC, 'publicView').then(doc => {
       const data = doc.exists ? doc.data() : null;
       if (!data) return 'empty';
       if (!Array.isArray(data.staff) || !data.staff.length){
@@ -20216,10 +20221,29 @@
       if (!document.hidden) retryCloudNow('חזרו למסך');
     });
   } catch (e) {}
+  const TRANSIENT_CLOUD_CODES = ['unavailable', 'deadline-exceeded', 'internal', 'aborted', 'cancelled'];
+  function isTransientCloudError(err){
+    const code = String((err && err.code) || '').toLowerCase();
+    return TRANSIENT_CLOUD_CODES.indexOf(code) !== -1;
+  }
+  function getDocWithRetry(ref, label){
+    let attempt = 0;
+    const tryOnce = () => ref.get().catch(err => {
+      attempt++;
+      if (!isTransientCloudError(err) || attempt > 2) throw err;
+      const wait = attempt === 1 ? 350 : 1100;
+      console.warn('cloud read "' + (label || '') + '" failed with ' + err.code
+                   + ' — retry ' + attempt + ' in ' + wait + 'ms');
+      return new Promise(r => setTimeout(r, wait)).then(tryOnce);
+    });
+    return tryOnce();
+  }
+  window.__getDocWithRetry = getDocWithRetry;
+
   function retryPublicLoadLater(){ return retryCloudLoadLater(); }
   function loadPrivateCloudData(cloudLoadStartedAt){
     runningOnPublicData = false;
-    return CLOUD_DOC.get().then(doc => {
+    return getDocWithRetry(CLOUD_DOC, 'business').then(doc => {
       hideCloudErrorBanner();
       hideBizNotReadyBanner();
       cloudLoadRetryCount = 0;
