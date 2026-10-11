@@ -4168,6 +4168,8 @@
         <div class="settings-section-body">
           <div class="label" style="margin:28px 0 10px;">חשבון</div>
       <button class="template-btn" onclick="doLogout()">🚪 התנתקות</button>
+      
+      <div id="weeklyBackupStatus" style="font-size:12.5px; color:var(--panel-text-dim); line-height:1.7; margin-top:16px; max-width:520px;"></div>
 
         </div>
       </div>
@@ -4176,7 +4178,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-11 · 97';
+        window.__APP_BUILD = '2026-10-11 · 98';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -10928,6 +10930,7 @@
     if (typeof applySensitiveSettingsLock === 'function') applySensitiveSettingsLock();
     const invEmailInputEl = document.getElementById('invAlertEmail');
     if (invEmailInputEl && document.activeElement !== invEmailInputEl) invEmailInputEl.value = invAlertEmail || '';
+    if (typeof renderWeeklyBackupStatus === 'function') renderWeeklyBackupStatus();
     const ownerCodeInputEl = document.getElementById('ownerAccessCodeInput');
     if (ownerCodeInputEl && document.activeElement !== ownerCodeInputEl) ownerCodeInputEl.value = ownerAccessCode || '';
     if (typeof renderHolidayOverrides === 'function') renderHolidayOverrides();
@@ -19337,6 +19340,37 @@
     }
     return '⚠ השינוי האחרון לא נשמר בענן. נא לבדוק את החיבור לאינטרנט ולנסות שוב — לא לרענן את הדף בינתיים, אחרת השינוי יאבד.' + tail;
   }
+  let lastWeeklyBackup = null;
+  function renderWeeklyBackupStatus(){
+    const el = document.getElementById('weeklyBackupStatus');
+    if (!el) return;
+    const lines = [];
+    let sizeKb = null;
+    try {
+      sizeKb = Math.round(measurePayloadBytes({
+        branding, clients, customTemplates, staff, weekAppointments, categories, services,
+        whatsNewItems, invAlertEmail, inventory, waitlist, cancellationLog, lateCancellations,
+        ownerAccessCode, gatedTabsConfig, personalBlocks, specialRequests, categoryMessages,
+        categoryColors, about: aboutMe, recommendations
+      }) / 1024);
+    } catch (e) { sizeKb = null; }
+    if (sizeKb === null){ el.textContent = ''; return; }
+    lines.push('גודל הנתונים: ' + sizeKb + ' ק"ב מתוך 1024.');
+    let b = null;
+    try { b = lastWeeklyBackup; } catch (e) { b = null; }
+    if (!invAlertEmail){
+      lines.push('⚠ הגיבוי השבועי אינו נשלח, כי לא מולאה כתובת ב"מייל המנהלת (לקבלת התראות)" למעלה. לשם הוא נשלח.');
+    } else if (!b || !b.date){
+      lines.push('הגיבוי השבועי נשלח לכתובת ' + invAlertEmail + ' בימי ראשון. עדיין לא נרשמה כאן שליחה — אם לא מגיע מייל, כדאי להגיד לי.');
+    } else {
+      const d = String(b.date).split('-');
+      const nice = (d.length === 3) ? (d[2] + '.' + d[1] + '.' + d[0]) : String(b.date);
+      lines.push((b.ok === false ? '⚠ הגיבוי השבועי האחרון נכשל' : '✓ הגיבוי השבועי האחרון נשלח')
+        + ' בתאריך ' + nice + ' אל ' + (b.to || invAlertEmail)
+        + (b.sentKb ? ' (' + b.sentKb + ' ק"ב דחוס)' : '') + '.');
+    }
+    el.textContent = lines.join(' ');
+  }
   function checkSaveSizeHeadroom(){
     if (!lastSavePayloadBytes) return;
     if (lastSavePayloadBytes < FIRESTORE_DOC_LIMIT * 0.85) return;
@@ -19752,6 +19786,9 @@
     if (data.categoryMessages && typeof data.categoryMessages === 'object') categoryMessages = data.categoryMessages;
     if (data.categoryColors && typeof data.categoryColors === 'object') categoryColors = data.categoryColors;
     if (typeof data.invAlertEmail === 'string') invAlertEmail = data.invAlertEmail;
+    if (data.lastWeeklyBackup && typeof data.lastWeeklyBackup === 'object'){
+      lastWeeklyBackup = data.lastWeeklyBackup;
+    }
     if (Array.isArray(data.holidayOverrides)) holidayOverrides = data.holidayOverrides.slice();
     else if (data.openOnTishaBav === true) migrateLegacyTishaBavFlag();
     if (data.inventory) inventory = data.inventory;
