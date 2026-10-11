@@ -147,8 +147,9 @@
 
   html.ground-unknown{background:#F6F1EA;}
   html.ground-unknown body{background:transparent; color:#2E2522;}
-  html.theme-unknown .hero{background:#f7f2ec; border-bottom-color:transparent;}
-  html.theme-unknown .hero-ground{opacity:0;}
+  html.ground-unknown .hero{background:#f7f2ec; border-bottom-color:transparent;}
+  html.ground-unknown .hero-ground{opacity:0;}
+  html.ground-unknown .hero, html.ground-unknown .hero *{color:#3A2E2E;}
   html.theme-unknown .hero > *:not(.hero-ground){opacity:0;}
 
   .hero-ground{position:absolute; inset:0; overflow:hidden; z-index:0; pointer-events:none;}
@@ -4079,7 +4080,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-11 · 91';
+        window.__APP_BUILD = '2026-10-11 · 92';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
