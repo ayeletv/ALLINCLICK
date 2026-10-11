@@ -113,6 +113,9 @@
       }
       if (t.name) window.__cachedBizName = t.name;
       if (t.phone) window.__cachedPhone = t.phone;
+      if (t.phone || t.wa || t.mail){
+        window.__cachedContact = { phone: t.phone || '', whatsapp: t.wa || '', email: t.mail || '' };
+      }
       if (t.hasContact) root.classList.add('contact-expected');
       if (t.theme && t.theme.style) window.__cachedTheme = t.theme;
       if (t.bizId) window.__cachedThemeBizId = t.bizId;
@@ -3185,6 +3188,9 @@
       window.__cachedHasContact = true;
       document.documentElement.classList.add('contact-expected');
     }
+    if (t.phone || t.wa || t.mail){
+      window.__cachedContact = { phone: t.phone || '', whatsapp: t.wa || '', email: t.mail || '' };
+    }
     if (t.logo){
       window.__cachedLogo = t.logo;
       window.__cachedLogoFill = !!t.logoFill;
@@ -4178,7 +4184,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-11 · 99';
+        window.__APP_BUILD = '2026-10-11 · 100';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9896,8 +9902,12 @@
   ];
   const THEME_TONE_KEYS = THEME_TONES.map(function(t){ return t.key; });
   function currentTone(){
-    const raw = (typeof branding !== 'undefined' && branding && branding.theme) || {};
-    const key = THEME_TONE_KEYS.indexOf(raw.tone) !== -1 ? raw.tone : 'pastel';
+    let toneKey = '';
+    try { toneKey = (currentSiteTheme() || {}).tone || ''; } catch (e) { toneKey = ''; }
+    if (!toneKey){
+      try { toneKey = ((branding && branding.theme) || {}).tone || ''; } catch (e) { toneKey = ''; }
+    }
+    const key = THEME_TONE_KEYS.indexOf(toneKey) !== -1 ? toneKey : 'pastel';
     return THEME_TONES.filter(function(t){ return t.key === key; })[0];
   }
   const THEME_FALLBACK = { primary: '#9B2C42', secondary: '#C9A227' };
@@ -10277,6 +10287,8 @@
         vars: vars, classes: classes,
         name: (typeof branding !== 'undefined' && branding && branding.name) || '',
         phone: (typeof branding !== 'undefined' && branding && branding.phone) || '',
+        wa: (typeof branding !== 'undefined' && branding && branding.whatsapp) || '',
+        mail: (typeof branding !== 'undefined' && branding && branding.email) || '',
         hasLogo: !!logoRaw,
         hasContact: !!((typeof branding !== 'undefined' && branding)
           && (branding.phone || branding.whatsapp || branding.email)),
@@ -10324,9 +10336,22 @@
     const el = document.getElementById('heroContact');
     if (!el) return;
     if (!hasTheme){ el.classList.remove('has-links'); el.innerHTML = ''; return; }
+    let b = (typeof branding !== 'undefined' && branding) || {};
+    const known = (() => { try { return !!window.__themeDataKnown; } catch (e) { return false; } })();
+    const bHasContact = !!(b.phone || b.whatsapp || b.email);
+    if (!known && !bHasContact){
+      let cached = null;
+      try { cached = window.__cachedContact || null; } catch (e) { cached = null; }
+      if (cached && (cached.phone || cached.whatsapp || cached.email)){
+        b = cached;
+      } else {
+        let expected = false;
+        try { expected = document.documentElement.classList.contains('contact-expected'); } catch (e) {}
+        if (expected) return;
+      }
+    }
     el.classList.remove('contact-pending');
     try { document.documentElement.classList.remove('contact-expected'); } catch (e2) {}
-    const b = (typeof branding !== 'undefined' && branding) || {};
     const phone = digitsOnlyPhone(b.phone);
     const wa = digitsOnlyPhone(b.whatsapp) || phone;
     const mail = String(b.email || '').trim();
@@ -14668,10 +14693,26 @@
     if (typeof showAdminToast === 'function') showAdminToast('✓ הקטגוריה נוספה בהצלחה');
   }
   const catTilePalette = ['#C9A227', '#6E8E5E', '#9B2C42', '#B5654B', '#5B7C99', '#8B5FA3'];
+  function themedVarsPair(){
+    try {
+      if (!document.body || !document.body.classList.contains('th-on')) return null;
+      const tagged = window.__cachedThemeBizId;
+      if (tagged && window.__BIZ_ID && tagged !== window.__BIZ_ID) return null;
+      const root = document.documentElement;
+      const p = normaliseThemeHex(String(root.style.getPropertyValue('--th-primary') || '').trim());
+      const s = normaliseThemeHex(String(root.style.getPropertyValue('--th-secondary') || '').trim());
+      return (p && s) ? { primary: p, secondary: s } : null;
+    } catch (e) { return null; }
+  }
   function themeCategoryPalette(){
     const th = currentSiteTheme();
-    if (!th.style) return null;
-    const A = hexToHsl(th.primary), B = hexToHsl(th.secondary);
+    let src = th.style ? th : null;
+    if (!src){
+      const fromPage = themedVarsPair();
+      if (!fromPage) return null;
+      src = { primary: fromPage.primary, secondary: fromPage.secondary };
+    }
+    const A = hexToHsl(src.primary), B = hexToHsl(src.secondary);
     if (!A || !B) return null;
     const t = currentTone().tile;
     const sat = h => Math.max(0.22, Math.min(0.68, h.s * t.sat));
@@ -19573,6 +19614,7 @@
     const lite = {
       vars: snap.vars, classes: snap.classes,
       name: snap.name || '', phone: snap.phone || '',
+      wa: snap.wa || '', mail: snap.mail || '',
       hasContact: !!snap.hasContact,
       theme: snap.theme || null,
       bizId: BIZ_ID,
