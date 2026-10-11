@@ -14,6 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+
 <link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js">
 <link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js">
 <link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js">
@@ -58,6 +60,17 @@
   window.__BIZ_BY_DOMAIN = {
     'rutizolberg.com': 'default',
   };
+(function(){
+  try {
+    var raw = localStorage.getItem('hbk.theme.v1');
+    if (!raw) return;
+    var t = JSON.parse(raw);
+    if (!t || !t.vars) return;
+    var root = document.documentElement;
+    Object.keys(t.vars).forEach(function(k){ root.style.setProperty(k, t.vars[k]); });
+    window.__themeFromCache = true;
+  } catch (e) {}
+})();
 (function(){
   if (window.__themeFromCache) return;            // יש זיכרון מקומי, אין צורך
   var cfg = (typeof firebaseConfig !== 'undefined') ? firebaseConfig : null;
@@ -789,8 +802,13 @@
     text-align:center;
     border-radius:10px;
     pointer-events:none;
+    opacity:0;
   }
-  .cloud-loading-overlay.show{display:flex;}
+  .cloud-loading-overlay.show{display:flex; animation:cloudVeilIn .3s ease .5s forwards;}
+  @keyframes cloudVeilIn{ from{opacity:0;} to{opacity:1;} }
+  @media (prefers-reduced-motion: reduce){
+    .cloud-loading-overlay.show{animation:cloudVeilIn .01s linear .5s forwards;}
+  }
   .cloud-spinner{
     width:34px; height:34px; border-radius:50%;
     border:3px solid rgba(var(--th-primary-rgb, 245,238,228),0.22);
@@ -4158,7 +4176,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-11 · 96';
+        window.__APP_BUILD = '2026-10-11 · 97';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -7543,6 +7561,7 @@
     openClientProfileByName(clientName, clientTz);
   });
   let clientProfileCurrent = null; // direct reference into the `clients` array
+  let __cpChannelEditSeq = 0;
   function showClientProfile(c){
     if (!c){ showAdminToast('לא נמצא כרטיס עבור לקוחה זו.'); return; }
     clientProfileCurrent = c;
@@ -7830,6 +7849,21 @@
       closeCpPhotoLightbox();
     }
   });
+  function clientRecordsForSamePerson(c){
+    const list = Array.isArray(clients) ? clients : [];
+    if (!c) return [];
+    const tz = String(c.teudatZehut || '').trim();
+    if (tz){
+      const same = list.filter(x => x && String(x.teudatZehut || '').trim() === tz);
+      if (same.length) return same;
+    }
+    if (list.indexOf(c) !== -1) return [c];
+    const ph = String(c.phone || '').replace(/[^0-9]/g, '');
+    const nm = String(c.name || '').trim();
+    if (!ph || !nm) return [];
+    return list.filter(x => x && String(x.name || '').trim() === nm
+      && String(x.phone || '').replace(/[^0-9]/g, '') === ph);
+  }
   function renderClientProfileOverlay(){
     const c = clientProfileCurrent;
     if (!c) return;
@@ -7839,6 +7873,7 @@
       ? cpExplicit
       : ((typeof lastChannelsForClient === 'function') ? lastChannelsForClient(c) : []);
     const cpIsImplied = !cpExplicit.length && cpShownChannels.length > 0;
+    const cpDupNow = clientRecordsForSamePerson(c).length;
     const fieldsEl = document.getElementById('cpPersonalFields');
     fieldsEl.innerHTML = `
       <div class="name-field-wrap">
@@ -7873,6 +7908,7 @@
         <label><input type="checkbox" class="cpReminderChannel" value="call"${(cpShownChannels.indexOf('call') !== -1) ? ' checked' : ''}> שיחת טלפון</label>
       </div>
       ${cpIsImplied ? `<p style="font-size:11.5px; color:var(--panel-text-dim); margin:4px 0 0; line-height:1.5;">מוצג לפי התור האחרון שלה — עדיין לא נבחרה עבורה העדפה קבועה. סימון כאן יקבע אותה.</p>` : ''}
+      ${cpDupNow > 1 ? `<p id="cpDuplicateNote" style="font-size:12px; color:var(--wine); background:rgba(var(--wine-rgb),0.08); border:1px solid rgba(var(--wine-rgb),0.3); border-radius:9px; padding:8px 11px; margin:10px 0 0; line-height:1.6;">יש ${cpDupNow} כרטסות עם אותה תעודת זהות. מה שמסמנים כאן חל על כולן, אבל כדאי לאחד אותן — הגדרות ← איחוד כרטיסים כפולים.</p>` : ''}
       <textarea class="client-note" id="cpNoteInput" placeholder="הערה אישית (העדפות, רגישויות...)">${c.note || ''}</textarea>
     `;
     const nameInput = fieldsEl.querySelector('#cpNameInput');
@@ -7909,7 +7945,10 @@
     updateCpContactLinks();
     fieldsEl.querySelectorAll('.cpReminderChannel').forEach(function(cb){
       cb.addEventListener('change', function(){
-        c.reminderChannelPref = Array.from(fieldsEl.querySelectorAll('.cpReminderChannel:checked')).map(el => el.value);
+        const cpPicked = Array.from(fieldsEl.querySelectorAll('.cpReminderChannel:checked')).map(el => el.value);
+        const cpSiblings = clientRecordsForSamePerson(c);
+        (cpSiblings.length ? cpSiblings : [c]).forEach(rec => { rec.reminderChannelPref = cpPicked.slice(); });
+        c.reminderChannelPref = cpPicked.slice();
         const cpFuture = weekAppointments.filter(a => apptBelongsToClient(a, c) && !isAppointmentHistory(a) && a.status !== 'cancelled');
         const cpPrefLabel = c.reminderChannelPref.length
           ? c.reminderChannelPref.map(v => (v === 'sms' ? 'SMS' : 'שיחת טלפון')).join(' + ')
@@ -7932,24 +7971,59 @@
           renderClientProfileOverlay();
           return;
         }
-        const cpWanted = c.reminderChannelPref.slice();
+        const cpWanted = cpPicked.slice();
         const cpVerify = () => {
-          const tz = String(c.teudatZehut || '').trim();
-          const ph = String(c.phone || '').replace(/[^0-9]/g, '');
-          const fresh = clients.find(x => x && tz && String(x.teudatZehut || '').trim() === tz)
-            || clients.find(x => x && ph && String(x.phone || '').replace(/[^0-9]/g, '') === ph)
-            || null;
-          const got = (fresh && fresh.reminderChannelPref) || [];
-          return JSON.stringify(got) === JSON.stringify(cpWanted);
+          const recs = clientRecordsForSamePerson(c);
+          if (!recs.length) return false;
+          return recs.every(r => JSON.stringify(r.reminderChannelPref || []) === JSON.stringify(cpWanted));
+        };
+        const cpDupCount = cpSiblings.length;
+        const cpReapply = () => {
+          const recs = clientRecordsForSamePerson(c);
+          if (!recs.length) return false;
+          recs.forEach(r => { r.reminderChannelPref = cpWanted.slice(); });
+          if (typeof clientProfileCurrent !== 'undefined' && clientProfileCurrent
+              && recs.indexOf(clientProfileCurrent) === -1) clientProfileCurrent = recs[0];
+          return true;
         };
         const cpSaved = (typeof saveState === 'function') ? saveState() : Promise.resolve();
         Promise.resolve(cpSaved).then(() => {
+          if (!cpVerify() && cpReapply()){
+            return Promise.resolve((typeof saveState === 'function') ? saveState({ silent: true }) : null)
+              .then(() => {
+                if (typeof renderClientProfileOverlay === 'function'
+                    && document.getElementById('clientProfileOverlay')
+                    && document.getElementById('clientProfileOverlay').classList.contains('show')){
+                  renderClientProfileOverlay();
+                }
+              });
+          }
+        }).then(() => {
+          const mySeq = ++__cpChannelEditSeq;
+          setTimeout(() => {
+            if (mySeq !== __cpChannelEditSeq) return;
+            if (cpVerify()) return;
+            if (!cpReapply()) return;
+            Promise.resolve((typeof saveState === 'function') ? saveState({ silent: true }) : null).then(() => {
+              if (typeof renderClientProfileOverlay === 'function'
+                  && document.getElementById('clientProfileOverlay')
+                  && document.getElementById('clientProfileOverlay').classList.contains('show')){
+                renderClientProfileOverlay();
+              }
+            });
+          }, 1500);
           if (cpVerify()){
-            if (typeof showAdminToast === 'function') showAdminToast('✓ אופן ההתקשרות עודכן בהצלחה');
+            if (typeof showAdminToast === 'function'){
+              showAdminToast(cpDupCount > 1
+                ? `✓ אופן ההתקשרות עודכן ב-${cpDupCount} כרטסות של ${c.name} (אותה ת"ז) — כדאי לאחד אותן`
+                : '✓ אופן ההתקשרות עודכן בהצלחה');
+            }
             return;
           }
           if (typeof showSaveErrorBanner === 'function'){
-            showSaveErrorBanner(`⚠ אופן ההתקשרות של ${c.name} לא נשמר בפועל, למרות שהפעולה נראתה תקינה. נא לנסות שוב, ואם זה חוזר — לצלם את ההודעה הזו.`, { retry: true });
+            const found = clientRecordsForSamePerson(c)
+              .map(r => JSON.stringify(r.reminderChannelPref || [])).join(' , ') || 'הכרטסת לא נמצאה';
+            showSaveErrorBanner(`⚠ אופן ההתקשרות של ${c.name} לא נשמר בפועל, למרות שהפעולה נראתה תקינה. (מה שנמצא בכרטסת: ${found}.) נא לנסות שוב, ואם זה חוזר — לצלם את ההודעה הזו.`, { retry: true });
           }
         });
       });
@@ -19018,7 +19092,8 @@
     }
     if (!cloudLoadComplete || !lastLoadedSnapshot){
       unsavedChangePending = true;
-      scheduleUnsavedRetry();
+      __changeBlockedByLoading = true;
+      scheduleUnsavedRetry({ quiet: true });
       if (!silent) showSaveStatus('⚠ עוד לא נשמר — הדף עדיין נטען', 6000, 'bad');
       return Promise.resolve();
     }
@@ -19150,6 +19225,20 @@
     }).finally(() => { pendingSaveCount--; });
   }
   let __deniedSaveRetried = false;
+  let __waitingForAuthToReturn = false;
+  function waitForSignedInUser(maxMs){
+    const STEP = 200;
+    let left = Math.max(1, Math.round((maxMs || 5000) / STEP));
+    return new Promise(resolve => {
+      const check = () => {
+        const u = auth && auth.currentUser;
+        if (u && !u.isAnonymous) return resolve(u);
+        if (--left <= 0) return resolve(null);
+        setTimeout(check, STEP);
+      };
+      check();
+    });
+  }
   function whoamiSuffix(){
     const u = auth && auth.currentUser;
     const mail = (u && u.email) ? u.email : 'לא מחוברת';
@@ -19177,6 +19266,21 @@
     }).catch(readErr => {
       const rc = String((readErr && readErr.code) || readErr || '').toLowerCase();
       if (rc.indexOf('permission') !== -1 || rc.indexOf('unauthenticated') !== -1){
+        const uNow = auth && auth.currentUser;
+        if ((!uNow || uNow.isAnonymous) && !__waitingForAuthToReturn){
+          __waitingForAuthToReturn = true;
+          if (!silent) showSaveStatus('שומר... (ההתחברות חוזרת)');
+          return waitForSignedInUser(5000).then(u => {
+            __waitingForAuthToReturn = false;
+            if (u){
+              __deniedSaveRetried = false;
+              return saveState({ silent: silent });
+            }
+            if (typeof scheduleOwnerMappingRetry === 'function') scheduleOwnerMappingRetry();
+            showSaveErrorBanner('⚠ השינוי לא נשמר — המערכת אינה מזהה את החשבון הזה כבעל הרשאה ליומן הזה. לא לרענן: אנחנו מנסים לזהות מחדש לבד. אם ההודעה נשארת, צריך לצאת ולהיכנס שוב עם המייל והסיסמה של היומן.' + whoamiSuffix(), { retry: true });
+            scheduleUnsavedRetry();
+          });
+        }
         if (typeof scheduleOwnerMappingRetry === 'function') scheduleOwnerMappingRetry();
         showSaveErrorBanner('⚠ השינוי לא נשמר — המערכת אינה מזהה את החשבון הזה כבעל הרשאה ליומן הזה. לא לרענן: אנחנו מנסים לזהות מחדש לבד. אם ההודעה נשארת, צריך לצאת ולהיכנס שוב עם המייל והסיסמה של היומן.' + whoamiSuffix(), { retry: true });
       } else {
@@ -19544,8 +19648,9 @@
       showSaveErrorBanner('⚠ שינוי שביצעת עדיין לא נשמר בענן — התור או הביטול לא קיימים עדיין אצל אף אחד אחר.', { retry: true });
     }, 10000);
   }
-  function scheduleUnsavedRetry(){
-    armUnsavedAlarm();
+  let __changeBlockedByLoading = false;
+  function scheduleUnsavedRetry(opts){
+    if (!(opts && opts.quiet)) armUnsavedAlarm();
     if (__unsavedRetryTimer) return;
     __unsavedRetryTimer = setTimeout(() => {
       __unsavedRetryTimer = null;
@@ -20277,6 +20382,8 @@
         lastLoadedSnapshot = {};
         __cloudDocWasMissing = true;
         cloudLoadComplete = true;
+        __changeBlockedByLoading = false;
+        if (unsavedChangePending) saveState({ silent: true });
         reportCloudLoadTiming(cloudLoadStartedAt, null);
         if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
         if (typeof attemptRestoreAdminView === 'function') attemptRestoreAdminView();
@@ -20287,6 +20394,7 @@
         return;
       }
       const rawCloudData = doc.data();
+      const __hadBlockedEdit = __changeBlockedByLoading && unsavedChangePending;
       backfillMissingListIds(rawCloudData);
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       __cloudDocWasMissing = false;
@@ -20295,6 +20403,14 @@
       rebindOpenRecords();
       rerenderEverything();
       cloudLoadComplete = true;
+      __changeBlockedByLoading = false;
+      if (__hadBlockedEdit){
+        unsavedChangePending = false;
+        if (__unsavedAlarmTimer){ clearTimeout(__unsavedAlarmTimer); __unsavedAlarmTimer = null; }
+        showSaveErrorBanner('⚠ שינוי שהוקלד לפני שהנתונים סיימו לרדת מהענן לא נקלט — הגרסה מהענן הגיעה אחריו. צריך לבצע אותו שוב. שום דבר אחר לא נפגע.');
+      } else if (unsavedChangePending){
+        saveState({ silent: true });
+      }
       publishPublicView(); // מפרסם את החצי הלא-רגיש; אצל לקוחה זה לא עושה כלום
       console.log('Loaded saved data from the cloud.');
       reportCloudLoadTiming(cloudLoadStartedAt, rawCloudData);
