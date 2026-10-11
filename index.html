@@ -4178,7 +4178,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-11 · 98';
+        window.__APP_BUILD = '2026-10-11 · 99';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -10222,7 +10222,7 @@
       const img = new Image();
       img.onload = function(){
         try {
-          const SIDE = 320;
+          const SIDE = 512;
           const draw = (fillWhite) => {
             const c = document.createElement('canvas');
             c.width = SIDE; c.height = SIDE;
@@ -10262,10 +10262,11 @@
         }
         return;
       }
+      const LOGO_FAST_PAINT_CHARS = 60000;
       const logoRaw = (typeof branding !== 'undefined' && branding && branding.logo) || '';
       let logoForCache = '';
       if (typeof logoRaw === 'string' && logoRaw.length > 0){
-        logoForCache = (logoRaw.length < 700000)
+        logoForCache = (logoRaw.length <= LOGO_FAST_PAINT_CHARS)
           ? logoRaw
           : makeLogoThumb(logoRaw, function(){ rememberThemeForNextLoad(root, body); });
       }
