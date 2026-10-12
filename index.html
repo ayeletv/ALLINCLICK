@@ -72,48 +72,6 @@
   } catch (e) {}
 })();
 (function(){
-  var cfg = (typeof firebaseConfig !== 'undefined') ? firebaseConfig : null;
-  if (!cfg || !cfg.projectId || !cfg.apiKey) return;
-  var host = '';
-  try { host = String(location.hostname || '').toLowerCase().replace(/^www\./, ''); } catch (e) { return; }
-  if (!host) return;
-  var base = 'https://firestore.googleapis.com/v1/projects/' + cfg.projectId
-           + '/databases/(default)/documents/';
-  var get = function(path){
-    return fetch(base + path + '?key=' + encodeURIComponent(cfg.apiKey), { cache: 'no-store' })
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .catch(function(){ return null; });
-  };
-  function decodeValue(v){
-    if (!v || typeof v !== 'object') return null;
-    if ('stringValue' in v) return v.stringValue;
-    if ('integerValue' in v) return Number(v.integerValue);
-    if ('doubleValue' in v) return Number(v.doubleValue);
-    if ('booleanValue' in v) return !!v.booleanValue;
-    if ('nullValue' in v) return null;
-    if ('timestampValue' in v) return v.timestampValue;
-    if ('arrayValue' in v) return ((v.arrayValue && v.arrayValue.values) || []).map(decodeValue);
-    if ('mapValue' in v) return decodeFields(v.mapValue && v.mapValue.fields);
-    return null;
-  }
-  function decodeFields(f){
-    var o = {};
-    Object.keys(f || {}).forEach(function(k){ o[k] = decodeValue(f[k]); });
-    return o;
-  }
-  var known = (window.__BIZ_BY_DOMAIN || {})[host];
-  var bizPromise = known ? Promise.resolve(known) : get('domains/' + encodeURIComponent(host))
-    .then(function(d){ try { return d.fields.bizId.stringValue; } catch (e) { return ''; } });
-  window.__publicViewPrefetchAt = Date.now();
-  window.__publicViewPrefetch = bizPromise.then(function(biz){
-    if (!biz) return null;
-    return get('publicView/' + encodeURIComponent(biz)).then(function(doc){
-      if (!doc || !doc.fields) return null;
-      return { bizId: biz, data: decodeFields(doc.fields), at: Date.now() };
-    });
-  }).catch(function(){ return null; });
-})();
-(function(){
   if (window.__themeFromCache) return;            // יש זיכרון מקומי, אין צורך
   var cfg = (typeof firebaseConfig !== 'undefined') ? firebaseConfig : null;
   if (!cfg || !cfg.projectId || !cfg.apiKey) return;
@@ -199,39 +157,9 @@
         auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){});
       }
     } catch (e) {}
-    let __authSettledPromise = null;
-    window.__authSettled = function(){
-      if (__authSettledPromise) return __authSettledPromise;
-      __authSettledPromise = new Promise(function(resolve){
-        let done = false;
-        const finish = function(u){
-          if (done) return;
-          done = true;
-          window.__authSettledWith = u ? (u.isAnonymous ? 'anonymous' : (u.email || 'user')) : 'none';
-          resolve(u || null);
-        };
-        try {
-          if (auth.currentUser) return finish(auth.currentUser);
-          const unsub = auth.onAuthStateChanged(function(u){
-            try { if (typeof unsub === 'function') unsub(); } catch (e) {}
-            finish(u);
-          });
-        } catch (e) {}
-        setTimeout(function(){ finish(auth && auth.currentUser); }, 3000);
-      });
-      return __authSettledPromise;
-    };
     let anonAuthAttempts = 0;
     window.__anonAuthState = 'pending';
     window.__ensureAnonAuth = function(){
-      if (auth.currentUser) { window.__anonAuthState = 'ok'; return Promise.resolve(auth.currentUser); }
-      return window.__authSettled().then(function(){
-        const now = auth && auth.currentUser;
-        if (now) { window.__anonAuthState = 'ok'; return now; }
-        return window.__signInAnonymouslyNow();
-      });
-    };
-    window.__signInAnonymouslyNow = function(){
       if (auth.currentUser) { window.__anonAuthState = 'ok'; return Promise.resolve(auth.currentUser); }
       const startedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
       anonAuthAttempts++;
@@ -4256,7 +4184,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-12 · 102';
+        window.__APP_BUILD = '2026-10-11 · 100';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -20025,20 +19953,13 @@
   function noteCloudError(err){
     lastCloudErrorCode = String((err && (err.code || err.message)) || '').slice(0, 60);
   }
-  function showCloudErrorBanner(customText){
+  function showCloudErrorBanner(){
     if (document.getElementById('cloudErrorBanner')) return;
     const banner = document.createElement('div');
     banner.id = 'cloudErrorBanner';
     banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:var(--wine); color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
     const visitor = !(typeof isOwnerSession === 'function' && isOwnerSession())
                  && !(typeof isLoggedIn !== 'undefined' && isLoggedIn);
-    if (customText){
-      banner.textContent = String(customText)
-        + (lastCloudErrorCode ? '  [' + lastCloudErrorCode + ']' : '');
-      document.body.prepend(banner);
-      syncTopBannerOffset();
-      return;
-    }
     if (visitor){
       banner.style.background = '#8a6212';
       const phone = (typeof branding !== 'undefined' && branding && branding.phone)
@@ -20330,8 +20251,6 @@
     document.body.appendChild(badge);
   }
   let runningOnPublicData = false;
-  let __ownerDataLoadedOnce = false;
-  let __ownerReverifyBusy = false;
   function applyPublicData(data){
     runningOnPublicData = true;
     if (data.branding) branding = Object.assign({ name: '', logo: null, phone: '', whatsapp: '', address: '', email: '', theme: null }, data.branding);
@@ -20387,16 +20306,7 @@
     });
   }
   function loadPublicData(){
-    const pre = (typeof window !== 'undefined') ? window.__publicViewPrefetch : null;
-    const firstTry = pre ? Promise.resolve(pre).then(function(p){
-      if (!p || !p.data) return null;
-      if (BIZ_ID && p.bizId && p.bizId !== BIZ_ID) return null;
-      try { window.__publicViewPrefetch = null; } catch (e) {}
-      return { exists: true, data: function(){ return p.data; } };
-    }, function(){ return null; }) : Promise.resolve(null);
-    return firstTry.then(function(pd){
-      return pd || getDocWithRetry(PUBLIC_DOC, 'publicView');
-    }).then(doc => {
+    return getDocWithRetry(PUBLIC_DOC, 'publicView').then(doc => {
       const data = doc.exists ? doc.data() : null;
       if (!data) return 'empty';
       if (!Array.isArray(data.staff) || !data.staff.length){
@@ -20406,22 +20316,6 @@
       applyPublicData(data);
       return 'ok';
     }).catch(err => {
-      const code = String((err && err.code) || '').toLowerCase();
-      if ((code.indexOf('permission') !== -1 || code.indexOf('unauthenticated') !== -1)
-          && typeof window.__publicReadNeedsAuthFallback === 'function'){
-        return window.__publicReadNeedsAuthFallback().then(function(signedIn){
-          if (!signedIn) { console.error('Reading the public document failed:', err); return 'fail'; }
-          return getDocWithRetry(PUBLIC_DOC, 'publicView').then(doc2 => {
-            const d2 = doc2.exists ? doc2.data() : null;
-            if (!d2) return 'empty';
-            applyPublicData(d2);
-            return (!Array.isArray(d2.staff) || !d2.staff.length) ? 'empty' : 'ok';
-          }).catch(function(err2){
-            console.error('Reading the public document failed:', err2);
-            return 'fail';
-          });
-        });
-      }
       console.error('Reading the public document failed:', err);
       return 'fail';
     });
@@ -20468,24 +20362,6 @@
       });
     }
     const cloudLoadStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
-    const __signedInWithEmail = (function(){
-      try { const u = auth && auth.currentUser; return !!(u && !u.isAnonymous && u.email); }
-      catch (e) { return false; }
-    })();
-    if (!isOwnerSession() && __ownerDataLoadedOnce && __signedInWithEmail){
-      console.warn('Owner mapping is unresolved — keeping the loaded calendar instead of falling back to the public view.');
-      if (!__ownerReverifyBusy && typeof resolveOwnerBusiness === 'function'){
-        __ownerReverifyBusy = true;
-        resolveOwnerBusiness().then(function(bizId){
-          __ownerReverifyBusy = false;
-          if (bizId && typeof loadCloudData === 'function') loadCloudData();
-        }, function(){ __ownerReverifyBusy = false; });
-      }
-      if (typeof scheduleOwnerMappingRetry === 'function') scheduleOwnerMappingRetry();
-      showCloudErrorBanner('⚠ לא הצלחנו לאמת מול הענן שזה היומן שלך, ולכן הוא אינו מתעדכן כרגע — מה שרואים על המסך הוא מה שהיה. אנחנו מנסים שוב לבד; לא לרענן. עדיף לא לקבוע תורים חדשים עד שההודעה תיעלם.');
-      if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
-      return Promise.resolve();
-    }
     if (!isOwnerSession()){
       return loadPublicData().then(loaded => {
         if (loaded === 'fail') return retryPublicLoadLater();
@@ -20575,12 +20451,6 @@
   window.__getDocWithRetry = getDocWithRetry;
 
   function retryPublicLoadLater(){ return retryCloudLoadLater(); }
-  function alignSnapshotWithNormalisedData(){
-    if (!lastLoadedSnapshot) return;
-    try { lastLoadedSnapshot.staff = cloneJSON(staff); } catch (e) {}
-    try { lastLoadedSnapshot.gatedTabsConfig = cloneJSON(gatedTabsConfig); } catch (e) {}
-    try { lastLoadedSnapshot.about = cloneJSON(aboutMe); } catch (e) {}
-  }
   function loadPrivateCloudData(cloudLoadStartedAt){
     runningOnPublicData = false;
     return getDocWithRetry(CLOUD_DOC, 'business').then(doc => {
@@ -20592,7 +20462,6 @@
         lastLoadedSnapshot = {};
         __cloudDocWasMissing = true;
         cloudLoadComplete = true;
-        __ownerDataLoadedOnce = true;
         __changeBlockedByLoading = false;
         if (unsavedChangePending) saveState({ silent: true });
         reportCloudLoadTiming(cloudLoadStartedAt, null);
@@ -20610,13 +20479,10 @@
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       __cloudDocWasMissing = false;
       applyCloudData(rawCloudData);
-      alignSnapshotWithNormalisedData();
       pruneExpiredWaitlistEntries();
       rebindOpenRecords();
       rerenderEverything();
-      alignSnapshotWithNormalisedData();
       cloudLoadComplete = true;
-      __ownerDataLoadedOnce = true;
       __changeBlockedByLoading = false;
       if (__hadBlockedEdit){
         unsavedChangePending = false;
@@ -20640,19 +20506,8 @@
       retryCloudLoadLater();
     });
   }
-  (function(){
-    let fallbackTried = false;
-    window.__publicReadNeedsAuthFallback = function(){
-      if (fallbackTried) return Promise.resolve(false);
-      fallbackTried = true;
-      const ensure = (typeof window.__signInAnonymouslyNow === 'function')
-        ? window.__signInAnonymouslyNow()
-        : ((typeof window.__ensureAnonAuth === 'function') ? window.__ensureAnonAuth() : Promise.resolve(null));
-      return ensure.then(function(u){ return !!u; }, function(){ return false; });
-    };
-  })();
-  if (typeof window.__authSettled === 'function'){
-    window.__authSettled().then(function(){ loadCloudData(); }, function(){ loadCloudData(); });
+  if (typeof anonAuthPromise !== 'undefined' && anonAuthPromise && typeof anonAuthPromise.finally === 'function'){
+    anonAuthPromise.finally(loadCloudData);
   } else {
     loadCloudData();
   }
@@ -20665,15 +20520,8 @@
       about: aboutMe, recommendations,
       weekAppointments, waitlist, clients, cancellationLog, lateCancellations,
     };
-    const norm = function(v){
-      if (v === undefined || v === null) return '';
-      if (Array.isArray(v)) return v.length ? JSON.stringify(v) : '';
-      if (typeof v === 'object') return Object.keys(v).length ? JSON.stringify(v) : '';
-      if (v === '') return '';
-      return JSON.stringify(v);
-    };
     return Object.keys(fields).some(function(k){
-      try { return norm(lastLoadedSnapshot[k]) !== norm(fields[k]); }
+      try { return JSON.stringify(lastLoadedSnapshot[k]) !== JSON.stringify(fields[k]); }
       catch (e) { return true; }   // ספק — שומרים. עדיף קריאה מיותרת מאשר שינוי שאבד.
     });
   }
@@ -20685,17 +20533,12 @@
   }, 4000);
   window.addEventListener('beforeunload', (e) => {
     if (!isOwnerSession()) return;
-    let dirty = false;
-    try {
-      dirty = (pendingSaveCount > 0)
-        || (typeof unsavedChangePending !== 'undefined' && unsavedChangePending)
-        || (typeof hasUnsavedLocalChanges === 'function' && hasUnsavedLocalChanges());
-    } catch (err) { dirty = false; }
-    if (!dirty) return;
     saveState();
-    e.preventDefault();
-    e.returnValue = '';
-    return '';
+    if (pendingSaveCount > 0){
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    }
   });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden || !cloudLoadComplete) return;
@@ -20711,7 +20554,6 @@
       backfillMissingListIds(rawCloudData);
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       applyCloudData(rawCloudData);
-      alignSnapshotWithNormalisedData();
       pruneExpiredWaitlistEntries();
       rebindOpenRecords();
       rerenderEverything();
@@ -20747,11 +20589,9 @@
       backfillMissingListIds(rawCloudData);
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       applyCloudData(rawCloudData);
-      alignSnapshotWithNormalisedData();
       pruneExpiredWaitlistEntries();
       rebindOpenRecords();
       rerenderEverything();
-      alignSnapshotWithNormalisedData();
     }).catch(err => console.error('Background live-sync check failed:', err));
   }
   let __pendingRemoteUpdatePollTimeout = null;
@@ -20816,10 +20656,6 @@
         return;
       }
       applyOwnerUi();
-      if (typeof loadCloudData === 'function' && typeof isOwnerSession === 'function' && isOwnerSession()
-          && (runningOnPublicData || !__ownerDataLoadedOnce)){
-        loadCloudData();
-      }
       const stillHere = auth.currentUser && !auth.currentUser.isAnonymous;
       if (!ownerMappingFailed || !stillHere){
         hideOwnerMappingErrorBanner();
@@ -21094,7 +20930,6 @@
       if (typeof backfillMissingListIds === 'function') backfillMissingListIds(rawCloudData);
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       applyCloudData(rawCloudData);
-      alignSnapshotWithNormalisedData();
       if (typeof pruneExpiredWaitlistEntries === 'function') pruneExpiredWaitlistEntries();
       rerenderEverything();
       refreshCalendarView();
