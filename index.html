@@ -13161,8 +13161,10 @@
         const rect = body.getBoundingClientRect();
         const offsetY = Math.max(0, e.clientY - rect.top);
         const rawMinutes = calStartHour * 60 + (offsetY / hourBandHeight) * 60;
-        const snappedMinutes = Math.round(rawMinutes / 15) * 15;
-        const clampedMinutes = Math.min(Math.max(snappedMinutes, calStartHour * 60), calEndHour * 60);
+        // Use the actual minute clicked, rather than snapping to a 15-minute mark;
+        // snapping could move a click in a short gap onto the next appointment and hide the gap note.
+        const clickedMinute = Math.floor(rawMinutes);
+        const clampedMinutes = Math.min(Math.max(clickedMinute, calStartHour * 60), calEndHour * 60 - 1);
         const outOfHours = !!closedInfo
           || blockedBands.some(([bs, be]) => clampedMinutes >= bs && clampedMinutes < be);
         const timeStr = minutesToTimeGlobal(clampedMinutes);
@@ -13181,9 +13183,9 @@
           });
           const nextStart = sameDayAppts.reduce((best, a) => Math.min(best, timeToMinutes(a.time)), calEndHour * 60);
           const staffWindowEnd = calEndHour * 60;
-          gapMinutes = Math.max(0, nextStart - startMin);
-          // Keep the estimate inside the visible calendar range.
-          gapMinutes = Math.min(gapMinutes, staffWindowEnd - startMin);
+          // A gap is usable only until the next appointment begins. The note is
+          // based on the exact clicked minute so short gaps (e.g. 7 minutes) are shown.
+          gapMinutes = Math.max(0, Math.min(nextStart, staffWindowEnd) - startMin);
           if (gapMinutes < 1) gapMinutes = 0;
         }
         openSlotChoiceOverlay({
