@@ -6438,10 +6438,11 @@
     if (blockBtn) blockBtn.style.display = blocked ? 'none' : 'block';
     if (releaseBtn) releaseBtn.style.display = slotChoicePending.canRelease ? 'block' : 'none';
     if (note){
-      note.style.display = blocked ? 'block' : 'none';
+      const gapMinutes = Number(slotChoicePending.gapMinutes || 0);
+      note.style.display = (blocked || gapMinutes > 0) ? 'block' : 'none';
       note.textContent = blocked
         ? ((slotChoicePending.time ? 'השעה ' + slotChoicePending.time : 'השעה הזו') + ' אינה בשעות העבודה של התאריך הזה.')
-        : '';
+        : (gapMinutes > 0 ? `ניתן לקבוע כאן תור של עד ${gapMinutes} דקות, החל מהשעה ${slotChoicePending.time}.` : '');
     }
     document.getElementById('slotChoiceOverlay').classList.add('show');
   }
@@ -6875,7 +6876,7 @@
       if (mbForcedTime && timeInput.value === mbForcedTime){
         hint.textContent = `נבחרה השעה ${mbForcedTime} ידנית, מחוץ לרשימת השעות הפנויות.`;
       } else if (mbDroppedSlot && mbDroppedSlot.taken){
-        hint.textContent = `⚠️ השעה ${mbDroppedSlot.time} נתפסה הרגע על ידי תור אחר${mbDroppedSlot.by ? ' (' + mbDroppedSlot.by + ')' : ''} — יש לבחור שעה אחרת מהרשימה.` + canOverride;
+        hint.textContent = '';
       } else if (previousTimeGotDropped && anyAvailable){
         hint.textContent = `השעה ${previouslySelected} שנבחרה לא מתאימה למשך הטיפול הנוכחי — יש לבחור שעה אחרת מהרשימה.` + canOverride;
       } else {
@@ -13165,11 +13166,32 @@
         const outOfHours = !!closedInfo
           || blockedBands.some(([bs, be]) => clampedMinutes >= bs && clampedMinutes < be);
         const timeStr = minutesToTimeGlobal(clampedMinutes);
+        const chosenStaff = selectedStaffFilter !== 'all' ? selectedStaffFilter : null;
+        // When clicking in an empty gap, calculate the available duration until the next appointment.
+        let gapMinutes = 0;
+        if (!outOfHours){
+          const dayKey = formatDateKey(day.fullDate);
+          const startMin = clampedMinutes;
+          const sameDayAppts = (Array.isArray(weekAppointments) ? weekAppointments : []).filter(a => {
+            if (!a || a.date !== dayKey || a.cancelled || a.status === 'cancelled') return false;
+            if (chosenStaff !== null && Number(a.staff) !== Number(chosenStaff)) return false;
+            const apptStart = timeToMinutes(a.time);
+            const apptDur = Number(a.dur || a.duration || 30);
+            return Number.isFinite(apptStart) && apptStart >= startMin && apptStart < calEndHour * 60 && apptDur > 0;
+          });
+          const nextStart = sameDayAppts.reduce((best, a) => Math.min(best, timeToMinutes(a.time)), calEndHour * 60);
+          const staffWindowEnd = calEndHour * 60;
+          gapMinutes = Math.max(0, nextStart - startMin);
+          // Keep the estimate inside the visible calendar range.
+          gapMinutes = Math.min(gapMinutes, staffWindowEnd - startMin);
+          if (gapMinutes < 1) gapMinutes = 0;
+        }
         openSlotChoiceOverlay({
           date: day.fullDate,
           time: timeStr,
-          staff: selectedStaffFilter !== 'all' ? selectedStaffFilter : null,
+          staff: chosenStaff,
           blocked: outOfHours,
+          gapMinutes,
           canRelease: !!closedInfo
         });
       };
@@ -19946,6 +19968,9 @@
       (typeof document !== 'undefined' && document.body && document.body.classList.contains('admin-mode'));
     const __reCalls = [
       ['renderCategories', isAdminActive && typeof renderCategories === 'function' ? renderCategories : null],
+      // Public booking categories must be redrawn after cloud/public data has been applied.
+      // Without this call, the grid can remain empty if its first render happened before data arrived.
+      ['renderCategoryGrid', typeof renderCategoryGrid === 'function' ? renderCategoryGrid : null],
       ['renderServices', typeof renderServices === 'function' ? renderServices : null],
       ['renderStaff', isAdminActive && typeof renderStaff === 'function' ? renderStaff : null],
       ['renderClients', isAdminActive && typeof renderClients === 'function' ? renderClients : null],
