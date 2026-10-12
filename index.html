@@ -13167,25 +13167,31 @@
         const clampedMinutes = Math.min(Math.max(clickedMinute, calStartHour * 60), calEndHour * 60 - 1);
         const outOfHours = !!closedInfo
           || blockedBands.some(([bs, be]) => clampedMinutes >= bs && clampedMinutes < be);
-        const timeStr = minutesToTimeGlobal(clampedMinutes);
+        let timeStr = minutesToTimeGlobal(clampedMinutes);
         const chosenStaff = selectedStaffFilter !== 'all' ? selectedStaffFilter : null;
-        // When clicking in an empty gap, calculate the available duration until the next appointment.
+        // When clicking in a gap, anchor the suggested start to the previous
+        // appointment's exact end (not the arbitrary minute that was clicked).
         let gapMinutes = 0;
         if (!outOfHours){
           const dayKey = formatDateKey(day.fullDate);
-          const startMin = clampedMinutes;
-          const sameDayAppts = (Array.isArray(weekAppointments) ? weekAppointments : []).filter(a => {
+          const dayAppts = (Array.isArray(weekAppointments) ? weekAppointments : []).filter(a => {
             if (!a || a.date !== dayKey || a.cancelled || a.status === 'cancelled') return false;
             if (chosenStaff !== null && Number(a.staff) !== Number(chosenStaff)) return false;
             const apptStart = timeToMinutes(a.time);
             const apptDur = Number(a.dur || a.duration || 30);
-            return Number.isFinite(apptStart) && apptStart >= startMin && apptStart < calEndHour * 60 && apptDur > 0;
-          });
-          const nextStart = sameDayAppts.reduce((best, a) => Math.min(best, timeToMinutes(a.time)), calEndHour * 60);
+            return Number.isFinite(apptStart) && apptStart < calEndHour * 60 && apptDur > 0;
+          }).map(a => ({ start: timeToMinutes(a.time), end: timeToMinutes(a.time) + Number(a.dur || a.duration || 30) }));
+          const previousEnd = dayAppts
+            .filter(a => a.end <= clampedMinutes)
+            .reduce((best, a) => Math.max(best, a.end), calStartHour * 60);
+          const nextStart = dayAppts
+            .filter(a => a.start > clampedMinutes)
+            .reduce((best, a) => Math.min(best, a.start), calEndHour * 60);
           const staffWindowEnd = calEndHour * 60;
-          // A gap is usable only until the next appointment begins. The note is
-          // based on the exact clicked minute so short gaps (e.g. 7 minutes) are shown.
-          gapMinutes = Math.max(0, Math.min(nextStart, staffWindowEnd) - startMin);
+          const gapStart = previousEnd <= clampedMinutes ? previousEnd : clampedMinutes;
+          const gapEnd = Math.min(nextStart, staffWindowEnd);
+          gapMinutes = Math.max(0, gapEnd - gapStart);
+          if (gapMinutes > 0) timeStr = minutesToTimeGlobal(gapStart);
           if (gapMinutes < 1) gapMinutes = 0;
         }
         openSlotChoiceOverlay({
