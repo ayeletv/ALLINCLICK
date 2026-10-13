@@ -4810,7 +4810,9 @@
       <div class="appt-detail-row"><span class="appt-detail-label">קטגוריה</span><span class="appt-detail-value" id="apptDetailCategory"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">שירות</span><span class="appt-detail-value" id="apptDetailService"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">תאריך</span><span class="appt-detail-value" id="apptDetailDate"></span></div>
-      <div class="appt-detail-row"><span class="appt-detail-label">שעה</span><span class="appt-detail-value" id="apptDetailTime"></span></div>
+      <div class="appt-detail-row"><span class="appt-detail-label">שעת התור</span><span class="appt-detail-value" id="apptDetailTime"></span></div>
+      <div class="appt-detail-row"><span class="appt-detail-label">משך הטיפול</span><span class="appt-detail-value" id="apptDetailDuration"></span></div>
+      <div class="appt-detail-row" id="apptDetailCreatedRow" style="display:none"><span class="appt-detail-label">נוסף בתאריך ובשעה</span><span class="appt-detail-value" id="apptDetailCreated"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">עובדת</span><span class="appt-detail-value" id="apptDetailStaff"></span></div>
       <div class="appt-detail-row" id="apptDetailNextGapRow" style="display:none"><span class="appt-detail-label">עד התור הבא</span><span class="appt-detail-value" id="apptDetailNextGap"></span></div>
       <div class="appt-detail-row" id="apptDetailNoteRow" style="display:none;"><span class="appt-detail-label">הערות לפגישה</span><span class="appt-detail-value" id="apptDetailNote" style="white-space:pre-wrap;"></span></div>
@@ -7137,7 +7139,16 @@
     const apptDetailCategoryEl = document.getElementById('apptDetailCategory');
     if (apptDetailCategoryEl) apptDetailCategoryEl.textContent = describeApptCategories(appt) || '—';
     document.getElementById('apptDetailDate').textContent = formatDateDMY(appt.date);
-    document.getElementById('apptDetailTime').textContent = appt.time + (appt.dur ? ' (' + appt.dur + ' דק\')' : '');
+    document.getElementById('apptDetailTime').textContent = appt.time || '—';
+    const durationEl = document.getElementById('apptDetailDuration');
+    if (durationEl) durationEl.textContent = (Number(appt.dur) > 0 ? Number(appt.dur) + ' דקות' : 'לא צוין');
+    const createdRaw = appt.createdAt || appt.addedAt || appt.created_at || '';
+    const createdRow = document.getElementById('apptDetailCreatedRow');
+    const createdEl = document.getElementById('apptDetailCreated');
+    if (createdRow && createdEl) {
+      if (createdRaw) { const cd = new Date(createdRaw); createdEl.textContent = Number.isNaN(cd.getTime()) ? String(createdRaw) : cd.toLocaleDateString('he-IL') + ' ' + cd.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'}); createdRow.style.display = ''; }
+      else { createdEl.textContent = ''; createdRow.style.display = 'none'; }
+    }
     // Show the real gap after this appointment until the next appointment for
     // the same staff member on the same date, excluding this appointment itself.
     const gapRow = document.getElementById('apptDetailNextGapRow');
@@ -16621,7 +16632,7 @@
       box.innerHTML = `
         <div class="waitlist-prompt">
           השעה ${time} לא זמינה — ${reason || 'תפוסה כרגע.'}
-          <input type="tel" inputmode="numeric" maxlength="9" id="wlId" class="field" style="margin-top:8px;" placeholder="תעודת זהות (9 ספרות) או טלפון (10 ספרות)" autocomplete="off">
+          <input type="tel" inputmode="numeric" maxlength="10" id="wlId" class="field" style="margin-top:8px;" placeholder="תעודת זהות (9 ספרות) או טלפון (10 ספרות)" autocomplete="off">
           <div id="wlIdentityStatus" style="display:none; margin:8px 0; line-height:1.55;"></div>
           <div id="wlKnownActions" style="display:none; margin-top:8px;">
             <div id="wlKnownMessage" class="reminder-choice-notice" style="margin-bottom:8px;"></div>
@@ -16714,7 +16725,15 @@
         }
         setDisplay(knownError, 'none');
         this.disabled = true;
-        try { await joinWaitlist(time, knownResult.firstName || '', '', idEl.value, email); }
+        // אם זוהתה לפי טלפון, שומרים את הטלפון בשדה phone ולא מעבירים
+        // אותו בטעות כמספר תעודת זהות. אם השרת החזיר ת"ז אמיתית, נשמור גם אותה.
+        const enteredDigits = idEl.value.replace(/\D/g, '');
+        const matchedTz = String(knownResult.teudatZehut || knownResult.tz ||
+          (knownResult.client && (knownResult.client.teudatZehut || knownResult.client.idNumber)) || '');
+        const joinId = enteredDigits.length === 9 ? enteredDigits : matchedTz.replace(/\D/g, '');
+        const joinPhone = enteredDigits.length === 10 ? enteredDigits :
+          String(knownResult.phone || (knownResult.client && knownResult.client.phone) || '');
+        try { await joinWaitlist(time, knownResult.firstName || '', joinPhone, joinId, email); }
         finally { this.disabled = false; }
       };
       document.getElementById('wlNewJoinBtn').onclick = () => joinWaitlist(time);
@@ -16867,6 +16886,8 @@
       staffName: selectedStaffIndex === 'any' ? '' : (emp ? emp.name : ''),
       date: dateStr,
       requestedTime: time,
+      duration: Number((svc && (svc.duration || svc.dur || svc.minutes)) || 0),
+      createdAt: new Date().toISOString(),
       status: 'pending'
     };
     if (bookingGoesThroughServer()){
@@ -16874,7 +16895,7 @@
       try {
         res = await callClientApi('waitlist', {
           id: idDigits || phone, name, phone, email, teudatZehut: idDigits,
-          entry: { date: dateStr, requestedTime: time, service: svc ? svc.name : '', staffName: wlEntry.staffName || '' },
+          entry: { date: dateStr, requestedTime: time, service: svc ? svc.name : '', duration: wlEntry.duration, createdAt: wlEntry.createdAt, staffName: wlEntry.staffName || '' },
         });
       } catch (err) {
         console.error('Waitlist through the server failed:', err);
