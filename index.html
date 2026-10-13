@@ -16608,10 +16608,18 @@
             const res = await fetchServerIdentity(digits);
             if (seq !== wlLookupSeq || wlIdEl.value.replace(/[^0-9]/g, '') !== digits) return;
             if (!res || !res.found) return;
-            const fullName = String(res.name || res.fullName || [res.firstName, res.lastName].filter(Boolean).join(' ') || '').trim();
+            // The lookup endpoint may return the customer under different wrappers /
+            // field names. Normalize those shapes before filling the waitlist form.
+            const profile = res.client || res.customer || res.profile || res.data || res;
+            const fullName = String(
+              profile.name || profile.fullName ||
+              [profile.firstName || profile.givenName || profile.first_name,
+               profile.lastName || profile.familyName || profile.surname || profile.last_name]
+                .filter(Boolean).join(' ') || ''
+            ).trim();
             if (fullName) splitNameIntoFields(fullName, 'wlFirstName', 'wlLastName');
-            const phoneValue = res.phone || res.mobile || '';
-            const emailValue = res.email || '';
+            const phoneValue = profile.phone || profile.mobile || profile.phoneNumber || profile.phone_number || profile.telephone || '';
+            const emailValue = profile.email || profile.emailAddress || profile.email_address || '';
             const phoneEl = document.getElementById('wlPhone');
             const emailEl = document.getElementById('wlEmail');
             if (phoneEl && phoneValue) phoneEl.value = phoneValue;
@@ -16656,17 +16664,25 @@
           const lookup = await fetchServerIdentity(idDigits);
           if (lookup && lookup.found) {
             publicKnown = lookup;
-            const fullName = String(lookup.name || lookup.fullName || [lookup.firstName, lookup.lastName].filter(Boolean).join(' ') || '').trim();
+            const profile = lookup.client || lookup.customer || lookup.profile || lookup.data || lookup;
+            const fullName = String(
+              profile.name || profile.fullName ||
+              [profile.firstName || profile.givenName || profile.first_name,
+               profile.lastName || profile.familyName || profile.surname || profile.last_name]
+                .filter(Boolean).join(' ') || ''
+            ).trim();
             if ((!firstNameOk || !lastNameOk) && fullName) {
               splitNameIntoFields(fullName, 'wlFirstName', 'wlLastName');
               name = combineNameFields('wlFirstName', 'wlLastName');
             }
-            if (!phone && (lookup.phone || lookup.mobile)) {
-              phone = lookup.phone || lookup.mobile;
+            const lookedUpPhone = profile.phone || profile.mobile || profile.phoneNumber || profile.phone_number || profile.telephone || '';
+            const lookedUpEmail = profile.email || profile.emailAddress || profile.email_address || '';
+            if (!phone && lookedUpPhone) {
+              phone = lookedUpPhone;
               if (phoneEl) phoneEl.value = phone;
             }
-            if (!email && lookup.email) {
-              email = lookup.email;
+            if (!email && lookedUpEmail) {
+              email = lookedUpEmail;
               if (emailEl) emailEl.value = email;
             }
           }
