@@ -14101,6 +14101,20 @@
     if (closing === null) return true;             // אף אחת לא עובדת היום — אין מה לממש
     return (now.getHours() * 60 + now.getMinutes()) >= closing;
   }
+  // בקשת המתנה תקפה עד סוף יום התור המבוקש (או עד סגירת הסלון באותו יום).
+  // כך בקשות שלא נמצאה להן התאמה אינן נשארות לנצח בעמודת "בקשה מיוחדת".
+  function waitlistEntryIsExpired(entry, nowDate){
+    if (!entry || !entry.date) return true;
+    if (entry.status === 'matched' || entry.status === 'expired') return true;
+    const now = nowDate || new Date();
+    const todayKey = formatDateKey(now);
+    if (String(entry.date) < todayKey) return true;
+    if (String(entry.date) > todayKey) return false;
+    const parts = String(entry.date).split('-').map(Number);
+    const closing = latestClosingMinuteOn(new Date(parts[0], parts[1] - 1, parts[2]));
+    if (closing === null) return true;
+    return (now.getHours() * 60 + now.getMinutes()) >= closing;
+  }
   function specialColumnPendingRequests(){
     const now = new Date();
     return specialRequests.filter(r => !(r.mode === 'flexible' && r.status === 'matched')
@@ -14127,7 +14141,7 @@
     body.style.height = bodyHeight + 'px';
     const pendingRequests = specialColumnPendingRequests()
       .slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const waitlistEntries = waitlist.filter(w => w.status !== 'matched');
+    const waitlistEntries = waitlist.filter(w => !waitlistEntryIsExpired(w, new Date()));
     if (!pendingRequests.length && !waitlistEntries.length){
       body.innerHTML = '';
     } else {
@@ -14177,7 +14191,8 @@
           nameEl.textContent = w.name || 'ללא שם';
           const metaEl = document.createElement('span');
           metaEl.className = 'sr-block-meta';
-          metaEl.textContent = `⏰ ${w.requestedTime || ''}` + (wlSvc ? ' · ' + wlSvc : '') + (wlCat ? ' (' + wlCat + ')' : '');
+          const createdLabel = w.createdAt ? new Date(w.createdAt).toLocaleDateString('he-IL') + ' ' + new Date(w.createdAt).toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'}) : '';
+          metaEl.textContent = `⏰ ${w.requestedTime || ''}` + (wlSvc ? ' · ' + wlSvc : '') + (wlCat ? ' (' + wlCat + ')' : '') + (createdLabel ? ` · נרשמה: ${createdLabel}` : '');
           main.appendChild(nameEl); main.appendChild(metaEl);
           return main;
         })());
@@ -14236,6 +14251,8 @@
         (w.staffName ? srDetailRow('עובדת', w.staffName) : '') +
         srDetailRow('תאריך מבוקש', dateLabel) +
         srDetailRow('שעה מבוקשת', w.requestedTime || '—') +
+        srDetailRow('נרשמה בתאריך ושעה', w.createdAt ? new Date(w.createdAt).toLocaleString('he-IL') : 'לא נשמר בעבר') +
+        srDetailRow('תפוגה', w.expiresAt ? new Date(w.expiresAt).toLocaleString('he-IL') : (w.date ? formatDateDMY(w.date) + ' בסוף היום' : '—')) +
         srDetailRow('סטטוס', isMatchedW ? '✓ נמצא תור' : '⏳ ממתין') +
         (isMatchedW ? srDetailRow('נקבע ל', `${formatDateDMY(w.matchedDate)}, ${w.matchedTime}${(staff[w.matchedStaff] && staff[w.matchedStaff].name) ? ' · ' + staff[w.matchedStaff].name : ''}`) : '');
       if (!isMatchedW){
@@ -16667,10 +16684,11 @@
     else if(!runningOnPublicData){ clients.push({name,phone,teudatZehut:idDigits,email,photo:null,visits:0,daysSinceVisit:null,note:'',birthday:null}); }
     const svc=getBookingSvc(); const emp=selectedStaffIndex==='any'?null:staff[selectedStaffIndex];
     const dateStr=bookingSelectedDate.getFullYear()+'-'+String(bookingSelectedDate.getMonth()+1).padStart(2,'0')+'-'+String(bookingSelectedDate.getDate()).padStart(2,'0');
-    const wlEntry={id:'wl_'+Date.now()+'_'+Math.floor(Math.random()*10000),name,phone,teudatZehut:idDigits,email:(existingClient&&existingClient.email)||email,service:svc?svc.name:'',staffName:selectedStaffIndex==='any'?'':(emp?emp.name:''),date:dateStr,requestedTime:time,status:'pending'};
+    const createdAt = new Date().toISOString();
+    const wlEntry={id:'wl_'+Date.now()+'_'+Math.floor(Math.random()*10000),name,phone,teudatZehut:idDigits,email:(existingClient&&existingClient.email)||email,service:svc?svc.name:'',staffName:selectedStaffIndex==='any'?'':(emp?emp.name:''),date:dateStr,requestedDate:dateStr,requestedTime:time,createdAt,createdDate:createdAt.slice(0,10),createdTime:createdAt.slice(11,16),expiresAt:dateStr+'T23:59:59',status:'pending'};
     if(bookingGoesThroughServer()){
       let res=null;
-      try{res=await callClientApi('waitlist',{id:idDigits||phone, name, phone, email, teudatZehut:idDigits, entry:{date:dateStr,requestedTime:time,service:svc?svc.name:'',staffName:wlEntry.staffName||''}});}
+      try{res=await callClientApi('waitlist',{id:idDigits||phone, name, phone, email, teudatZehut:idDigits, entry:{date:dateStr,requestedDate:dateStr,requestedTime:time,createdAt,createdDate:wlEntry.createdDate,createdTime:wlEntry.createdTime,expiresAt:wlEntry.expiresAt,service:svc?svc.name:'',staffName:wlEntry.staffName||''}});}
       catch(err){console.error('Waitlist through the server failed:',err);res=runningOnPublicData?{ok:false,error:'לא הצלחנו לרשום אותך לרשימת ההמתנה כרגע. נא לנסות שוב.'}:{ok:true,entry:wlEntry,__fallback:true};}
       if(!res||!res.ok){const b=document.getElementById('waitlistBox');if(b)b.innerHTML=`<div class="waitlist-prompt">${(res&&res.error)||'לא הצלחנו לרשום אותך לרשימת ההמתנה. נא לנסות שוב.'}</div>`;return;}
       waitlist.push(res.entry||wlEntry); if(res.__fallback&&typeof saveState==='function')saveState();
@@ -20251,13 +20269,19 @@
     }
   }
   function pruneExpiredWaitlistEntries(){
-    if (!Array.isArray(waitlist) || !waitlist.length) return;
-    const todayKey = formatDateKey(todayMidnight);
+    if (!Array.isArray(waitlist) || !waitlist.length) return false;
+    const now = new Date();
     const before = waitlist.length;
-    waitlist = waitlist.filter(w => w && w.date && w.date >= todayKey);
-    if (waitlist.length !== before){
-      console.log(`Removed ${before - waitlist.length} expired waitlist request(s).`);
+    waitlist = waitlist.filter(w => !waitlistEntryIsExpired(w, now));
+    const removed = before - waitlist.length;
+    if (removed){
+      console.log(`Removed ${removed} expired waitlist request(s).`);
+      // Preserve the pre-prune snapshot so the normal save pipeline persists removals.
+      if (lastLoadedSnapshot && Array.isArray(lastLoadedSnapshot.waitlist)){
+        lastLoadedSnapshot.waitlist = lastLoadedSnapshot.waitlist.filter(w => !waitlistEntryIsExpired(w, now) || !waitlist.some(active => active && w && active.id === w.id));
+      }
     }
+    return removed > 0;
   }
   function reportCloudLoadTiming(startedAt, rawCloudData){
     const elapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt) / 1000;
