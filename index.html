@@ -4814,7 +4814,7 @@
       <div class="appt-detail-row"><span class="appt-detail-label">משך הטיפול</span><span class="appt-detail-value" id="apptDetailDuration"></span></div>
       <div class="appt-detail-row" id="apptDetailCreatedRow" style="display:none"><span class="appt-detail-label">נוסף בתאריך ובשעה</span><span class="appt-detail-value" id="apptDetailCreated"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">עובדת</span><span class="appt-detail-value" id="apptDetailStaff"></span></div>
-      <div class="appt-detail-row" id="apptDetailNextGapRow" style="display:none"><span class="appt-detail-label">עד התור הבא</span><span class="appt-detail-value" id="apptDetailNextGap"></span></div>
+      <div class="appt-detail-row" id="apptDetailNextGapRow" style="display:none !important"><span class="appt-detail-label">עד התור הבא</span><span class="appt-detail-value" id="apptDetailNextGap"></span></div>
       <div class="appt-detail-row" id="apptDetailNoteRow" style="display:none;"><span class="appt-detail-label">הערות לפגישה</span><span class="appt-detail-value" id="apptDetailNote" style="white-space:pre-wrap;"></span></div>
     </div>
 
@@ -14216,7 +14216,13 @@
           nameEl.textContent = w.name || 'ללא שם';
           const metaEl = document.createElement('span');
           metaEl.className = 'sr-block-meta';
-          metaEl.textContent = `⏰ ${w.requestedTime || ''}` + (wlSvc ? ' · ' + wlSvc : '') + (wlCat ? ' (' + wlCat + ')' : '');
+          const wlCreated = w.createdAt || w.addedAt || w.created_at || '';
+          const wlCreatedDate = wlCreated ? new Date(wlCreated) : null;
+          const wlCreatedLabel = wlCreatedDate && !Number.isNaN(wlCreatedDate.getTime())
+            ? 'נוסף ' + wlCreatedDate.toLocaleDateString('he-IL') + ' ' + wlCreatedDate.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'})
+            : 'מועד הוספה לא נשמר';
+          const wlDuration = Number(w.duration || w.dur || w.serviceDuration || 0);
+          metaEl.textContent = `⏰ ${w.requestedTime || ''}` + (wlDuration > 0 ? ` · ${wlDuration} דקות` : '') + ' · ' + wlCreatedLabel + (wlSvc ? ' · ' + wlSvc : '') + (wlCat ? ' (' + wlCat + ')' : '');
           main.appendChild(nameEl); main.appendChild(metaEl);
           return main;
         })());
@@ -14275,8 +14281,24 @@
         (w.staffName ? srDetailRow('עובדת', w.staffName) : '') +
         srDetailRow('תאריך מבוקש', dateLabel) +
         srDetailRow('שעה מבוקשת', w.requestedTime || '—') +
+        srDetailRow('משך הטיפול', Number(w.duration || w.dur || w.serviceDuration || 0) > 0 ? `${Number(w.duration || w.dur || w.serviceDuration)} דקות` : 'לא נשמר') +
+        srDetailRow('מועד הוספה', (function(){ const raw = w.createdAt || w.addedAt || w.created_at || ''; const d = raw ? new Date(raw) : null; return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('he-IL') + ' בשעה ' + d.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false}) : 'לא נשמר תאריך מדויק'; })()) +
         srDetailRow('סטטוס', isMatchedW ? '✓ נמצא תור' : '⏳ ממתין') +
         (isMatchedW ? srDetailRow('נקבע ל', `${formatDateDMY(w.matchedDate)}, ${w.matchedTime}${(staff[w.matchedStaff] && staff[w.matchedStaff].name) ? ' · ' + staff[w.matchedStaff].name : ''}`) : '');
+      const waitlistProfileBtn = document.createElement('button');
+      waitlistProfileBtn.type = 'button';
+      waitlistProfileBtn.className = 'cta ghost';
+      waitlistProfileBtn.textContent = '👤 כרטסת הלקוחה';
+      waitlistProfileBtn.onclick = () => {
+        const tz = String(w.teudatZehut || w.idNumber || '');
+        const phoneDigits = String(w.phone || '').replace(/\D/g, '');
+        const client = (tz && clients.find(c => c && String(c.teudatZehut || '') === tz))
+          || (phoneDigits && clients.find(c => c && String(c.phone || '').replace(/\D/g, '') === phoneDigits))
+          || clients.find(c => c && c.name === w.name) || null;
+        if (client) showClientProfile(client);
+        else if (typeof showAdminToast === 'function') showAdminToast('לא נמצאה כרטסת לקוחה מקושרת לרשומה הזו.');
+      };
+      actionsEl.appendChild(waitlistProfileBtn);
       if (!isMatchedW){
         const recheckBtn = document.createElement('button');
         recheckBtn.type = 'button';
@@ -14368,6 +14390,20 @@
       : 'לא נשמר תאריך מדויק';
     html += srDetailRow('מועד הוספה', createdAtExact);
     cardEl.innerHTML = html;
+    const requestProfileBtn = document.createElement('button');
+    requestProfileBtn.type = 'button';
+    requestProfileBtn.className = 'cta ghost';
+    requestProfileBtn.textContent = '👤 כרטסת הלקוחה';
+    requestProfileBtn.onclick = () => {
+      const tz = String(r.teudatZehut || r.idNumber || '');
+      const phoneDigits = String(r.phone || '').replace(/\D/g, '');
+      const client = (tz && clients.find(c => c && String(c.teudatZehut || '') === tz))
+        || (phoneDigits && clients.find(c => c && String(c.phone || '').replace(/\D/g, '') === phoneDigits))
+        || clients.find(c => c && c.name === r.name) || null;
+      if (client) showClientProfile(client);
+      else if (typeof showAdminToast === 'function') showAdminToast('לא נמצאה כרטסת לקוחה מקושרת לרשומה הזו.');
+    };
+    actionsEl.appendChild(requestProfileBtn);
     if (isFlexible && r.status !== 'matched'){
       const recheckBtn = document.createElement('button');
       recheckBtn.type = 'button';
