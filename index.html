@@ -7031,7 +7031,8 @@
     });
   }
   function renderWaitlistMatchAlert(matches, appt){
-    if (!matches || !matches.length) return;
+    matches = filterStillPendingWaitlistMatches(matches).filter(w => w && !['matched','offerExpired','cancelled','declined','dismissed'].includes(w.status));
+    if (!matches.length) return;
     const existing = document.getElementById('waitlistMatchAlert');
     if (existing) existing.remove();
     const specialCol = document.getElementById('weekcol-special');
@@ -7048,9 +7049,7 @@
       const digits = (w.phone || '').replace(/[^0-9]/g,'');
       const smsMsg = encodeURIComponent(`היי ${w.name}, התפנה תור ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time}. אם תרצי, אפשר לקבוע אותו כאן: ${getSiteUrl()}`);
       const clientEmail = findClientEmailByPhone(w.phone);
-      if (clientEmail){
-        sendEmail(clientEmail, 'התפנה תור אצלנו!', `היי ${w.name}, התפנה תור ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time}. אם תרצי, אפשר לקבוע אותו כאן:\n${getSiteUrl()}\n\nאם זה כבר לא רלוונטי לך, אפשר להסיר את עצמך מרשימת ההמתנה כאן:\n${buildWaitlistCancelLink(w.id)}`);
-      }
+      // Do not send email while rendering; repeated renders must not resend notifications.
       const row = document.createElement('div');
       row.className='wl-match';
       row.innerHTML = `<div><b>${w.name}</b> · ${w.phone}${clientEmail ? ' · נשלח גם מייל אוטומטית' : ''}</div><div class="wl-actions">
@@ -14087,27 +14086,16 @@
   }
 
   async function attemptMatchFlexibleRequest(req){
-    if (!req || req.mode !== 'flexible' || req.status === 'matched') return false;
+    if (!req || req.mode !== 'flexible' || req.status !== 'pending') return false;
     const match = tryFindFlexibleSlot(req);
     if (!match) return false;
-    const now = new Date();
-    const away = offerMinutesUntil(match.date, match.time, now);
-    if (away !== null && away <= offerSetting('maxDaysAhead') * 24 * 60){
-      if (away < offerSetting('floorMin')) return false;   // אף אחת לא תספיק
-      const dur = (req.services || []).reduce(function(a, sv){ return a + (sv.duration || 0); }, 0) || 30;
-      const startMin = timeToMinutes(match.time);
-      if (slotIsHeldByOffer(match.date, match.staffIdx, startMin, startMin + dur, now)) return false;
-      return !!createOfferForFreedSlot({
-        date: match.date, time: match.time, dur: dur, staff: match.staffIdx,
-        serviceName: (req.services || []).map(function(sv){ return sv.name; }).filter(Boolean).join(' + '),
-      });
-    }
+    // Eligible special requests are booked directly into the calendar.
     const appt = await bookFlexibleRequest(req, match);
     return !!appt;
   }
   async function recheckAllPendingFlexibleRequests(){
     let matchedAny = false;
-    const pending = specialRequests.filter(r => r.mode === 'flexible' && r.status !== 'matched');
+    const pending = specialRequests.filter(r => r.mode === 'flexible' && r.status === 'pending');
     for (const r of pending){
       const matched = await attemptMatchFlexibleRequest(r);
       if (matched) matchedAny = true;
