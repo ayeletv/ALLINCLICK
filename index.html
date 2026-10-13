@@ -13625,6 +13625,20 @@
     const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
     const dow = dateObj.getDay();
     const startMin = timeToMinutes(slot.time);
+    const slotEndMin = startMin + (slot.dur || 30);
+    const blockedRanges = (typeof getBlockedRangesForStaff === 'function')
+      ? getBlockedRangesForStaff(dateObj, slot.staff) : [];
+    // Never offer a slot that overlaps a personal/staff block shown in the calendar.
+    if ((blockedRanges || []).some(function(range){
+      return range && startMin < range[1] && slotEndMin > range[0];
+    })) return [];
+    const staffClash = (weekAppointments || []).some(function(a){
+      if (!a || a.date !== slot.date || a.status === 'cancelled') return false;
+      if (typeof a.staff !== 'undefined' && a.staff !== slot.staff) return false;
+      const aStart = timeToMinutes(a.time), aEnd = aStart + (a.dur || 30);
+      return startMin < aEnd && slotEndMin > aStart;
+    });
+    if (staffClash) return [];
     const specialEligible = (specialRequests || []).filter(function(r){
       if (!r || r.mode !== 'flexible' || r.status !== 'pending') return false;
       if (typeof specialRequestIsExpired === 'function' && specialRequestIsExpired(r, now)) return false;
