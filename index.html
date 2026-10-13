@@ -13625,20 +13625,6 @@
     const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
     const dow = dateObj.getDay();
     const startMin = timeToMinutes(slot.time);
-    const slotEndMin = startMin + (slot.dur || 30);
-    const blockedRanges = (typeof getBlockedRangesForStaff === 'function')
-      ? getBlockedRangesForStaff(dateObj, slot.staff) : [];
-    // Never offer a slot that overlaps a personal/staff block shown in the calendar.
-    if ((blockedRanges || []).some(function(range){
-      return range && startMin < range[1] && slotEndMin > range[0];
-    })) return [];
-    const staffClash = (weekAppointments || []).some(function(a){
-      if (!a || a.date !== slot.date || a.status === 'cancelled') return false;
-      if (typeof a.staff !== 'undefined' && a.staff !== slot.staff) return false;
-      const aStart = timeToMinutes(a.time), aEnd = aStart + (a.dur || 30);
-      return startMin < aEnd && slotEndMin > aStart;
-    });
-    if (staffClash) return [];
     const specialEligible = (specialRequests || []).filter(function(r){
       if (!r || r.mode !== 'flexible' || r.status !== 'pending') return false;
       if (typeof specialRequestIsExpired === 'function' && specialRequestIsExpired(r, now)) return false;
@@ -13692,11 +13678,18 @@
       };
     });
     const combined = specialEligible.map(function(r){ r._offerSource = 'specialRequest'; return r; }).concat(waitlistEligible);
+    // A cancelled offer blocks only the request(s) that were offered it, not the whole slot.
     const terminal = new Set(['cancelledByOwner','takenByOwner','claimed']);
     const sameSlotOffers = (pendingOffers || []).filter(function(o){
-      return o && o.date === slot.date && o.time === slot.time && o.staff === slot.staff && terminal.has(o.status);
+      return o && String(o.date || '') === String(slot.date || '') &&
+        String(o.time || '').trim() === String(slot.time || '').trim() &&
+        String(o.staff) === String(slot.staff) && terminal.has(o.status);
     });
-    if (sameSlotOffers.length) return [];
+    const excludedRequestIds = new Set();
+    sameSlotOffers.forEach(function(o){
+      (o.requestIds || []).forEach(function(id){ excludedRequestIds.add(String(id)); });
+      (o.cancelledRequestIds || []).forEach(function(id){ excludedRequestIds.add(String(id)); });
+    });
     const previouslyContacted = new Set();
     (pendingOffers || []).filter(function(o){
       return o && o.date === slot.date && o.time === slot.time && o.staff === slot.staff;
@@ -13705,7 +13698,7 @@
         if (rec && rec.requestId) previouslyContacted.add(String(rec.requestId));
       });
     });
-    return combined.filter(function(r){ return !previouslyContacted.has(String(r.id)); })
+    return combined.filter(function(r){ return !previouslyContacted.has(String(r.id)) && !excludedRequestIds.has(String(r.id)); })
       .sort(function(a, b){ return String(a.createdAt || '').localeCompare(String(b.createdAt || '')); });
   }
   function offerById(id){ return (pendingOffers || []).filter(function(o){ return o && o.id === id; })[0] || null; }
@@ -13759,6 +13752,24 @@
         minutesAway < offerSetting('floorMin')) return null;
     expireStaleOffers();
     if (slotIsHeldByOffer(slot.date, slot.staff, timeToMinutes(slot.time), timeToMinutes(slot.time) + (slot.dur || 30), now)) return null;
+    // Never offer a slot that overlaps a staff/calendar block or an existing appointment.
+    const slotStart = timeToMinutes(slot.time);
+    const slotEnd = slotStart + (slot.dur || 30);
+    const blocked = (typeof blockedTimes !== 'undefined' && Array.isArray(blockedTimes) ? blockedTimes : [])
+      .some(function(b){
+        if (!b || String(b.date || '') !== String(slot.date || '')) return false;
+        if (b.staff != null && String(b.staff) !== String(slot.staff) && String(b.staffName || '') !== String((staff[slot.staff]||{}).name || '')) return false;
+        const bs = timeToMinutes(b.startTime || b.time || '00:00');
+        const be = timeToMinutes(b.endTime || b.end || b.time || '00:00');
+        return bs < slotEnd && be > slotStart;
+      });
+    const booked = (weekAppointments || []).some(function(a){
+      if (!a || a.date !== slot.date || a.status === 'cancelled' || a.status === 'declined') return false;
+      if (String(a.staff) !== String(slot.staff)) return false;
+      const as = timeToMinutes(a.time);
+      return as < slotEnd && as + (a.dur || 30) > slotStart;
+    });
+    if (blocked || booked) return null;
     const eligible = eligibleRequestsForSlot(slot, now);
     if (!eligible.length) return null;
     const chosen = [eligible[0]];
@@ -13940,15 +13951,48 @@
   }
   function ownerCancelOffer(id){
     const o = offerById(id);
-    if (!o) return;
-    if (!confirm('לבטל את ההצעה?\n\nהשעה ' + o.time + ' תחזור להיות פנויה לכולן, ' +
-                 'והלקוחות שקיבלו את ההודעה כבר לא יוכלו לאשר דרכה.')) return;
+    if (!o || o.status !== 'offered') return;
+    if (!confirm('לבטל את ההצעה ללקוחה זו?\\n\\nהלקוחה לא תקבל שוב את אותה הצעה. אם יש לקוחה אחרת מתאימה, אפשר להציע לה את השעה.')) return;
+    const slot = {date:o.date, time:o.time, dur:o.dur || 30, staff:o.staff, serviceName:o.serviceName, freedFrom:o.freedFrom};
+    const now = new Date().toISOString();
     o.status = 'cancelledByOwner';
-    o.closedAt = new Date().toISOString();
+    o.closedAt = now;
+    o.cancelledByOwner = true;
+    o.cancelledRequestIds = Array.from(new Set([].concat(o.cancelledRequestIds || [], o.requestIds || []))).map(String);
+    o.nextOfferAttempted = true;
     closeOfferDetail();
     if (typeof saveState === 'function') saveState();
     if (typeof renderWeekCal === 'function') renderWeekCal();
-    if (typeof showAdminToast === 'function') showAdminToast('✓ ההצעה בוטלה והשעה פנויה');
+    if (typeof showAdminToast === 'function') showAdminToast('✓ ההצעה ללקוחה בוטלה; בודקת אם יש לקוחה אחרת מתאימה');
+
+    // Send owner a "slot freed" email if the application has an owner/admin email configured.
+    try {
+      const ownerEmail = (typeof settings !== 'undefined' && settings &&
+        (settings.ownerEmail || settings.adminEmail || settings.email)) ||
+        (typeof salonSettings !== 'undefined' && salonSettings &&
+        (salonSettings.ownerEmail || salonSettings.adminEmail || salonSettings.email)) || '';
+      if (ownerEmail && typeof db !== 'undefined' && db && typeof db.collection === 'function') {
+        const msg = '<div dir="rtl"><h3>תור התפנה</h3><p>תאריך: ' + offerHebDate(slot.date) +
+          '</p><p>שעה: ' + slot.time + '</p><p>השעה שוחררה לאחר ביטול הצעה ללקוחה.</p></div>';
+        db.collection('mail').add({to:ownerEmail,message:{subject:'התפנה תור - הכל בקליק',html:msg}})
+          .catch(function(err){console.error('Owner freed-slot email queue failed',err);});
+      }
+    } catch(err) { console.error('Owner freed-slot email setup failed',err); }
+
+    // Run after the cancelled status is persisted. createOfferForFreedSlot excludes this request,
+    // but can choose the next eligible request. If no one qualifies, the slot remains free.
+    setTimeout(function(){
+      try {
+        const next = createOfferForFreedSlot(slot);
+        if (next) {
+          if (typeof showAdminToast === 'function') showAdminToast('ההצעה הבאה נשלחה ללקוחה הבאה בתור');
+        } else if (typeof showAdminToast === 'function') {
+          showAdminToast('ההצעה בוטלה; כרגע אין לקוחה מתאימה נוספת או שהשעה חסומה');
+        }
+        if (typeof saveState === 'function') saveState();
+        if (typeof renderWeekCal === 'function') renderWeekCal();
+      } catch(err) { console.error('Next offer after cancellation failed',err); }
+    }, 250);
   }
 
   async function attemptMatchFlexibleRequest(req){
