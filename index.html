@@ -13891,6 +13891,22 @@
     const until = o.expiresAt
       ? new Date(o.expiresAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '';
     const n = (o.recipients || []).length;
+    // Recompute the candidate list when the offer is opened; never trust a stale saved list.
+    const liveEligible = (typeof eligibleRequestsForSlot === 'function')
+      ? eligibleRequestsForSlot({date:o.date, time:o.time, dur:o.dur || 30, staff:o.staff}, new Date())
+      : [];
+    const savedCandidateStates = (o.eligibleRecipients || []).concat(o.recipients || []);
+    const visibleEligible = liveEligible.map(function(r, index){
+      const saved = savedCandidateStates.find(function(x){ return x && String(x.requestId || '') === String(r.id || ''); }) || {};
+      return {
+        requestId:r.id, name:r.name || '', phone:r.phone || '',
+        source:r._offerSource || saved.source || 'specialRequest',
+        queuePosition:index+1,
+        status:saved.status || (index===0 ? 'selected' : 'waiting'),
+        emailStatus:saved.emailStatus || 'not-sent',
+        smsStatus:saved.smsStatus || 'not-sent'
+      };
+    });
     const why = o.broadcast
       ? 'מכיוון שהתור הזה מתחיל ב-' + o.time + ' ב' + offerHebDate(o.date) +
         ' — כלומר בעוד פחות מ-' + offerSetting('broadcastHours') + ' שעות — לא היה זמן להציע אותו ' +
@@ -13918,8 +13934,8 @@
       '<div class="offer-why">' + why + '</div>' +
       '<div class="offer-list-title">ההצעה נשלחה ללקוחה הראשונה שמתאימה לכל תנאי הבקשה. ברשימה מופיעות רק לקוחות שעברו בדיקת התאמה:</div>' +
       '<div class="offer-rec-list">' +
-        ((o.eligibleRecipients || []).filter(function(rec){ return rec && rec.status !== 'ineligible'; }).map(offerRecipientRow).join('') ||
-          '<div class="offer-rec-row"><div class="offer-rec-main">אין לקוחות נוספות שעברו את בדיקת ההתאמה לשעה זו.</div></div>') +
+        (visibleEligible.map(offerRecipientRow).join('') ||
+          '<div class="offer-rec-row"><div class="offer-rec-main">אין כרגע לקוחות שעומדות בכל תנאי הבקשה לשעה זו.</div></div>') +
       '</div>' +
       '<div class="offer-foot">ההודעה נשלחה ב-' +
         new Date(o.createdAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) +
