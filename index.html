@@ -13786,7 +13786,10 @@
       date: slot.date, time: slot.time, dur: slot.dur || 30, staff: slot.staff,
       serviceName: slot.serviceName || (chosen[0].services || []).map(function(s){return s.name;}).filter(Boolean).join(' + '),
       requestIds: chosen.map(function(r){ return r.id; }),
-      eligibleRecipients: eligible.map(function(r, index){
+      eligibleRecipients: eligible.filter(function(r){
+        // Candidate list is built only from eligibleRequestsForSlot, which checks the full requested time window.
+        return !!r && !!r.id;
+      }).map(function(r, index){
         return { requestId:r.id, name:r.name||'', phone:r.phone||'', source:r._offerSource||'specialRequest',
           queuePosition:index+1, status:index===0?'selected':'waiting', emailStatus:'not-sent', smsStatus:'not-sent' };
       }),
@@ -13913,9 +13916,10 @@
           : 'פג הזמן. השעה חזרה להיות פנויה.') +
       '</div>' +
       '<div class="offer-why">' + why + '</div>' +
-      '<div class="offer-list-title">נשלחה הצעה ללקוחה אחת. אלה כל הלקוחות המתאימות לפי סדר ההמתנה:</div>' +
+      '<div class="offer-list-title">ההצעה נשלחה ללקוחה הראשונה שמתאימה לכל תנאי הבקשה. ברשימה מופיעות רק לקוחות שעברו בדיקת התאמה:</div>' +
       '<div class="offer-rec-list">' +
-        ((o.eligibleRecipients && o.eligibleRecipients.length) ? o.eligibleRecipients : (o.recipients || [])).map(offerRecipientRow).join('') +
+        ((o.eligibleRecipients || []).filter(function(rec){ return rec && rec.status !== 'ineligible'; }).map(offerRecipientRow).join('') ||
+          '<div class="offer-rec-row"><div class="offer-rec-main">אין לקוחות נוספות שעברו את בדיקת ההתאמה לשעה זו.</div></div>') +
       '</div>' +
       '<div class="offer-foot">ההודעה נשלחה ב-' +
         new Date(o.createdAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) +
