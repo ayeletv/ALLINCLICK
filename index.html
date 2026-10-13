@@ -13381,14 +13381,24 @@
     if (diffDays === 1) return 'נוספה אתמול';
     return `נוספה לפני ${diffDays} ימים`;
   }
-  function deleteSpecialRequest(id){
-    const req = specialRequests.find(r => r.id === id);
+  async function deleteSpecialRequest(id){
+    const req = specialRequests.find(r => String(r.id) === String(id));
     if (!req) return;
     if (!confirm(`למחוק את הבקשה של ${req.name || 'לקוחה'}?`)) return;
-    specialRequests = specialRequests.filter(r => r.id !== id);
+    const previousRequests = specialRequests.slice();
+    specialRequests = specialRequests.filter(r => String(r.id) !== String(id));
     renderWeekCal();
-    if (typeof saveState === 'function') saveState();
-    if (typeof showAdminToast === 'function') showAdminToast('✓ הבקשה נמחקה בהצלחה');
+    try {
+      // Wait for the cloud transaction before confirming deletion. A fire-and-forget
+      // save lets the next cloud refresh restore the old request to the screen.
+      if (typeof saveState === 'function') await saveState();
+      if (typeof showAdminToast === 'function') showAdminToast('✓ הבקשה נמחקה ונשמרה');
+    } catch (err) {
+      specialRequests = previousRequests;
+      renderWeekCal();
+      console.error('Could not persist special-request deletion:', err);
+      if (typeof showAdminToast === 'function') showAdminToast('⚠ המחיקה לא נשמרה בענן. הבקשה הוחזרה למסך — נסי שוב לאחר בדיקת החיבור.');
+    }
   }
   function removeSpecialRequestSilently(id){
     specialRequests = specialRequests.filter(r => r.id !== id);
