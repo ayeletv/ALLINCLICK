@@ -16578,137 +16578,114 @@
     document.getElementById('waitlistBox').innerHTML = `
       <div class="waitlist-prompt">
         השעה ${time} לא זמינה — ${reason || 'תפוסה כרגע.'}
-        <input type="tel" inputmode="numeric" maxlength="10" id="wlId" class="field" style="margin-top:8px;" placeholder="תעודת זהות או מספר טלפון">
-        <div class="field-row">
-          <input type="text" id="wlFirstName" class="field" placeholder="שם פרטי">
-          <input type="text" id="wlLastName" class="field" placeholder="שם משפחה">
+        <input type="tel" inputmode="numeric" maxlength="9" id="wlId" class="field" style="margin-top:8px;" placeholder="תעודת זהות (9 ספרות)">
+        <div id="wlIdentityStatus" style="display:none; font-size:13px; margin:6px 0; line-height:1.5;"></div>
+        <div id="wlNewClientFields">
+          <div class="field-row">
+            <input type="text" id="wlFirstName" class="field" placeholder="שם פרטי">
+            <input type="text" id="wlLastName" class="field" placeholder="שם משפחה">
+          </div>
+          <input type="tel" inputmode="numeric" maxlength="10" id="wlPhone" class="field" placeholder="050-0000000">
         </div>
-        <input type="tel" inputmode="numeric" maxlength="10" id="wlPhone" class="field" placeholder="050-0000000">
-        <input type="email" id="wlEmail" class="field" placeholder="אימייל (כדי שנוכל להודיע לך אם יתפנה מקום)">
-        <div id="wlError" style="display:none; color:var(--wine); font-size:12px; margin-bottom:6px;">יש למלא תעודת זהות (9 ספרות), שם פרטי, שם משפחה, טלפון ואימייל תקינים</div>
-        <div><button data-primary onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
+        <div id="wlEmailWrap" style="display:none;">
+          <input type="email" id="wlEmail" class="field" placeholder="אימייל (כדי שנוכל להודיע לך אם יתפנה מקום)">
+        </div>
+        <div id="wlError" style="display:none; color:var(--wine); font-size:12px; margin-bottom:6px;"></div>
+        <div><button data-primary id="wlJoinBtn" onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
       </div>`;
-    wireIdentityAutofill({ idId: 'wlId', firstId: 'wlFirstName', lastId: 'wlLastName', phoneId: 'wlPhone', emailId: 'wlEmail' });
-
-    // On the public booking page, the private clients array is intentionally empty.
-    // Therefore local autofill cannot recognize an existing customer by ID. Use the
-    // same server-side identity lookup as the main booking form.
     const wlIdEl = document.getElementById('wlId');
-    let wlLookupTimer = null;
-    let wlLookupSeq = 0;
-    if (wlIdEl && runningOnPublicData) {
-      wlIdEl.addEventListener('input', function(){
-        const digits = String(this.value || '').replace(/[^0-9]/g, '').slice(0, 10);
-        if (this.value !== digits) this.value = digits;
-        if (wlLookupTimer) clearTimeout(wlLookupTimer);
-        const seq = ++wlLookupSeq;
-        if (digits.length !== 9 && !isValidIsraeliPhone(digits)) return;
-        wlLookupTimer = setTimeout(async () => {
-          try {
-            const res = await fetchServerIdentity(digits);
-            if (seq !== wlLookupSeq || wlIdEl.value.replace(/[^0-9]/g, '') !== digits) return;
-            if (!res || !res.found) return;
-            // The lookup endpoint may return the customer under different wrappers /
-            // field names. Normalize those shapes before filling the waitlist form.
-            const profile = res.client || res.customer || res.profile || res.data || res;
-            const fullName = String(
-              profile.name || profile.fullName ||
-              [profile.firstName || profile.givenName || profile.first_name,
-               profile.lastName || profile.familyName || profile.surname || profile.last_name]
-                .filter(Boolean).join(' ') || ''
-            ).trim();
-            if (fullName) splitNameIntoFields(fullName, 'wlFirstName', 'wlLastName');
-            const phoneValue = profile.phone || profile.mobile || profile.phoneNumber || profile.phone_number || profile.telephone || '';
-            const emailValue = profile.email || profile.emailAddress || profile.email_address || '';
-            const phoneEl = document.getElementById('wlPhone');
-            const emailEl = document.getElementById('wlEmail');
-            if (phoneEl && phoneValue) phoneEl.value = phoneValue;
-            if (emailEl && emailValue) emailEl.value = emailValue;
-            const errorEl = document.getElementById('wlError');
-            if (errorEl) errorEl.style.display = 'none';
-          } catch (err) {
-            console.warn('Waitlist identity lookup failed:', err);
-          }
-        }, 300);
-      });
+    const fields = document.getElementById('wlNewClientFields');
+    const emailWrap = document.getElementById('wlEmailWrap');
+    const statusEl = document.getElementById('wlIdentityStatus');
+    const errorEl = document.getElementById('wlError');
+    const joinBtn = document.getElementById('wlJoinBtn');
+    let timer = null, seq = 0, identityState = 'idle';
+    function showStatus(text, color){ statusEl.textContent=text; statusEl.style.color=color||'inherit'; statusEl.style.display='block'; }
+    function setState(state, result){
+      identityState = state;
+      wlIdEl.dataset.identityState = state;
+      wlIdEl.dataset.identityEmail = result && result.hasEmail ? 'yes' : 'no';
+      fields.style.display = state === 'new' ? 'block' : 'none';
+      emailWrap.style.display = (state === 'known-no-email' || state === 'new') ? 'block' : 'none';
+      if (state === 'known-email') showStatus('זיהינו אותך 😊 הפרטים שלך כבר אצלנו. אין צורך למלא אותם שוב.');
+      else if (state === 'known-no-email') showStatus('זיהינו אותך 😊 חסר לנו אימייל בכרטיס שלך. נא להזין אימייל כדי שנוכל לעדכן אותך אם יתפנה תור.');
+      else if (state === 'new') showStatus('לא מצאנו כרטיס לקוחה לפי תעודת הזהות. נא למלא את הפרטים כדי להצטרף לרשימת ההמתנה.');
+      else if (state === 'failed') showStatus('לא הצלחנו לבדוק כרגע אם את כבר רשומה אצלנו. נסי שוב בעוד רגע. לא נרשום אותך כלקוחה חדשה עד שהבדיקה תצליח.');
+      else { statusEl.style.display='none'; }
+      errorEl.style.display='none';
     }
+    wlIdEl.addEventListener('input', function(){
+      const digits = String(this.value || '').replace(/[^0-9]/g, '').slice(0,9);
+      if (this.value !== digits) this.value = digits;
+      if (timer) clearTimeout(timer);
+      const current = ++seq;
+      if (digits.length !== 9){ setState('idle'); return; }
+      setState('checking'); showStatus('בודקת אם את כבר רשומה אצלנו…');
+      timer = setTimeout(async () => {
+        try {
+          const res = await fetchServerIdentity(digits);
+          if (current !== seq || wlIdEl.value !== digits) return;
+          if (!res || res.__failed) { setState('failed'); return; }
+          if (res.found) setState(res.hasEmail ? 'known-email' : 'known-no-email', res);
+          else setState('new', res);
+        } catch (err) {
+          if (current === seq) setState('failed');
+        }
+      }, 300);
+    });
+    // Allow a retry after a transient lookup failure without changing the ID.
+    statusEl.addEventListener('click', function(){
+      if (identityState === 'failed') wlIdEl.dispatchEvent(new Event('input'));
+    });
     scrollWaitlistBoxIntoView();
   }
   async function joinWaitlist(time, presetName, presetPhone, presetId, presetEmail){
-    let name, phone, idDigits, email;
+    let name = '', phone = '', idDigits = '', email = '';
+    const idEl = document.getElementById('wlId');
+    const emailEl = document.getElementById('wlEmail');
+    const errorEl = document.getElementById('wlError');
+    const identityState = idEl ? (idEl.dataset.identityState || 'idle') : 'idle';
     if (presetName !== undefined && presetPhone !== undefined && presetId !== undefined && presetEmail !== undefined){
-      name = presetName;
-      phone = presetPhone;
-      idDigits = presetId;
-      email = presetEmail;
+      name = presetName; phone = presetPhone; idDigits = String(presetId || '').replace(/[^0-9]/g,''); email = presetEmail;
     } else {
-      const firstNameOk = document.getElementById('wlFirstName').value.trim();
-      const lastNameOk = document.getElementById('wlLastName').value.trim();
-      const phoneEl = document.getElementById('wlPhone');
-      const idEl = document.getElementById('wlId');
-      const emailEl = document.getElementById('wlEmail');
-      const errorEl = document.getElementById('wlError');
-      name = combineNameFields('wlFirstName', 'wlLastName');
-      phone = phoneEl.value.trim();
-      idDigits = idEl.value.replace(/[^0-9]/g, '');
-      email = emailEl.value.trim();
-      const wlResolved = resolveClientByIdOrPhone(idEl.value || '');
-      const wlKnown = wlResolved && wlResolved.client;
-      if (wlKnown && String(wlKnown.teudatZehut || '')) idDigits = String(wlKnown.teudatZehut);
-
-      // Last-chance lookup prevents a recognized public customer from being treated
-      // as a new customer merely because private client data is not loaded in the browser.
-      let publicKnown = null;
-      if (runningOnPublicData && idDigits.length === 9) {
-        try {
-          const lookup = await fetchServerIdentity(idDigits);
-          if (lookup && lookup.found) {
-            publicKnown = lookup;
-            const profile = lookup.client || lookup.customer || lookup.profile || lookup.data || lookup;
-            const fullName = String(
-              profile.name || profile.fullName ||
-              [profile.firstName || profile.givenName || profile.first_name,
-               profile.lastName || profile.familyName || profile.surname || profile.last_name]
-                .filter(Boolean).join(' ') || ''
-            ).trim();
-            if ((!firstNameOk || !lastNameOk) && fullName) {
-              splitNameIntoFields(fullName, 'wlFirstName', 'wlLastName');
-              name = combineNameFields('wlFirstName', 'wlLastName');
-            }
-            const lookedUpPhone = profile.phone || profile.mobile || profile.phoneNumber || profile.phone_number || profile.telephone || '';
-            const lookedUpEmail = profile.email || profile.emailAddress || profile.email_address || '';
-            if (!phone && lookedUpPhone) {
-              phone = lookedUpPhone;
-              if (phoneEl) phoneEl.value = phone;
-            }
-            if (!email && lookedUpEmail) {
-              email = lookedUpEmail;
-              if (emailEl) emailEl.value = email;
-            }
-          }
-        } catch (err) { console.warn('Waitlist submit identity lookup failed:', err); }
+      idDigits = String(idEl && idEl.value || '').replace(/[^0-9]/g, '');
+      email = String(emailEl && emailEl.value || '').trim();
+      const existingById = resolveClientByIdOrPhone(idDigits);
+      const localClient = existingById && existingById.client;
+      if (idDigits.length !== 9){
+        errorEl.textContent = 'יש להזין תעודת זהות בת 9 ספרות.'; errorEl.style.display='block'; return;
       }
-      const finalFirstName = (document.getElementById('wlFirstName').value || '').trim();
-      const finalLastName = (document.getElementById('wlLastName').value || '').trim();
-      name = combineNameFields('wlFirstName', 'wlLastName') || name;
-      phone = (phoneEl.value || phone || '').trim();
-      email = (emailEl.value || email || '').trim();
-      if (!finalFirstName || !finalLastName || !isValidIsraeliPhone(phone)
-          || (!wlKnown && !publicKnown && idDigits.length !== 9)){
-        errorEl.textContent = 'בואי נשלים כמה פרטים כדי שנוכל לצרף אותך לרשימת ההמתנה.';
-        errorEl.style.display = 'block';
-        return;
+      if (runningOnPublicData && identityState === 'failed'){
+        errorEl.textContent = 'לא הצלחנו לבדוק אם את כבר רשומה. נסי שוב לפני ההצטרפות.'; errorEl.style.display='block'; return;
       }
-      if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
-        errorEl.textContent = 'כמעט סיימנו 😊 חסר לנו אימייל תקין. אנא השלימי אותו כדי שנוכל לעדכן אותך אם יתפנה מקום.';
-        errorEl.style.display = 'block';
-        if (emailEl) {
-          emailEl.focus();
-          emailEl.style.borderColor = '#f06b57';
+      if (runningOnPublicData && !['known-email','known-no-email','new'].includes(identityState)){
+        errorEl.textContent = 'אנא המתיני לסיום בדיקת תעודת הזהות.'; errorEl.style.display='block'; return;
+      }
+      const isKnown = identityState === 'known-email' || identityState === 'known-no-email' || !!localClient;
+      if (isKnown){
+        name = localClient ? String(localClient.name || '') : '';
+        phone = localClient ? String(localClient.phone || '') : '';
+        if (identityState === 'known-email' && !email) {
+          // The server already has the email; do not ask the customer to re-enter it.
+          email = '';
+        } else if (identityState === 'known-no-email' && !email){
+          errorEl.textContent = 'זיהינו אותך 😊 חסר לנו אימייל בכרטיס שלך. נא להזין אימייל כדי שנוכל לעדכן אותך אם יתפנה תור.'; errorEl.style.display='block'; if(emailEl) emailEl.focus(); return;
         }
-        return;
+      } else {
+        const first = String(document.getElementById('wlFirstName')?.value || '').trim();
+        const last = String(document.getElementById('wlLastName')?.value || '').trim();
+        name = [first,last].filter(Boolean).join(' ');
+        phone = String(document.getElementById('wlPhone')?.value || '').trim();
+        if (!first || !last || !isValidIsraeliPhone(phone)){
+          errorEl.textContent = 'נא למלא שם פרטי, שם משפחה וטלפון תקין.'; errorEl.style.display='block'; return;
+        }
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+          errorEl.textContent = 'כמעט סיימנו 😊 חסר לנו אימייל תקין. אנא השלימי אותו כדי שנוכל לעדכן אותך אם יתפנה מקום.'; errorEl.style.display='block'; if(emailEl) emailEl.focus(); return;
+        }
       }
-      errorEl.textContent = 'יש למלא תעודת זהות (9 ספרות), שם פרטי, שם משפחה, טלפון ואימייל תקינים';
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+        errorEl.textContent = 'יש להזין כתובת אימייל תקינה.'; errorEl.style.display='block'; if(emailEl) emailEl.focus(); return;
+      }
     }
     if (idDigits) attachRealTzToMigrated(idDigits, phone);
     const wlBlockStatus = getLateCancelStatusForIdentity({ teudatZehut: idDigits, name });
