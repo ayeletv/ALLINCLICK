@@ -4814,7 +4814,7 @@
       <div class="appt-detail-row"><span class="appt-detail-label">משך הטיפול</span><span class="appt-detail-value" id="apptDetailDuration"></span></div>
       <div class="appt-detail-row" id="apptDetailCreatedRow" style="display:none"><span class="appt-detail-label">נוסף בתאריך ובשעה</span><span class="appt-detail-value" id="apptDetailCreated"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">עובדת</span><span class="appt-detail-value" id="apptDetailStaff"></span></div>
-      <div class="appt-detail-row" id="apptDetailNextGapRow" style="display:none !important"><span class="appt-detail-label">עד התור הבא</span><span class="appt-detail-value" id="apptDetailNextGap"></span></div>
+      <div class="appt-detail-row" id="apptDetailNextGapRow" style="display:none"><span class="appt-detail-label">עד התור הבא</span><span class="appt-detail-value" id="apptDetailNextGap"></span></div>
       <div class="appt-detail-row" id="apptDetailNoteRow" style="display:none;"><span class="appt-detail-label">הערות לפגישה</span><span class="appt-detail-value" id="apptDetailNote" style="white-space:pre-wrap;"></span></div>
     </div>
 
@@ -13712,8 +13712,18 @@
     const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
     const dow = dateObj.getDay();
     const startMin = timeToMinutes(slot.time);
+    const slotKey = String(slot.date || '') + '|' + String(slot.time || '') + '|' + String(slot.staff);
+    const previouslyOffered = new Set();
+    (pendingOffers || []).forEach(function(o){
+      if (!o || String(o.date || '') + '|' + String(o.time || '') + '|' + String(o.staff) !== slotKey) return;
+      (o.recipients || []).forEach(function(rec){
+        if (rec && rec.requestId != null) previouslyOffered.add(String(rec.requestId));
+      });
+      (o.requestIds || []).forEach(function(id){ if (id != null) previouslyOffered.add(String(id)); });
+    });
     return (specialRequests || []).filter(function(r){
       if (!r || r.mode !== 'flexible' || r.status !== 'pending') return false;
+      if (previouslyOffered.has(String(r.id))) return false;
       if (typeof specialRequestIsExpired === 'function' && specialRequestIsExpired(r, now)) return false;
       if (minutesAway < requestLeadMinutes(r)) return false;
       const pref = r.preference || {};
@@ -13735,7 +13745,18 @@
         return startMin < e && end > s;
       });
       return !clash;
-    }).sort(function(a, b){ return String(a.createdAt || '').localeCompare(String(b.createdAt || '')); });
+    }).sort(function(a, b){
+      function createdMs(r){
+        const raw = r && (r.createdAt || r.createdDate || r.timestamp || r.created);
+        if (typeof raw === 'number') return raw;
+        if (raw && typeof raw.toDate === 'function') { const d = raw.toDate(); return d instanceof Date ? d.getTime() : 0; }
+        const n = raw ? Date.parse(String(raw)) : NaN;
+        return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
+      }
+      const delta = createdMs(a) - createdMs(b);
+      if (delta) return delta;
+      return String(a.id || '').localeCompare(String(b.id || ''));
+    });
   }
   function offerById(id){ return (pendingOffers || []).filter(function(o){ return o && o.id === id; })[0] || null; }
   function offerIsLive(o, now){
@@ -13757,6 +13778,16 @@
       if (o && o.status === 'offered' && !offerIsLive(o, now)){
         o.status = 'expired';
         o.closedAt = now.toISOString();
+        // Do not let an expired recipient become eligible for the same freed slot again.
+        (o.recipients || []).forEach(function(rec){
+          if (!rec || rec.requestId == null) return;
+          const req = (specialRequests || []).find(function(r){ return r && String(r.id) === String(rec.requestId); });
+          if (req && req.status === 'pending') {
+            req.status = 'offerExpired';
+            req.offerExpiredAt = now.toISOString();
+            req.expiredOfferId = o.id;
+          }
+        });
         changed = true;
       }
     });
@@ -13797,6 +13828,33 @@
     }
     return offer;
   }
+  let offerRotationBusy = false;
+  function rotateExpiredOffers(){
+    if (offerRotationBusy) return;
+    offerRotationBusy = true;
+    try {
+      const changed = expireStaleOffers();
+      const expired = (pendingOffers || []).filter(function(o){
+        return o && o.status === 'expired' && !o.nextOfferAttempted;
+      });
+      expired.forEach(function(oldOffer){
+        oldOffer.nextOfferAttempted = true;
+        createOfferForFreedSlot({
+          date: oldOffer.date, time: oldOffer.time, dur: oldOffer.dur,
+          staff: oldOffer.staff, serviceName: oldOffer.serviceName,
+          freedFrom: oldOffer.freedFrom
+        });
+      });
+      if ((changed || expired.length) && typeof saveState === 'function') saveState({silent:true});
+    } catch (e) {
+      console.error('Offer rotation failed', e);
+    } finally {
+      offerRotationBusy = false;
+    }
+  }
+
+  if (!window.__offerRotationTimer) window.__offerRotationTimer = setInterval(rotateExpiredOffers, 15000);
+
   function offerSmsText(offer){
     const [y, mo, d] = offer.date.split('-').map(Number);
     const when = (offerMinutesUntil(offer.date, offer.time, new Date()) < 24 * 60)
@@ -14216,13 +14274,7 @@
           nameEl.textContent = w.name || 'ללא שם';
           const metaEl = document.createElement('span');
           metaEl.className = 'sr-block-meta';
-          const wlCreated = w.createdAt || w.addedAt || w.created_at || '';
-          const wlCreatedDate = wlCreated ? new Date(wlCreated) : null;
-          const wlCreatedLabel = wlCreatedDate && !Number.isNaN(wlCreatedDate.getTime())
-            ? 'נוסף ' + wlCreatedDate.toLocaleDateString('he-IL') + ' ' + wlCreatedDate.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'})
-            : 'מועד הוספה לא נשמר';
-          const wlDuration = Number(w.duration || w.dur || w.serviceDuration || 0);
-          metaEl.textContent = `⏰ ${w.requestedTime || ''}` + (wlDuration > 0 ? ` · ${wlDuration} דקות` : '') + ' · ' + wlCreatedLabel + (wlSvc ? ' · ' + wlSvc : '') + (wlCat ? ' (' + wlCat + ')' : '');
+          metaEl.textContent = `⏰ ${w.requestedTime || ''}` + (wlSvc ? ' · ' + wlSvc : '') + (wlCat ? ' (' + wlCat + ')' : '');
           main.appendChild(nameEl); main.appendChild(metaEl);
           return main;
         })());
@@ -14281,24 +14333,8 @@
         (w.staffName ? srDetailRow('עובדת', w.staffName) : '') +
         srDetailRow('תאריך מבוקש', dateLabel) +
         srDetailRow('שעה מבוקשת', w.requestedTime || '—') +
-        srDetailRow('משך הטיפול', Number(w.duration || w.dur || w.serviceDuration || 0) > 0 ? `${Number(w.duration || w.dur || w.serviceDuration)} דקות` : 'לא נשמר') +
-        srDetailRow('מועד הוספה', (function(){ const raw = w.createdAt || w.addedAt || w.created_at || ''; const d = raw ? new Date(raw) : null; return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('he-IL') + ' בשעה ' + d.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false}) : 'לא נשמר תאריך מדויק'; })()) +
         srDetailRow('סטטוס', isMatchedW ? '✓ נמצא תור' : '⏳ ממתין') +
         (isMatchedW ? srDetailRow('נקבע ל', `${formatDateDMY(w.matchedDate)}, ${w.matchedTime}${(staff[w.matchedStaff] && staff[w.matchedStaff].name) ? ' · ' + staff[w.matchedStaff].name : ''}`) : '');
-      const waitlistProfileBtn = document.createElement('button');
-      waitlistProfileBtn.type = 'button';
-      waitlistProfileBtn.className = 'cta ghost';
-      waitlistProfileBtn.textContent = '👤 כרטסת הלקוחה';
-      waitlistProfileBtn.onclick = () => {
-        const tz = String(w.teudatZehut || w.idNumber || '');
-        const phoneDigits = String(w.phone || '').replace(/\D/g, '');
-        const client = (tz && clients.find(c => c && String(c.teudatZehut || '') === tz))
-          || (phoneDigits && clients.find(c => c && String(c.phone || '').replace(/\D/g, '') === phoneDigits))
-          || clients.find(c => c && c.name === w.name) || null;
-        if (client) showClientProfile(client);
-        else if (typeof showAdminToast === 'function') showAdminToast('לא נמצאה כרטסת לקוחה מקושרת לרשומה הזו.');
-      };
-      actionsEl.appendChild(waitlistProfileBtn);
       if (!isMatchedW){
         const recheckBtn = document.createElement('button');
         recheckBtn.type = 'button';
@@ -14390,20 +14426,6 @@
       : 'לא נשמר תאריך מדויק';
     html += srDetailRow('מועד הוספה', createdAtExact);
     cardEl.innerHTML = html;
-    const requestProfileBtn = document.createElement('button');
-    requestProfileBtn.type = 'button';
-    requestProfileBtn.className = 'cta ghost';
-    requestProfileBtn.textContent = '👤 כרטסת הלקוחה';
-    requestProfileBtn.onclick = () => {
-      const tz = String(r.teudatZehut || r.idNumber || '');
-      const phoneDigits = String(r.phone || '').replace(/\D/g, '');
-      const client = (tz && clients.find(c => c && String(c.teudatZehut || '') === tz))
-        || (phoneDigits && clients.find(c => c && String(c.phone || '').replace(/\D/g, '') === phoneDigits))
-        || clients.find(c => c && c.name === r.name) || null;
-      if (client) showClientProfile(client);
-      else if (typeof showAdminToast === 'function') showAdminToast('לא נמצאה כרטסת לקוחה מקושרת לרשומה הזו.');
-    };
-    actionsEl.appendChild(requestProfileBtn);
     if (isFlexible && r.status !== 'matched'){
       const recheckBtn = document.createElement('button');
       recheckBtn.type = 'button';
@@ -16678,7 +16700,7 @@
             <button type="button" id="wlKnownJoinBtn" data-primary>הצטרפות לרשימת המתנה</button>
           </div>
           <div id="wlNewClientFields" style="display:none; margin-top:8px;">
-            <div id="wlNewClientMessage" style="margin-bottom:8px; line-height:1.55;">לא מצאנו כרטיס לקוחה לפי המספר שהוזן. נא למלא את הפרטים כדי להצטרף לרשימת ההמתנה.</div>
+            <div style="margin-bottom:8px; line-height:1.55;">לא מצאנו כרטיס לקוחה לפי תעודת הזהות. נא למלא את הפרטים כדי להצטרף לרשימת ההמתנה.</div>
             <div class="field-row">
               <input type="text" id="wlFirstName" class="field" placeholder="שם פרטי" autocomplete="given-name">
               <input type="text" id="wlLastName" class="field" placeholder="שם משפחה" autocomplete="family-name">
@@ -16733,14 +16755,6 @@
             retryEl.textContent = 'המספר הזה משויך ליותר מכרטיס אחד. כדי לשמור על פרטיותך, לא ניתן להצטרף אוטומטית עם המספר הזה. נא לפנות לסלון לעזרה.';
           } else {
             lastState = 'new'; setDisplay(newFields, 'block');
-            const newClientMessage = document.getElementById('wlNewClientMessage');
-            const newPhoneField = document.getElementById('wlPhone');
-            if (digits.length === 10) {
-              if (newClientMessage) newClientMessage.textContent = 'לא מצאנו כרטיס לקוחה לפי הטלפון הזה. השלימי שם ואימייל; מספר הטלפון שהקלדת כבר הועתק ואינך צריכה להקליד אותו שוב.';
-              if (newPhoneField) newPhoneField.value = digits;
-            } else if (newClientMessage) {
-              newClientMessage.textContent = 'לא מצאנו כרטיס לקוחה לפי תעודת הזהות. נא למלא שם, טלפון ואימייל כדי להצטרף לרשימת ההמתנה.';
-            }
             if (typeof wireIdentityAutofill === 'function') wireIdentityAutofill({ idId: 'wlId', firstId: 'wlFirstName', lastId: 'wlLastName', phoneId: 'wlPhone', emailId: 'wlEmail', skipIdListener: true });
           }
         } catch (err) {
@@ -16839,14 +16853,8 @@
       const errorEl = document.getElementById('wlError');
       name = combineNameFields('wlFirstName', 'wlLastName');
       phone = phoneEl.value.trim();
-      const enteredIdentityDigits = idEl.value.replace(/[^0-9]/g, '');
-      // A 10-digit value in the identity box is a phone, not a national ID.
-      idDigits = enteredIdentityDigits.length === 9 ? enteredIdentityDigits : '';
+      idDigits = idEl.value.replace(/[^0-9]/g, '');
       email = emailEl.value.trim();
-      if (enteredIdentityDigits.length === 10 && !phone) {
-        phone = enteredIdentityDigits;
-        if (phoneEl) phoneEl.value = phone;
-      }
       const wlResolved = resolveClientByIdOrPhone(idEl.value || '');
       const wlKnown = wlResolved && wlResolved.client;
       if (wlKnown && String(wlKnown.teudatZehut || '')) idDigits = String(wlKnown.teudatZehut);
@@ -16890,9 +16898,8 @@
       name = (firstEl && lastEl ? combineNameFields('wlFirstName', 'wlLastName') : '') || name;
       phone = (phoneEl.value || phone || '').trim();
       email = (emailEl.value || email || '').trim();
-      const enteredPhoneAsIdentity = enteredIdentityDigits.length === 10 && isValidIsraeliPhone(enteredIdentityDigits);
       if (!finalFirstName || !finalLastName || !isValidIsraeliPhone(phone)
-          || (!wlKnown && !publicKnown && idDigits.length !== 9 && !enteredPhoneAsIdentity)){
+          || (!wlKnown && !publicKnown && idDigits.length !== 9)){
         errorEl.textContent = 'בואי נשלים כמה פרטים כדי שנוכל לצרף אותך לרשימת ההמתנה.';
         errorEl.style.display = 'block';
         return;
@@ -17237,11 +17244,7 @@
     const key = type + ':' + digits;
     const hit = cachedServerIdentity(key);
     if (hit) return Promise.resolve(hit);
-    // Client API's lookup handler resolves its primary identifier from body.id.
-    // Send the phone in both fields so older deployed Client API versions can
-    // match it through resolveClient(data.clients, body.id), while newer
-    // versions can also use the explicit phone field.
-    const payload = type === 'phone' ? { id: digits, phone: digits } : { id: digits };
+    const payload = type === 'phone' ? { phone: digits } : { id: digits };
     return callClientApi('lookup', payload)
       .then(res => {
         const r = Object.assign({ id: digits, identifierType: type, __at: Date.now() }, res || {});
@@ -20440,40 +20443,47 @@
     let offerId = '';
     try { offerId = new URLSearchParams(window.location.search).get('offer') || ''; } catch (e) { return; }
     if (!offerId) return;
-    const show = function(){
-      const o = (pendingOffers || []).filter(function(x){ return x && x.id === offerId; })[0];
-      const ov = document.getElementById('claimOfferOverlay');
-      const body = document.getElementById('claimOfferBody');
-      if (!ov || !body) return;
-      if (!o || !offerIsLive(o)){
-        body.innerHTML = '<div class="claim-gone">התור הזה כבר לא זמין.<br><span>או שמישהי אחרת הספיקה לאשר, או שפג הזמן. ' +
-          'אנחנו נעדכן אותך בפעם הבאה שמתפנה משהו שמתאים לך.</span></div>';
-        document.getElementById('claimOfferActions').innerHTML = '';
-      } else {
-        const left = Math.max(0, Math.round((new Date(o.expiresAt).getTime() - Date.now()) / 60000));
-        const [y, mo, d] = o.date.split('-').map(Number);
-        const dt = new Date(y, mo - 1, d);
-        const isToday = formatDateKey(new Date()) === o.date;
-        body.innerHTML =
-          '<div class="claim-time">' + o.time + '</div>' +
-          '<div class="claim-date">' + (isToday ? 'היום' : days[dt.getDay()].name) + ', ' + d + ' ב' + hebrewMonths[mo - 1] + '</div>' +
-          '<div class="claim-meta">' + (o.serviceName || 'תור') + ' · ' + (o.dur || 30) + ' דקות</div>' +
-          '<div class="claim-timer">⏳ התור שמור לך עוד ' + left + ' דקות</div>' +
-          '<div class="claim-note">ההודעה נשלחה לכמה לקוחות — הראשונה שתאשר מקבלת את התור.</div>' +
-          '<label class="label" style="margin:16px 0 6px; display:block;">תעודת זהות או טלפון</label>' +
-          '<input id="claimOfferId" class="field-dark" inputmode="numeric" placeholder="לזיהוי" style="width:100%;">' +
-          '<div id="claimOfferError" class="claim-error" style="display:none;"></div>';
+    const ov = document.getElementById('claimOfferOverlay');
+    const body = document.getElementById('claimOfferBody');
+    const actions = document.getElementById('claimOfferActions');
+    if (!ov || !body) return;
+    body.innerHTML = '<div class="claim-gone">טוענת את פרטי התור…</div>';
+    if (actions) actions.innerHTML = '';
+    ov.classList.add('show');
+    (async function(){
+      let result = null;
+      try {
+        // Do not rely on pendingOffers in the public browser: it may not be loaded
+        // because it is private business data. Fetch the offer by ID from clientApi.
+        result = await callClientApi('offerInfo', { offerId: offerId, siteUrl: getSiteUrl() });
+      } catch(e) {
+        result = { ok:false, error:'לא הצלחנו לטעון את ההצעה כרגע. נא לפתוח שוב את הקישור בעוד רגע.' };
       }
-      ov.classList.add('show');
-    };
-    let waited = 0;
-    const tick = setInterval(function(){
-      waited += 250;
-      if ((pendingOffers && pendingOffers.length) || waited >= 6000){
-        clearInterval(tick);
-        show();
+      if (!result || !result.ok || !result.offer) {
+        body.innerHTML = '<div class="claim-gone">' +
+          (result && result.error ? String(result.error) : 'לא הצלחנו לטעון את פרטי התור.') +
+          '<br><span>אם ההצעה עדיין בתוקף, נסי לפתוח שוב את הקישור מהמייל.</span></div>';
+        if (actions) actions.innerHTML = '';
+        return;
       }
-    }, 250);
+      const o = result.offer;
+      const left = Math.max(0, Math.ceil((new Date(o.expiresAt).getTime() - Date.now()) / 60000));
+      const p = String(o.date || '').split('-').map(Number);
+      const dt = new Date(p[0], p[1]-1, p[2]);
+      const isToday = typeof formatDateKey === 'function' && formatDateKey(new Date()) === o.date;
+      const dayName = (typeof days !== 'undefined' && days[dt.getDay()]) ? days[dt.getDay()].name : '';
+      const monthName = (typeof hebrewMonths !== 'undefined' && hebrewMonths[p[1]-1]) ? hebrewMonths[p[1]-1] : '';
+      body.innerHTML =
+        '<div class="claim-time">' + o.time + '</div>' +
+        '<div class="claim-date">' + (isToday ? 'היום' : dayName) + ', ' + p[2] + ' ב' + monthName + '</div>' +
+        '<div class="claim-meta">' + (o.serviceName || 'תור') + ' · ' + (o.dur || 30) + ' דקות</div>' +
+        '<div class="claim-timer">⏳ נותרו ' + left + ' דקות לאישור</div>' +
+        '<div class="claim-note">האישור יינתן ללקוחה שההצעה נשלחה אליה. אם ההודעה נשלחה לכמה לקוחות, הראשונה שתאשר תקבל את התור.</div>' +
+        '<label class="label" style="margin:16px 0 6px; display:block;">תעודת זהות או טלפון</label>' +
+        '<input id="claimOfferId" class="field-dark" inputmode="numeric" autocomplete="tel" placeholder="תעודת זהות או טלפון" style="width:100%;">' +
+        '<div id="claimOfferError" class="claim-error" style="display:none;"></div>';
+      if (actions) actions.innerHTML = '<button id="claimOfferBtn" class="btn-primary" onclick="submitClaimOffer()">✓ אני מגיעה — לאשר את התור</button>';
+    })();
   }
   async function submitClaimOffer(){
     const idEl = document.getElementById('claimOfferId');
