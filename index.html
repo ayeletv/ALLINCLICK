@@ -14303,6 +14303,17 @@
         if (c && reqCats.indexOf(c) === -1) reqCats.push(c);
       });
       if (reqCats.length) html += srDetailRow('קטגוריה', reqCats.join(' + '));
+      // Show the combined service duration immediately below category. Prefer the
+      // duration saved with the request, and fall back to the current service catalog
+      // for older requests that did not persist per-service durations.
+      const requestedDuration = (r.services || []).reduce((total, item) => {
+        const savedDuration = Number(item && item.duration);
+        if (Number.isFinite(savedDuration) && savedDuration > 0) return total + savedDuration;
+        const catalogService = services.find(s => s && s.name === (item && item.name));
+        const catalogDuration = Number(catalogService && catalogService.duration);
+        return total + (Number.isFinite(catalogDuration) && catalogDuration > 0 ? catalogDuration : 0);
+      }, 0);
+      if (requestedDuration > 0) html += srDetailRow('משך התור', `${requestedDuration} דקות`);
       html += srDetailRow('העדפה', summarizeFlexiblePreference(r));
       const isMatched = r.status === 'matched';
       html += srDetailRow('סטטוס', isMatched ? '✓ נמצא תור' : '⏳ ממתין');
@@ -14311,7 +14322,12 @@
       }
     }
     if (r.note) html += srDetailRow('הערה', r.note);
-    html += srDetailRow('נוספה', formatRelativeDaysAgo(r.createdAt));
+    const createdDate = r.createdAt ? new Date(r.createdAt) : null;
+    const createdAtExact = createdDate && !isNaN(createdDate.getTime())
+      ? createdDate.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        + ' בשעה ' + createdDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+      : 'לא נשמר תאריך מדויק';
+    html += srDetailRow('מועד הוספה', createdAtExact);
     cardEl.innerHTML = html;
     if (isFlexible && r.status !== 'matched'){
       const recheckBtn = document.createElement('button');
