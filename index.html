@@ -13409,8 +13409,16 @@
   }
   function flexReqTimeWindow(req){
     const pref = (req && req.preference) || {};
+    const raw = String(pref.timeOfDay || pref.timePreference || pref.preferredTime ||
+      (req && (req.timeOfDay || req.timePreference || req.preferredTime || req.availability)) || 'any').toLowerCase().trim();
     if (pref.timeFrom && pref.timeTo) return [timeToMinutes(pref.timeFrom), timeToMinutes(pref.timeTo)];
-    return FLEX_TIME_WINDOWS[pref.timeOfDay] || FLEX_TIME_WINDOWS.any;
+    if (pref.timeFrom && !pref.timeTo) return [timeToMinutes(pref.timeFrom), 24 * 60];
+    if (pref.timeTo && !pref.timeFrom) return [0, timeToMinutes(pref.timeTo)];
+    const key = /ערב|evening|night/.test(raw) ? 'evening' :
+      /צהר|afternoon|noon/.test(raw) ? 'afternoon' :
+      /בוקר|morning/.test(raw) ? 'morning' :
+      /כל שעה|any|גמיש|לא משנה/.test(raw) ? 'any' : raw;
+    return FLEX_TIME_WINDOWS[key] || FLEX_TIME_WINDOWS.any;
   }
   function summarizeFlexiblePreference(req){
     const pref = (req && req.preference) || {};
@@ -13700,8 +13708,19 @@
         if (rec && rec.requestId) previouslyContacted.add(String(rec.requestId));
       });
     });
+    function requestCreatedTime(r){
+      const raw = r && (r.createdAt || r.created_at || r.requestedAt || r.createdOn || r.timestamp || r.created);
+      if (typeof raw === 'number') return raw;
+      if (raw && typeof raw.toDate === 'function') return raw.toDate().getTime();
+      const parsed = raw ? new Date(raw).getTime() : NaN;
+      // Missing timestamps cannot be honestly ordered by arrival time; put them after
+      // timestamped requests and preserve their existing source-array order.
+      return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+    }
     return combined.filter(function(r){ return !previouslyContacted.has(String(r.id)) && !excludedRequestIds.has(String(r.id)); })
-      .sort(function(a, b){ return String(a.createdAt || '').localeCompare(String(b.createdAt || '')); });
+      .map(function(r, index){ return {request:r, index:index, created:requestCreatedTime(r)}; })
+      .sort(function(a,b){ return a.created - b.created || a.index - b.index; })
+      .map(function(x){ return x.request; });
   }
   function offerById(id){ return (pendingOffers || []).filter(function(o){ return o && o.id === id; })[0] || null; }
   function offerIsLive(o, now){
@@ -13896,17 +13915,25 @@
       ? eligibleRequestsForSlot({date:o.date, time:o.time, dur:o.dur || 30, staff:o.staff}, new Date())
       : [];
     const savedCandidateStates = (o.eligibleRecipients || []).concat(o.recipients || []);
-    const visibleEligible = liveEligible.map(function(r, index){
-      const saved = savedCandidateStates.find(function(x){ return x && String(x.requestId || '') === String(r.id || ''); }) || {};
-      return {
-        requestId:r.id, name:r.name || '', phone:r.phone || '',
-        source:r._offerSource || saved.source || 'specialRequest',
-        queuePosition:index+1,
-        status:saved.status || (index===0 ? 'selected' : 'waiting'),
-        emailStatus:saved.emailStatus || 'not-sent',
-        smsStatus:saved.smsStatus || 'not-sent'
-      };
+    // Always show the customer who actually received this offer, even though eligibility
+    // filtering excludes previously contacted customers from the next-offer queue.
+    const alreadyOffered = (o.recipients || []).map(function(rec){
+      return Object.assign({}, rec, {status: rec.status || 'queued', _isCurrentOffer: true});
     });
+    const offeredIds = new Set(alreadyOffered.map(function(rec){ return String(rec.requestId || ''); }));
+    const nextEligible = liveEligible.filter(function(r){ return !offeredIds.has(String(r.id || '')); })
+      .map(function(r, index){
+        const saved = savedCandidateStates.find(function(x){ return x && String(x.requestId || '') === String(r.id || ''); }) || {};
+        return {
+          requestId:r.id, name:r.name || '', phone:r.phone || '',
+          source:r._offerSource || saved.source || 'specialRequest',
+          queuePosition:index+alreadyOffered.length+1,
+          status:saved.status === 'claimed' || saved.status === 'declined' ? saved.status : 'waiting',
+          emailStatus:saved.emailStatus || 'not-sent',
+          smsStatus:saved.smsStatus || 'not-sent'
+        };
+      });
+    const visibleEligible = alreadyOffered.concat(nextEligible);
     const why = o.broadcast
       ? 'מכיוון שהתור הזה מתחיל ב-' + o.time + ' ב' + offerHebDate(o.date) +
         ' — כלומר בעוד פחות מ-' + offerSetting('broadcastHours') + ' שעות — לא היה זמן להציע אותו ' +
