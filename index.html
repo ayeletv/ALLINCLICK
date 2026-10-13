@@ -7150,7 +7150,7 @@
       const startMin = toMin(appt.time);
       const durMin = Math.max(0, Number(appt.dur) || 0);
       const endMin = startMin + durMin;
-      const next = (Array.isArray(appointments) ? appointments : [])
+      const next = (Array.isArray(weekAppointments) ? weekAppointments : [])
         .filter(a => a && a !== appt && a.date === appt.date && String(a.staff) === String(appt.staff)
           && !a.cancelled && !a.canceled && !a.deleted)
         .map(a => ({ appt:a, start:toMin(a.time), dur:Math.max(0, Number(a.dur)||0) }))
@@ -16621,7 +16621,7 @@
       box.innerHTML = `
         <div class="waitlist-prompt">
           השעה ${time} לא זמינה — ${reason || 'תפוסה כרגע.'}
-          <input type="tel" inputmode="numeric" maxlength="9" id="wlId" class="field" style="margin-top:8px;" placeholder="תעודת זהות (9 ספרות)" autocomplete="off">
+          <input type="tel" inputmode="numeric" maxlength="9" id="wlId" class="field" style="margin-top:8px;" placeholder="תעודת זהות (9 ספרות) או טלפון (10 ספרות)" autocomplete="off">
           <div id="wlIdentityStatus" style="display:none; margin:8px 0; line-height:1.55;"></div>
           <div id="wlKnownActions" style="display:none; margin-top:8px;">
             <div id="wlKnownMessage" class="reminder-choice-notice" style="margin-bottom:8px;"></div>
@@ -16659,14 +16659,14 @@
         setDisplay(statusEl, 'none'); knownResult = null; lastState = 'idle';
       };
       async function runLookup(digits, retry){
-        if (!idEl || digits.length !== 9) return;
+        if (!idEl || ![9,10].includes(digits.length)) return;
         const seq = ++lookupSeq;
         hideResults();
         setDisplay(statusEl, 'block');
         statusEl.textContent = 'רגע, בודקות אם את כבר רשומה אצלנו…';
         try {
-          if (retry) { try { delete serverIdentityCache[digits]; } catch (_) {} }
-          const result = await fetchServerIdentity(digits);
+          if (retry) { try { delete serverIdentityCache[(digits.length === 10 ? 'phone:' : 'id:') + digits]; } catch (_) {} }
+          const result = await fetchServerIdentity(digits, digits.length === 10 ? 'phone' : 'id');
           if (seq !== lookupSeq || idEl.value.replace(/\D/g, '') !== digits) return;
           if (!result || result.__failed) throw new Error('lookup failed');
           setDisplay(statusEl, 'none');
@@ -16698,11 +16698,11 @@
         }
       }
       idEl.addEventListener('input', function(){
-        const digits = this.value.replace(/\D/g, '').slice(0,9);
+        const digits = this.value.replace(/\D/g, '').slice(0,10);
         if (this.value !== digits) this.value = digits;
         if (lookupTimer) clearTimeout(lookupTimer);
         lookupSeq++; hideResults();
-        if (digits.length < 9) return;
+        if (digits.length !== 9 && digits.length !== 10) return;
         lookupTimer = setTimeout(() => runLookup(digits, false), 250);
       });
       document.getElementById('wlKnownJoinBtn').onclick = async function(){
@@ -16740,6 +16740,10 @@
   }
   async function joinWaitlist(time, presetName, presetPhone, presetId, presetEmail){
     let name, phone, idDigits, email;
+    // Resolve this outside the branch: the recognized-customer path also needs it
+    // when constructing the waitlist entry. Previously it was block-scoped in
+    // the manual-entry branch, causing a ReferenceError after clicking Join.
+    let existingClient = null;
     if (presetName !== undefined && presetPhone !== undefined && presetId !== undefined && presetEmail !== undefined){
       name = presetName;
       phone = presetPhone;
@@ -16845,7 +16849,7 @@
     // On the public page, client records stay server-side. Do not create a partial
     // local client from a lookup result; the API resolves existing customers itself.
     if (!runningOnPublicData) {
-      const existingClient = clients.find(c => c.teudatZehut === idDigits);
+      existingClient = clients.find(c => c.teudatZehut === idDigits) || null;
       if (existingClient){
         if (!existingClient.email) existingClient.email = email;
         if (!existingClient.phone) existingClient.phone = phone;
@@ -17156,18 +17160,21 @@
     if ((Date.now() - hit.__at) > SERVER_IDENTITY_TTL_MS){ delete serverIdentityCache[digits]; return null; }
     return hit;
   }
-  function fetchServerIdentity(digits){
-    const hit = cachedServerIdentity(digits);
+  function fetchServerIdentity(digits, identifierType){
+    const type = identifierType || (String(digits || '').replace(/\D/g, '').length === 10 ? 'phone' : 'id');
+    const key = type + ':' + digits;
+    const hit = cachedServerIdentity(key);
     if (hit) return Promise.resolve(hit);
-    return callClientApi('lookup', { id: digits })
+    const payload = type === 'phone' ? { phone: digits } : { id: digits };
+    return callClientApi('lookup', payload)
       .then(res => {
-        const r = Object.assign({ id: digits, __at: Date.now() }, res || {});
-        serverIdentityCache[digits] = r;
+        const r = Object.assign({ id: digits, identifierType: type, __at: Date.now() }, res || {});
+        serverIdentityCache[key] = r;
         return r;
       })
       .catch(err => {
         console.error('Identifying through the server failed:', err);
-        return { __failed: true, id: digits, found: false };
+        return { __failed: true, id: digits, identifierType: type, found: false };
       });
   }
   function setIdentityUnavailableNotice(anchorId, show, onRetry){
