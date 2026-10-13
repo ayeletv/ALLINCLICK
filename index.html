@@ -16642,7 +16642,7 @@
             <button type="button" id="wlKnownJoinBtn" data-primary>הצטרפות לרשימת המתנה</button>
           </div>
           <div id="wlNewClientFields" style="display:none; margin-top:8px;">
-            <div style="margin-bottom:8px; line-height:1.55;">לא מצאנו כרטיס לקוחה לפי תעודת הזהות. נא למלא את הפרטים כדי להצטרף לרשימת ההמתנה.</div>
+            <div id="wlNewClientMessage" style="margin-bottom:8px; line-height:1.55;">לא מצאנו כרטיס לקוחה לפי המספר שהוזן. נא למלא את הפרטים כדי להצטרף לרשימת ההמתנה.</div>
             <div class="field-row">
               <input type="text" id="wlFirstName" class="field" placeholder="שם פרטי" autocomplete="given-name">
               <input type="text" id="wlLastName" class="field" placeholder="שם משפחה" autocomplete="family-name">
@@ -16697,6 +16697,14 @@
             retryEl.textContent = 'המספר הזה משויך ליותר מכרטיס אחד. כדי לשמור על פרטיותך, לא ניתן להצטרף אוטומטית עם המספר הזה. נא לפנות לסלון לעזרה.';
           } else {
             lastState = 'new'; setDisplay(newFields, 'block');
+            const newClientMessage = document.getElementById('wlNewClientMessage');
+            const newPhoneField = document.getElementById('wlPhone');
+            if (digits.length === 10) {
+              if (newClientMessage) newClientMessage.textContent = 'לא מצאנו כרטיס לקוחה לפי הטלפון הזה. השלימי שם ואימייל; מספר הטלפון שהקלדת כבר הועתק ואינך צריכה להקליד אותו שוב.';
+              if (newPhoneField) newPhoneField.value = digits;
+            } else if (newClientMessage) {
+              newClientMessage.textContent = 'לא מצאנו כרטיס לקוחה לפי תעודת הזהות. נא למלא שם, טלפון ואימייל כדי להצטרף לרשימת ההמתנה.';
+            }
             if (typeof wireIdentityAutofill === 'function') wireIdentityAutofill({ idId: 'wlId', firstId: 'wlFirstName', lastId: 'wlLastName', phoneId: 'wlPhone', emailId: 'wlEmail', skipIdListener: true });
           }
         } catch (err) {
@@ -16795,8 +16803,14 @@
       const errorEl = document.getElementById('wlError');
       name = combineNameFields('wlFirstName', 'wlLastName');
       phone = phoneEl.value.trim();
-      idDigits = idEl.value.replace(/[^0-9]/g, '');
+      const enteredIdentityDigits = idEl.value.replace(/[^0-9]/g, '');
+      // A 10-digit value in the identity box is a phone, not a national ID.
+      idDigits = enteredIdentityDigits.length === 9 ? enteredIdentityDigits : '';
       email = emailEl.value.trim();
+      if (enteredIdentityDigits.length === 10 && !phone) {
+        phone = enteredIdentityDigits;
+        if (phoneEl) phoneEl.value = phone;
+      }
       const wlResolved = resolveClientByIdOrPhone(idEl.value || '');
       const wlKnown = wlResolved && wlResolved.client;
       if (wlKnown && String(wlKnown.teudatZehut || '')) idDigits = String(wlKnown.teudatZehut);
@@ -16840,8 +16854,9 @@
       name = (firstEl && lastEl ? combineNameFields('wlFirstName', 'wlLastName') : '') || name;
       phone = (phoneEl.value || phone || '').trim();
       email = (emailEl.value || email || '').trim();
+      const enteredPhoneAsIdentity = enteredIdentityDigits.length === 10 && isValidIsraeliPhone(enteredIdentityDigits);
       if (!finalFirstName || !finalLastName || !isValidIsraeliPhone(phone)
-          || (!wlKnown && !publicKnown && idDigits.length !== 9)){
+          || (!wlKnown && !publicKnown && idDigits.length !== 9 && !enteredPhoneAsIdentity)){
         errorEl.textContent = 'בואי נשלים כמה פרטים כדי שנוכל לצרף אותך לרשימת ההמתנה.';
         errorEl.style.display = 'block';
         return;
@@ -17186,7 +17201,11 @@
     const key = type + ':' + digits;
     const hit = cachedServerIdentity(key);
     if (hit) return Promise.resolve(hit);
-    const payload = type === 'phone' ? { phone: digits } : { id: digits };
+    // Client API's lookup handler resolves its primary identifier from body.id.
+    // Send the phone in both fields so older deployed Client API versions can
+    // match it through resolveClient(data.clients, body.id), while newer
+    // versions can also use the explicit phone field.
+    const payload = type === 'phone' ? { id: digits, phone: digits } : { id: digits };
     return callClientApi('lookup', payload)
       .then(res => {
         const r = Object.assign({ id: digits, identifierType: type, __at: Date.now() }, res || {});
