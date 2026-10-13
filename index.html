@@ -13165,10 +13165,15 @@
         // snapping could move a click in a short gap onto the next appointment and hide the gap note.
         const clickedMinute = Math.floor(rawMinutes);
         const clampedMinutes = Math.min(Math.max(clickedMinute, calStartHour * 60), calEndHour * 60 - 1);
-        const outOfHours = !!closedInfo
-          || blockedBands.some(([bs, be]) => clampedMinutes >= bs && clampedMinutes < be);
-        let timeStr = minutesToTimeGlobal(clampedMinutes);
         const chosenStaff = selectedStaffFilter !== 'all' ? selectedStaffFilter : null;
+        // Personal blocks are unavailable time too, not free space in the calendar.
+        const clickedBlockRanges = chosenStaff !== null
+          ? getBlockedRangesForStaff(day.fullDate, Number(chosenStaff))
+          : staff.flatMap((_, staffIdx) => getBlockedRangesForStaff(day.fullDate, staffIdx));
+        const outOfHours = !!closedInfo
+          || blockedBands.some(([bs, be]) => clampedMinutes >= bs && clampedMinutes < be)
+          || clickedBlockRanges.some(([bs, be]) => clampedMinutes >= bs && clampedMinutes < be);
+        let timeStr = minutesToTimeGlobal(clampedMinutes);
         // When clicking in a gap, anchor the suggested start to the previous
         // appointment's exact end (not the arbitrary minute that was clicked).
         let gapMinutes = 0;
@@ -13189,7 +13194,22 @@
             .reduce((best, a) => Math.min(best, a.start), calEndHour * 60);
           const staffWindowEnd = calEndHour * 60;
           const gapStart = previousEnd <= clampedMinutes ? previousEnd : clampedMinutes;
-          const gapEnd = Math.min(nextStart, staffWindowEnd);
+          // Stop the reported gap at the first blocked interval, just as we stop
+          // it at the next appointment. A blocked interval must never count as
+          // bookable minutes.
+          const personalBlockRanges = chosenStaff !== null
+            ? getBlockedRangesForStaff(day.fullDate, Number(chosenStaff))
+            : staff.flatMap((_, staffIdx) => getBlockedRangesForStaff(day.fullDate, staffIdx));
+          // Include the calendar's general blocked bands (closed hours / global blocks)
+          // as unavailable intervals too. Otherwise a gap can incorrectly count time
+          // through a striped blocked band and show a much larger duration than is real.
+          const relevantBlockRanges = personalBlockRanges.concat(
+            (Array.isArray(blockedBands) ? blockedBands : []).map(r => [Number(r[0]), Number(r[1])])
+          ).filter(r => Number.isFinite(r[0]) && Number.isFinite(r[1]) && r[1] > r[0]);
+          const nextBlockStart = relevantBlockRanges
+            .filter(([bs, be]) => be > gapStart && bs < staffWindowEnd)
+            .reduce((best, [bs, be]) => Math.min(best, bs <= gapStart ? gapStart : bs), staffWindowEnd);
+          const gapEnd = Math.min(nextStart, staffWindowEnd, nextBlockStart);
           gapMinutes = Math.max(0, gapEnd - gapStart);
           if (gapMinutes > 0) timeStr = minutesToTimeGlobal(gapStart);
           if (gapMinutes < 1) gapMinutes = 0;
@@ -19631,8 +19651,10 @@
     const banner = document.createElement('div');
     banner.id = 'ownerMappingBanner';
     banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:var(--wine); color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
-    banner.textContent = '⚠ לא הצלחנו לאמת את ההרשאות שלך מול הענן. נא לרענן את הדף.';
+    banner.textContent = '⚠ עדיין לא הצלחנו לאמת את ההרשאות מול הענן. אין צורך לרענן את הדף — אנחנו מנסים להתחבר מחדש אוטומטית. עד שההודעה תיעלם, מומלץ לא לבצע שינויים ביומן.';
     document.body.prepend(banner);
+    syncTopBannerOffset();
+    if (typeof scheduleOwnerMappingRetry === 'function') scheduleOwnerMappingRetry();
   }
   function hideOwnerMappingErrorBanner(){
     const banner = document.getElementById('ownerMappingBanner');
@@ -19788,7 +19810,7 @@
     const banner = document.createElement('div');
     banner.id = bannerId;
     const bg = (opts && opts.tone === 'info') ? '#8a6212' : 'var(--wine)';
-    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:' + bg + '; color:#fff; text-align:center; padding:10px 40px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
+    banner.style.cssText = 'position:fixed; bottom:14px; top:auto; left:50%; transform:translateX(-50%); width:calc(100% - 28px); max-width:620px; box-sizing:border-box; background:' + ((opts && opts.tone === 'info') ? '#8a6212' : '#5b4650') + '; color:#fff; text-align:center; padding:10px 38px; font-size:13.5px; line-height:1.45; border-radius:12px; z-index:999999; direction:rtl; box-shadow:0 3px 14px rgba(0,0,0,.18);';
     banner.textContent = message;
     if (opts && opts.retry){
       const retryBtn = document.createElement('button');
@@ -20688,7 +20710,9 @@
     loadCloudData();
   }
   function hasUnsavedLocalChanges(){
-    if (!lastLoadedSnapshot) return false;
+    // Never infer dirty state while initial/private cloud loading is incomplete:
+    // an incomplete snapshot can differ from the UI defaults without any user edit.
+    if (!cloudLoadComplete || !lastLoadedSnapshot || !isOwnerSession()) return false;
     const fields = {
       branding, customTemplates, staff, categories, services, whatsNewItems,
       invAlertEmail, inventory, ownerAccessCode, gatedTabsConfig, personalBlocks,
@@ -20696,33 +20720,42 @@
       about: aboutMe, recommendations,
       weekAppointments, waitlist, clients, cancellationLog, lateCancellations,
     };
-    const norm = function(v){
-      if (v === undefined || v === null) return '';
-      if (Array.isArray(v)) return v.length ? JSON.stringify(v) : '';
-      if (typeof v === 'object') return Object.keys(v).length ? JSON.stringify(v) : '';
-      if (v === '') return '';
+    const stable = function(v){
+      if (v === undefined || v === null || v === '') return '';
+      if (Array.isArray(v)) return v.length ? '[' + v.map(stable).join(',') + ']' : '';
+      if (typeof v === 'object') {
+        const keys = Object.keys(v).filter(function(k){ return v[k] !== undefined; }).sort();
+        if (!keys.length) return '';
+        return '{' + keys.map(function(k){ return JSON.stringify(k) + ':' + stable(v[k]); }).join(',') + '}';
+      }
       return JSON.stringify(v);
     };
     return Object.keys(fields).some(function(k){
-      try { return norm(lastLoadedSnapshot[k]) !== norm(fields[k]); }
-      catch (e) { return true; }   // ספק — שומרים. עדיף קריאה מיותרת מאשר שינוי שאבד.
+      try {
+        return stable(lastLoadedSnapshot[k]) !== stable(fields[k]);
+      } catch (e) {
+        // A comparison failure is not proof of an unsaved edit; the save loop and
+        // explicit save actions remain responsible for persistence.
+        console.warn('Could not compare save snapshot field:', k, e);
+        return false;
+      }
     });
   }
   setInterval(() => {
-    if (!isOwnerSession()) return;
-    if (document.hidden) return;
+    if (!isOwnerSession() || !cloudLoadComplete || !lastLoadedSnapshot) return;
+    if (document.hidden || pendingSaveCount > 0) return;
     if (!unsavedChangePending && !hasUnsavedLocalChanges()) return;
     saveState({ silent: true });
   }, 4000);
   window.addEventListener('beforeunload', (e) => {
-    if (!isOwnerSession()) return;
-    // Warn only when the current in-memory data differs from the last confirmed cloud snapshot.
-    // A stale unsavedChangePending flag or an in-flight save alone must not trigger a false warning.
-    // Do not start an async save here: browsers do not guarantee it will finish during unload.
+    if (!isOwnerSession() || !cloudLoadComplete || !lastLoadedSnapshot) return;
+    // Only ask the browser to warn when a real local-vs-confirmed-cloud difference exists.
+    // Do not use unsavedChangePending alone: it can remain true after a transient/retried save.
+    // A save already in progress is handled by the regular save/retry loop, not by unload.
+    if (pendingSaveCount > 0) return;
     let dirty = false;
-    try {
-      dirty = (typeof hasUnsavedLocalChanges === 'function' && hasUnsavedLocalChanges());
-    } catch (err) { dirty = true; } // If comparison itself fails, fail safe and warn.
+    try { dirty = hasUnsavedLocalChanges(); }
+    catch (err) { console.warn('Unable to check unsaved changes before leaving:', err); }
     if (!dirty) return;
     e.preventDefault();
     e.returnValue = '';
@@ -20801,18 +20834,21 @@
     setTimeout(attemptMidnightRefresh, nextMidnight.getTime() - now.getTime());
   }
   function attemptMidnightRefresh(){
+    // Never reload the admin page while the owner is working or while any save
+    // is pending/dirty. A forced midnight reload can trigger Chrome's scary
+    // native 'reload site?' prompt in the middle of adding an appointment.
     const activeTag = document.activeElement && document.activeElement.tagName;
-    const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
-    const overlayOpen = document.querySelector('[id$="Overlay"].show');
-    if (isTyping || overlayOpen){
-      setTimeout(attemptMidnightRefresh, 5 * 60 * 1000); // try again in 5 minutes
+    const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT';
+    const overlayOpen = !!document.querySelector('[id$="Overlay"].show');
+    const ownerWorking = isOwnerSession() && (isTyping || overlayOpen || pendingSaveCount > 0 || unsavedChangePending ||
+      (typeof hasUnsavedLocalChanges === 'function' && hasUnsavedLocalChanges()));
+    if (ownerWorking){
+      setTimeout(attemptMidnightRefresh, 5 * 60 * 1000);
       return;
     }
-    if (typeof saveState === 'function') saveState();
-    setTimeout(() => {
-      if (unsavedChangePending){ setTimeout(attemptMidnightRefresh, 5 * 60 * 1000); return; }
-      location.reload();
-    }, 1500);
+    // Automatic refresh is unnecessary; live polling and visibility refresh handle updates.
+    // Do not call location.reload() here, as browsers may show a native confirmation.
+    scheduleMidnightRefresh();
   }
   scheduleMidnightRefresh();
   let isLoggedIn = false;
