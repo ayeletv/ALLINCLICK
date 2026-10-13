@@ -13450,8 +13450,12 @@
   function tryFindFlexibleSlot(req){
     const duration = flexReqDuration(req);
     const cats = flexReqCategories(req);
-    if (!cats.length) return null;
-    let capableIndices = getCapableStaffIndicesForCats(cats);
+    // A special request may have a service without a category saved on the service record.
+    // Do not discard the request solely for that missing metadata; search all active staff
+    // in that case, while still enforcing category capability whenever categories exist.
+    let capableIndices = cats.length
+      ? getCapableStaffIndicesForCats(cats)
+      : staff.map((s, i) => ({ s, i })).filter(x => x.s && !x.s.deleted).map(x => x.i);
     if (req && req.preferredStaffIdx != null && capableIndices.includes(req.preferredStaffIdx)){
       capableIndices = [req.preferredStaffIdx];
     }
@@ -13464,8 +13468,8 @@
       const [y, m, d] = str.split('-').map(Number);
       return new Date(y, m - 1, d);
     };
-    const dateFrom = parseDateOnly(pref.dateFrom) || new Date(todayMidnight);
-    const dateTo = parseDateOnly(pref.dateTo) || (() => { const d = new Date(todayMidnight); d.setDate(d.getDate() + 30); return d; })();
+    const dateFrom = parseDateOnly(pref.dateFrom || req.dateFrom || req.startDate) || new Date(todayMidnight);
+    const dateTo = parseDateOnly(pref.dateTo || req.dateTo || req.endDate) || (() => { const d = new Date(todayMidnight); d.setDate(d.getDate() + 30); return d; })();
     const startDate = dateFrom < todayMidnight ? new Date(todayMidnight) : dateFrom;
     for (let d = new Date(startDate); d <= dateTo; d.setDate(d.getDate() + 1)){
       const dow = d.getDay();
@@ -13479,11 +13483,13 @@
           .map(([s, e]) => [Math.max(s, winStart), e]);
         if (!windows.length) continue;
         const busy = weekAppointments
-          .filter(a => a.date === formatDateKey(d) && a.staff === staffIdx)
+          // Cancelled/declined appointments must not block a newly available slot.
+          .filter(a => a && a.date === formatDateKey(d) && String(a.staff) === String(staffIdx) &&
+            a.status !== 'cancelled' && a.status !== 'declined' && a.status !== 'canceled')
           .map(a => { const s = timeToMinutes(a.time); return [s, s + (a.dur || 30)]; })
           .concat(getBlockedRangesForStaff(d, staffIdx));
         for (const [openMin, closeMin] of windows){
-          for (let t = openMin; t + duration <= closeMin && t <= winEnd; t += fineStepMinutes){
+          for (let t = openMin; t + duration <= Math.min(closeMin, winEnd) && t >= winStart; t += fineStepMinutes){
             const end = t + duration;
             if (busy.every(([bs, be]) => end <= bs || t >= be)){
               return { date: formatDateKey(d), time: minutesToTimeGlobal(t), staffIdx, dateObj: new Date(d) };
@@ -13663,7 +13669,7 @@
     // Include waitlist entries only when they explicitly match this slot.
     // Waitlist entries are fixed-date/fixed-time requests; never offer to arbitrary clients.
     const waitlistEligible = (waitlist || []).filter(function(w){
-      if (!w || w.status === 'matched' || w.status === 'cancelled' || w.status === 'declined') return false;
+      if (!w || w.status === 'matched' || w.status === 'offerExpired' || w.status === 'cancelled' || w.status === 'declined') return false;
       if (String(w.date || '') !== String(slot.date || '') || String(w.requestedTime || '') !== String(slot.time || '')) return false;
       const svc = services.find(function(s){ return s && s.name === w.service; });
       const duration = svc ? (svc.duration || 30) : 30;
@@ -13735,6 +13741,18 @@
       if (o && o.status === 'offered' && !offerIsLive(o, now)){
         o.status = 'expired';
         o.closedAt = now.toISOString();
+        // A waitlist request that received an offer and did not accept in time
+        // must leave the active waitlist; do not re-offer the same request.
+        (o.recipients || []).forEach(function(rec){
+          if (!rec || !rec.waitlistId) return;
+          const entry = (waitlist || []).find(function(w){ return w && String(w.id) === String(rec.waitlistId); });
+          if (entry && entry.status !== 'matched' && entry.status !== 'cancelled') {
+            entry.status = 'offerExpired';
+            entry.offerExpiredAt = now.toISOString();
+            entry.expiredOfferId = o.id;
+            changed = true;
+          }
+        });
         changed = true;
       }
     });
@@ -13914,10 +13932,10 @@
       ? eligibleRequestsForSlot({date:o.date, time:o.time, dur:o.dur || 30, staff:o.staff}, new Date())
       : [];
     const savedCandidateStates = (o.eligibleRecipients || []).concat(o.recipients || []);
-    const visibleEligible = liveEligible.map(function(r, index){
+    let visibleEligible = liveEligible.map(function(r, index){
       const saved = savedCandidateStates.find(function(x){ return x && String(x.requestId || '') === String(r.id || ''); }) || {};
       return {
-        requestId:r.id, name:r.name || '', phone:r.phone || '',
+        requestId:r.id, name:r.name || saved.name || '', phone:r.phone || saved.phone || '',
         source:r._offerSource || saved.source || 'specialRequest',
         queuePosition:index+1,
         status:saved.status || (index===0 ? 'selected' : 'waiting'),
@@ -13925,6 +13943,22 @@
         smsStatus:saved.smsStatus || 'not-sent'
       };
     });
+    // Always show the actual saved recipients of this offer, even if they no longer
+    // qualify in a live recalculation (for example after the offer was created).
+    // The offer's recipient record is the source of truth for who received it.
+    if (!visibleEligible.length) {
+      visibleEligible = (o.recipients || []).concat(o.eligibleRecipients || [])
+        .filter(function(r, index, arr){
+          return r && r.requestId && arr.findIndex(function(x){ return x && String(x.requestId) === String(r.requestId); }) === index;
+        })
+        .map(function(r, index){ return {
+          requestId:r.requestId, name:r.name || '', phone:r.phone || '', source:r.source || 'specialRequest',
+          queuePosition:r.queuePosition || index+1, status:r.status || (index===0 ? 'selected' : 'waiting'),
+          emailStatus:r.emailStatus || 'not-sent', smsStatus:r.smsStatus || 'not-sent'
+        }; });
+    }
+    const sentToNames = (o.recipients || []).map(function(r){ return r && r.name; }).filter(Boolean);
+    const sentToText = sentToNames.length ? ' ההצעה נשלחה אל: ' + sentToNames.join(', ') + '.' : '';
     const why = o.broadcast
       ? 'מכיוון שהתור הזה מתחיל ב-' + o.time + ' ב' + offerHebDate(o.date) +
         ' — כלומר בעוד פחות מ-' + offerSetting('broadcastHours') + ' שעות — לא היה זמן להציע אותו ' +
@@ -13949,7 +13983,7 @@
           ? '⏳ השעה שמורה עוד <b>' + left + ' דקות</b> — עד ' + until
           : 'פג הזמן. השעה חזרה להיות פנויה.') +
       '</div>' +
-      '<div class="offer-why">' + why + '</div>' +
+      '<div class="offer-why">' + why + sentToText + '</div>' +
       '<div class="offer-list-title">ההצעה נשלחה ללקוחה הראשונה שמתאימה לכל תנאי הבקשה. ברשימה מופיעות רק לקוחות שעברו בדיקת התאמה:</div>' +
       '<div class="offer-rec-list">' +
         (visibleEligible.map(offerRecipientRow).join('') ||
@@ -13995,7 +14029,7 @@
       openManualBooking({ date: dateObj, time: o.time, staff: o.staff, duration: o.dur || 30 });
     }
   }
-  function ownerCancelOffer(id){
+  async function ownerCancelOffer(id){
     const o = offerById(id);
     if (!o || o.status !== 'offered') return;
     if (!confirm('לבטל את ההצעה ללקוחה זו?\\n\\nהלקוחה לא תקבל שוב את אותה הצעה. אם יש לקוחה אחרת מתאימה, אפשר להציע לה את השעה.')) return;
@@ -14007,7 +14041,9 @@
     o.cancelledRequestIds = Array.from(new Set([].concat(o.cancelledRequestIds || [], o.requestIds || [], (o.recipients || []).map(function(rec){ return rec && rec.requestId; }).filter(Boolean)))).map(String);
     o.nextOfferAttempted = true;
     closeOfferDetail();
-    if (typeof saveState === 'function') saveState();
+    // Persist the cancelled status before recalculating candidates. Do not let a delayed
+    // cloud save restore the previous offered status after the UI has shown the cancellation.
+    if (typeof saveState === 'function') await saveState();
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof showAdminToast === 'function') showAdminToast('✓ ההצעה ללקוחה בוטלה; בודקת אם יש לקוחה אחרת מתאימה');
 
@@ -14026,20 +14062,18 @@
 
     // Run after the cancelled status is persisted. createOfferForFreedSlot excludes this request,
     // but can choose the next eligible request. If no one qualifies, the slot remains free.
-    setTimeout(async function(){
-      try {
-        // Refresh from the latest in-memory state before selecting the next candidate.
-        expireStaleOffers();
-        const next = createOfferForFreedSlot(slot);
-        if (next) {
-          if (typeof showAdminToast === 'function') showAdminToast('ההצעה הבאה נשלחה ללקוחה הבאה בתור');
-        } else if (typeof showAdminToast === 'function') {
-          showAdminToast('ההצעה בוטלה; כרגע אין לקוחה מתאימה נוספת או שהשעה חסומה');
-        }
-        if (typeof saveState === 'function') saveState();
-        if (typeof renderWeekCal === 'function') renderWeekCal();
-      } catch(err) { console.error('Next offer after cancellation failed',err); }
-    }, 250);
+    try {
+      // Run only after the cancelled offer has been persisted, avoiding a race with cloud state.
+      expireStaleOffers();
+      const next = createOfferForFreedSlot(slot);
+      if (next) {
+        if (typeof showAdminToast === 'function') showAdminToast('ההצעה הבאה נשלחה ללקוחה הבאה בתור');
+      } else if (typeof showAdminToast === 'function') {
+        showAdminToast('ההצעה בוטלה; כרגע אין לקוחה מתאימה נוספת או שהשעה חסומה');
+      }
+      if (typeof saveState === 'function') await saveState();
+      if (typeof renderWeekCal === 'function') renderWeekCal();
+    } catch(err) { console.error('Next offer after cancellation failed',err); }
   }
 
   async function attemptMatchFlexibleRequest(req){
@@ -14073,6 +14107,22 @@
     if (matchedAny && typeof renderWeekCal === 'function') renderWeekCal();
     return matchedAny;
   }
+  // Automatically re-check pending special requests and waitlist entries. This is
+  // deliberately owner-session-only because matching writes appointments/offers.
+  let automaticRequestCheckBusy = false;
+  async function runAutomaticRequestCheck(){
+    if (automaticRequestCheckBusy || !isOwnerSession() || !cloudLoadComplete || !lastLoadedSnapshot) return;
+    automaticRequestCheckBusy = true;
+    try {
+      const changed = await recheckAllPendingFlexibleRequests();
+      if (changed && typeof saveState === 'function') await saveState({silent:true});
+    } catch (err) {
+      console.error('Automatic special-request/waitlist check failed:', err);
+    } finally {
+      automaticRequestCheckBusy = false;
+    }
+  }
+  setInterval(runAutomaticRequestCheck, 30000);
   function recheckWaitlistEntry(w){
     if (!w || w.status === 'matched') return null;
     const parts = (w.date || '').split('-').map(Number);
@@ -14215,7 +14265,7 @@
   }
   async function recheckAllPendingWaitlist(){
     let matchedAny = false;
-    const pending = waitlist.filter(w => w.status !== 'matched');
+    const pending = waitlist.filter(w => w.status !== 'matched' && w.status !== 'offerExpired' && w.status !== 'cancelled' && w.status !== 'declined');
     for (const w of pending){
       const matched = await attemptMatchWaitlistEntry(w);
       if (matched) matchedAny = true;
@@ -14274,7 +14324,7 @@
     body.style.height = bodyHeight + 'px';
     const pendingRequests = specialColumnPendingRequests()
       .slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const waitlistEntries = waitlist.filter(w => w.status !== 'matched');
+    const waitlistEntries = waitlist.filter(w => w.status !== 'matched' && w.status !== 'offerExpired' && w.status !== 'cancelled' && w.status !== 'declined');
     if (!pendingRequests.length && !waitlistEntries.length){
       body.innerHTML = '';
     } else {
