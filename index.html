@@ -13633,10 +13633,12 @@
       if (pref.dateFrom && slot.date < pref.dateFrom) return false;
       if (pref.dateTo && slot.date > pref.dateTo) return false;
       if (Array.isArray(pref.days) && pref.days.length && pref.days.indexOf(dow) === -1) return false;
-      if (pref.timeFrom && startMin < timeToMinutes(pref.timeFrom)) return false;
-      if (pref.timeTo && startMin > timeToMinutes(pref.timeTo)) return false;
       if (typeof r.preferredStaffIdx === 'number' && r.preferredStaffIdx !== slot.staff) return false;
       const dur = (r.services || []).reduce(function(a, sv){ return a + (sv.duration || 0); }, 0) || 30;
+      // Respect both custom time ranges and named periods (morning/afternoon/evening).
+      // The complete treatment must fit inside the customer's requested window.
+      const requestWindow = flexReqTimeWindow(r);
+      if (!Array.isArray(requestWindow) || startMin < requestWindow[0] || startMin + dur > requestWindow[1]) return false;
       if (dur > (slot.dur || 30)) return false;
       const cats = (r.services || []).map(function(sv){ return sv.category; }).filter(Boolean);
       if (cats.some(function(c){ return !isStaffCapableOf(slot.staff, c); })) return false;
@@ -13755,14 +13757,20 @@
     // Never offer a slot that overlaps a staff/calendar block or an existing appointment.
     const slotStart = timeToMinutes(slot.time);
     const slotEnd = slotStart + (slot.dur || 30);
-    const blocked = (typeof blockedTimes !== 'undefined' && Array.isArray(blockedTimes) ? blockedTimes : [])
-      .some(function(b){
-        if (!b || String(b.date || '') !== String(slot.date || '')) return false;
-        if (b.staff != null && String(b.staff) !== String(slot.staff) && String(b.staffName || '') !== String((staff[slot.staff]||{}).name || '')) return false;
-        const bs = timeToMinutes(b.startTime || b.time || '00:00');
-        const be = timeToMinutes(b.endTime || b.end || b.time || '00:00');
-        return bs < slotEnd && be > slotStart;
-      });
+    let blocked = false;
+    try {
+      const dateParts = String(slot.date || '').split('-').map(Number);
+      const slotDateObj = dateParts.length === 3 ? new Date(dateParts[0], dateParts[1]-1, dateParts[2]) : null;
+      if (slotDateObj && typeof isDateClosedForStaff === 'function' && isDateClosedForStaff(slot.staff, slotDateObj)) blocked = true;
+      if (!blocked && slotDateObj && typeof getBlockedRangesForStaff === 'function') {
+        blocked = (getBlockedRangesForStaff(slotDateObj, slot.staff) || []).some(function(range){
+          return range && slotStart < range[1] && slotEnd > range[0];
+        });
+      }
+    } catch(e) {
+      console.error('Blocked-slot validation failed; refusing to offer slot', e);
+      return null;
+    }
     const booked = (weekAppointments || []).some(function(a){
       if (!a || a.date !== slot.date || a.status === 'cancelled' || a.status === 'declined') return false;
       if (String(a.staff) !== String(slot.staff)) return false;
