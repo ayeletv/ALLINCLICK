@@ -13605,7 +13605,7 @@
     return appt;
   }
   const OFFER_DEFAULTS = {
-    floorMin: 30,        // מתחת לזה לא מציעים כלל — אף אחת לא תספיק
+    floorMin: 0,         // גם תור שהתפנה בהתראה קצרה יכול להיבדק; ההתאמה נקבעת לפי העדפות הלקוחה
     broadcastHours: 3,   // מתחת לזה מציעים לכולן יחד; מעליו אחת בכל פעם
     windowMin: 18,       // כמה זמן השעה שמורה עד שחוזרת להיות פנויה
     maxDaysAhead: 3,     // מעבר לזה ממשיכים לשבץ אוטומטית כמו קודם
@@ -13617,8 +13617,9 @@
   }
   function requestLeadMinutes(req){
     const raw = req && req.preference && req.preference.leadMinutes;
+    if (raw === undefined || raw === null || raw === '') return 0;
     const n = Number(raw);
-    return (!isNaN(n) && n > 0) ? n : 120;
+    return (!isNaN(n) && n >= 0) ? n : 0;
   }
   function offerMinutesUntil(dateKey, timeStr, now){
     const [y, mo, d] = String(dateKey || '').split('-').map(Number);
@@ -13709,7 +13710,10 @@
       });
     });
     return combined.filter(function(r){ return !previouslyContacted.has(String(r.id)) && !excludedRequestIds.has(String(r.id)); })
-      .sort(function(a, b){ return String(a.createdAt || '').localeCompare(String(b.createdAt || '')); });
+      .sort(function(a, b){
+        const byCreated = String(a.createdAt || '').localeCompare(String(b.createdAt || ''));
+        return byCreated || String(a.name || '').localeCompare(String(b.name || ''), 'he');
+      });
   }
   function offerById(id){ return (pendingOffers || []).filter(function(o){ return o && o.id === id; })[0] || null; }
   function offerIsLive(o, now){
@@ -14000,7 +14004,7 @@
     o.status = 'cancelledByOwner';
     o.closedAt = now;
     o.cancelledByOwner = true;
-    o.cancelledRequestIds = Array.from(new Set([].concat(o.cancelledRequestIds || [], o.requestIds || []))).map(String);
+    o.cancelledRequestIds = Array.from(new Set([].concat(o.cancelledRequestIds || [], o.requestIds || [], (o.recipients || []).map(function(rec){ return rec && rec.requestId; }).filter(Boolean)))).map(String);
     o.nextOfferAttempted = true;
     closeOfferDetail();
     if (typeof saveState === 'function') saveState();
@@ -14022,8 +14026,10 @@
 
     // Run after the cancelled status is persisted. createOfferForFreedSlot excludes this request,
     // but can choose the next eligible request. If no one qualifies, the slot remains free.
-    setTimeout(function(){
+    setTimeout(async function(){
       try {
+        // Refresh from the latest in-memory state before selecting the next candidate.
+        expireStaleOffers();
         const next = createOfferForFreedSlot(slot);
         if (next) {
           if (typeof showAdminToast === 'function') showAdminToast('ההצעה הבאה נשלחה ללקוחה הבאה בתור');
