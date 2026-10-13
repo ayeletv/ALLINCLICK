@@ -2061,8 +2061,6 @@
     overflow:hidden; /* clips .cc-banner's square top corners to the card's own radius */
     box-shadow:0 4px 15px rgba(26,20,22,0.13);
   }
-  .client-card.client-card-editing { outline: 2px solid var(--panel-gold); outline-offset: 2px; }
-  .client-card .client-edit-start, .client-card .client-edit-save, .client-card .client-edit-cancel { white-space: nowrap; }
   .client-card .cc-banner{
     display:flex;
     align-items:center;
@@ -6438,11 +6436,10 @@
     if (blockBtn) blockBtn.style.display = blocked ? 'none' : 'block';
     if (releaseBtn) releaseBtn.style.display = slotChoicePending.canRelease ? 'block' : 'none';
     if (note){
-      const gapMinutes = Number(slotChoicePending.gapMinutes || 0);
-      note.style.display = (blocked || gapMinutes > 0) ? 'block' : 'none';
+      note.style.display = blocked ? 'block' : 'none';
       note.textContent = blocked
         ? ((slotChoicePending.time ? 'השעה ' + slotChoicePending.time : 'השעה הזו') + ' אינה בשעות העבודה של התאריך הזה.')
-        : (gapMinutes > 0 ? `ניתן לקבוע כאן תור של עד ${gapMinutes} דקות, החל מהשעה ${slotChoicePending.time}.` : '');
+        : '';
     }
     document.getElementById('slotChoiceOverlay').classList.add('show');
   }
@@ -6876,7 +6873,7 @@
       if (mbForcedTime && timeInput.value === mbForcedTime){
         hint.textContent = `נבחרה השעה ${mbForcedTime} ידנית, מחוץ לרשימת השעות הפנויות.`;
       } else if (mbDroppedSlot && mbDroppedSlot.taken){
-        hint.textContent = '';
+        hint.textContent = `⚠️ השעה ${mbDroppedSlot.time} נתפסה הרגע על ידי תור אחר${mbDroppedSlot.by ? ' (' + mbDroppedSlot.by + ')' : ''} — יש לבחור שעה אחרת מהרשימה.` + canOverride;
       } else if (previousTimeGotDropped && anyAvailable){
         hint.textContent = `השעה ${previouslySelected} שנבחרה לא מתאימה למשך הטיפול הנוכחי — יש לבחור שעה אחרת מהרשימה.` + canOverride;
       } else {
@@ -11404,29 +11401,26 @@
           <div class="client-avatar">${avatarHtml}</div>
           <div class="name-field-wrap cc-banner-name">
             <span class="mini-field-label">שם</span>
-            <input class="client-name-input" value="${c.name}" placeholder="שם הלקוחה" disabled>
+            <input class="client-name-input" value="${c.name}" placeholder="שם הלקוחה">
           </div>
-          <button type="button" class="template-btn small client-edit-start" data-client-edit="start" title="עריכת פרטי הלקוחה">✎ עריכה</button>
-          <button type="button" class="template-btn small client-edit-save" data-client-edit="save" style="display:none;">שמור</button>
-          <button type="button" class="template-btn small client-edit-cancel" data-client-edit="cancel" style="display:none;">ביטול</button>
-          <button type="button" class="svc-del" aria-label="מחיקת לקוחה">✕</button>
+          <button class="svc-del" aria-label="מחיקת לקוחה">✕</button>
         </div>
         <div class="client-info">
           <div class="client-mini-row">
             <div class="mini-field" data-field-wrap="teudatZehut">
               <span class="mini-field-label">ת.ז.</span>
-              <input class="client-mini-input" data-field="teudatZehut" inputmode="numeric" maxlength="9" disabled value="${c.teudatZehut || ''}" placeholder="תעודת זהות">
+              <input class="client-mini-input" data-field="teudatZehut" inputmode="numeric" maxlength="9" value="${c.teudatZehut || ''}" placeholder="תעודת זהות">
             </div>
             <div class="mini-field" data-field-wrap="phone">
               <span class="mini-field-label">טלפון</span>
               <div class="mini-field-with-call">
-                <input class="client-mini-input" data-field="phone" disabled value="${c.phone || ''}" placeholder="טלפון">
+                <input class="client-mini-input" data-field="phone" value="${c.phone || ''}" placeholder="טלפון">
                 <a class="mini-field-call-icon${c.phone ? '' : ' disabled'}" data-call-icon href="${c.phone ? 'tel:' + c.phone.replace(/[^0-9+]/g,'') : '#'}" title="התקשרות" aria-label="התקשרות">📞</a>
               </div>
             </div>
             <div class="mini-field" data-field-wrap="email">
               <span class="mini-field-label">אימייל</span>
-              <input class="client-mini-input" data-field="email" type="email" disabled value="${c.email || ''}" placeholder="אימייל">
+              <input class="client-mini-input" data-field="email" type="email" value="${c.email || ''}" placeholder="אימייל">
             </div>
             <div class="mini-field" data-field-wrap="birthday">
               <span class="mini-field-label">🎂 יום הולדת</span>
@@ -11438,7 +11432,7 @@
             </div>
           </div>
           <div class="visits">${c.visits || 0} ביקורים · אחרון ${formatLastVisit(c.daysSinceVisit)}${isBday ? ' <span class="badge" style="background:rgba(var(--gold-rgb),0.2); color:var(--panel-gold); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : ''}</div>
-          <textarea class="client-note" disabled placeholder="הערה אישית (העדפות, רגישויות...)">${c.note || ''}</textarea>
+          <textarea class="client-note" placeholder="הערה אישית (העדפות, רגישויות...)">${c.note || ''}</textarea>
           ${todayAppts.length ? `
           <div class="client-today-block" style="margin:10px 0; padding:10px; border:1px solid rgba(var(--gold-rgb),0.35); border-radius:10px; background:rgba(var(--gold-rgb),0.08);">
             <div style="font-weight:600; font-size:13px; margin-bottom:6px;">📌 טיפול של היום</div>
@@ -11502,70 +11496,70 @@
         avatarEl.onclick = () => openClientProfileByRef(c);
       }
       const nameInputEl = row.querySelector('.client-name-input');
-      const editStartBtn = row.querySelector('[data-client-edit="start"]');
-      const editSaveBtn = row.querySelector('[data-client-edit="save"]');
-      const editCancelBtn = row.querySelector('[data-client-edit="cancel"]');
-      const bdayWrap = row.querySelector('[data-birthday-picker]');
-      const editableControls = Array.from(row.querySelectorAll('.client-name-input, .client-mini-input, .client-note, .mini-bday-day, .mini-bday-month, .mini-bday-year'));
-      const setClientEditMode = (editing) => {
-        editableControls.forEach(el => { el.disabled = !editing; });
-        editStartBtn.style.display = editing ? 'none' : '';
-        editSaveBtn.style.display = editing ? '' : 'none';
-        editCancelBtn.style.display = editing ? '' : 'none';
-        row.classList.toggle('client-card-editing', editing);
-      };
-      editStartBtn.onclick = () => setClientEditMode(true);
-      editCancelBtn.onclick = () => renderClients(); // הנתונים לא משתנים עד לחיצה על שמירה
-      row.querySelectorAll('.client-mini-input').forEach(inp => {
-        if (inp.dataset.field === 'teudatZehut') {
-          inp.oninput = e => { e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 9); };
-        }
+      nameInputEl.addEventListener('focus', (e) => { e.target.dataset.prevName = c.name; });
+      nameInputEl.oninput = (e) => { c.name = e.target.value; };
+      nameInputEl.addEventListener('blur', (e) => {
+        const oldName = e.target.dataset.prevName;
+        const newName = c.name.trim();
+        if (!oldName || !newName || oldName === newName) return;
+        let changedCount = 0;
+        weekAppointments.forEach(a => { if (a.client === oldName){ a.client = newName; changedCount++; } });
+        waitlist.forEach(w => { if (c.teudatZehut && w.teudatZehut ? w.teudatZehut === c.teudatZehut : w.name === oldName) w.name = newName; });
+        cancellationLog.forEach(cl => { if (cl.client === oldName) cl.client = newName; });
+        if (typeof saveState === 'function') saveState();
+        if (typeof showAdminToast === 'function') showAdminToast(changedCount
+          ? `✓ השם עודכן בהצלחה — ${changedCount} תורים קושרו אוטומטית לשם החדש`
+          : '✓ השם עודכן בהצלחה');
+        renderClients();
       });
+      row.querySelectorAll('.client-mini-input').forEach(inp => {
+        if (inp.dataset.field === 'teudatZehut'){
+          inp.oninput = (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 9);
+            c.teudatZehut = e.target.value;
+          };
+        } else if (inp.dataset.field === 'phone'){
+          inp.oninput = (e) => {
+            c.phone = e.target.value;
+            const icon = row.querySelector('[data-call-icon]');
+            if (icon){
+              const digits = e.target.value.replace(/[^0-9+]/g, '');
+              if (digits){ icon.href = 'tel:' + digits; icon.classList.remove('disabled'); }
+              else { icon.href = '#'; icon.classList.add('disabled'); }
+            }
+          };
+        } else {
+          inp.oninput = (e) => { c[e.target.dataset.field] = e.target.value; };
+        }
+        inp.addEventListener('focus', (e) => { e.target.dataset.prevVal = e.target.value; });
+        inp.addEventListener('blur', (e) => {
+          if (e.target.dataset.prevVal === e.target.value) return;
+          if (typeof saveState === 'function') saveState();
+          if (typeof showAdminToast === 'function') showAdminToast('✓ הפרטים עודכנו בהצלחה');
+        });
+      });
+      const bdayWrap = row.querySelector('[data-birthday-picker]');
       if (bdayWrap){
         const bdayDayEl = bdayWrap.querySelector('.mini-bday-day');
         const bdayMonthEl = bdayWrap.querySelector('.mini-bday-month');
         const bdayYearEl = bdayWrap.querySelector('.mini-bday-year');
         populateDMYPickerEls(bdayDayEl, bdayMonthEl, bdayYearEl, { allowBlank: true, yearsBack: 100, value: c.birthday });
-        [bdayDayEl, bdayMonthEl, bdayYearEl].forEach(el => { el.disabled = true; });
+        let prevBirthday = c.birthday || null;
+        const onBdayChange = () => {
+          const picked = readDMYPickerEls(bdayDayEl, bdayMonthEl, bdayYearEl);
+          c.birthday = picked;
+          refreshClientRowBirthdayBadge(row, c);
+          if (typeof saveState === 'function') saveState();
+          if (typeof showAdminToast === 'function'){
+            if (picked) showAdminToast('✓ יום ההולדת עודכן בהצלחה');
+            else if (prevBirthday) showAdminToast('✓ יום ההולדת נמחק');
+          }
+          prevBirthday = picked || null;
+        };
+        bdayDayEl.onchange = onBdayChange;
+        bdayMonthEl.onchange = onBdayChange;
+        bdayYearEl.onchange = onBdayChange;
       }
-      editSaveBtn.onclick = async () => {
-        const old = cloneJSON(c);
-        const oldAppointments = cloneJSON(weekAppointments);
-        const oldWaitlist = cloneJSON(waitlist);
-        const oldCancellationLog = cloneJSON(cancellationLog);
-        const oldName = String(c.name || '').trim();
-        const newName = String(nameInputEl.value || '').trim();
-        if (!newName){ alert('צריך להזין שם לקוחה.'); nameInputEl.focus(); return; }
-        const idInput = row.querySelector('[data-field="teudatZehut"]');
-        const idValue = String(idInput.value || '');
-        if (idValue && !/^\d{9}$/.test(idValue)) { alert('תעודת זהות חייבת להכיל בדיוק 9 ספרות, או להשאיר ריק.'); idInput.focus(); return; }
-        c.name = newName;
-        c.teudatZehut = idValue || null;
-        c.phone = String(row.querySelector('[data-field="phone"]').value || '').trim();
-        c.email = String(row.querySelector('[data-field="email"]').value || '').trim();
-        c.note = String(row.querySelector('.client-note').value || '');
-        c.birthday = readDMYPickerEls(row.querySelector('.mini-bday-day'), row.querySelector('.mini-bday-month'), row.querySelector('.mini-bday-year') );
-        if (oldName && oldName !== newName){
-          weekAppointments.forEach(a => { if (a.client === oldName) a.client = newName; });
-          waitlist.forEach(w => { if (c.teudatZehut && w.teudatZehut ? w.teudatZehut === c.teudatZehut : w.name === oldName) w.name = newName; });
-          cancellationLog.forEach(cl => { if (cl.client === oldName) cl.client = newName; });
-        }
-        try {
-          await saveState();
-          const stillDirty = !!unsavedChangePending || (typeof hasUnsavedLocalChanges === 'function' && hasUnsavedLocalChanges());
-          if (stillDirty) throw new Error('Save was not confirmed');
-          if (typeof showAdminToast === 'function') showAdminToast('✓ פרטי הלקוחה נשמרו בהצלחה');
-          renderClients();
-          if (typeof renderWeekCal === 'function') renderWeekCal();
-          if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
-        } catch (err) {
-          Object.keys(c).forEach(k => delete c[k]); Object.assign(c, old);
-          weekAppointments = oldAppointments; waitlist = oldWaitlist; cancellationLog = oldCancellationLog;
-          renderClients();
-          alert('השמירה לא אושרה. הפרטים הוחזרו למצב הקודם כדי למנוע הצגת הצלחה כוזבת. בדקי חיבור ונסי שוב.');
-          console.error('Explicit client edit save failed:', err);
-        }
-      };
       row.querySelector('.svc-del').onclick = () => {
         let warnMsg = `האם את בטוחה שברצונך למחוק את הלקוחה ${c.name}?`;
         if (upcoming.length) warnMsg += `\n\nיש לה ${upcoming.length} תור/ים עתידי/ים — הם יבוטלו אוטומטית.`;
@@ -11589,7 +11583,14 @@
         if (typeof renderBroadcastCount === 'function') renderBroadcastCount();
         showAdminToast(`✓ הלקוחה ${c.name} נמחקה בהצלחה`);
       };
-      // Other appointment-history status controls remain independent of client-profile editing.
+      const noteEl = row.querySelector('.client-note');
+      noteEl.oninput = (e) => { c.note = e.target.value; };
+      noteEl.addEventListener('focus', (e) => { e.target.dataset.prevVal = e.target.value; });
+      noteEl.addEventListener('blur', (e) => {
+        if (e.target.dataset.prevVal === e.target.value) return;
+        if (typeof saveState === 'function') saveState();
+        if (typeof showAdminToast === 'function') showAdminToast('✓ ההערה נשמרה בהצלחה');
+      });
       row.querySelectorAll('[data-panel="history"] .visit-row').forEach(visitEl => {
         const appt = apptForRowEl(visitEl, apptById);
         if (!appt) return;
@@ -13161,65 +13162,16 @@
         const rect = body.getBoundingClientRect();
         const offsetY = Math.max(0, e.clientY - rect.top);
         const rawMinutes = calStartHour * 60 + (offsetY / hourBandHeight) * 60;
-        // Use the actual minute clicked, rather than snapping to a 15-minute mark;
-        // snapping could move a click in a short gap onto the next appointment and hide the gap note.
-        const clickedMinute = Math.floor(rawMinutes);
-        const clampedMinutes = Math.min(Math.max(clickedMinute, calStartHour * 60), calEndHour * 60 - 1);
-        const chosenStaff = selectedStaffFilter !== 'all' ? selectedStaffFilter : null;
-        // Personal blocks are unavailable time too, not free space in the calendar.
-        const clickedBlockRanges = chosenStaff !== null
-          ? getBlockedRangesForStaff(day.fullDate, Number(chosenStaff))
-          : staff.flatMap((_, staffIdx) => getBlockedRangesForStaff(day.fullDate, staffIdx));
+        const snappedMinutes = Math.round(rawMinutes / 15) * 15;
+        const clampedMinutes = Math.min(Math.max(snappedMinutes, calStartHour * 60), calEndHour * 60);
         const outOfHours = !!closedInfo
-          || blockedBands.some(([bs, be]) => clampedMinutes >= bs && clampedMinutes < be)
-          || clickedBlockRanges.some(([bs, be]) => clampedMinutes >= bs && clampedMinutes < be);
-        let timeStr = minutesToTimeGlobal(clampedMinutes);
-        // When clicking in a gap, anchor the suggested start to the previous
-        // appointment's exact end (not the arbitrary minute that was clicked).
-        let gapMinutes = 0;
-        if (!outOfHours){
-          const dayKey = formatDateKey(day.fullDate);
-          const dayAppts = (Array.isArray(weekAppointments) ? weekAppointments : []).filter(a => {
-            if (!a || a.date !== dayKey || a.cancelled || a.status === 'cancelled') return false;
-            if (chosenStaff !== null && Number(a.staff) !== Number(chosenStaff)) return false;
-            const apptStart = timeToMinutes(a.time);
-            const apptDur = Number(a.dur || a.duration || 30);
-            return Number.isFinite(apptStart) && apptStart < calEndHour * 60 && apptDur > 0;
-          }).map(a => ({ start: timeToMinutes(a.time), end: timeToMinutes(a.time) + Number(a.dur || a.duration || 30) }));
-          const previousEnd = dayAppts
-            .filter(a => a.end <= clampedMinutes)
-            .reduce((best, a) => Math.max(best, a.end), calStartHour * 60);
-          const nextStart = dayAppts
-            .filter(a => a.start > clampedMinutes)
-            .reduce((best, a) => Math.min(best, a.start), calEndHour * 60);
-          const staffWindowEnd = calEndHour * 60;
-          const gapStart = previousEnd <= clampedMinutes ? previousEnd : clampedMinutes;
-          // Stop the reported gap at the first blocked interval, just as we stop
-          // it at the next appointment. A blocked interval must never count as
-          // bookable minutes.
-          const personalBlockRanges = chosenStaff !== null
-            ? getBlockedRangesForStaff(day.fullDate, Number(chosenStaff))
-            : staff.flatMap((_, staffIdx) => getBlockedRangesForStaff(day.fullDate, staffIdx));
-          // Include the calendar's general blocked bands (closed hours / global blocks)
-          // as unavailable intervals too. Otherwise a gap can incorrectly count time
-          // through a striped blocked band and show a much larger duration than is real.
-          const relevantBlockRanges = personalBlockRanges.concat(
-            (Array.isArray(blockedBands) ? blockedBands : []).map(r => [Number(r[0]), Number(r[1])])
-          ).filter(r => Number.isFinite(r[0]) && Number.isFinite(r[1]) && r[1] > r[0]);
-          const nextBlockStart = relevantBlockRanges
-            .filter(([bs, be]) => be > gapStart && bs < staffWindowEnd)
-            .reduce((best, [bs, be]) => Math.min(best, bs <= gapStart ? gapStart : bs), staffWindowEnd);
-          const gapEnd = Math.min(nextStart, staffWindowEnd, nextBlockStart);
-          gapMinutes = Math.max(0, gapEnd - gapStart);
-          if (gapMinutes > 0) timeStr = minutesToTimeGlobal(gapStart);
-          if (gapMinutes < 1) gapMinutes = 0;
-        }
+          || blockedBands.some(([bs, be]) => clampedMinutes >= bs && clampedMinutes < be);
+        const timeStr = minutesToTimeGlobal(clampedMinutes);
         openSlotChoiceOverlay({
           date: day.fullDate,
           time: timeStr,
-          staff: chosenStaff,
+          staff: selectedStaffFilter !== 'all' ? selectedStaffFilter : null,
           blocked: outOfHours,
-          gapMinutes,
           canRelease: !!closedInfo
         });
       };
@@ -13647,7 +13599,7 @@
   const OFFER_DEFAULTS = {
     floorMin: 30,        // מתחת לזה לא מציעים כלל — אף אחת לא תספיק
     broadcastHours: 3,   // מתחת לזה מציעים לכולן יחד; מעליו אחת בכל פעם
-    windowMin: 20,       // כמה זמן השעה שמורה עד שחוזרת להיות פנויה
+    windowMin: 18,       // כמה זמן השעה שמורה עד שחוזרת להיות פנויה
     maxDaysAhead: 3,     // מעבר לזה ממשיכים לשבץ אוטומטית כמו קודם
   };
   function offerSetting(key){
@@ -13673,7 +13625,7 @@
     const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
     const dow = dateObj.getDay();
     const startMin = timeToMinutes(slot.time);
-    return (specialRequests || []).filter(function(r){
+    const specialEligible = (specialRequests || []).filter(function(r){
       if (!r || r.mode !== 'flexible' || r.status !== 'pending') return false;
       if (typeof specialRequestIsExpired === 'function' && specialRequestIsExpired(r, now)) return false;
       if (minutesAway < requestLeadMinutes(r)) return false;
@@ -13696,7 +13648,51 @@
         return startMin < e && end > s;
       });
       return !clash;
-    }).sort(function(a, b){ return String(a.createdAt || '').localeCompare(String(b.createdAt || '')); });
+    });
+    // Include waitlist entries only when they explicitly match this slot.
+    // Waitlist entries are fixed-date/fixed-time requests; never offer to arbitrary clients.
+    const waitlistEligible = (waitlist || []).filter(function(w){
+      if (!w || w.status === 'matched' || w.status === 'cancelled' || w.status === 'declined') return false;
+      if (String(w.date || '') !== String(slot.date || '') || String(w.requestedTime || '') !== String(slot.time || '')) return false;
+      const svc = services.find(function(s){ return s && s.name === w.service; });
+      const duration = svc ? (svc.duration || 30) : 30;
+      if (duration > (slot.dur || 30)) return false;
+      if (w.staffName && staff[slot.staff] && w.staffName !== staff[slot.staff].name) return false;
+      if (svc && svc.category && !isStaffCapableOf(slot.staff, svc.category)) return false;
+      const hasAppointment = (weekAppointments || []).some(function(a){
+        return a && a.date === slot.date && a.status !== 'cancelled' &&
+          String(a.client || '') === String(w.name || '') &&
+          timeToMinutes(a.time) < timeToMinutes(slot.time) + duration &&
+          timeToMinutes(a.time) + (a.dur || 30) > timeToMinutes(slot.time);
+      });
+      if (hasAppointment) return false;
+      return true;
+    }).map(function(w){
+      return {
+        id: w.id, name: w.name || '', phone: w.phone || '', email: w.email || '',
+        createdAt: w.createdAt || '', mode: 'waitlist', status: 'pending',
+        _offerSource: 'waitlist', _waitlistId: w.id,
+        services: (function(){ const s = services.find(function(x){return x && x.name === w.service;}); return s ? [s] : []; })(),
+        preferredStaffIdx: (w.staffName ? staff.findIndex(function(s){return s && s.name === w.staffName;}) : undefined),
+        reminderChannels: w.reminderChannels || w.reminderChannelPref || []
+      };
+    });
+    const combined = specialEligible.map(function(r){ r._offerSource = 'specialRequest'; return r; }).concat(waitlistEligible);
+    const terminal = new Set(['cancelledByOwner','takenByOwner','claimed']);
+    const sameSlotOffers = (pendingOffers || []).filter(function(o){
+      return o && o.date === slot.date && o.time === slot.time && o.staff === slot.staff && terminal.has(o.status);
+    });
+    if (sameSlotOffers.length) return [];
+    const previouslyContacted = new Set();
+    (pendingOffers || []).filter(function(o){
+      return o && o.date === slot.date && o.time === slot.time && o.staff === slot.staff;
+    }).forEach(function(o){
+      (o.recipients || []).forEach(function(rec){
+        if (rec && rec.requestId) previouslyContacted.add(String(rec.requestId));
+      });
+    });
+    return combined.filter(function(r){ return !previouslyContacted.has(String(r.id)); })
+      .sort(function(a, b){ return String(a.createdAt || '').localeCompare(String(b.createdAt || '')); });
   }
   function offerById(id){ return (pendingOffers || []).filter(function(o){ return o && o.id === id; })[0] || null; }
   function offerIsLive(o, now){
@@ -13724,38 +13720,55 @@
     if (changed && typeof saveState === 'function') saveState({ silent: true });
     return changed;
   }
+  let offerRotationBusy = false;
+  async function rotateExpiredOffers(){
+    if (offerRotationBusy || !isOwnerSession()) return;
+    offerRotationBusy = true;
+    try {
+      expireStaleOffers();
+      const expired = (pendingOffers || []).filter(function(o){return o && o.status === 'expired' && !o.nextOfferAttempted;});
+      for (const oldOffer of expired) {
+        oldOffer.nextOfferAttempted = true;
+        const next = createOfferForFreedSlot({date:oldOffer.date,time:oldOffer.time,dur:oldOffer.dur,staff:oldOffer.staff,serviceName:oldOffer.serviceName,freedFrom:oldOffer.freedFrom});
+        if (next) break;
+      }
+      if (typeof saveState === 'function') saveState({silent:true});
+    } catch(e) { console.error('Offer rotation failed',e); }
+    finally { offerRotationBusy = false; }
+  }
+  setInterval(function(){ rotateExpiredOffers(); }, 15000);
+
   function createOfferForFreedSlot(slot){
     const now = new Date();
     const minutesAway = offerMinutesUntil(slot.date, slot.time, now);
-    if (minutesAway === null) return null;
-    if (minutesAway > offerSetting('maxDaysAhead') * 24 * 60) return null;
-    if (minutesAway < offerSetting('floorMin')) return null;
+    if (minutesAway === null || minutesAway > offerSetting('maxDaysAhead') * 24 * 60 ||
+        minutesAway < offerSetting('floorMin')) return null;
+    expireStaleOffers();
+    if (slotIsHeldByOffer(slot.date, slot.staff, timeToMinutes(slot.time), timeToMinutes(slot.time) + (slot.dur || 30), now)) return null;
     const eligible = eligibleRequestsForSlot(slot, now);
     if (!eligible.length) return null;
-    const broadcast = minutesAway <= offerSetting('broadcastHours') * 60;
-    const chosen = broadcast ? eligible : eligible.slice(0, 1);
+    const chosen = [eligible[0]];
     const offer = {
       id: 'offer_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
       date: slot.date, time: slot.time, dur: slot.dur || 30, staff: slot.staff,
-      serviceName: slot.serviceName || '',
+      serviceName: slot.serviceName || (chosen[0].services || []).map(function(s){return s.name;}).filter(Boolean).join(' + '),
       requestIds: chosen.map(function(r){ return r.id; }),
-      recipients: chosen.map(function(r){
-        return { requestId: r.id, name: r.name || '', phone: r.phone || '', status: 'notified' };
+      eligibleRecipients: eligible.map(function(r, index){
+        return { requestId:r.id, name:r.name||'', phone:r.phone||'', source:r._offerSource||'specialRequest',
+          queuePosition:index+1, status:index===0?'selected':'waiting', emailStatus:'not-sent', smsStatus:'not-sent' };
       }),
-      broadcast: broadcast,
-      freedFrom: slot.freedFrom || '',
-      createdAt: now.toISOString(),
-      expiresAt: new Date(now.getTime() + offerSetting('windowMin') * 60000).toISOString(),
-      status: 'offered',
+      recipients: chosen.map(function(r){
+        return { requestId:r.id, name:r.name||'', phone:r.phone||'', source:r._offerSource||'specialRequest',
+          status:'queued', emailStatus:'queued', smsStatus:'not-sent', waitlistId:r._waitlistId||null };
+      }),
+      broadcast: false, freedFrom: slot.freedFrom || '', createdAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + 18 * 60000).toISOString(), status: 'offered'
     };
     pendingOffers.push(offer);
     notifyOfferRecipients(offer, chosen);
     if (typeof saveState === 'function') saveState();
     if (typeof renderWeekCal === 'function') renderWeekCal();
-    if (typeof showAdminToast === 'function'){
-      showAdminToast('✓ השעה ' + offer.time + ' הוצעה ל-' + chosen.length +
-        (chosen.length === 1 ? ' לקוחה' : ' לקוחות'));
-    }
+    if (typeof showAdminToast === 'function') showAdminToast('✓ השעה ' + offer.time + ' הוצעה ללקוחה אחת; הבאות בתור מוצגות בפרטים');
     return offer;
   }
   function offerSmsText(offer){
@@ -13771,12 +13784,34 @@
       '. לאישור: ' + link + race;
   }
   function notifyOfferRecipients(offer, requests){
-    requests.forEach(function(r){
-      try {
-        const fake = { id: offer.id, client: r.name, teudatZehut: r.teudatZehut,
-                       reminderChannels: r.reminderChannels || ['sms'] };
-        if (typeof queueApptSms === 'function') queueApptSms(fake, offerSmsText(offer));
-      } catch (e){ console.error('Offer SMS failed for', r.name, e); }
+    (requests || []).forEach(function(r){
+      const rec = (offer.recipients || []).find(function(x){return x && String(x.requestId) === String(r.id);});
+      const client = (clients || []).find(function(c){
+        return c && ((r.teudatZehut && String(c.teudatZehut||'') === String(r.teudatZehut)) ||
+          (r.phone && String(c.phone||'').replace(/\D/g,'') === String(r.phone||'').replace(/\D/g,'')) ||
+          (r.name && String(c.name||'') === String(r.name)));
+      });
+      const email = r.email || (client && client.email) || '';
+      const link = (typeof siteBaseUrl === 'function' ? siteBaseUrl() : location.origin + location.pathname) + '?offer=' + encodeURIComponent(offer.id);
+      const dateText = offerHebDate(offer.date);
+      const serviceText = offer.serviceName || 'הטיפול שביקשת';
+      const emailHtml = '<div dir="rtl" style="font-family:Arial,sans-serif"><h2>התפנה תור עבורך</h2>' +
+        '<p>תאריך: ' + dateText + '</p><p>שעה: ' + offer.time + '</p><p>טיפול: ' + serviceText + '</p>' +
+        '<p>יש לך 18 דקות לאשר את התור.</p><p><a href="' + link + '">לאישור התור לחצי כאן</a></p></div>';
+      if (email && typeof db !== 'undefined' && db && typeof db.collection === 'function') {
+        db.collection('mail').add({to:email, message:{subject:'התפנה תור עבורך', html:emailHtml}})
+          .then(function(){ if (rec) rec.emailStatus = 'queued'; if (typeof saveState === 'function') saveState({silent:true}); })
+          .catch(function(err){ if (rec) rec.emailStatus = 'failed'; console.error('Offer email queue failed',err); if (typeof saveState === 'function') saveState({silent:true}); });
+      } else if (rec) rec.emailStatus = email ? 'failed' : 'missing-email';
+      const channels = r.reminderChannels || r.reminderChannelPref || [];
+      const smsOptIn = Array.isArray(channels) && channels.indexOf('sms') !== -1;
+      if (smsOptIn && r.phone && typeof queueApptSms === 'function') {
+        try {
+          queueApptSms({id:offer.id, client:r.name, phone:r.phone, teudatZehut:r.teudatZehut, reminderChannels:['sms']},
+            'התפנה תור ' + dateText + ' בשעה ' + offer.time + ' עבור ' + serviceText + '. לאישור בתוך 18 דקות: ' + link);
+          if (rec) rec.smsStatus = 'queued';
+        } catch(e) { if (rec) rec.smsStatus = 'failed'; console.error('Offer SMS queue failed',e); }
+      } else if (rec) rec.smsStatus = smsOptIn ? 'missing-phone' : 'not-opted-in';
     });
   }
 
@@ -13794,7 +13829,11 @@
     const phone = rec.phone || '';
     const tel = phone.replace(/[^0-9+]/g, '');
     const label = rec.status === 'claimed' ? '✓ אישרה' :
-                  rec.status === 'declined' ? '✕ סירבה' : '⏳ ממתינה לתשובה';
+                  rec.status === 'declined' ? '✕ סירבה' :
+                  rec.status === 'waiting' ? 'בתור' :
+                  rec.emailStatus === 'failed' ? 'שגיאת אימייל' :
+                  rec.emailStatus === 'missing-email' ? 'חסר אימייל' :
+                  rec.status === 'queued' ? 'בתור לשליחה' : '⏳ ממתינה לתשובה';
     return '<div class="offer-rec-row">' +
       '<div class="offer-rec-num">' + (idx + 1) + '</div>' +
       '<div class="offer-rec-main">' +
@@ -13841,10 +13880,9 @@
           : 'פג הזמן. השעה חזרה להיות פנויה.') +
       '</div>' +
       '<div class="offer-why">' + why + '</div>' +
-      '<div class="offer-list-title">ההצעה נשלחה ל-' + n +
-        (n === 1 ? ' לקוחה' : ' לקוחות') + ', לפי סדר ההרשמה:</div>' +
+      '<div class="offer-list-title">נשלחה הצעה ללקוחה אחת. אלה כל הלקוחות המתאימות לפי סדר ההמתנה:</div>' +
       '<div class="offer-rec-list">' +
-        (o.recipients || []).map(offerRecipientRow).join('') +
+        ((o.eligibleRecipients && o.eligibleRecipients.length) ? o.eligibleRecipients : (o.recipients || [])).map(offerRecipientRow).join('') +
       '</div>' +
       '<div class="offer-foot">ההודעה נשלחה ב-' +
         new Date(o.createdAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) +
@@ -13878,8 +13916,12 @@
     closeOfferDetail();
     if (typeof saveState === 'function') saveState();
     if (typeof renderWeekCal === 'function') renderWeekCal();
-    if (typeof openManualBooking === 'function'){
-      openManualBooking({ date: o.date, time: o.time, staff: o.staff });
+    const parts = String(o.date || '').split('-').map(Number);
+    const dateObj = parts.length === 3 && parts.every(Number.isFinite) ? new Date(parts[0], parts[1]-1, parts[2]) : new Date();
+    if (typeof openManualBookingModal === 'function') {
+      openManualBookingModal({ date: dateObj, time: o.time, staff: o.staff, duration: o.dur || 30 });
+    } else if (typeof openManualBooking === 'function') {
+      openManualBooking({ date: dateObj, time: o.time, staff: o.staff, duration: o.dur || 30 });
     }
   }
   function ownerCancelOffer(id){
@@ -14101,20 +14143,6 @@
     if (closing === null) return true;             // אף אחת לא עובדת היום — אין מה לממש
     return (now.getHours() * 60 + now.getMinutes()) >= closing;
   }
-  // בקשת המתנה תקפה עד סוף יום התור המבוקש (או עד סגירת הסלון באותו יום).
-  // כך בקשות שלא נמצאה להן התאמה אינן נשארות לנצח בעמודת "בקשה מיוחדת".
-  function waitlistEntryIsExpired(entry, nowDate){
-    if (!entry || !entry.date) return true;
-    if (entry.status === 'matched' || entry.status === 'expired') return true;
-    const now = nowDate || new Date();
-    const todayKey = formatDateKey(now);
-    if (String(entry.date) < todayKey) return true;
-    if (String(entry.date) > todayKey) return false;
-    const parts = String(entry.date).split('-').map(Number);
-    const closing = latestClosingMinuteOn(new Date(parts[0], parts[1] - 1, parts[2]));
-    if (closing === null) return true;
-    return (now.getHours() * 60 + now.getMinutes()) >= closing;
-  }
   function specialColumnPendingRequests(){
     const now = new Date();
     return specialRequests.filter(r => !(r.mode === 'flexible' && r.status === 'matched')
@@ -14141,7 +14169,7 @@
     body.style.height = bodyHeight + 'px';
     const pendingRequests = specialColumnPendingRequests()
       .slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const waitlistEntries = waitlist.filter(w => !waitlistEntryIsExpired(w, new Date()));
+    const waitlistEntries = waitlist.filter(w => w.status !== 'matched');
     if (!pendingRequests.length && !waitlistEntries.length){
       body.innerHTML = '';
     } else {
@@ -14191,8 +14219,7 @@
           nameEl.textContent = w.name || 'ללא שם';
           const metaEl = document.createElement('span');
           metaEl.className = 'sr-block-meta';
-          const createdLabel = w.createdAt ? new Date(w.createdAt).toLocaleDateString('he-IL') + ' ' + new Date(w.createdAt).toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'}) : '';
-          metaEl.textContent = `⏰ ${w.requestedTime || ''}` + (wlSvc ? ' · ' + wlSvc : '') + (wlCat ? ' (' + wlCat + ')' : '') + (createdLabel ? ` · נרשמה: ${createdLabel}` : '');
+          metaEl.textContent = `⏰ ${w.requestedTime || ''}` + (wlSvc ? ' · ' + wlSvc : '') + (wlCat ? ' (' + wlCat + ')' : '');
           main.appendChild(nameEl); main.appendChild(metaEl);
           return main;
         })());
@@ -14251,8 +14278,6 @@
         (w.staffName ? srDetailRow('עובדת', w.staffName) : '') +
         srDetailRow('תאריך מבוקש', dateLabel) +
         srDetailRow('שעה מבוקשת', w.requestedTime || '—') +
-        srDetailRow('נרשמה בתאריך ושעה', w.createdAt ? new Date(w.createdAt).toLocaleString('he-IL') : 'לא נשמר בעבר') +
-        srDetailRow('תפוגה', w.expiresAt ? new Date(w.expiresAt).toLocaleString('he-IL') : (w.date ? formatDateDMY(w.date) + ' בסוף היום' : '—')) +
         srDetailRow('סטטוס', isMatchedW ? '✓ נמצא תור' : '⏳ ממתין') +
         (isMatchedW ? srDetailRow('נקבע ל', `${formatDateDMY(w.matchedDate)}, ${w.matchedTime}${(staff[w.matchedStaff] && staff[w.matchedStaff].name) ? ' · ' + staff[w.matchedStaff].name : ''}`) : '');
       if (!isMatchedW){
@@ -14320,17 +14345,6 @@
         if (c && reqCats.indexOf(c) === -1) reqCats.push(c);
       });
       if (reqCats.length) html += srDetailRow('קטגוריה', reqCats.join(' + '));
-      // Show the combined service duration immediately below category. Prefer the
-      // duration saved with the request, and fall back to the current service catalog
-      // for older requests that did not persist per-service durations.
-      const requestedDuration = (r.services || []).reduce((total, item) => {
-        const savedDuration = Number(item && item.duration);
-        if (Number.isFinite(savedDuration) && savedDuration > 0) return total + savedDuration;
-        const catalogService = services.find(s => s && s.name === (item && item.name));
-        const catalogDuration = Number(catalogService && catalogService.duration);
-        return total + (Number.isFinite(catalogDuration) && catalogDuration > 0 ? catalogDuration : 0);
-      }, 0);
-      if (requestedDuration > 0) html += srDetailRow('משך התור', `${requestedDuration} דקות`);
       html += srDetailRow('העדפה', summarizeFlexiblePreference(r));
       const isMatched = r.status === 'matched';
       html += srDetailRow('סטטוס', isMatched ? '✓ נמצא תור' : '⏳ ממתין');
@@ -14339,12 +14353,7 @@
       }
     }
     if (r.note) html += srDetailRow('הערה', r.note);
-    const createdDate = r.createdAt ? new Date(r.createdAt) : null;
-    const createdAtExact = createdDate && !isNaN(createdDate.getTime())
-      ? createdDate.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })
-        + ' בשעה ' + createdDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
-      : 'לא נשמר תאריך מדויק';
-    html += srDetailRow('מועד הוספה', createdAtExact);
+    html += srDetailRow('נוספה', formatRelativeDaysAgo(r.createdAt));
     cardEl.innerHTML = html;
     if (isFlexible && r.status !== 'matched'){
       const recheckBtn = document.createElement('button');
@@ -15538,7 +15547,7 @@
   let calViewYear = todayMidnight.getFullYear();
   let calViewMonth = todayMidnight.getMonth();
   const slotStepMinutes = 15;
-  const fineStepMinutes = 1; // בחירת שעת התחלה בדקות בודדות, גם למזכירה בקביעה ידנית
+  const fineStepMinutes = 5;
   const minLeadMinutes = 30;
   const slotsEl = document.getElementById('slots');
   let selectedSlot = null;
@@ -16592,109 +16601,104 @@
     }
   }
   function showWaitlistPromptManual(time, reason){
-    const box = document.getElementById('waitlistBox');
-    box.innerHTML = `
+    document.getElementById('waitlistBox').innerHTML = `
       <div class="waitlist-prompt">
         השעה ${time} לא זמינה — ${reason || 'תפוסה כרגע.'}
-        <input type="tel" inputmode="numeric" maxlength="10" id="wlId" class="field" style="margin-top:8px;" placeholder="מלאי תעודת זהות או מספר טלפון">
-        <div id="wlIdentityStatus" style="font-size:13px;margin:8px 0;"></div>
-        <div id="wlExtraFields" style="display:none">
-          <div class="field-row"><input type="text" id="wlFirstName" class="field" placeholder="שם פרטי"><input type="text" id="wlLastName" class="field" placeholder="שם משפחה"></div>
-          <input type="tel" inputmode="numeric" maxlength="10" id="wlPhone" class="field" placeholder="טלפון">
-          <input type="email" id="wlEmail" class="field" placeholder="אימייל (כדי שנוכל להודיע לך אם יתפנה מקום)">
+        <input type="tel" inputmode="numeric" maxlength="10" id="wlId" class="field" style="margin-top:8px;" placeholder="תעודת זהות או מספר טלפון">
+        <div class="field-row">
+          <input type="text" id="wlFirstName" class="field" placeholder="שם פרטי">
+          <input type="text" id="wlLastName" class="field" placeholder="שם משפחה">
         </div>
-        <div id="wlError" style="display:none;color:var(--wine);font-size:12px;margin-bottom:6px;"></div>
-        <div><button id="wlJoinBtn" data-primary disabled>הצטרפות לרשימת המתנה</button></div>
+        <input type="tel" inputmode="numeric" maxlength="10" id="wlPhone" class="field" placeholder="050-0000000">
+        <input type="email" id="wlEmail" class="field" placeholder="אימייל (כדי שנוכל להודיע לך אם יתפנה מקום)">
+        <div id="wlError" style="display:none; color:var(--wine); font-size:12px; margin-bottom:6px;">יש למלא תעודת זהות (9 ספרות), שם פרטי, שם משפחה, טלפון ואימייל תקינים</div>
+        <div><button data-primary onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
       </div>`;
-    const idEl = document.getElementById('wlId');
-    const statusEl = document.getElementById('wlIdentityStatus');
-    const extra = document.getElementById('wlExtraFields');
-    const joinBtn = document.getElementById('wlJoinBtn');
-    let timer = null, seq = 0, state = 'empty', lastIdentifier = '';
-    function showNew(){ state='new'; extra.style.display='block'; statusEl.textContent='לא מצאנו כרטיס קיים. מלאי את הפרטים כדי להירשם.'; joinBtn.disabled=false; }
-    async function lookup(){
-      const raw=idEl.value.trim(), digits=raw.replace(/\D/g,'');
-      if (timer) clearTimeout(timer);
-      const current=++seq; lastIdentifier=digits; state='checking'; joinBtn.disabled=true; extra.style.display='none';
-      if (!(digits.length===9 || /^0\d{8,9}$/.test(digits))){ state='empty'; statusEl.textContent=''; return; }
-      statusEl.textContent='בודקות פרטים…';
-      timer=setTimeout(async()=>{
-        try {
-          const res=await fetchServerIdentity(digits);
-          if(current!==seq || idEl.value.replace(/\D/g,'')!==digits) return;
-          if(!res || res.__failed){ state='error'; statusEl.textContent='לא הצלחנו לבדוק כרגע. בדקי את המספר ונסי שוב.'; joinBtn.disabled=true; return; }
-          if(res.found){
-            state=res.hasEmail?'known':'knownNoEmail';
-            extra.style.display=res.hasEmail?'none':'block';
-            if(res.hasEmail){ statusEl.textContent='זיהינו אותך 😊 אפשר להצטרף בלי למלא פרטים נוספים.'; }
-            else { statusEl.textContent='זיהינו אותך 😊 חסר לנו אימייל בכרטיס שלך. נא להזין אימייל כדי שנוכל לעדכן אותך אם יתפנה תור.'; document.getElementById('wlEmail').focus(); }
-            joinBtn.disabled=false;
-          } else { showNew(); }
-        } catch(e){ if(current===seq){state='error';statusEl.textContent='לא הצלחנו לבדוק כרגע. נסי שוב.';joinBtn.disabled=true;} }
-      },350);
-    }
-    idEl.addEventListener('input', lookup);
-    idEl.addEventListener('blur',()=>{ if(state==='error' && idEl.value.trim()) lookup(); });
-    joinBtn.onclick=()=>joinWaitlist(time);
+    wireIdentityAutofill({ idId: 'wlId', firstId: 'wlFirstName', lastId: 'wlLastName', phoneId: 'wlPhone', emailId: 'wlEmail' });
     scrollWaitlistBoxIntoView();
   }
   async function joinWaitlist(time, presetName, presetPhone, presetId, presetEmail){
-    let name='', phone='', idDigits='', email='';
-    const idEl=document.getElementById('wlId');
-    const statusEl=document.getElementById('wlIdentityStatus');
-    const errorEl=document.getElementById('wlError');
-    const firstEl=document.getElementById('wlFirstName'), lastEl=document.getElementById('wlLastName');
-    const phoneEl=document.getElementById('wlPhone'), emailEl=document.getElementById('wlEmail');
+    let name, phone, idDigits, email;
     if (presetName !== undefined && presetPhone !== undefined && presetId !== undefined && presetEmail !== undefined){
-      name=presetName; phone=presetPhone; idDigits=String(presetId||'').replace(/\D/g,''); email=presetEmail;
+      name = presetName;
+      phone = presetPhone;
+      idDigits = presetId;
+      email = presetEmail;
     } else {
-      if(!idEl || !idEl.value.trim()){ if(errorEl){errorEl.textContent='נא להזין תעודת זהות או מספר טלפון.';errorEl.style.display='block';} return; }
-      idDigits=idEl.value.replace(/\D/g,'');
-      const digits=idDigits;
-      const identityText=statusEl ? statusEl.textContent : '';
-      const known=identityText.includes('זיהינו אותך');
-      if(!known){
-        name=((firstEl&&firstEl.value.trim())||'')+' '+((lastEl&&lastEl.value.trim())||''); name=name.trim();
-        phone=phoneEl ? phoneEl.value.trim() : '';
-      }
-      email=emailEl ? emailEl.value.trim() : '';
-      if(!known && (!firstEl?.value.trim() || !lastEl?.value.trim() || !isValidIsraeliPhone(phone))){
-        if(errorEl){errorEl.textContent='נא למלא שם פרטי, שם משפחה וטלפון תקין.';errorEl.style.display='block';} return;
-      }
-      if((!known || identityText.includes('חסר לנו אימייל')) && (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))){
-        if(errorEl){errorEl.textContent='נא להזין אימייל תקין כדי שנוכל לעדכן אותך אם יתפנה תור.';errorEl.style.display='block';} if(emailEl) emailEl.focus(); return;
-      }
-      // Always verify again at submit; lookup failure must not become a new-customer registration.
-      if(runningOnPublicData){
-        try{
-          const check=await fetchServerIdentity(digits);
-          if(!check || check.__failed){ if(errorEl){errorEl.textContent='לא הצלחנו לאמת את הפרטים. נסי שוב.';errorEl.style.display='block';} return; }
-          if(check.found){
-            if(!check.hasEmail && !email){ if(errorEl){errorEl.textContent='זיהינו אותך 😊 חסר אימייל בכרטיס שלך. נא להזין אימייל.';errorEl.style.display='block';} return; }
-            name=check.firstName||name;
-          } else if(known){ if(errorEl){errorEl.textContent='לא הצלחנו לאמת את הזיהוי. נסי שוב.';errorEl.style.display='block';} return; }
-        }catch(e){ if(errorEl){errorEl.textContent='לא הצלחנו לאמת את הפרטים. נסי שוב.';errorEl.style.display='block';} return; }
+      const firstNameOk = document.getElementById('wlFirstName').value.trim();
+      const lastNameOk = document.getElementById('wlLastName').value.trim();
+      const phoneEl = document.getElementById('wlPhone');
+      const idEl = document.getElementById('wlId');
+      const emailEl = document.getElementById('wlEmail');
+      const errorEl = document.getElementById('wlError');
+      name = combineNameFields('wlFirstName', 'wlLastName');
+      phone = phoneEl.value.trim();
+      idDigits = idEl.value.replace(/[^0-9]/g, '');
+      email = emailEl.value.trim();
+      const wlResolved = resolveClientByIdOrPhone(idEl.value || '');
+      const wlKnown = wlResolved && wlResolved.client;
+      if (wlKnown && String(wlKnown.teudatZehut || '')) idDigits = String(wlKnown.teudatZehut);
+      if (!firstNameOk || !lastNameOk || !isValidIsraeliPhone(phone) || !email
+          || (!wlKnown && idDigits.length !== 9)){
+        errorEl.style.display = 'block';
+        return;
       }
     }
     if (idDigits) attachRealTzToMigrated(idDigits, phone);
     const wlBlockStatus = getLateCancelStatusForIdentity({ teudatZehut: idDigits, name });
-    if (wlBlockStatus.blocked){ alert(buildBlockedBookingClientMessage()); const b=document.getElementById('waitlistBox'); if(b)b.innerHTML=`<div class="waitlist-prompt">${buildBlockedBookingClientMessage()}</div>`; return; }
-    const existingClient = clients.find(c => c && (String(c.teudatZehut||'')===idDigits || String(c.phone||'').replace(/\D/g,'')===idDigits));
-    if(existingClient){ if(!existingClient.email && email) existingClient.email=email; if(!existingClient.phone && phone) existingClient.phone=phone; }
-    else if(!runningOnPublicData){ clients.push({name,phone,teudatZehut:idDigits,email,photo:null,visits:0,daysSinceVisit:null,note:'',birthday:null}); }
-    const svc=getBookingSvc(); const emp=selectedStaffIndex==='any'?null:staff[selectedStaffIndex];
-    const dateStr=bookingSelectedDate.getFullYear()+'-'+String(bookingSelectedDate.getMonth()+1).padStart(2,'0')+'-'+String(bookingSelectedDate.getDate()).padStart(2,'0');
-    const createdAt = new Date().toISOString();
-    const wlEntry={id:'wl_'+Date.now()+'_'+Math.floor(Math.random()*10000),name,phone,teudatZehut:idDigits,email:(existingClient&&existingClient.email)||email,service:svc?svc.name:'',staffName:selectedStaffIndex==='any'?'':(emp?emp.name:''),date:dateStr,requestedDate:dateStr,requestedTime:time,createdAt,createdDate:createdAt.slice(0,10),createdTime:createdAt.slice(11,16),expiresAt:dateStr+'T23:59:59',status:'pending'};
-    if(bookingGoesThroughServer()){
-      let res=null;
-      try{res=await callClientApi('waitlist',{id:idDigits||phone, name, phone, email, teudatZehut:idDigits, entry:{date:dateStr,requestedDate:dateStr,requestedTime:time,createdAt,createdDate:wlEntry.createdDate,createdTime:wlEntry.createdTime,expiresAt:wlEntry.expiresAt,service:svc?svc.name:'',staffName:wlEntry.staffName||''}});}
-      catch(err){console.error('Waitlist through the server failed:',err);res=runningOnPublicData?{ok:false,error:'לא הצלחנו לרשום אותך לרשימת ההמתנה כרגע. נא לנסות שוב.'}:{ok:true,entry:wlEntry,__fallback:true};}
-      if(!res||!res.ok){const b=document.getElementById('waitlistBox');if(b)b.innerHTML=`<div class="waitlist-prompt">${(res&&res.error)||'לא הצלחנו לרשום אותך לרשימת ההמתנה. נא לנסות שוב.'}</div>`;return;}
-      waitlist.push(res.entry||wlEntry); if(res.__fallback&&typeof saveState==='function')saveState();
-    } else {waitlist.push(wlEntry);if(typeof saveState==='function')saveState();}
-    if(typeof renderClients==='function')renderClients(); if(typeof renderWaitlistAdmin==='function')renderWaitlistAdmin();
-    document.getElementById('waitlistBox').innerHTML=`<div class="waitlist-confirmed">✓ &nbsp;נרשמת לרשימת ההמתנה ל-${time}. נעדכן אותך אם יתפנה מקום.</div>`;
+    if (wlBlockStatus.blocked){
+      alert(buildBlockedBookingClientMessage());
+      const wlBoxBlocked = document.getElementById('waitlistBox');
+      if (wlBoxBlocked) wlBoxBlocked.innerHTML = `<div class="waitlist-prompt">${buildBlockedBookingClientMessage()}</div>`;
+      return;
+    }
+    const existingClient = clients.find(c => c.teudatZehut === idDigits);
+    if (existingClient){
+      if (!existingClient.email) existingClient.email = email;
+      if (!existingClient.phone) existingClient.phone = phone;
+    } else {
+      clients.push({ name, phone, teudatZehut: idDigits, email, photo: null, visits: 0, daysSinceVisit: null, note: '', birthday: null });
+    }
+    const svc = getBookingSvc();
+    const emp = selectedStaffIndex === 'any' ? null : staff[selectedStaffIndex];
+    const dateStr = bookingSelectedDate.getFullYear() + '-' + String(bookingSelectedDate.getMonth()+1).padStart(2,'0') + '-' + String(bookingSelectedDate.getDate()).padStart(2,'0');
+    const wlEntry = {
+      id: 'wl_' + Date.now() + '_' + Math.floor(Math.random()*10000),
+      name, phone, teudatZehut: idDigits, email: (existingClient && existingClient.email) || email,
+      service: svc ? svc.name : '',
+      staffName: selectedStaffIndex === 'any' ? '' : (emp ? emp.name : ''),
+      date: dateStr,
+      requestedTime: time,
+      status: 'pending'
+    };
+    if (bookingGoesThroughServer()){
+      let res = null;
+      try {
+        res = await callClientApi('waitlist', {
+          id: idDigits || phone, name, phone, email, teudatZehut: idDigits,
+          entry: { date: dateStr, requestedTime: time, service: svc ? svc.name : '', staffName: wlEntry.staffName || '' },
+        });
+      } catch (err) {
+        console.error('Waitlist through the server failed:', err);
+        res = runningOnPublicData
+          ? { ok: false, error: 'לא הצלחנו לרשום אותך לרשימת ההמתנה כרגע. נא לנסות שוב בעוד רגע.' }
+          : { ok: true, entry: wlEntry, __fallback: true };
+      }
+      if (!res || !res.ok){
+        document.getElementById('waitlistBox').innerHTML =
+          `<div class="waitlist-prompt">${(res && res.error) || 'לא הצלחנו לרשום אותך לרשימת ההמתנה. נא לנסות שוב.'}</div>`;
+        return;
+      }
+      waitlist.push(res.entry || wlEntry);
+      if (res.__fallback && typeof saveState === 'function') saveState();
+    } else {
+      waitlist.push(wlEntry);
+      if (typeof saveState === 'function') saveState();
+    }
+    if (typeof renderClients === 'function') renderClients();
+    if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
+    document.getElementById('waitlistBox').innerHTML = `
+      <div class="waitlist-confirmed">✓ &nbsp;נרשמת לרשימת ההמתנה ל-${time}. נעדכן אותך אם יתפנה מקום.</div>`;
   }
   renderMiniCal();
   renderAvailableSlots();
@@ -19689,10 +19693,8 @@
     const banner = document.createElement('div');
     banner.id = 'ownerMappingBanner';
     banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:var(--wine); color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
-    banner.textContent = '⚠ עדיין לא הצלחנו לאמת את ההרשאות מול הענן. אין צורך לרענן את הדף — אנחנו מנסים להתחבר מחדש אוטומטית. עד שההודעה תיעלם, מומלץ לא לבצע שינויים ביומן.';
+    banner.textContent = '⚠ לא הצלחנו לאמת את ההרשאות שלך מול הענן. נא לרענן את הדף.';
     document.body.prepend(banner);
-    syncTopBannerOffset();
-    if (typeof scheduleOwnerMappingRetry === 'function') scheduleOwnerMappingRetry();
   }
   function hideOwnerMappingErrorBanner(){
     const banner = document.getElementById('ownerMappingBanner');
@@ -19848,7 +19850,7 @@
     const banner = document.createElement('div');
     banner.id = bannerId;
     const bg = (opts && opts.tone === 'info') ? '#8a6212' : 'var(--wine)';
-    banner.style.cssText = 'position:fixed; bottom:14px; top:auto; left:50%; transform:translateX(-50%); width:calc(100% - 28px); max-width:620px; box-sizing:border-box; background:' + ((opts && opts.tone === 'info') ? '#8a6212' : '#5b4650') + '; color:#fff; text-align:center; padding:10px 38px; font-size:13.5px; line-height:1.45; border-radius:12px; z-index:999999; direction:rtl; box-shadow:0 3px 14px rgba(0,0,0,.18);';
+    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:' + bg + '; color:#fff; text-align:center; padding:10px 40px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
     banner.textContent = message;
     if (opts && opts.retry){
       const retryBtn = document.createElement('button');
@@ -20036,9 +20038,6 @@
       (typeof document !== 'undefined' && document.body && document.body.classList.contains('admin-mode'));
     const __reCalls = [
       ['renderCategories', isAdminActive && typeof renderCategories === 'function' ? renderCategories : null],
-      // Public booking categories must be redrawn after cloud/public data has been applied.
-      // Without this call, the grid can remain empty if its first render happened before data arrived.
-      ['renderCategoryGrid', typeof renderCategoryGrid === 'function' ? renderCategoryGrid : null],
       ['renderServices', typeof renderServices === 'function' ? renderServices : null],
       ['renderStaff', isAdminActive && typeof renderStaff === 'function' ? renderStaff : null],
       ['renderClients', isAdminActive && typeof renderClients === 'function' ? renderClients : null],
@@ -20269,19 +20268,13 @@
     }
   }
   function pruneExpiredWaitlistEntries(){
-    if (!Array.isArray(waitlist) || !waitlist.length) return false;
-    const now = new Date();
+    if (!Array.isArray(waitlist) || !waitlist.length) return;
+    const todayKey = formatDateKey(todayMidnight);
     const before = waitlist.length;
-    waitlist = waitlist.filter(w => !waitlistEntryIsExpired(w, now));
-    const removed = before - waitlist.length;
-    if (removed){
-      console.log(`Removed ${removed} expired waitlist request(s).`);
-      // Preserve the pre-prune snapshot so the normal save pipeline persists removals.
-      if (lastLoadedSnapshot && Array.isArray(lastLoadedSnapshot.waitlist)){
-        lastLoadedSnapshot.waitlist = lastLoadedSnapshot.waitlist.filter(w => !waitlistEntryIsExpired(w, now) || !waitlist.some(active => active && w && active.id === w.id));
-      }
+    waitlist = waitlist.filter(w => w && w.date && w.date >= todayKey);
+    if (waitlist.length !== before){
+      console.log(`Removed ${before - waitlist.length} expired waitlist request(s).`);
     }
-    return removed > 0;
   }
   function reportCloudLoadTiming(startedAt, rawCloudData){
     const elapsedSec = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt) / 1000;
@@ -20754,9 +20747,7 @@
     loadCloudData();
   }
   function hasUnsavedLocalChanges(){
-    // Never infer dirty state while initial/private cloud loading is incomplete:
-    // an incomplete snapshot can differ from the UI defaults without any user edit.
-    if (!cloudLoadComplete || !lastLoadedSnapshot || !isOwnerSession()) return false;
+    if (!lastLoadedSnapshot) return false;
     const fields = {
       branding, customTemplates, staff, categories, services, whatsNewItems,
       invAlertEmail, inventory, ownerAccessCode, gatedTabsConfig, personalBlocks,
@@ -20764,43 +20755,34 @@
       about: aboutMe, recommendations,
       weekAppointments, waitlist, clients, cancellationLog, lateCancellations,
     };
-    const stable = function(v){
-      if (v === undefined || v === null || v === '') return '';
-      if (Array.isArray(v)) return v.length ? '[' + v.map(stable).join(',') + ']' : '';
-      if (typeof v === 'object') {
-        const keys = Object.keys(v).filter(function(k){ return v[k] !== undefined; }).sort();
-        if (!keys.length) return '';
-        return '{' + keys.map(function(k){ return JSON.stringify(k) + ':' + stable(v[k]); }).join(',') + '}';
-      }
+    const norm = function(v){
+      if (v === undefined || v === null) return '';
+      if (Array.isArray(v)) return v.length ? JSON.stringify(v) : '';
+      if (typeof v === 'object') return Object.keys(v).length ? JSON.stringify(v) : '';
+      if (v === '') return '';
       return JSON.stringify(v);
     };
     return Object.keys(fields).some(function(k){
-      try {
-        return stable(lastLoadedSnapshot[k]) !== stable(fields[k]);
-      } catch (e) {
-        // A comparison failure is not proof of an unsaved edit; the save loop and
-        // explicit save actions remain responsible for persistence.
-        console.warn('Could not compare save snapshot field:', k, e);
-        return false;
-      }
+      try { return norm(lastLoadedSnapshot[k]) !== norm(fields[k]); }
+      catch (e) { return true; }   // ספק — שומרים. עדיף קריאה מיותרת מאשר שינוי שאבד.
     });
   }
   setInterval(() => {
-    if (!isOwnerSession() || !cloudLoadComplete || !lastLoadedSnapshot) return;
-    if (document.hidden || pendingSaveCount > 0) return;
+    if (!isOwnerSession()) return;
+    if (document.hidden) return;
     if (!unsavedChangePending && !hasUnsavedLocalChanges()) return;
     saveState({ silent: true });
   }, 4000);
   window.addEventListener('beforeunload', (e) => {
-    if (!isOwnerSession() || !cloudLoadComplete || !lastLoadedSnapshot) return;
-    // Only ask the browser to warn when a real local-vs-confirmed-cloud difference exists.
-    // Do not use unsavedChangePending alone: it can remain true after a transient/retried save.
-    // A save already in progress is handled by the regular save/retry loop, not by unload.
-    if (pendingSaveCount > 0) return;
+    if (!isOwnerSession()) return;
     let dirty = false;
-    try { dirty = hasUnsavedLocalChanges(); }
-    catch (err) { console.warn('Unable to check unsaved changes before leaving:', err); }
+    try {
+      dirty = (pendingSaveCount > 0)
+        || (typeof unsavedChangePending !== 'undefined' && unsavedChangePending)
+        || (typeof hasUnsavedLocalChanges === 'function' && hasUnsavedLocalChanges());
+    } catch (err) { dirty = false; }
     if (!dirty) return;
+    saveState();
     e.preventDefault();
     e.returnValue = '';
     return '';
@@ -20878,21 +20860,18 @@
     setTimeout(attemptMidnightRefresh, nextMidnight.getTime() - now.getTime());
   }
   function attemptMidnightRefresh(){
-    // Never reload the admin page while the owner is working or while any save
-    // is pending/dirty. A forced midnight reload can trigger Chrome's scary
-    // native 'reload site?' prompt in the middle of adding an appointment.
     const activeTag = document.activeElement && document.activeElement.tagName;
-    const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT';
-    const overlayOpen = !!document.querySelector('[id$="Overlay"].show');
-    const ownerWorking = isOwnerSession() && (isTyping || overlayOpen || pendingSaveCount > 0 || unsavedChangePending ||
-      (typeof hasUnsavedLocalChanges === 'function' && hasUnsavedLocalChanges()));
-    if (ownerWorking){
-      setTimeout(attemptMidnightRefresh, 5 * 60 * 1000);
+    const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
+    const overlayOpen = document.querySelector('[id$="Overlay"].show');
+    if (isTyping || overlayOpen){
+      setTimeout(attemptMidnightRefresh, 5 * 60 * 1000); // try again in 5 minutes
       return;
     }
-    // Automatic refresh is unnecessary; live polling and visibility refresh handle updates.
-    // Do not call location.reload() here, as browsers may show a native confirmation.
-    scheduleMidnightRefresh();
+    if (typeof saveState === 'function') saveState();
+    setTimeout(() => {
+      if (unsavedChangePending){ setTimeout(attemptMidnightRefresh, 5 * 60 * 1000); return; }
+      location.reload();
+    }, 1500);
   }
   scheduleMidnightRefresh();
   let isLoggedIn = false;
