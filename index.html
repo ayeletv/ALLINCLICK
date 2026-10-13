@@ -14086,16 +14086,31 @@
   }
 
   async function attemptMatchFlexibleRequest(req){
-    if (!req || req.mode !== 'flexible' || req.status !== 'pending') return false;
+    // Special requests must create a temporary dashed offer, not a confirmed appointment.
+    // Accept legacy records that store the flexible flag in `kind` instead of `mode`.
+    if (!req || !((req.mode === 'flexible') || (req.kind === 'flexible')) || req.status !== 'pending') return false;
+    if (req.mode !== 'flexible') req.mode = 'flexible';
     const match = tryFindFlexibleSlot(req);
     if (!match) return false;
-    // Eligible special requests are booked directly into the calendar.
-    const appt = await bookFlexibleRequest(req, match);
-    return !!appt;
+    const now = new Date();
+    const away = offerMinutesUntil(match.date, match.time, now);
+    if (away !== null && away < offerSetting('floorMin')) return false;
+    const dur = flexReqDuration(req);
+    const startMin = timeToMinutes(match.time);
+    if (slotIsHeldByOffer(match.date, match.staffIdx, startMin, startMin + dur, now)) return false;
+    const serviceName = (req.services || []).map(sv => sv.name).filter(Boolean).join(' + ') || 'שירות';
+    // createOfferForFreedSlot creates the temporary offer and emails the customer;
+    // the appointment is only finalized after the customer claims/accepts it.
+    const offer = createOfferForFreedSlot({
+      date: match.date, time: match.time, dur, staff: match.staffIdx, serviceName,
+      requestIds: [req.id],
+      specialRequestId: req.id
+    });
+    return !!offer;
   }
   async function recheckAllPendingFlexibleRequests(){
     let matchedAny = false;
-    const pending = specialRequests.filter(r => r.mode === 'flexible' && r.status === 'pending');
+    const pending = specialRequests.filter(r => ((r.mode === 'flexible') || (r.kind === 'flexible')) && r.status === 'pending');
     for (const r of pending){
       const matched = await attemptMatchFlexibleRequest(r);
       if (matched) matchedAny = true;
