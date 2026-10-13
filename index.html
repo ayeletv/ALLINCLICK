@@ -13708,19 +13708,8 @@
         if (rec && rec.requestId) previouslyContacted.add(String(rec.requestId));
       });
     });
-    function requestCreatedTime(r){
-      const raw = r && (r.createdAt || r.created_at || r.requestedAt || r.createdOn || r.timestamp || r.created);
-      if (typeof raw === 'number') return raw;
-      if (raw && typeof raw.toDate === 'function') return raw.toDate().getTime();
-      const parsed = raw ? new Date(raw).getTime() : NaN;
-      // Missing timestamps cannot be honestly ordered by arrival time; put them after
-      // timestamped requests and preserve their existing source-array order.
-      return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
-    }
     return combined.filter(function(r){ return !previouslyContacted.has(String(r.id)) && !excludedRequestIds.has(String(r.id)); })
-      .map(function(r, index){ return {request:r, index:index, created:requestCreatedTime(r)}; })
-      .sort(function(a,b){ return a.created - b.created || a.index - b.index; })
-      .map(function(x){ return x.request; });
+      .sort(function(a, b){ return String(a.createdAt || '').localeCompare(String(b.createdAt || '')); });
   }
   function offerById(id){ return (pendingOffers || []).filter(function(o){ return o && o.id === id; })[0] || null; }
   function offerIsLive(o, now){
@@ -13850,13 +13839,19 @@
       const link = (typeof siteBaseUrl === 'function' ? siteBaseUrl() : location.origin + location.pathname) + '?offer=' + encodeURIComponent(offer.id);
       const dateText = offerHebDate(offer.date);
       const serviceText = offer.serviceName || 'הטיפול שביקשת';
-      const emailHtml = '<div dir="rtl" style="font-family:Arial,sans-serif"><h2>התפנה תור עבורך</h2>' +
-        '<p>תאריך: ' + dateText + '</p><p>שעה: ' + offer.time + '</p><p>טיפול: ' + serviceText + '</p>' +
-        '<p>יש לך 18 דקות לאשר את התור.</p><p><a href="' + link + '">לאישור התור לחצי כאן</a></p></div>';
-      if (email && typeof db !== 'undefined' && db && typeof db.collection === 'function') {
-        db.collection('mail').add({to:email, message:{subject:'התפנה תור עבורך', html:emailHtml}})
-          .then(function(){ if (rec) rec.emailStatus = 'queued'; if (typeof saveState === 'function') saveState({silent:true}); })
-          .catch(function(err){ if (rec) rec.emailStatus = 'failed'; console.error('Offer email queue failed',err); if (typeof saveState === 'function') saveState({silent:true}); });
+      const emailText = 'התפנה תור עבורך\nתאריך: ' + dateText + '\nשעה: ' + offer.time + '\nטיפול: ' + serviceText +
+        '\nיש לך 18 דקות לאשר את התור.\nלאישור התור לחצי כאן: ' + link;
+      // Use the app's central sendEmail function so the configured sender remains torim@hakolbeklik.com.
+      if (email && typeof sendEmail === 'function') {
+        try {
+          sendEmail(email, 'התפנה תור עבורך', emailText);
+          if (rec) rec.emailStatus = 'queued';
+          if (typeof saveState === 'function') saveState({silent:true});
+        } catch(err) {
+          if (rec) rec.emailStatus = 'failed';
+          console.error('Offer email queue failed',err);
+          if (typeof saveState === 'function') saveState({silent:true});
+        }
       } else if (rec) rec.emailStatus = email ? 'failed' : 'missing-email';
       const channels = r.reminderChannels || r.reminderChannelPref || [];
       const smsOptIn = Array.isArray(channels) && channels.indexOf('sms') !== -1;
@@ -13915,25 +13910,17 @@
       ? eligibleRequestsForSlot({date:o.date, time:o.time, dur:o.dur || 30, staff:o.staff}, new Date())
       : [];
     const savedCandidateStates = (o.eligibleRecipients || []).concat(o.recipients || []);
-    // Always show the customer who actually received this offer, even though eligibility
-    // filtering excludes previously contacted customers from the next-offer queue.
-    const alreadyOffered = (o.recipients || []).map(function(rec){
-      return Object.assign({}, rec, {status: rec.status || 'queued', _isCurrentOffer: true});
+    const visibleEligible = liveEligible.map(function(r, index){
+      const saved = savedCandidateStates.find(function(x){ return x && String(x.requestId || '') === String(r.id || ''); }) || {};
+      return {
+        requestId:r.id, name:r.name || '', phone:r.phone || '',
+        source:r._offerSource || saved.source || 'specialRequest',
+        queuePosition:index+1,
+        status:saved.status || (index===0 ? 'selected' : 'waiting'),
+        emailStatus:saved.emailStatus || 'not-sent',
+        smsStatus:saved.smsStatus || 'not-sent'
+      };
     });
-    const offeredIds = new Set(alreadyOffered.map(function(rec){ return String(rec.requestId || ''); }));
-    const nextEligible = liveEligible.filter(function(r){ return !offeredIds.has(String(r.id || '')); })
-      .map(function(r, index){
-        const saved = savedCandidateStates.find(function(x){ return x && String(x.requestId || '') === String(r.id || ''); }) || {};
-        return {
-          requestId:r.id, name:r.name || '', phone:r.phone || '',
-          source:r._offerSource || saved.source || 'specialRequest',
-          queuePosition:index+alreadyOffered.length+1,
-          status:saved.status === 'claimed' || saved.status === 'declined' ? saved.status : 'waiting',
-          emailStatus:saved.emailStatus || 'not-sent',
-          smsStatus:saved.smsStatus || 'not-sent'
-        };
-      });
-    const visibleEligible = alreadyOffered.concat(nextEligible);
     const why = o.broadcast
       ? 'מכיוון שהתור הזה מתחיל ב-' + o.time + ' ב' + offerHebDate(o.date) +
         ' — כלומר בעוד פחות מ-' + offerSetting('broadcastHours') + ' שעות — לא היה זמן להציע אותו ' +
@@ -14027,10 +14014,9 @@
         (typeof salonSettings !== 'undefined' && salonSettings &&
         (salonSettings.ownerEmail || salonSettings.adminEmail || salonSettings.email)) || '';
       if (ownerEmail && typeof db !== 'undefined' && db && typeof db.collection === 'function') {
-        const msg = '<div dir="rtl"><h3>תור התפנה</h3><p>תאריך: ' + offerHebDate(slot.date) +
-          '</p><p>שעה: ' + slot.time + '</p><p>השעה שוחררה לאחר ביטול הצעה ללקוחה.</p></div>';
-        db.collection('mail').add({to:ownerEmail,message:{subject:'התפנה תור - הכל בקליק',html:msg}})
-          .catch(function(err){console.error('Owner freed-slot email queue failed',err);});
+        const msg = 'תור התפנה\nתאריך: ' + offerHebDate(slot.date) +
+          '\nשעה: ' + slot.time + '\nהשעה שוחררה לאחר ביטול הצעה ללקוחה.';
+        if (typeof sendEmail === 'function') sendEmail(ownerEmail, 'התפנה תור - הכל בקליק', msg);
       }
     } catch(err) { console.error('Owner freed-slot email setup failed',err); }
 
