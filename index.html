@@ -16589,6 +16589,41 @@
         <div><button data-primary onclick="joinWaitlist('${time}')">הצטרפות לרשימת המתנה</button></div>
       </div>`;
     wireIdentityAutofill({ idId: 'wlId', firstId: 'wlFirstName', lastId: 'wlLastName', phoneId: 'wlPhone', emailId: 'wlEmail' });
+
+    // On the public booking page, the private clients array is intentionally empty.
+    // Therefore local autofill cannot recognize an existing customer by ID. Use the
+    // same server-side identity lookup as the main booking form.
+    const wlIdEl = document.getElementById('wlId');
+    let wlLookupTimer = null;
+    let wlLookupSeq = 0;
+    if (wlIdEl && runningOnPublicData) {
+      wlIdEl.addEventListener('input', function(){
+        const digits = String(this.value || '').replace(/[^0-9]/g, '').slice(0, 10);
+        if (this.value !== digits) this.value = digits;
+        if (wlLookupTimer) clearTimeout(wlLookupTimer);
+        const seq = ++wlLookupSeq;
+        if (digits.length !== 9 && !isValidIsraeliPhone(digits)) return;
+        wlLookupTimer = setTimeout(async () => {
+          try {
+            const res = await fetchServerIdentity(digits);
+            if (seq !== wlLookupSeq || wlIdEl.value.replace(/[^0-9]/g, '') !== digits) return;
+            if (!res || !res.found) return;
+            const fullName = String(res.name || res.fullName || [res.firstName, res.lastName].filter(Boolean).join(' ') || '').trim();
+            if (fullName) splitNameIntoFields(fullName, 'wlFirstName', 'wlLastName');
+            const phoneValue = res.phone || res.mobile || '';
+            const emailValue = res.email || '';
+            const phoneEl = document.getElementById('wlPhone');
+            const emailEl = document.getElementById('wlEmail');
+            if (phoneEl && phoneValue) phoneEl.value = phoneValue;
+            if (emailEl && emailValue) emailEl.value = emailValue;
+            const errorEl = document.getElementById('wlError');
+            if (errorEl) errorEl.style.display = 'none';
+          } catch (err) {
+            console.warn('Waitlist identity lookup failed:', err);
+          }
+        }, 300);
+      });
+    }
     scrollWaitlistBoxIntoView();
   }
   async function joinWaitlist(time, presetName, presetPhone, presetId, presetEmail){
@@ -16612,11 +16647,52 @@
       const wlResolved = resolveClientByIdOrPhone(idEl.value || '');
       const wlKnown = wlResolved && wlResolved.client;
       if (wlKnown && String(wlKnown.teudatZehut || '')) idDigits = String(wlKnown.teudatZehut);
-      if (!firstNameOk || !lastNameOk || !isValidIsraeliPhone(phone) || !email
-          || (!wlKnown && idDigits.length !== 9)){
+
+      // Last-chance lookup prevents a recognized public customer from being treated
+      // as a new customer merely because private client data is not loaded in the browser.
+      let publicKnown = null;
+      if (runningOnPublicData && idDigits.length === 9) {
+        try {
+          const lookup = await fetchServerIdentity(idDigits);
+          if (lookup && lookup.found) {
+            publicKnown = lookup;
+            const fullName = String(lookup.name || lookup.fullName || [lookup.firstName, lookup.lastName].filter(Boolean).join(' ') || '').trim();
+            if ((!firstNameOk || !lastNameOk) && fullName) {
+              splitNameIntoFields(fullName, 'wlFirstName', 'wlLastName');
+              name = combineNameFields('wlFirstName', 'wlLastName');
+            }
+            if (!phone && (lookup.phone || lookup.mobile)) {
+              phone = lookup.phone || lookup.mobile;
+              if (phoneEl) phoneEl.value = phone;
+            }
+            if (!email && lookup.email) {
+              email = lookup.email;
+              if (emailEl) emailEl.value = email;
+            }
+          }
+        } catch (err) { console.warn('Waitlist submit identity lookup failed:', err); }
+      }
+      const finalFirstName = (document.getElementById('wlFirstName').value || '').trim();
+      const finalLastName = (document.getElementById('wlLastName').value || '').trim();
+      name = combineNameFields('wlFirstName', 'wlLastName') || name;
+      phone = (phoneEl.value || phone || '').trim();
+      email = (emailEl.value || email || '').trim();
+      if (!finalFirstName || !finalLastName || !isValidIsraeliPhone(phone)
+          || (!wlKnown && !publicKnown && idDigits.length !== 9)){
+        errorEl.textContent = 'בואי נשלים כמה פרטים כדי שנוכל לצרף אותך לרשימת ההמתנה.';
         errorEl.style.display = 'block';
         return;
       }
+      if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+        errorEl.textContent = 'כמעט סיימנו 😊 חסר לנו אימייל תקין. אנא השלימי אותו כדי שנוכל לעדכן אותך אם יתפנה מקום.';
+        errorEl.style.display = 'block';
+        if (emailEl) {
+          emailEl.focus();
+          emailEl.style.borderColor = '#f06b57';
+        }
+        return;
+      }
+      errorEl.textContent = 'יש למלא תעודת זהות (9 ספרות), שם פרטי, שם משפחה, טלפון ואימייל תקינים';
     }
     if (idDigits) attachRealTzToMigrated(idDigits, phone);
     const wlBlockStatus = getLateCancelStatusForIdentity({ teudatZehut: idDigits, name });
