@@ -13767,7 +13767,22 @@
     if (changed && typeof saveState === 'function') saveState({ silent: true });
     return changed;
   }
+  // An expired offer does not mean the slot is free: another client may have
+  // booked it while the offer was active. Re-check appointments before rotating.
+  function slotHasAppointmentConflict(slot){
+    if (!slot || !slot.date || slot.time == null) return true;
+    const start = timeToMinutes(slot.time);
+    const end = start + Number(slot.dur || 30);
+    return (weekAppointments || []).some(function(a){
+      if (!a || a.date !== slot.date || ['cancelled', 'canceled'].includes(String(a.status || '').toLowerCase())) return false;
+      if (Number(a.staff) !== Number(slot.staff)) return false;
+      const aStart = timeToMinutes(a.time);
+      const aEnd = aStart + Number(a.dur || 30);
+      return start < aEnd && end > aStart;
+    });
+  }
   function createOfferForFreedSlot(slot){
+    if (slotHasAppointmentConflict(slot)) return null;
     const now = new Date();
     const minutesAway = offerMinutesUntil(slot.date, slot.time, now);
     if (minutesAway === null) return null;
@@ -13812,11 +13827,20 @@
       });
       expired.forEach(function(oldOffer){
         oldOffer.nextOfferAttempted = true;
-        createOfferForFreedSlot({
+        const slot = {
           date: oldOffer.date, time: oldOffer.time, dur: oldOffer.dur,
           staff: oldOffer.staff, serviceName: oldOffer.serviceName,
           freedFrom: oldOffer.freedFrom
-        });
+        };
+        if (slotHasAppointmentConflict(slot)) {
+          // The offer expired, but the slot was booked in the meantime.
+          // Close it without offering the occupied time to another client.
+          oldOffer.status = 'taken';
+          oldOffer.closedAt = new Date().toISOString();
+          oldOffer.closedReason = 'appointment_conflict';
+          return;
+        }
+        createOfferForFreedSlot(slot);
       });
       if ((changed || expired.length) && typeof saveState === 'function') saveState({silent:true});
     } catch (e) {
