@@ -20957,6 +20957,43 @@
     document.body.prepend(banner);
     syncTopBannerOffset();
   }
+  // Recover the booking category UI if the public document loads but the
+  // category/service arrays or rendered tiles are temporarily incomplete.
+  let __bookingCategoryRecoveryStarted = false;
+  function scheduleBookingCategoryRecovery(){
+    if (__bookingCategoryRecoveryStarted || !runningOnPublicData) return;
+    __bookingCategoryRecoveryStarted = true;
+    const tryRender = function(){
+      try {
+        if (typeof renderCategoryGrid === 'function') renderCategoryGrid();
+        if (typeof renderCategories === 'function') renderCategories();
+      } catch (e) {
+        console.warn('Booking category UI recovery render failed:', e);
+      }
+    };
+    // A delayed render handles initialization/order-of-execution races.
+    setTimeout(tryRender, 250);
+    setTimeout(function(){
+      tryRender();
+      const grid = document.getElementById('catGrid');
+      const hasRenderableServices = Array.isArray(categories) && categories.some(function(cat){
+        return typeof availableServicesOf === 'function' && availableServicesOf(cat).length > 0;
+      });
+      if (hasRenderableServices && grid && !grid.children.length) {
+        // One fresh read only; avoid polling or repeated server requests.
+        refreshPublicDataQuietly().then(function(ok){
+          if (ok) {
+            try {
+              rerenderEverything();
+              if (typeof renderCategoryGrid === 'function') renderCategoryGrid();
+            } catch (e) {
+              console.warn('Booking category UI recovery after refresh failed:', e);
+            }
+          }
+        }).catch(function(e){ console.warn('Booking category recovery refresh failed:', e); });
+      }
+    }, 1100);
+  }
   function loadCloudData(){
     if (!BIZ_ID){
       return resolveBizIdFromCloud().then(found => {
@@ -21006,6 +21043,7 @@
         cloudLoadComplete = true;
         lastLoadedSnapshot = null;   // אין מה לשמור מכאן, ולכן גם אין ממה למזג
         rerenderEverything();
+        scheduleBookingCategoryRecovery();
         if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
         handleOfferFromUrl();
         handleAppointmentLookupFromUrl();
