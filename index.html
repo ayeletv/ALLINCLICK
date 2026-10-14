@@ -13783,7 +13783,7 @@
       serviceName: slot.serviceName || '',
       requestIds: chosen.map(function(r){ return r.id; }),
       recipients: chosen.map(function(r){
-        return { requestId: r.id, name: r.name || '', phone: r.phone || '', status: 'notified' };
+        return { requestId: r.id, name: r.name || '', phone: r.phone || '', email: r.email || '', status: 'notified' };
       }),
       broadcast: broadcast,
       freedFrom: slot.freedFrom || '',
@@ -13840,6 +13840,19 @@
     return 'התפנה תור ' + when + ' ב-' + offer.time + (offer.serviceName ? ' (' + offer.serviceName + ')' : '') +
       '. לאישור: ' + link + race;
   }
+  function offerEmailText(offer, recipient){
+    const parts = String(offer.date || '').split('-').map(Number);
+    const dateLabel = parts.length === 3 && parts[0]
+      ? parts[2] + '/' + parts[1] + '/' + parts[0] : String(offer.date || '');
+    const link = (typeof siteBaseUrl === 'function' ? siteBaseUrl() : location.origin + location.pathname) +
+      '?offer=' + encodeURIComponent(offer.id);
+    return 'היי ' + (recipient.name || '') + ',\n\nהתפנה תור' +
+      (offer.serviceName ? ' ל' + offer.serviceName : '') +
+      ' בתאריך ' + dateLabel + ' בשעה ' + offer.time + '.\n\n' +
+      'לאישור התור לחצי כאן: ' + link + '\n\n' +
+      'התור יישמר ביומן רק לאחר שתפתחי את הקישור ותאשרי אותו. ' +
+      'אם לקוחה אחרת תאשר קודם או שההצעה תפוג, יוצג לך עדכון מתאים.';
+  }
   function notifyOfferRecipients(offer, requests){
     requests.forEach(function(r){
       try {
@@ -13847,6 +13860,12 @@
                        reminderChannels: r.reminderChannels || ['sms'] };
         if (typeof queueApptSms === 'function') queueApptSms(fake, offerSmsText(offer));
       } catch (e){ console.error('Offer SMS failed for', r.name, e); }
+      try {
+        const email = (r.email || (typeof findClientEmailByPhone === 'function' ? findClientEmailByPhone(r.phone) : '') || '').trim();
+        if (email && typeof sendEmail === 'function') {
+          sendEmail(email, 'התפנה תור — לאישור לחצי כאן', offerEmailText(offer, r));
+        }
+      } catch (e){ console.error('Offer email failed for', r.name, e); }
     });
   }
 
@@ -14022,7 +14041,7 @@
       const windows = getEffectiveDayWindows(dayInfo, dateObj);
       if (!windows.some(([s, e]) => startMin >= s && endMin <= e)) continue;
       const busy = weekAppointments
-        .filter(a => a.date === w.date && a.staff === staffIdx)
+        .filter(a => a && a.date === w.date && a.staff === staffIdx && !['cancelled', 'canceled'].includes(String(a.status || '').toLowerCase()))
         .map(a => { const s = timeToMinutes(a.time); return [s, s + (a.dur || 30)]; })
         .concat(getBlockedRangesForStaff(dateObj, staffIdx));
       const conflict = busy.some(([bs, be]) => !(endMin <= bs || startMin >= be));
@@ -14130,12 +14149,63 @@
     }
     return appt;
   }
+  async function createWaitlistOfferForMatch(w, match){
+    if (!w || !match || !w.id) return false;
+    const dur = (services.find(s => s.name === w.service) || {}).duration || 30;
+    const startMin = timeToMinutes(match.time);
+    const endMin = startMin + dur;
+    if (typeof slotIsHeldByOffer === 'function' &&
+        slotIsHeldByOffer(match.date, match.staffIdx, startMin, endMin, new Date())) return false;
+
+    const duplicate = (pendingOffers || []).some(o =>
+      o && o.status === 'offered' && o.date === match.date &&
+      String(o.staff) === String(match.staffIdx) &&
+      timeToMinutes(o.time) < endMin &&
+      timeToMinutes(o.time) + Number(o.dur || 30) > startMin &&
+      (o.recipients || []).some(r => String(r.waitlistId || r.requestId || '') === String(w.id))
+    );
+    if (duplicate) return false;
+
+    const now = new Date();
+    const offer = {
+      id: 'offer_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+      date: match.date, time: match.time, dur, staff: match.staffIdx,
+      serviceName: w.service || '',
+      requestIds: [w.id],
+      recipients: [{
+        requestId: w.id, waitlistId: w.id, source: 'waitlist',
+        name: w.name || '', phone: w.phone || '', email: w.email || '',
+        teudatZehut: w.teudatZehut || '', status: 'notified'
+      }],
+      broadcast: false,
+      freedFrom: 'waitlist',
+      createdAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + offerSetting('windowMin') * 60000).toISOString(),
+      status: 'offered'
+    };
+    pendingOffers.push(offer);
+    // Save before notifying, so the unique link resolves on the server immediately.
+    try {
+      if (typeof saveState === 'function') await saveState();
+    } catch (e) {
+      pendingOffers = pendingOffers.filter(o => o && o.id !== offer.id);
+      console.error('Waitlist offer was not saved; not sending an acceptance link.', e);
+      if (typeof showAdminToast === 'function') showAdminToast('⚠ ההצעה לא נשמרה ולכן לא נשלח קישור. נסי שוב.');
+      return false;
+    }
+    notifyOfferRecipients(offer, offer.recipients);
+    if (typeof renderWeekCal === 'function') renderWeekCal();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ נשלחה הצעה ל-' + (w.name || 'הלקוחה') + ' לאישור התור');
+    return true;
+  }
+
   async function attemptMatchWaitlistEntry(w){
     if (!w || w.status === 'matched') return false;
     const match = recheckWaitlistEntry(w);
     if (!match) return false;
-    const appt = await bookWaitlistAutoMatch(w, match);
-    return !!appt;
+    // A waitlist match is an offer, not an appointment yet. The appointment
+    // is created only after the recipient confirms through the unique link.
+    return await createWaitlistOfferForMatch(w, match);
   }
   async function recheckAllPendingWaitlist(){
     let matchedAny = false;
@@ -14337,7 +14407,7 @@
           recheckBtn.textContent = 'בודקת…';
           attemptMatchWaitlistEntry(w).then(found => {
             if (typeof showAdminToast === 'function'){
-              showAdminToast(found ? `✓ נמצא תור ל-${w.name || 'הממתינה'} ונקבע אוטומטית` : 'השעה המבוקשת עדיין לא פנויה — ננסה שוב מאוחר יותר.');
+              showAdminToast(found ? `✓ נשלחה ל-${w.name || 'הממתינה'} הצעה לאישור התור` : 'השעה המבוקשת עדיין לא פנויה, או שכבר נשלחה הצעה — ננסה שוב מאוחר יותר.');
             }
             if (found) closeSpecialRequestDetailOverlay();
             else renderSpecialRequestDetailOverlay();
