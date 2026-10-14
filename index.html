@@ -14043,6 +14043,9 @@
       const busy = weekAppointments
         .filter(a => a && a.date === w.date && a.staff === staffIdx && !['cancelled', 'canceled'].includes(String(a.status || '').toLowerCase()))
         .map(a => { const s = timeToMinutes(a.time); return [s, s + (a.dur || 30)]; })
+        .concat((pendingOffers || [])
+          .filter(o => o && o.status === 'offered' && o.date === w.date && Number(o.staff) === Number(staffIdx))
+          .map(o => { const s = timeToMinutes(o.time); return [s, s + Number(o.dur || 30)]; }))
         .concat(getBlockedRangesForStaff(dateObj, staffIdx));
       const conflict = busy.some(([bs, be]) => !(endMin <= bs || startMin >= be));
       if (conflict) continue;
@@ -14199,8 +14202,24 @@
     return true;
   }
 
+  function waitlistCreatedMs(w){
+    const raw = w && (w.createdAt || w.createdDate || w.timestamp || w.created);
+    if (typeof raw === 'number') return raw;
+    if (raw && typeof raw.toDate === 'function'){
+      const d = raw.toDate();
+      return d instanceof Date ? d.getTime() : Number.MAX_SAFE_INTEGER;
+    }
+    const parsed = raw ? Date.parse(String(raw)) : NaN;
+    return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+  }
   async function attemptMatchWaitlistEntry(w){
     if (!w || w.status === 'matched') return false;
+    // Do not send duplicate offers to the same waitlist request.
+    const alreadyOffered = (pendingOffers || []).some(o =>
+      o && o.status === 'offered' &&
+      (o.recipients || []).some(r => String(r.waitlistId || r.requestId || '') === String(w.id || ''))
+    );
+    if (alreadyOffered) return false;
     const match = recheckWaitlistEntry(w);
     if (!match) return false;
     // A waitlist match is an offer, not an appointment yet. The appointment
@@ -14209,7 +14228,12 @@
   }
   async function recheckAllPendingWaitlist(){
     let matchedAny = false;
-    const pending = waitlist.filter(w => w.status !== 'matched');
+    // FIFO: oldest request first; use id as a stable tie-breaker.
+    const pending = waitlist.filter(w => w.status !== 'matched').slice().sort((a, b) => {
+      const delta = waitlistCreatedMs(a) - waitlistCreatedMs(b);
+      if (delta) return delta;
+      return String(a.id || '').localeCompare(String(b.id || ''));
+    });
     for (const w of pending){
       const matched = await attemptMatchWaitlistEntry(w);
       if (matched) matchedAny = true;
