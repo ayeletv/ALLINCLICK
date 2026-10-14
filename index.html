@@ -13341,14 +13341,26 @@
           block.classList.add(apptStyle.onLight ? 'cal-appt-onlight' : 'cal-appt-ondark');
         }
         const apptCatName = categoryOfAppointment(a);
+        const apptCreatedRaw = a.createdAt || a.addedAt || a.created_at || '';
+        let apptCreatedLabel = '';
+        if (apptCreatedRaw){
+          const apptCreatedDate = new Date(apptCreatedRaw);
+          if (!Number.isNaN(apptCreatedDate.getTime())){
+            apptCreatedLabel = apptCreatedDate.toLocaleDateString('he-IL') + ' ' + apptCreatedDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+          }
+        }
         block.title = `${a.client} · ${a.service}${apptCatName ? ' (' + apptCatName + ')' : ''} · ${a.time} (${dur} דק')`
-          + ` · אצל ${(staff[a.staff] && staff[a.staff].name) || '—'} — לחיצה לצפייה בפרטי התור`;
+          + ` · אצל ${(staff[a.staff] && staff[a.staff].name) || '—'}`
+          + (apptCreatedLabel ? ` · התור נקבע: ${apptCreatedLabel}` : '')
+          + ' — לחיצה לצפייה בפרטי התור';
         const blockHeightPx = heightPx;
         if (blockHeightPx < 22) block.classList.add('cal-appt-tiny');
         else if (blockHeightPx >= 26) block.classList.add('cal-appt-wrap');
-        block.innerHTML = (blockHeightPx >= 34)
-          ? `<span class="cal-appt-name">${a.client}</span><span class="cal-appt-meta">${a.time.slice(0,5)} · ${a.service}</span>`
-          : `<span class="cal-appt-name">${a.client}</span>`;
+        block.innerHTML = (blockHeightPx >= 48)
+          ? `<span class="cal-appt-name">${a.client}</span><span class="cal-appt-meta">${a.time.slice(0,5)} · ${a.service}</span>${apptCreatedLabel ? `<span class="cal-appt-meta">נקבע: ${apptCreatedLabel}</span>` : ''}`
+          : (blockHeightPx >= 34)
+            ? `<span class="cal-appt-name">${a.client}</span><span class="cal-appt-meta">${a.time.slice(0,5)} · ${a.service}</span>`
+            : `<span class="cal-appt-name">${a.client}</span>`;
         block.onclick = (e) => {
           e.stopPropagation();
           openApptDetailOverlay(a);
@@ -19584,6 +19596,14 @@
   let lastLoadedSnapshot = null;
   let pendingSaveCount = 0;
   let unsavedChangePending = false;
+  // Serialize full-document cloud saves and track edits made while a save is in flight.
+  let __cloudSaveQueue = Promise.resolve();
+  let __saveRequestRevision = 0;
+  function enqueueCloudSave(run){
+    const result = __cloudSaveQueue.then(run, run);
+    __cloudSaveQueue = result.then(() => undefined, () => undefined);
+    return result;
+  }
   let __cloudDocWasMissing = false;
   let __staleBaselineDetected = false;
   let __lastWriteRepairs = [];
@@ -19752,6 +19772,7 @@
       if (!silent) showSaveStatus('⚠ עוד לא נשמר — הדף עדיין נטען', 6000, 'bad');
       return Promise.resolve();
     }
+    const saveRevision = ++__saveRequestRevision;
     const nowIso = new Date().toISOString();
     const simpleFields = {
       branding, customTemplates, staff,
@@ -19806,11 +19827,11 @@
       const code = String((err && err.code) || '').toLowerCase();
       return TRANSIENT_SAVE_ERRORS.some(c => code.indexOf(c) !== -1);
     };
-    return runSaveTransaction().catch(err => {
+    return enqueueCloudSave(runSaveTransaction).catch(err => {
       if (!isTransientSaveError(err)) throw err;
       console.warn('Cloud save hit a transient error, retrying once:', err && err.code);
       if (!silent) showSaveStatus('שומר... (ניסיון נוסף)');
-      return new Promise(r => setTimeout(r, 900)).then(runSaveTransaction);
+      return new Promise(r => setTimeout(r, 900)).then(() => enqueueCloudSave(runSaveTransaction));
     }).then(committedPayload => {
       __deniedSaveRetried = false;
       if (committedPayload && committedPayload.__stale){
@@ -19827,7 +19848,7 @@
         return;
       }
       if (committedPayload && committedPayload.__repairedOnly){
-        unsavedChangePending = false;
+        unsavedChangePending = (__saveRequestRevision !== saveRevision);
         if (__unsavedAlarmTimer){ clearTimeout(__unsavedAlarmTimer); __unsavedAlarmTimer = null; }
         hideSaveErrorBanner();
         __lastWriteRepairs = [];
@@ -19836,8 +19857,8 @@
         hideSaveStatus();
         return;
       }
-      if (!committedPayload) { unsavedChangePending = false; if (__unsavedAlarmTimer){ clearTimeout(__unsavedAlarmTimer); __unsavedAlarmTimer = null; } hideSaveErrorBanner(); if (!silent) showSaveStatus('נשמר ✓', 1800); else hideSaveStatus(); return; }
-      unsavedChangePending = false;
+      if (!committedPayload) { unsavedChangePending = (__saveRequestRevision !== saveRevision); if (__unsavedAlarmTimer){ clearTimeout(__unsavedAlarmTimer); __unsavedAlarmTimer = null; } hideSaveErrorBanner(); if (!silent) showSaveStatus('נשמר ✓', 1800); else hideSaveStatus(); return; }
+      unsavedChangePending = (__saveRequestRevision !== saveRevision);
       if (__unsavedAlarmTimer){ clearTimeout(__unsavedAlarmTimer); __unsavedAlarmTimer = null; }
       hideSaveErrorBanner();
       if (!silent) showSaveStatus('נשמר ✓', 2600);
@@ -19877,7 +19898,10 @@
       }
       showSaveErrorBanner(describeSaveFailure(err), { retry: true });
       scheduleUnsavedRetry();
-    }).finally(() => { pendingSaveCount--; });
+    }).finally(() => {
+      pendingSaveCount--;
+      if (unsavedChangePending && __saveRequestRevision !== saveRevision && typeof scheduleUnsavedRetry === 'function') scheduleUnsavedRetry({ quiet: true });
+    });
   }
   let __deniedSaveRetried = false;
   let __waitingForAuthToReturn = false;
