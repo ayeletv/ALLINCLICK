@@ -13935,6 +13935,19 @@
       '<div class="offer-rec-list">' +
         (o.recipients || []).map(offerRecipientRow).join('') +
       '</div>' +
+      (function(){ 
+        const slotWaitlist = (waitlist || []).filter(function(w){
+          return w && w.status !== 'matched' && w.date === o.date &&
+            String(w.requestedTime || '') === String(o.time || '');
+        }).slice().sort(function(a,b){
+          const stamp = function(w){ const v = w.createdAt || w.createdDate || w.timestamp || w.created; const n = typeof v === 'number' ? v : Date.parse(String(v || '')); return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER; };
+          return stamp(a)-stamp(b);
+        });
+        if (!slotWaitlist.length) return '';
+        return '<div class="offer-list-title" style="margin-top:12px">סדר הפניות שמבקשות את השעה הזאת:</div><div class="offer-rec-list">' +
+          slotWaitlist.map(function(w,i){ return '<div class="offer-rec-row"><span class="offer-rec-number">'+(i+1)+'</span><span class="offer-rec-main"><b>'+String(w.name || 'לקוחה').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];})+'</b><small>'+(w.status === 'matched' ? 'התור נקבע' : 'ממתינה')+'</small></span></div>'; }).join('') +
+          '</div>';
+      })() +
       '<div class="offer-foot">ההודעה נשלחה ב-' +
         new Date(o.createdAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) +
         '. אם אף אחת לא תאשר, השעה תחזור להיות פנויה לכולן ותוצג שוב באתר.</div>';
@@ -13976,12 +13989,24 @@
     if (!o) return;
     if (!confirm('לבטל את ההצעה?\n\nהשעה ' + o.time + ' תחזור להיות פנויה לכולן, ' +
                  'והלקוחות שקיבלו את ההודעה כבר לא יוכלו לאשר דרכה.')) return;
-    o.status = 'cancelledByOwner';
-    o.closedAt = new Date().toISOString();
+    const closedAt = new Date().toISOString();
+    // Cancel every still-live offer for this exact slot so no old acceptance
+    // link can keep the slot reserved or race with a newer offer.
+    (pendingOffers || []).forEach(function(other){
+      if (!other || other.status !== 'offered') return;
+      if (String(other.date) === String(o.date) &&
+          String(other.time) === String(o.time) &&
+          String(other.staff) === String(o.staff)) {
+        other.status = 'cancelledByOwner';
+        other.closedAt = closedAt;
+        other.cancelReason = 'owner_cancelled_slot';
+      }
+    });
     closeOfferDetail();
     if (typeof saveState === 'function') saveState();
     if (typeof renderWeekCal === 'function') renderWeekCal();
-    if (typeof showAdminToast === 'function') showAdminToast('✓ ההצעה בוטלה והשעה פנויה');
+    if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ ההצעה וכל ההצעות המקבילות בוטלו; השעה שוחררה');
   }
 
   async function attemptMatchFlexibleRequest(req){
