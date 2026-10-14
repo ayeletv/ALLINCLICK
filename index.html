@@ -4814,8 +4814,7 @@
       <div class="appt-detail-row"><span class="appt-detail-label">משך הטיפול</span><span class="appt-detail-value" id="apptDetailDuration"></span></div>
       <div class="appt-detail-row" id="apptDetailCreatedRow" style="display:none"><span class="appt-detail-label">נוסף בתאריך ובשעה</span><span class="appt-detail-value" id="apptDetailCreated"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">עובדת</span><span class="appt-detail-value" id="apptDetailStaff"></span></div>
-      <div class="appt-detail-row" id="apptDetailNextGapRow" style="display:none"><span class="appt-detail-label">עד התור הבא</span><span class="appt-detail-value" id="apptDetailNextGap"></span></div>
-      <div class="appt-detail-row" id="apptDetailNoteRow" style="display:none;"><span class="appt-detail-label">הערות לפגישה</span><span class="appt-detail-value" id="apptDetailNote" style="white-space:pre-wrap;"></span></div>
+       <div class="appt-detail-row" id="apptDetailNoteRow" style="display:none;"><span class="appt-detail-label">הערות לפגישה</span><span class="appt-detail-value" id="apptDetailNote" style="white-space:pre-wrap;"></span></div>
     </div>
 
     <div class="appt-detail-card" id="apptEditPanel" style="display:none; margin-top:12px;">
@@ -6986,6 +6985,7 @@
       staff: appt.staff,
       status: 'pending',
       note: '',
+      createdAt: new Date().toISOString(),
       reminderChannels: channelsForNewAppointment(w.reminderChannels, w)
     };
     weekAppointments.push(newAppt);
@@ -7148,35 +7148,6 @@
     if (createdRow && createdEl) {
       if (createdRaw) { const cd = new Date(createdRaw); createdEl.textContent = Number.isNaN(cd.getTime()) ? String(createdRaw) : cd.toLocaleDateString('he-IL') + ' ' + cd.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'}); createdRow.style.display = ''; }
       else { createdEl.textContent = ''; createdRow.style.display = 'none'; }
-    }
-    // Show the real gap after this appointment until the next appointment for
-    // the same staff member on the same date, excluding this appointment itself.
-    const gapRow = document.getElementById('apptDetailNextGapRow');
-    const gapEl = document.getElementById('apptDetailNextGap');
-    if (gapRow && gapEl){
-      const toMin = v => {
-        const m = /^(\d{1,2}):(\d{2})$/.exec(String(v || '').trim());
-        return m ? (+m[1] * 60 + +m[2]) : NaN;
-      };
-      const startMin = toMin(appt.time);
-      const durMin = Math.max(0, Number(appt.dur) || 0);
-      const endMin = startMin + durMin;
-      const next = (Array.isArray(weekAppointments) ? weekAppointments : [])
-        .filter(a => a && a !== appt && a.date === appt.date && String(a.staff) === String(appt.staff)
-          && !a.cancelled && !a.canceled && !a.deleted)
-        .map(a => ({ appt:a, start:toMin(a.time), dur:Math.max(0, Number(a.dur)||0) }))
-        .filter(x => Number.isFinite(x.start) && x.start >= endMin && x.start > startMin)
-        .sort((a,b) => a.start-b.start)[0];
-      if (Number.isFinite(startMin) && durMin > 0 && next){
-        const gap = Math.max(0, next.start - endMin);
-        gapEl.textContent = gap > 0
-          ? `${gap} דקות פנויות עד ${next.appt.time} — אפשר להכניס טיפול עד ${gap} דקות`
-          : `התור הבא מתחיל מיד ב־${next.appt.time}`;
-        gapRow.style.display = '';
-      } else {
-        gapRow.style.display = 'none';
-        gapEl.textContent = '';
-      }
     }
     document.getElementById('apptDetailStaff').textContent = (staff[appt.staff] && staff[appt.staff].name) || '—';
     const apptDetailNoteRow = document.getElementById('apptDetailNoteRow');
@@ -8447,6 +8418,7 @@
       staff: staffIdx,
       status: 'pending',
       note: (document.getElementById('mbApptNote')?.value || '').trim(),
+      createdAt: new Date().toISOString(),
       reminderChannels: Array.from(document.querySelectorAll('input[name="mbReminderChannel"]:checked')).map(cb => cb.value)
     };
     weekAppointments.push(manualAppointment);
@@ -13624,6 +13596,7 @@
           staff: match.staffIdx,
           status: 'pending',
           note: req.note || '',
+          createdAt: new Date().toISOString(),
           reminderChannels: channelsForNewAppointment(req.reminderChannels, req)
         };
         const mergedAppts = mergeListField(server.weekAppointments, lastLoadedSnapshot.weekAppointments, weekAppointments.concat([appt]), a => a && a.id);
@@ -14100,6 +14073,7 @@
           service: (svc && svc.name) || w.service || 'שירות',
           services: svc ? [{ name: svc.name, duration: svc.duration || 0, price: svc.price || 0 }] : [],
           price: svc ? (svc.price || 0) : 0, staff: match.staffIdx, status: 'pending', note: '',
+          createdAt: new Date().toISOString(),
           reminderChannels: channelsForNewAppointment(w.reminderChannels, w)
         };
         const mergedAppts = mergeListField(server.weekAppointments, lastLoadedSnapshot.weekAppointments, weekAppointments.concat([appt]), a => a && a.id);
@@ -14298,6 +14272,22 @@
   function srDetailRow(label, value){
     return `<div class="appt-detail-row"><span class="appt-detail-label">${label}</span><span class="appt-detail-value">${value}</span></div>`;
   }
+  function formatRecordCreatedAt(raw){
+    if (!raw) return 'לא נשמר תאריך מדויק';
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? String(raw)
+      : d.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' })
+        + ' בשעה ' + d.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+  }
+  function findClientForSpecialRecord(record){
+    if (!record) return null;
+    const tz = String(record.teudatZehut || '').trim();
+    const phone = String(record.phone || '').replace(/\D/g, '');
+    return (tz && clients.find(c => c && String(c.teudatZehut || '').trim() === tz))
+      || (phone && clients.find(c => c && String(c.phone || '').replace(/\D/g, '') === phone))
+      || clients.find(c => c && String(c.name || '').trim() === String(record.name || '').trim())
+      || null;
+  }
   function removeWaitlistEntry(id, opts){
     const idx = waitlist.findIndex(w => w.id === id);
     if (idx === -1) return;
@@ -14333,6 +14323,8 @@
         (w.staffName ? srDetailRow('עובדת', w.staffName) : '') +
         srDetailRow('תאריך מבוקש', dateLabel) +
         srDetailRow('שעה מבוקשת', w.requestedTime || '—') +
+        srDetailRow('משך התור', `${Number(w.duration || (services.find(s => s && s.name === w.service) || {}).duration) || 0} דקות`) +
+        srDetailRow('מועד הוספה', formatRecordCreatedAt(w.createdAt)) +
         srDetailRow('סטטוס', isMatchedW ? '✓ נמצא תור' : '⏳ ממתין') +
         (isMatchedW ? srDetailRow('נקבע ל', `${formatDateDMY(w.matchedDate)}, ${w.matchedTime}${(staff[w.matchedStaff] && staff[w.matchedStaff].name) ? ' · ' + staff[w.matchedStaff].name : ''}`) : '');
       if (!isMatchedW){
@@ -14419,12 +14411,7 @@
       }
     }
     if (r.note) html += srDetailRow('הערה', r.note);
-    const createdDate = r.createdAt ? new Date(r.createdAt) : null;
-    const createdAtExact = createdDate && !isNaN(createdDate.getTime())
-      ? createdDate.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })
-        + ' בשעה ' + createdDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
-      : 'לא נשמר תאריך מדויק';
-    html += srDetailRow('מועד הוספה', createdAtExact);
+    html += srDetailRow('מועד הוספה', formatRecordCreatedAt(r.createdAt));
     cardEl.innerHTML = html;
     if (isFlexible && r.status !== 'matched'){
       const recheckBtn = document.createElement('button');
@@ -14462,6 +14449,25 @@
       };
       actionsEl.appendChild(bookBtn);
     }
+    const profileBtn = document.createElement('button');
+    profileBtn.type = 'button';
+    profileBtn.className = 'cta ghost appt-detail-client-btn';
+    profileBtn.textContent = '👤 לכרטסת הלקוחה';
+    profileBtn.onclick = () => {
+      const current = srDetailCurrent;
+      if (!current) return;
+      const record = current.type === 'waitlist'
+        ? waitlist.find(x => x.id === current.id)
+        : specialRequests.find(x => x.id === current.id);
+      const client = findClientForSpecialRecord(record);
+      if (!client){
+        if (typeof showAdminToast === 'function') showAdminToast('לא נמצא כרטיס לקוחה תואם לפי תעודת זהות, טלפון או שם.');
+        return;
+      }
+      closeSpecialRequestDetailOverlay();
+      showClientProfile(client);
+    };
+    actionsEl.appendChild(profileBtn);
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.className = 'cta';
