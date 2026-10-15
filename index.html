@@ -165,7 +165,10 @@
       // הלוגו מתחיל לרדת כבר עכשיו. אם הכותרת כבר על המסך — מציירים אותו
       // בה מיד; אחרת הסקריפט של הכותרת יאסוף אותו כשיגיע אליה.
       if (typeof t.logo === 'string' && t.logo && !/^data:/i.test(t.logo)){
-        window.__cachedLogo = t.logo;
+        // העותק הזעיר (אם יש) מוצג מיד — הוא כבר כאן, בלי הורדה. הלוגו המלא
+        // מתחיל לרדת במקביל ומחליף אותו כשמגיע.
+        var tiny = (typeof t.logoThumb === 'string' && t.logoThumb.indexOf('data:image/') === 0) ? t.logoThumb : '';
+        window.__cachedLogo = tiny || t.logo;
         window.__cachedHasLogo = true;
         window.__cachedLogoFill = !!t.logoFill;
         window.__cachedLogoZoom = Number(t.logoZoom) || 1;
@@ -4286,7 +4289,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-15 · 104';
+        window.__APP_BUILD = '2026-10-15 · 105';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -13739,7 +13742,8 @@
       (o.requestIds || []).forEach(function(id){ if (id != null) previouslyOffered.add(String(id)); });
     });
     return (specialRequests || []).filter(function(r){
-      if (!r || r.mode !== 'flexible' || r.status !== 'pending') return false;
+      // offerExpired — סטטוס מגרסאות קודמות (לקוחה שלא ענתה פעם אחת). היא חוזרת לרשימה.
+      if (!r || r.mode !== 'flexible' || (r.status !== 'pending' && r.status !== 'offerExpired')) return false;
       if (previouslyOffered.has(String(r.id))) return false;
       if (typeof specialRequestIsExpired === 'function' && specialRequestIsExpired(r, now)) return false;
       if (minutesAway < requestLeadMinutes(r)) return false;
@@ -13795,15 +13799,14 @@
       if (o && o.status === 'offered' && !offerIsLive(o, now)){
         o.status = 'expired';
         o.closedAt = now.toISOString();
-        // Do not let an expired recipient become eligible for the same freed slot again.
+        // לקוחה שלא ענתה נשארת ברשימה לשעות אחרות. עד גרסה 104 הבקשה שלה
+        // סומנה offerExpired, ומאותו רגע היא לא קיבלה אף הצעה — בלי שאף אחד
+        // ידע. את אותה שעה היא לא תקבל שוב: eligibleRequestsForSlot מדלג על
+        // מי שכבר קיבלה הצעה לאותה שעה (לפי recipients של ההצעה). (15.10.2026)
         (o.recipients || []).forEach(function(rec){
           if (!rec || rec.requestId == null) return;
           const req = (specialRequests || []).find(function(r){ return r && String(r.id) === String(rec.requestId); });
-          if (req && req.status === 'pending') {
-            req.status = 'offerExpired';
-            req.offerExpiredAt = now.toISOString();
-            req.expiredOfferId = o.id;
-          }
+          if (req) req.lastOfferExpiredAt = now.toISOString();
         });
         changed = true;
       }
@@ -13860,11 +13863,41 @@
     }
     return offer;
   }
+  /* מושך מהענן את מצב ההצעות, הבקשות והתורים לפני שהיומן מחליט משהו לגביהם.
+   * היומן של רותי פתוח שעות בלי רענון, ובינתיים לקוחות מאשרות הצעות דרך
+   * הקישור (בשרת). בלי המשיכה הזו היומן ראה הצעה שכבר אושרה כ"פגה", סגר
+   * אותה, והציע את השעה התפוסה ללקוחה הבאה. (15.10.2026) */
+  async function pullOfferStateFromCloud(){
+    if (!lastLoadedSnapshot) return false;
+    const doc = await getDocWithRetry(CLOUD_DOC, 'offers-refresh');
+    if (!doc || !doc.exists) return false;
+    const server = doc.data();
+    backfillMissingListIds(server);
+    const base = lastLoadedSnapshot;
+    const pull = (key, live, keyFn) => mergeListField(cloneJSON(server[key] || []), base[key], live, keyFn);
+    weekAppointments = pull('weekAppointments', weekAppointments, a => a && a.id);
+    pendingOffers = keepServerDecisions(pull('pendingOffers', pendingOffers, o => o && o.id), server.pendingOffers, isFinalOfferDecision);
+    specialRequests = keepServerDecisions(pull('specialRequests', specialRequests, r => r && r.id), server.specialRequests, isFinalRequestDecision);
+    ['weekAppointments', 'pendingOffers', 'specialRequests'].forEach(k => { lastLoadedSnapshot[k] = cloneJSON(server[k] || []); });
+    saveDiag('offers-refresh', { offers: pendingOffers.length });
+    return true;
+  }
   let offerRotationBusy = false;
-  function rotateExpiredOffers(){
+  async function rotateExpiredOffers(){
     if (offerRotationBusy) return;
+    try { if (!isOwnerSession() || !cloudLoadComplete || runningOnPublicData) return; } catch (e) { return; }
+    const nowCheck = new Date();
+    const due = (pendingOffers || []).some(function(o){
+      return o && ((o.status === 'offered' && !offerIsLive(o, nowCheck)) || (o.status === 'expired' && !o.nextOfferAttempted));
+    });
+    if (!due) return;
     offerRotationBusy = true;
     try {
+      // בלי מצב עדכני מהענן — לא מחליטים כלום בסבב הזה (עדיף לחכות 15 שניות
+      // מאשר לפעול על תמונה ישנה). השרת ממילא מקדם את התור בעצמו.
+      try { if (!(await pullOfferStateFromCloud())) return; }
+      catch (e) { console.warn('[offers] refresh before rotation failed — skipping this round:', e && e.code); return; }
+      if (typeof renderWeekCal === 'function') renderWeekCal();
       const changed = expireStaleOffers();
       const expired = (pendingOffers || []).filter(function(o){
         return o && o.status === 'expired' && !o.nextOfferAttempted;
@@ -13896,12 +13929,18 @@
 
   if (!window.__offerRotationTimer) window.__offerRotationTimer = setInterval(rotateExpiredOffers, 15000);
 
-  function offerSmsText(offer){
+  // הקישור פותח ישר את "התורים שלי" של הלקוחה (לפי הטלפון), ושם ההצעה מחכה
+  // עם כפתור אישור. (15.10.2026) — זהה לקישור שהשרת שולח (offerLink).
+  function offerLinkFor(offer, phone){
+    const digits = String(phone || '').replace(/[^0-9]/g, '');
+    return (typeof siteBaseUrl === 'function' ? siteBaseUrl() : location.origin + location.pathname) +
+      '?offer=' + encodeURIComponent(offer.id) + (digits ? '&lookupPhone=' + encodeURIComponent(digits) : '');
+  }
+  function offerSmsText(offer, phone){
     const [y, mo, d] = offer.date.split('-').map(Number);
     const when = (offerMinutesUntil(offer.date, offer.time, new Date()) < 24 * 60)
       ? 'היום' : (d + '/' + mo);
-    const link = (typeof siteBaseUrl === 'function' ? siteBaseUrl() : location.origin + location.pathname) +
-      '?offer=' + offer.id;
+    const link = offerLinkFor(offer, phone);
     const race = offer.broadcast
       ? ' ההודעה נשלחה לכמה לקוחות — הראשונה שתאשר מקבלת.'
       : '';
@@ -13912,8 +13951,7 @@
     const parts = String(offer.date || '').split('-').map(Number);
     const dateLabel = parts.length === 3 && parts[0]
       ? parts[2] + '/' + parts[1] + '/' + parts[0] : String(offer.date || '');
-    const link = (typeof siteBaseUrl === 'function' ? siteBaseUrl() : location.origin + location.pathname) +
-      '?offer=' + encodeURIComponent(offer.id);
+    const link = offerLinkFor(offer, recipient && recipient.phone);
     return 'היי ' + (recipient.name || '') + ',\n\nהתפנה תור' +
       (offer.serviceName ? ' ל' + offer.serviceName : '') +
       ' בתאריך ' + dateLabel + ' בשעה ' + offer.time + '.\n\n' +
@@ -13926,7 +13964,7 @@
       try {
         const fake = { id: offer.id, client: r.name, teudatZehut: r.teudatZehut,
                        reminderChannels: r.reminderChannels || ['sms'] };
-        if (typeof queueApptSms === 'function') queueApptSms(fake, offerSmsText(offer));
+        if (typeof queueApptSms === 'function') queueApptSms(fake, offerSmsText(offer, r.phone));
       } catch (e){ console.error('Offer SMS failed for', r.name, e); }
       try {
         const email = (r.email || (typeof findClientEmailByPhone === 'function' ? findClientEmailByPhone(r.phone) : '') || '').trim();
@@ -14078,7 +14116,7 @@
   }
 
   async function attemptMatchFlexibleRequest(req){
-    if (!req || req.mode !== 'flexible' || req.status === 'matched') return false;
+    if (!req || req.mode !== 'flexible' || !requestIsOpen(req)) return false;
     const match = tryFindFlexibleSlot(req);
     if (!match) return false;
     const now = new Date();
@@ -14098,7 +14136,10 @@
   }
   async function recheckAllPendingFlexibleRequests(){
     let matchedAny = false;
-    const pending = specialRequests.filter(r => r.mode === 'flexible' && r.status !== 'matched');
+    // קודם מצב עדכני מהענן: לקוחה אולי קבעה באתר את השעה הזו לפני רגע.
+    try { if (isOwnerSession() && cloudLoadComplete && !runningOnPublicData) await pullOfferStateFromCloud(); }
+    catch (e) { console.warn('[offers] refresh before recheck failed — continuing with what we have:', e && e.code); }
+    const pending = specialRequests.filter(r => r.mode === 'flexible' && requestIsOpen(r));
     for (const r of pending){
       const matched = await attemptMatchFlexibleRequest(r);
       if (matched) matchedAny = true;
@@ -14359,9 +14400,14 @@
     if (closing === null) return true;             // אף אחת לא עובדת היום — אין מה לממש
     return (now.getHours() * 60 + now.getMinutes()) >= closing;
   }
+  // סטטוסים שבהם בקשה כבר לא בתמונה: נקבע לה תור, הלקוחה ביטלה בעצמה (מ"התורים
+  // שלי" — 15.10.2026), או שהתאריך עבר והשרת סגר אותה.
+  const CLOSED_REQUEST_STATUSES = ['matched', 'cancelledByClient', 'expired'];
+  function requestIsOpen(r){ return !!r && CLOSED_REQUEST_STATUSES.indexOf(r.status) === -1; }
   function specialColumnPendingRequests(){
     const now = new Date();
-    return specialRequests.filter(r => !(r.mode === 'flexible' && r.status === 'matched')
+    return specialRequests.filter(r => r && r.status !== 'cancelledByClient' && r.status !== 'expired'
+      && !(r.mode === 'flexible' && r.status === 'matched')
       && !specialRequestIsExpired(r, now));
   }
   function renderSpecialRequestsColumn(bodyHeight){
@@ -18502,7 +18548,9 @@
         resultEl.innerHTML = '<p style="color:var(--wine); font-size:13px;">לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.</p>';
         return;
       }
-      if (!res || !res.found || !(res.appointments || []).length){
+      lookedUpRequests = (res && Array.isArray(res.requests)) ? res.requests : [];
+      lookedUpWaitlist = (res && Array.isArray(res.waitlist)) ? res.waitlist : [];
+      if (!res || !res.found || (!(res.appointments || []).length && !lookedUpRequests.length && !lookedUpWaitlist.length)){
         resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצא תור עתידי עבור הפרטים שהוזנו. אפשר לנסות את הפרטים האחרים, או ליצור איתנו קשר.</p>';
         return;
       }
@@ -18525,6 +18573,7 @@
       resultEl.innerHTML = '';
       closeApptLookup();
       renderLookedUpAppointment(mine);
+      showOfferFromLinkStatus();
       return;
     }
     try {
@@ -18579,6 +18628,124 @@
   }
   let lookedUpAppointmentsList = [];
   let lastIdentifiedLookupId = '';
+  // הבקשות המיוחדות הפתוחות של הלקוחה, כפי שהשרת החזיר ב"התורים שלי". (15.10.2026)
+  let lookedUpRequests = [];
+  function escHtml(v){
+    return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function myRequestSummary(r){
+    const p = r.preference || {};
+    const dmy = d => { const x = String(d || '').split('-').map(Number); return x.length === 3 && x[0] ? x[2] + '/' + x[1] : ''; };
+    const parts = [];
+    if (p.dateFrom && p.dateTo && p.dateFrom !== p.dateTo) parts.push('בין ' + dmy(p.dateFrom) + ' ל-' + dmy(p.dateTo));
+    else if (p.dateFrom || p.dateTo) parts.push('ב-' + dmy(p.dateFrom || p.dateTo));
+    if (Array.isArray(p.days) && p.days.length && p.days.length < 7) parts.push('בימים ' + p.days.map(d => FLEX_DAY_LETTERS[d]).join(' '));
+    if (p.timeFrom && p.timeTo) parts.push(p.timeFrom === p.timeTo ? 'בשעה ' + p.timeFrom : 'בין ' + p.timeFrom + ' ל-' + p.timeTo);
+    else if (p.timeOfDay && p.timeOfDay !== 'any') parts.push({ morning: 'בבוקר', afternoon: 'בצהריים', evening: 'בערב' }[p.timeOfDay] || '');
+    return parts.filter(Boolean).join(' · ');
+  }
+  let lookedUpWaitlist = [];
+  function myWaitlistHtml(){
+    if (!lookedUpWaitlist.length) return '';
+    return `<div class="my-requests" style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(245,238,228,0.12);">
+      <div class="status-dot">⏳ ברשימת המתנה</div>
+      ${lookedUpWaitlist.map((w, i) => {
+        const x = String(w.date || '').split('-').map(Number);
+        return `<div class="my-appt-card" style="margin-top:${i ? 12 : 6}px;">
+          <h4>${escHtml(w.service || 'תור')}</h4>
+          <div class="appt-meta">${x.length === 3 ? x[2] + '/' + x[1] : ''}${w.requestedTime ? ' · ' + escHtml(w.requestedTime) : ''}${w.staffName ? ' · אצל ' + escHtml(w.staffName) : ''}</div>
+          <div class="my-appt-actions"><button class="danger" onclick="cancelMyWaitlist(${i})">יציאה מרשימת ההמתנה</button></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+  async function cancelMyWaitlist(idx){
+    const w = lookedUpWaitlist[idx];
+    if (!w) return;
+    if (!confirm('לצאת מרשימת ההמתנה לשעה הזו?')) return;
+    let res = null;
+    try { res = await callClientApi('cancelWaitlist', { id: lastIdentifiedLookupId, waitlistId: w.id }); }
+    catch (e) { res = { ok: false, error: 'לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.' }; }
+    if (!res || !res.ok){ alert((res && res.error) || 'לא הצלחנו לבטל. נא לנסות שוב.'); return; }
+    lookedUpWaitlist.splice(idx, 1);
+    renderLookedUpAppointment(lookedUpAppointmentsList);
+    alert('✓ יצאת מרשימת ההמתנה.');
+  }
+  function myRequestsHtml(){
+    if (!lookedUpRequests.length) return myWaitlistHtml();
+    return myWaitlistHtml() + `<div class="my-requests" style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(245,238,228,0.12);">
+      <div class="status-dot">⏳ ${lookedUpRequests.length === 1 ? 'בקשה מיוחדת שממתינה לשעה מתאימה' : lookedUpRequests.length + ' בקשות מיוחדות שממתינות לשעה מתאימה'}</div>
+      ${lookedUpRequests.map((r, i) => `
+        <div class="my-appt-card" style="${i > 0 ? 'margin-top:12px;' : 'margin-top:6px;'}">
+          <h4>${escHtml((r.services || []).join(' + ') || 'בקשה מיוחדת')}</h4>
+          <div class="appt-meta">${escHtml(myRequestSummary(r))}</div>
+          ${r.liveOffer ? `<div class="my-offer" id="myOffer_${escHtml(r.liveOffer.id)}" style="margin-top:10px; padding:10px 12px; border-radius:10px; background:rgba(28,138,75,0.10); border:1px solid rgba(28,138,75,0.45);">
+            <div style="font-weight:700;">✨ התפנתה לך שעה: ${escHtml(myOfferDateLabel(r.liveOffer))} בשעה ${escHtml(r.liveOffer.time)}</div>
+            <div style="font-size:12.5px; opacity:.85; margin-top:2px;">ההצעה שמורה לך עד ${escHtml(new Date(r.liveOffer.expiresAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }))}</div>
+            <div class="my-appt-actions" style="margin-top:8px;"><button onclick="claimMyOffer(${i})" style="border-color:#1c8a4b; color:#1c8a4b; font-weight:700;">✓ אני מגיעה — לאישור התור</button></div>
+          </div>` : ''}
+          <div class="my-appt-actions"><button class="danger" onclick="cancelMyRequest(${i})">ביטול הבקשה</button></div>
+        </div>`).join('')}
+    </div>`;
+  }
+  function myOfferDateLabel(o){
+    const x = String(o.date || '').split('-').map(Number);
+    if (x.length !== 3 || !x[0]) return String(o.date || '');
+    const dt = new Date(x[0], x[1] - 1, x[2]);
+    const isToday = formatDateKey(new Date()) === o.date;
+    return (isToday ? 'היום' : (days[dt.getDay()] ? days[dt.getDay()].name : '')) + ', ' + x[2] + ' ב' + hebrewMonths[x[1] - 1];
+  }
+  /* אישור ההצעה מתוך "התורים שלי" — אותה פעולה בשרת כמו בחלון ההצעה הישן. */
+  async function claimMyOffer(idx){
+    const r = lookedUpRequests[idx];
+    if (!r || !r.liveOffer) return;
+    let res = null;
+    try { res = await callClientApi('claimOffer', { id: lastIdentifiedLookupId, offerId: r.liveOffer.id, siteUrl: getSiteUrl() }); }
+    catch (e) { res = { ok: false, error: 'לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.' }; }
+    if (!res || !res.ok){
+      alert((res && res.error) || 'לא הצלחנו לאשר את התור.');
+      if (typeof searchMyAppointment === 'function') searchMyAppointment();   // מצב עדכני
+      return;
+    }
+    window.__offerFromLink = '';
+    alert('✓ התור שלך נקבע: ' + res.appointment.time + ' · ' + res.appointment.service + '. נתראה!');
+    if (typeof searchMyAppointment === 'function') searchMyAppointment();
+  }
+  /* הגיעה מקישור של הצעה: מדגישים את ההצעה, ואם היא כבר לא פתוחה — אומרים למה. */
+  async function showOfferFromLinkStatus(){
+    const id = window.__offerFromLink;
+    if (!id) return;
+    const card = document.getElementById('myOffer_' + id);
+    if (card){ try { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} return; }
+    let info = null;
+    try { info = await callClientApi('offerInfo', { offerId: id, siteUrl: getSiteUrl() }); } catch (e) { info = null; }
+    const apptEl = document.getElementById('myAppointment');
+    if (!apptEl || (info && info.ok)) return;
+    const note = document.createElement('div');
+    note.className = 'claim-gone';
+    note.style.cssText = 'margin-bottom:12px;';
+    note.textContent = (info && info.error) || 'ההצעה מהקישור כבר לא פתוחה.';
+    apptEl.prepend(note);
+    window.__offerFromLink = '';
+  }
+  async function cancelMyRequest(idx){
+    const r = lookedUpRequests[idx];
+    if (!r) return;
+    if (!confirm('לבטל את הבקשה המיוחדת? לא נציע לך יותר שעות לפיה.')) return;
+    let res = null;
+    try {
+      res = await callClientApi('cancelSpecialRequest', { id: lastIdentifiedLookupId, requestId: r.id, siteUrl: getSiteUrl() });
+    } catch (e) {
+      res = { ok: false, error: 'לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.' };
+    }
+    if (!res || !res.ok){
+      alert((res && res.error) || 'לא הצלחנו לבטל את הבקשה. נא לנסות שוב.');
+      return;
+    }
+    lookedUpRequests.splice(idx, 1);
+    renderLookedUpAppointment(lookedUpAppointmentsList);
+    alert('✓ הבקשה בוטלה.');
+  }
   function renderLookedUpAppointment(apptOrList){
     const list = Array.isArray(apptOrList) ? apptOrList : [apptOrList];
     lookedUpAppointmentsList = list;
@@ -18589,6 +18756,7 @@
     if (!list.length){
       apptEl.innerHTML = `
         <div class="waitlist-confirmed">אין לך יותר תורים עתידיים.</div>
+        ${myRequestsHtml()}
         <button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור חדש</button>`;
       return;
     }
@@ -18616,7 +18784,7 @@
           <button class="danger" onclick="cancelListedAppointment(${idx})">ביטול תור</button>
         </div>
       </div>`;
-    }).join('') + `<button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
+    }).join('') + myRequestsHtml() + `<button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
   }
   function resolveCurrentAppt(listAppt){
     if (!listAppt) return null;
@@ -19707,6 +19875,8 @@
     cancellationLog: c => c && c.id,
     lateCancellations: c => c && c.id,
     clients: clientListKey,
+    pendingOffers: o => o && o.id,
+    specialRequests: r => r && r.id,
   };
   function liveListByName(name){
     switch (name){
@@ -19715,6 +19885,8 @@
       case 'cancellationLog': return cancellationLog;
       case 'lateCancellations': return lateCancellations;
       case 'clients': return clients;
+      case 'pendingOffers': return pendingOffers;
+      case 'specialRequests': return specialRequests;
     }
     return null;
   }
@@ -19730,11 +19902,9 @@
     inventory: [() => inventory, v => { inventory = v; }],
     gatedTabsConfig: [() => gatedTabsConfig, v => { gatedTabsConfig = v; }],
     personalBlocks: [() => personalBlocks, v => { personalBlocks = v; }],
-    specialRequests: [() => specialRequests, v => { specialRequests = v; }],
     categoryMessages: [() => categoryMessages, v => { categoryMessages = v; }],
     categoryColors: [() => categoryColors, v => { categoryColors = v; }],
     holidayOverrides: [() => holidayOverrides, v => { holidayOverrides = v; }],
-    pendingOffers: [() => pendingOffers, v => { pendingOffers = v; }],
     about: [() => aboutMe, v => { aboutMe = v; }],
     recommendations: [() => recommendations, v => { recommendations = v; }],
   };
@@ -19921,6 +20091,24 @@
     });
     return merged;
   }
+  /* החלטה סופית שהשרת רשם — לקוחה אישרה הצעה, הצעה נסגרה כי השעה נתפסה,
+   * רותי לקחה או ביטלה, בקשה שובצה או בוטלה על ידי הלקוחה — לא נדרסת על ידי
+   * יומן שעדיין מחזיק את המצב הקודם. (15.10.2026; בבדיקה: יומן פתוח סימן
+   * הצעה שאושרה כ"פגה", החזיר את הבקשה של הלקוחה, ושלח את אותה שעה לבאה.) */
+  const FINAL_OFFER_STATUSES = ['claimed', 'taken', 'takenByOwner', 'cancelledByOwner', 'withdrawn'];
+  function isFinalOfferDecision(o){ return !!o && FINAL_OFFER_STATUSES.indexOf(o.status) !== -1; }
+  function isFinalRequestDecision(r){ return !!r && (r.status === 'matched' || r.status === 'cancelledByClient'); }
+  function keepServerDecisions(merged, serverArr, isFinal){
+    const finals = new Map();
+    (serverArr || []).forEach(s => { if (s && s.id != null && isFinal(s)) finals.set(String(s.id), s); });
+    if (!finals.size) return merged;
+    return merged.map(item => {
+      const s = item && item.id != null ? finals.get(String(item.id)) : null;
+      if (!s || item === s) return item;
+      if (isFinal(item) && item.status === s.status) return item;
+      return s;   // מה שהשרת החליט — גובר
+    });
+  }
   const WIPE_PROTECTED_LISTS = ['clients', 'categories', 'staff'];
   const WIPE_FIELD_LABELS = { clients: 'כרטסת הלקוחות', categories: 'הקטגוריות', staff: 'הצוות' };
   function listLength(v){ return Array.isArray(v) ? v.length : 0; }
@@ -20005,11 +20193,14 @@
     }
     const saveRevision = ++__saveRequestRevision;
     const nowIso = new Date().toISOString();
+    // specialRequests ו-pendingOffers יצאו מכאן (15.10.2026): הם נכתבים גם מהשרת
+    // (לקוחה מאשרת הצעה, מבטלת בקשה, "שעון" ההצעות), ולכן הם ממוזגים פריט-פריט
+    // למטה. כשהם נכתבו כאן בשלמותם, יומן פתוח שלא רוענן דרס אישור של לקוחה.
     const simpleFields = {
       branding, customTemplates, staff,
       categories, services, whatsNewItems, invAlertEmail, inventory,
-      ownerAccessCode, gatedTabsConfig, personalBlocks, specialRequests,
-      categoryMessages, categoryColors, holidayOverrides, pendingOffers,
+      ownerAccessCode, gatedTabsConfig, personalBlocks,
+      categoryMessages, categoryColors, holidayOverrides,
       about: aboutMe, recommendations
     };
     unsavedChangePending = true;
@@ -20044,6 +20235,16 @@
       const mergedLateCancellations = mergeListField(server.lateCancellations, lastLoadedSnapshot.lateCancellations, lateCancellations, c => c && c.id);
       if (JSON.stringify(mergedLateCancellations) !== JSON.stringify(server.lateCancellations || [])) changedKeys.add('lateCancellations');
       payload.lateCancellations = mergedLateCancellations;
+      const mergedOffers = keepServerDecisions(
+        mergeListField(server.pendingOffers, lastLoadedSnapshot.pendingOffers, pendingOffers, o => o && o.id),
+        server.pendingOffers, isFinalOfferDecision);
+      if (JSON.stringify(mergedOffers) !== JSON.stringify(server.pendingOffers || [])) changedKeys.add('pendingOffers');
+      payload.pendingOffers = mergedOffers;
+      const mergedRequests = keepServerDecisions(
+        mergeListField(server.specialRequests, lastLoadedSnapshot.specialRequests, specialRequests, r => r && r.id),
+        server.specialRequests, isFinalRequestDecision);
+      if (JSON.stringify(mergedRequests) !== JSON.stringify(server.specialRequests || [])) changedKeys.add('specialRequests');
+      payload.specialRequests = mergedRequests;
       const repairs = repairPayloadBeforeWrite(payload, server, changedKeys);
       __lastWriteRepairs = repairs.fixed;
       __moreRemovalsPending = repairs.moreToRemove;
@@ -20138,6 +20339,8 @@
       clients = reconcile('clients', clients, clientListKey);
       cancellationLog = reconcile('cancellationLog', cancellationLog, c => c && c.id);
       lateCancellations = reconcile('lateCancellations', lateCancellations, c => c && c.id);
+      pendingOffers = reconcile('pendingOffers', pendingOffers, o => o && o.id);
+      specialRequests = reconcile('specialRequests', specialRequests, r => r && r.id);
       lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(committedCopy));
       publishPublicView(); // כל שינוי שנשמר מתעדכן גם במסמך הציבורי
       if (__lastWriteRepairs.length){
@@ -20529,6 +20732,42 @@
     };
   }
   let lastPublishedSiteThemeJson = null;
+  const __tinyLogo = { src: '', data: '', busy: false, failed: '' };
+  function tinyLogoThumb(src, onReady){
+    if (!src) return '';
+    if (__tinyLogo.src === src) return __tinyLogo.data;
+    if (__tinyLogo.busy || __tinyLogo.failed === src) return '';
+    __tinyLogo.busy = true;
+    const done = function(data){
+      __tinyLogo.busy = false;
+      if (!data){ __tinyLogo.failed = src; return; }
+      __tinyLogo.src = src; __tinyLogo.data = data;
+      if (typeof onReady === 'function') { try { onReady(); } catch (e) {} }
+    };
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function(){
+        try {
+          const SIDE = 160;
+          const c = document.createElement('canvas');
+          c.width = SIDE; c.height = SIDE;
+          const ctx = c.getContext('2d');
+          const w = img.naturalWidth || SIDE, h = img.naturalHeight || SIDE, s = Math.min(w, h) || SIDE;
+          ctx.drawImage(img, (w - s) / 2, (h - s) / 2, s, s, 0, 0, SIDE, SIDE);
+          let out = '';
+          try { out = c.toDataURL('image/webp', 0.8); } catch (e) { out = ''; }
+          if (!out || out.indexOf('data:image/webp') !== 0) {
+            try { out = c.toDataURL('image/png'); } catch (e) { out = ''; }
+          }
+          done(out && out.length < 30000 ? out : '');
+        } catch (e) { done(''); }
+      };
+      img.onerror = function(){ done(''); };
+      img.src = src;
+    } catch (e) { done(''); }
+    return '';
+  }
   function publishSiteTheme(){
     if (!isOwnerSession() || !BIZ_ID) return Promise.resolve();
     let snap = null;
@@ -20551,6 +20790,12 @@
       lite.logo = logoUrl;
       lite.logoFill = !!snap.logoFill;
       lite.logoZoom = Number(snap.logoZoom) || 1;
+      // עותק זעיר (~5 ק"ב) של הלוגו בתוך המסמך עצמו: מגיע יחד עם הצבעים, בלי
+      // בקשה נוספת, ומוצג מיד; הלוגו המלא מחליף אותו כשהוא נטען. נוצר כאן
+      // מהלוגו של העסק — לכל עסק, בלי שום דבר קבוע בקוד. אם האחסון לא מאפשר
+      // לקרוא את התמונה (CORS), פשוט אין עותק זעיר והכול עובד כמו קודם.
+      const thumb = tinyLogoThumb(logoUrl, function(){ lastPublishedSiteThemeJson = null; publishSiteTheme(); });
+      if (thumb) lite.logoThumb = thumb;
     }
     const json = JSON.stringify(lite);
     if (json === lastPublishedSiteThemeJson) return Promise.resolve();
@@ -20939,8 +21184,17 @@
     if (autoOfferFromUrlDone) return;
     autoOfferFromUrlDone = true;
     let offerId = '';
-    try { offerId = new URLSearchParams(window.location.search).get('offer') || ''; } catch (e) { return; }
+    let viaMyAppointments = false;
+    try {
+      const q = new URLSearchParams(window.location.search);
+      offerId = q.get('offer') || '';
+      viaMyAppointments = !!(q.get('lookupPhone') || q.get('lookupId'));
+    } catch (e) { return; }
     if (!offerId) return;
+    // קישור חדש (עם הטלפון): ההצעה מוצגת בתוך "התורים שלי", שנפתח לבד
+    // (handleAppointmentLookupFromUrl), ושם היא מאשרת. קישורים ישנים בלי
+    // טלפון ממשיכים לעבוד כמו קודם — בחלון ההצעה. (15.10.2026)
+    if (viaMyAppointments) { window.__offerFromLink = offerId; return; }
     const ov = document.getElementById('claimOfferOverlay');
     const body = document.getElementById('claimOfferBody');
     const actions = document.getElementById('claimOfferActions');
@@ -21386,6 +21640,7 @@
       }
     }, 1100);
   }
+  let __ownerFirstResolveDone = false;
   function loadCloudData(){
     if (!BIZ_ID){
       return resolveBizIdFromCloud().then(found => {
@@ -21402,6 +21657,14 @@
       try { const u = auth && auth.currentUser; return !!(u && !u.isAnonymous && u.email); }
       catch (e) { return false; }
     })();
+    // מחוברת במייל, ועוד לא ידוע אם היא בעלת היומן הזה: קודם בודקים, ורק אז
+    // מחליטים מה לטעון. עד גרסה 104 הדף טען בינתיים את הנתונים הציבוריים
+    // ("יומן אפור" בלי שמות) ורק אחר כך את היומן האמיתי — גם הבהוב וגם
+    // הורדה כפולה. נכון לכל עסק, לא רק לרותי. (15.10.2026)
+    if (__signedInWithEmail && !isOwnerSession() && !__ownerFirstResolveDone){
+      __ownerFirstResolveDone = true;
+      return resolveOwnerBusiness().then(function(){ return loadCloudData(); }, function(){ return loadCloudData(); });
+    }
     if (!isOwnerSession() && __ownerDataLoadedOnce && __signedInWithEmail){
       console.warn('Owner mapping is unresolved — keeping the loaded calendar instead of falling back to the public view.');
       if (!__ownerReverifyBusy && typeof resolveOwnerBusiness === 'function'){
@@ -21438,6 +21701,10 @@
         cloudLoadRetryCount = 0;
         cloudLoadComplete = true;
         lastLoadedSnapshot = null;   // אין מה לשמור מכאן, ולכן גם אין ממה למזג
+        // כל כניסה לאתר מזיזה את "שעון" ההצעות בשרת: הצעה שפגה עוברת לבאה,
+        // ובקשות שתאריכן עבר נסגרות — גם כשאף יומן לא פתוח. בלי לחכות ובלי
+        // להציג כלום; ב-Cloud Scheduler זה קורה ממילא כל כמה דקות. (15.10.2026)
+        try { callClientApi('offersTick', { siteUrl: getSiteUrl() }).catch(function(){}); } catch (e) {}
         rerenderEverything();
         scheduleBookingCategoryRecovery();
         if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
