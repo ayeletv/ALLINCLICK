@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-15 · 107">
+<meta name="app-build" content="2026-10-15 · 108">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4297,7 +4297,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-15 · 107';
+        window.__APP_BUILD = '2026-10-15 · 108';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -7798,6 +7798,20 @@
     if (typeof closeClientProfileOverlay === 'function') closeClientProfileOverlay();
     const bizBtn = document.getElementById('businessTabBtn');
     if (typeof showPanel === 'function' && bizBtn) showPanel('business', bizBtn);
+    // מלשונית "לקוחות" (או כל לשונית אחרת) עוברים ללשונית היומן עצמה. עד
+    // 107 היומן התעדכן לשבוע הנכון אבל נשאר מוסתר מאחורי הלשונית הנוכחית,
+    // ו"ביומן" נראה כאילו לא עשה כלום. (15.10.2026)
+    try {
+      const overviewBtn = document.querySelector('#bizSubNavRow button[onclick*="showSub(\'overview\'"]');
+      const overviewPanel = document.getElementById('sub-overview');
+      if (overviewBtn && overviewPanel && !overviewPanel.classList.contains('active')) showSub('overview', overviewBtn);
+      const innerCal = document.getElementById('inner-overview-calendar');
+      if (innerCal && !innerCal.classList.contains('active')){
+        const innerSel = document.getElementById('overviewInnerTabSelect');
+        if (innerSel && typeof onOverviewInnerTabChange === 'function'){ innerSel.value = 'inner-overview-calendar'; onOverviewInnerTabChange(innerSel); }
+        else if (typeof showInnerTab === 'function') showInnerTab('sub-overview', 'inner-overview-calendar', null);
+      }
+    } catch (e) { console.warn('goToAppointmentInCalendar: switching to the calendar tab failed:', e); }
     if (typeof setOverviewView === 'function') setOverviewView('week');
     try {
       if (selectedStaffFilter !== 'all' && appt.staff !== undefined
