@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://firebasestorage.googleapis.com">
 
 <link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js">
 <link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js">
@@ -161,6 +162,16 @@
       if (t.hasContact) root.classList.add('contact-expected');
       if (t.theme && t.theme.style) window.__cachedTheme = t.theme;
       if (t.bizId) window.__cachedThemeBizId = t.bizId;
+      // הלוגו מתחיל לרדת כבר עכשיו. אם הכותרת כבר על המסך — מציירים אותו
+      // בה מיד; אחרת הסקריפט של הכותרת יאסוף אותו כשיגיע אליה.
+      if (typeof t.logo === 'string' && t.logo && !/^data:/i.test(t.logo)){
+        window.__cachedLogo = t.logo;
+        window.__cachedHasLogo = true;
+        window.__cachedLogoFill = !!t.logoFill;
+        window.__cachedLogoZoom = Number(t.logoZoom) || 1;
+        try { var pre = new Image(); pre.src = t.logo; window.__earlyLogoImg = pre; } catch (e) {}
+      }
+      if (typeof window.__paintHeroEarly === 'function') window.__paintHeroEarly();
       window.__themeFromCache = true;
       window.__themeFromCloudSnapshot = true;
       root.classList.remove('theme-unknown');
@@ -189,7 +200,15 @@
     db = firebase.firestore();
     try {
       if (typeof db.settings === 'function'){
-        db.settings({ experimentalAutoDetectLongPolling: true, merge: true });
+        // מכשיר שבו הערוץ הרציף של Firestore נחסם (סינון "כשר", רשת של מקום
+        // עבודה) קיבל [unavailable] והיומן נשאר אפור. אחרי פעם אחת כזו המכשיר
+        // זוכר ועובר לחיבור בבקשות רגילות, שמסננים מעבירים. (15.10.2026)
+        let forceLongPolling = false;
+        try { forceLongPolling = localStorage.getItem('hk_force_long_polling') === '1'; } catch (e) {}
+        db.settings(forceLongPolling
+          ? { experimentalForceLongPolling: true, merge: true }
+          : { experimentalAutoDetectLongPolling: true, merge: true });
+        window.__forceLongPolling = forceLongPolling;
       }
     } catch (e) { console.warn('firestore settings not applied:', e); }
     if (typeof firebase.storage === 'function') storage = firebase.storage();
@@ -3367,10 +3386,12 @@
   </h1>
   
   <script>
-  (function(){
+  // רץ פעם אחת כאן, ושוב אם מסמך הצבעים (siteTheme) מגיע מהענן אחרי
+  // שהכותרת כבר צוירה — כך גם מבקרת חדשה רואה את הלוגו והשם מוקדם.
+  window.__paintHeroEarly = function(){
     try {
       var h = document.getElementById('heroBizName'), t = document.getElementById('heroBizNameText');
-      var nameShown = false;
+      var nameShown = !!(h && h.classList.contains('biz-name-visible'));
       var showName = function(){
         if (nameShown || !window.__cachedBizName || !h || !t) return;
         nameShown = true;
@@ -3404,7 +3425,8 @@
         showName();
       }
     } catch (e) {}
-  })();
+  };
+  window.__paintHeroEarly();
   </script>
   <div class="hero-entry" id="heroEntry">
     <button type="button" class="hero-cta" onclick="enterSiteTab('customer')">קביעת תור</button>
@@ -4264,7 +4286,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-15 · 103';
+        window.__APP_BUILD = '2026-10-15 · 104';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -20386,7 +20408,9 @@
     }
     const email = String(u.email).trim().toLowerCase();
     if (ownerBizIdForEmail === email) return Promise.resolve(ownerBizId);
-    return db.collection('owners').doc(email).get().then(doc => {
+    // דרך getDocWithRetry: במכשיר מסונן גם הקריאה הזו נחסמה, ורותי זוהתה
+    // כ"לקוחה" — ומכאן היומן האפור בלי שמות.
+    return getDocWithRetry(db.collection('owners').doc(email), 'owners').then(doc => {
       const mapped = (doc.exists && doc.data()) ? doc.data().bizId : null;
       ownerBizId = mapped ? String(mapped) : null;
       ownerBizIdForEmail = email;
@@ -20518,6 +20542,16 @@
       theme: snap.theme || null,
       bizId: BIZ_ID,
     };
+    // כתובת הלוגו (קישור לקובץ ב-Storage — לעולם לא התמונה עצמה כטקסט).
+    // המסמך הזה נקרא ראשון, עוד לפני שהקוד הגדול של האתר רץ, ולכן ממנו
+    // מבקרת חדשה יכולה להתחיל להוריד את הלוגו מיד. עד גרסה 103 הלוגו חיכה
+    // לכל הקוד (872 ק"ב) ולמסמך הציבורי — "הלוגו מגיע באיחור". (15.10.2026)
+    const logoUrl = (typeof branding !== 'undefined' && branding && typeof branding.logo === 'string') ? branding.logo : '';
+    if (logoUrl && !/^data:/i.test(logoUrl) && logoUrl.length < 2000){
+      lite.logo = logoUrl;
+      lite.logoFill = !!snap.logoFill;
+      lite.logoZoom = Number(snap.logoZoom) || 1;
+    }
     const json = JSON.stringify(lite);
     if (json === lastPublishedSiteThemeJson) return Promise.resolve();
     return db.collection('siteTheme').doc(BIZ_ID)
@@ -21463,8 +21497,24 @@
   }
   function getDocWithRetry(ref, label){
     let attempt = 0;
+    // קריאה רגילה עוברת בערוץ הרציף של Firestore. כשהוא חסום, קריאה בתוך
+    // טרנזקציה עוברת בבקשת רשת רגילה — ולכן היא דרך עוקפת שעובדת מיד, בלי
+    // לחכות לטעינה הבאה. בפעם הבאה המכשיר כבר יתחבר בבקשות רגילות.
+    const readViaRequest = (err) => {
+      if (!isTransientCloudError(err) || !db || typeof db.runTransaction !== 'function') throw err;
+      if (typeof saveDiag === 'function') saveDiag('read-fallback', { label: label || '', code: String(err && err.code || '') });
+      return Promise.race([
+        db.runTransaction(tx => tx.get(ref)),
+        new Promise((_, rej) => setTimeout(() => rej(err), 15000)),
+      ]).then(doc => {
+        // הערוץ הרציף נכשל והבקשה הרגילה עברה — זה מכשיר מסונן, לא מכשיר בלי רשת.
+        try { localStorage.setItem('hk_force_long_polling', '1'); } catch (e) {}
+        return doc;
+      });
+    };
     const tryOnce = () => ref.get().catch(err => {
       attempt++;
+      if (isTransientCloudError(err) && attempt > 2) return readViaRequest(err);
       if (!isTransientCloudError(err) || attempt > 2) throw err;
       const wait = attempt === 1 ? 350 : 1100;
       console.warn('cloud read "' + (label || '') + '" failed with ' + err.code
