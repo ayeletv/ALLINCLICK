@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-15 · 109">
+<meta name="app-build" content="2026-10-15 · 110">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4306,7 +4306,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-15 · 109';
+        window.__APP_BUILD = '2026-10-15 · 110';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -14313,6 +14313,9 @@
     return !!appt;
   }
   async function recheckAllPendingFlexibleRequests(){
+    // רק על נתונים מלאים: בזמן טעינה היומן ריק לרגע, וזה לא אומר שהשעות
+    // פנויות. (15.10.2026)
+    try { if (!cloudLoadComplete || runningOnPublicData) return false; } catch (e) { return false; }
     let matchedAny = false;
     // קודם מצב עדכני מהענן: לקוחה אולי קבעה באתר את השעה הזו לפני רגע.
     try { if (isOwnerSession() && cloudLoadComplete && !runningOnPublicData) await pullOfferStateFromCloud(); }
@@ -22089,6 +22092,19 @@
     try { lastLoadedSnapshot.about = cloneJSON(aboutMe); } catch (e) {}
   }
   function loadPrivateCloudData(cloudLoadStartedAt){
+    // מעבר מהתצוגה הציבורית ליומן המלא (התחברות בחלון גלישה בסתר, או בכל
+    // כניסה שבה הדף נטען קודם כמו אצל לקוחה). עד 109 היומן הוצג מיד עם
+    // השעות התפוסות הציבוריות — תורים אפורים בלי שם ובלי טיפול — עד שהנתונים
+    // המלאים הגיעו. עכשיו הן מתנקות, ועד שהנתונים מגיעים מוצג "טוען נתונים".
+    // שום דבר לא נשמר מהמצב הזה: אין snapshot, ולכן גם אין שמירה. (15.10.2026)
+    if (runningOnPublicData){
+      weekAppointments = [];
+      personalBlocks = [];
+      lastLoadedSnapshot = null;
+      cloudLoadComplete = false;
+      try { if (typeof renderWeekCal === 'function') renderWeekCal(); } catch (e) {}
+      if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
+    }
     runningOnPublicData = false;
     return getDocWithRetry(CLOUD_DOC, 'business').then(doc => {
       hideCloudErrorBanner();
