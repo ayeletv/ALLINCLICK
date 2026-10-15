@@ -4,6 +4,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
+     פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
+     עם window.__APP_BUILD בכל העלאה. -->
+<meta name="app-build" content="2026-10-15 · 106">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4289,7 +4293,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-15 · 105';
+        window.__APP_BUILD = '2026-10-15 · 106';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -4844,6 +4848,7 @@
       <div class="appt-detail-row"><span class="appt-detail-label">שעת התור</span><span class="appt-detail-value" id="apptDetailTime"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">משך הטיפול</span><span class="appt-detail-value" id="apptDetailDuration"></span></div>
       <div class="appt-detail-row" id="apptDetailCreatedRow" style="display:none"><span class="appt-detail-label">נוסף בתאריך ובשעה</span><span class="appt-detail-value" id="apptDetailCreated"></span></div>
+      <div class="appt-detail-row" id="apptDetailCreatedByRow" style="display:none"><span class="appt-detail-label">נקבע ע״י</span><span class="appt-detail-value" id="apptDetailCreatedBy"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">עובדת</span><span class="appt-detail-value" id="apptDetailStaff"></span></div>
        <div class="appt-detail-row" id="apptDetailNoteRow" style="display:none;"><span class="appt-detail-label">הערות לפגישה</span><span class="appt-detail-value" id="apptDetailNote" style="white-space:pre-wrap;"></span></div>
     </div>
@@ -7021,6 +7026,7 @@
       status: 'pending',
       note: '',
       createdAt: new Date().toISOString(),
+      createdBy: 'salon-waitlist',   // ע"י הסלון, מתוך רשימת המתנה (15.10.2026)
       reminderChannels: channelsForNewAppointment(w.reminderChannels, w)
     };
     weekAppointments.push(newAppt);
@@ -7177,12 +7183,31 @@
     document.getElementById('apptDetailTime').textContent = appt.time || '—';
     const durationEl = document.getElementById('apptDetailDuration');
     if (durationEl) durationEl.textContent = (Number(appt.dur) > 0 ? Number(appt.dur) + ' דקות' : 'לא צוין');
-    const createdRaw = appt.createdAt || appt.addedAt || appt.created_at || '';
+    // מתי נוסף: מהשדה, ואם אין (תורים שנקבעו דרך השרת לפני 15.10.2026) —
+    // מהחותמת שבמזהה התור (appt_<ms>_...), שקיימת בכל תור חדש.
+    let createdRaw = appt.createdAt || appt.addedAt || appt.created_at || '';
+    if (!createdRaw) { const m = /^appt_(\d{13})_/.exec(String(appt.id || '')); if (m) createdRaw = new Date(Number(m[1])).toISOString(); }
     const createdRow = document.getElementById('apptDetailCreatedRow');
     const createdEl = document.getElementById('apptDetailCreated');
     if (createdRow && createdEl) {
       if (createdRaw) { const cd = new Date(createdRaw); createdEl.textContent = Number.isNaN(cd.getTime()) ? String(createdRaw) : cd.toLocaleDateString('he-IL') + ' ' + cd.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'}); createdRow.style.display = ''; }
       else { createdEl.textContent = ''; createdRow.style.display = 'none'; }
+    }
+    // מי קבעה. תורים ישנים בלי השדה: "אישרה הצעה" ניכר מההערה; אחרת לא ידוע.
+    const createdByRow = document.getElementById('apptDetailCreatedByRow');
+    const createdByEl = document.getElementById('apptDetailCreatedBy');
+    if (createdByRow && createdByEl) {
+      const by = appt.createdBy || (/מתוך הצעה/.test(appt.note || '') ? 'offer' : '');
+      const label = {
+        client: 'הלקוחה, באתר',
+        offer: 'הלקוחה — אישרה הצעה לשעה שהתפנתה',
+        salon: 'הסלון (ביומן)',
+        'salon-waitlist': 'הסלון — מרשימת המתנה',
+        'auto-request': 'אוטומטית — מבקשה מיוחדת',
+        'auto-waitlist': 'אוטומטית — מרשימת המתנה',
+      }[by] || '';
+      createdByEl.textContent = label;
+      createdByRow.style.display = label ? '' : 'none';
     }
     document.getElementById('apptDetailStaff').textContent = (staff[appt.staff] && staff[appt.staff].name) || '—';
     const apptDetailNoteRow = document.getElementById('apptDetailNoteRow');
@@ -7799,6 +7824,8 @@
     visitEl.style.cursor = 'pointer';
     visitEl.title = 'לחיצה פותחת את התור הזה ביומן';
     visitEl.addEventListener('click', (e) => {
+      // כפתור "📅 ביומן" — תמיד. לחיצה על שאר השורה — רק אם לא על שדה/כפתור.
+      if (e.target.closest('.visit-jump-btn')) { e.stopPropagation(); goToAppointmentInCalendar(appt); return; }
       if (e.target.closest('button, input, textarea, select, a')) return;
       goToAppointmentInCalendar(appt);
     });
@@ -8164,6 +8191,33 @@
     document.getElementById('cpHistory').innerHTML = renderClientAppointmentRows(history, { emptyText: 'אין עדיין היסטוריית טיפולים.', paginateAt: 5 });
     wireCpAppointmentRows('cpUpcoming', upcoming);
     wireCpAppointmentRows('cpHistory', history);
+    // טיפולים ישנים מהארכיון — מתחת להיסטוריה, לקריאה בלבד. אם הארכיון עוד
+    // לא נטען, נטען ברקע ואז מציירים שוב.
+    (function(){
+      const host = document.getElementById('cpHistory');
+      if (!host) return;
+      const forThis = c;
+      const paint = () => {
+        if (clientProfileCurrent !== forThis) return;
+        const old = getClientAppointments(c.name, archiveCache.appointments.filter(a => apptBelongsToClient(a, c)));
+        const prev = host.querySelector('.cp-archive-block');
+        if (prev) prev.remove();
+        if (!old.length) return;
+        const block = document.createElement('div');
+        block.className = 'cp-archive-block';
+        block.style.cssText = 'margin-top:12px; padding-top:10px; border-top:1px dashed rgba(var(--panel-line-rgb),0.25);';
+        block.innerHTML = '<div style="font-size:12.5px; color:var(--panel-text-dim); margin-bottom:6px;">טיפולים ישנים (מהארכיון) — ' + old.length + '</div>'
+          + renderClientAppointmentRows(old, { paginateAt: 5 });
+        block.querySelectorAll('button, input, textarea').forEach(el => { el.disabled = true; });
+        const more = block.querySelector('.visit-show-more-btn');
+        if (more){
+          more.disabled = false;
+          more.onclick = () => { const rest = block.querySelector('.visit-rows-rest'); if (rest) rest.style.display = ''; more.remove(); };
+        }
+        host.appendChild(block);
+      };
+      if (archiveCache.loaded) paint(); else loadArchive().then(paint);
+    })();
 
     renderCpFollowUps();
     renderCpPhotoGrid();
@@ -8454,6 +8508,7 @@
       status: 'pending',
       note: (document.getElementById('mbApptNote')?.value || '').trim(),
       createdAt: new Date().toISOString(),
+      createdBy: 'salon',   // נקבע ידנית ביומן (15.10.2026)
       reminderChannels: Array.from(document.querySelectorAll('input[name="mbReminderChannel"]:checked')).map(cb => cb.value)
     };
     weekAppointments.push(manualAppointment);
@@ -8738,11 +8793,13 @@
     let noShowRevenue = 0, noShowCount = 0;
     let weekBucketRevenue = 0, weekIndex = 1;
     const todayKey = formatDateKey(new Date());
+    // תורים שעברו לארכיון נכללים בדוח (אם הארכיון נטען — renderReports דואג לזה)
+    const apptPool = archiveCache.loaded ? weekAppointments.concat(archiveCache.appointments) : weekAppointments;
     for (let i = 0; i < totalDays; i++){
       const d = new Date(fromD);
       d.setDate(fromD.getDate() + i);
       const dateKey = formatDateKey(d);
-      const dayAppts = weekAppointments
+      const dayAppts = apptPool
         .filter(a => a.date === dateKey)
         .slice()
         .sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
@@ -8791,7 +8848,8 @@
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
     const fromKey = formatDateKey(fromD), toKey = formatDateKey(toD);
-    const cancellations = cancellationLog
+    const cancelPool = archiveCache.loaded ? cancellationLog.concat(archiveCache.cancellations) : cancellationLog;
+    const cancellations = cancelPool
       .filter(c => c && c.date && c.date >= fromKey && c.date <= toKey)
       .sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
     const cancelValueRaw = cancellations.reduce((s, c) => s + (Number(c.price) || 0), 0);
@@ -8830,6 +8888,10 @@
   function renderReports(range){
     const r = reportPresetRange(range, new Date());
     renderReportOutput(computeRealRangeReport(r.from, r.to, range));
+    // טווח שנוגע בתורים שעברו לארכיון — טוענים אותו ומציירים שוב
+    if (!archiveCache.loaded && formatDateKey(r.from) < archiveCutoffKey()){
+      loadArchive().then(() => { if (archiveCache.loaded) renderReportOutput(computeRealRangeReport(r.from, r.to, range)); });
+    }
   }
   function renderCustomRangeReport(){
     const fromVal = readDMYPicker('reportFromDateDay', 'reportFromDateMonth', 'reportFromDateYear');
@@ -8841,6 +8903,9 @@
     const toD = new Date(toParts[0], toParts[1]-1, toParts[2]);
     if (toD < fromD) return;
     renderReportOutput(computeRealRangeReport(fromD, toD, 'custom'));
+    if (!archiveCache.loaded && formatDateKey(fromD) < archiveCutoffKey()){
+      loadArchive().then(() => { if (archiveCache.loaded) renderReportOutput(computeRealRangeReport(fromD, toD, 'custom')); });
+    }
   }
   function reportRangeLabel(){
     if (!lastReportData) return '';
@@ -9331,6 +9396,36 @@
       return null;
     });
   }
+  /* תמונות שנשמרו כטקסט (base64) בתוך מסמך העסק — עוברות לקובץ באחסון,
+   * פעם אחת, אוטומטית, כשבעלת העסק פותחת את היומן. תמונת עובדת אחת כזו
+   * תפסה 40 ק"ב במסמך הראשי וגם במסמך הציבורי שכל לקוחה מורידה. אם
+   * ההעלאה נכשלת התמונה נשארת כמו שהיא — שום דבר לא נמחק. (15.10.2026) */
+  let __inlinePhotosMigrated = false;
+  async function migrateInlinePhotos(){
+    if (__inlinePhotosMigrated) return;
+    __inlinePhotosMigrated = true;
+    try { if (!isOwnerSession() || !storage) return; } catch (e) { return; }
+    const jobs = [];
+    const add = (obj, key, folder) => {
+      const v = obj && obj[key];
+      if (typeof v === 'string' && v.indexOf('data:image/') === 0 && v.length > 8000) jobs.push({ obj, key, folder });
+    };
+    (staff || []).forEach(s => add(s, 'photo', 'public/staff'));
+    (services || []).forEach(s => add(s, 'photo', 'public/services'));
+    add(aboutMe, 'photo', 'public/about');
+    (whatsNewItems || []).forEach(w => { add(w, 'photo', 'public/whatsnew'); add(w, 'image', 'public/whatsnew'); });
+    if (!jobs.length) return;
+    let moved = 0;
+    for (const j of jobs) {
+      const mime = (/^data:(image\/[a-z+]+)/.exec(j.obj[j.key]) || [])[1] || 'image/jpeg';
+      const url = await uploadImageAndGetUrl(j.obj[j.key], j.folder, mime);
+      if (url) { j.obj[j.key] = url; moved++; }
+    }
+    if (moved) {
+      saveDiag('inline-photos-moved', { moved: moved });
+      if (typeof saveState === 'function') saveState({ silent: true });
+    }
+  }
   function readImageCompressed(file, callback, opts){
     opts = opts || {};
     const maxDim = opts.maxDim || 900;
@@ -9373,6 +9468,19 @@
     readImageCompressed(file, (dataUrl, localDataUrl) => {
       branding.logo = dataUrl;
       const forPixels = localDataUrl || dataUrl;
+      // העותק הזעיר של הלוגו נוצר כאן, מהקובץ עצמו — לפני שהוא באחסון, ולכן
+      // בלי תלות בהרשאות CORS. נשמר על העסק ומפורסם ב-siteTheme, וכך כל עסק
+      // (לא רק רותי) מקבל לוגו שמופיע מיד בכניסה הראשונה. (15.10.2026)
+      __tinyLogo.src = ''; __tinyLogo.failed = '';
+      tinyLogoThumb(forPixels, function(){
+        try {
+          branding.logoThumb = __tinyLogo.data;
+          branding.logoThumbFor = dataUrl;
+          if (typeof saveState === 'function') saveState({ silent: true });
+          lastPublishedSiteThemeJson = null;
+          publishSiteTheme();
+        } catch (e) {}
+      });
       ['logoPreview', 'themeLogoPreview'].forEach(function(id){
         const el = document.getElementById(id);
         if (el){ el.src = dataUrl; el.style.display = 'block'; }
@@ -11279,6 +11387,41 @@
     const ownerOfId = clients.find(x => x && String(x.teudatZehut || '').trim() === at);
     return !ownerOfId || ownerOfId === c;
   }
+  /* הארכיון (15.10.2026): תורים שעברו לפני יותר מ-30 יום יוצאים בלילה
+   * מהמסמך הראשי (client-api, runNightlyArchive) אל business/<עסק>/archive/
+   * YYYY-MM. כאן הם נקראים — רק ליומן של בעלת העסק, רק כשצריך (כרטיס לקוחה,
+   * דוחות), ופעם אחת בכל טעינה. הם לקריאה בלבד: לעולם לא נכנסים ל-
+   * weekAppointments, אחרת השמירה הבאה הייתה מחזירה אותם למסמך הראשי. */
+  const archiveCache = { loaded: false, loading: null, appointments: [], cancellations: [] };
+  function archiveCutoffKey(){
+    const days = Number(branding && branding.archiveSettings && branding.archiveSettings.keepPastDays) || 14;   // זהה לשרת (ARCHIVE_DEFAULTS)
+    const d = new Date(); d.setDate(d.getDate() - days);
+    return formatDateKey(d);
+  }
+  function loadArchive(){
+    if (archiveCache.loaded) return Promise.resolve(archiveCache);
+    if (archiveCache.loading) return archiveCache.loading;
+    try { if (!isOwnerSession()) return Promise.resolve(archiveCache); } catch (e) { return Promise.resolve(archiveCache); }
+    archiveCache.loading = CLOUD_DOC.collection('archive').get().then(snap => {
+      const appts = [], cancels = [];
+      snap.forEach(doc => {
+        const x = doc.data() || {};
+        (x.appointments || []).forEach(a => { if (a) appts.push(Object.assign({}, a, { __archived: true })); });
+        (x.cancellations || []).forEach(c => { if (c) cancels.push(c); });
+      });
+      archiveCache.appointments = appts;
+      archiveCache.cancellations = cancels;
+      archiveCache.loaded = true;
+      archiveCache.loading = null;
+      return archiveCache;
+    }).catch(err => {
+      console.warn('[archive] loading the archive failed:', err && err.code);
+      archiveCache.loading = null;
+      return archiveCache;
+    });
+    return archiveCache.loading;
+  }
+  window.__loadArchive = loadArchive;
   function getClientAppointments(clientName, prefiltered){
     return (prefiltered || weekAppointments.filter(a => a.client === clientName))
       .slice()
@@ -11342,7 +11485,8 @@
               <span class="t">${a.time || ''}</span>
               <span class="visit-svc">${a.service || 'שירות'}${a.dur ? ` <span class="visit-dur">(${a.dur} דק')</span>` : ''}</span>
               ${confirmedBadge}
-              <button class="visit-cancel-btn" data-cancel-appt-id="${a.id || ''}" title="ביטול התור הזה" style="margin-inline-start:auto; background:none; border:1px solid rgba(var(--wine-rgb),0.4); color:var(--wine); border-radius:8px; font-size:12px; padding:3px 8px; cursor:pointer;">✕ ביטול</button>
+              <button type="button" class="visit-jump-btn" data-jump-appt-id="${a.id || ''}" title="פתיחת התור הזה ביומן" style="margin-inline-start:auto; background:none; border:1px solid rgba(var(--panel-line-rgb),0.3); color:inherit; border-radius:8px; font-size:12px; padding:3px 8px; cursor:pointer;">📅 ביומן</button>
+              <button class="visit-cancel-btn" data-cancel-appt-id="${a.id || ''}" title="ביטול התור הזה" style=" background:none; border:1px solid rgba(var(--wine-rgb),0.4); color:var(--wine); border-radius:8px; font-size:12px; padding:3px 8px; cursor:pointer;">✕ ביטול</button>
             </div>
             <div class="upcoming-meta">${a.staff !== undefined && staff[a.staff] ? 'אצל ' + staff[a.staff].name + ' · ' : ''}${formatAppointmentStatus(a)}</div>
             ${(typeof isAppointmentToday === 'function' && isAppointmentToday(a)) ? `
@@ -13087,6 +13231,12 @@
         ? `${first.getDate()}-${last.getDate()} ב${hebrewMonths[first.getMonth()]}`
         : `${first.getDate()}.${first.getMonth() + 1} - ${last.getDate()}.${last.getMonth() + 1}`;
       navLabelEl.textContent = rangeTxt + (weekOffset === 0 ? ' (השבוע)' : '');
+      // שבוע שכולו לפני גבול הארכיון: התורים שלו בארכיון, לא ביומן. (15.10.2026)
+      try {
+        const lastDay = weekDays && weekDays.length ? weekDays[weekDays.length - 1] : null;
+        const lastKey = lastDay && (lastDay.dateObj || lastDay.date) ? formatDateKey(new Date(lastDay.dateObj || lastDay.date)) : '';
+        if (lastKey && lastKey < archiveCutoffKey()) navLabelEl.textContent += ' · תורים ישנים בארכיון — בדוחות ובכרטיס הלקוחה';
+      } catch (e) {}
     }
     const calTodayBtnEl = __isSingleDay ? null : document.getElementById('calTodayBtn');
     if (calTodayBtnEl) calTodayBtnEl.classList.toggle('is-current', weekOffset === 0);
@@ -13644,6 +13794,7 @@
           status: 'pending',
           note: req.note || '',
           createdAt: new Date().toISOString(),
+          createdBy: 'auto-request',   // שובץ אוטומטית מבקשה מיוחדת (15.10.2026)
           reminderChannels: channelsForNewAppointment(req.reminderChannels, req)
         };
         const mergedAppts = mergeListField(server.weekAppointments, lastLoadedSnapshot.weekAppointments, weekAppointments.concat([appt]), a => a && a.id);
@@ -14230,6 +14381,7 @@
           services: svc ? [{ name: svc.name, duration: svc.duration || 0, price: svc.price || 0 }] : [],
           price: svc ? (svc.price || 0) : 0, staff: match.staffIdx, status: 'pending', note: '',
           createdAt: new Date().toISOString(),
+          createdBy: 'auto-waitlist',   // שובץ אוטומטית מרשימת המתנה (15.10.2026)
           reminderChannels: channelsForNewAppointment(w.reminderChannels, w)
         };
         const mergedAppts = mergeListField(server.weekAppointments, lastLoadedSnapshot.weekAppointments, weekAppointments.concat([appt]), a => a && a.id);
@@ -18247,6 +18399,9 @@
       staff: resolvedStaffIndex,
       status: 'pending',
       note: '',
+      createdAt: new Date().toISOString(),
+      // מי קבעה: הסלון (דרך מסך הקביעה) או הלקוחה עצמה (15.10.2026)
+      createdBy: bookedByTheSalon ? 'salon' : 'client',
       reminderChannels: reminderChannels
     };
     let serverSentNotifications = false;
@@ -19835,6 +19990,99 @@
     try { console.log('[save] ' + stage, info || ''); } catch (e) {}
   }
 
+  /* יומן אבחון בענן (15.10.2026): כל פס אדום, שמירה שנכשלה או איטית, טעינה
+   * איטית ושגיאת קוד נרשמים דרך client-api באוסף diagnostics — לא במסמך
+   * העסק. כך אפשר לראות תקלות אמיתיות מהטלפון של רותי ושל הלקוחות בלי
+   * לחכות לצילום מסך. נשלחים רק קוד, מפתח קצר, גרסה, זמנים וסוג מכשיר —
+   * השרת מוחק ממילא כל ספרה. עד 20 אירועים לביקור, ובלי כפילויות בתוך דקה. */
+  const __diagState = { n: 0, last: {} };
+  function reportDiag(kind, info){
+    try {
+      if (__diagState.n >= 20) return;
+      const sig = kind + '|' + ((info && (info.code || info.key)) || '');
+      const now = Date.now();
+      if (__diagState.last[sig] && now - __diagState.last[sig] < 60000) return;
+      __diagState.last[sig] = now;
+      __diagState.n++;
+      let role = 'customer';
+      try { if (isOwnerSession()) role = 'owner'; } catch (e) {}
+      const net = (navigator.connection && navigator.connection.effectiveType) || '';
+      const device = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '') ? 'mobile' : 'desktop';
+      const event = Object.assign({ kind: kind, role: role, build: window.__APP_BUILD || '', net: net, device: device }, info || {});
+      if (typeof callClientApi === 'function') callClientApi('diag', { event: event }).catch(function(){});
+    } catch (e) {}
+  }
+  window.__reportDiag = reportDiag;
+
+  /* יומן פתוח מתרענן לבד כשמועלית גרסה חדשה (15.10.2026).
+   *
+   * מה שקרה ביום שישי 16.10: גרסה 105 עלתה ב-09:16, אבל יומן שנפתח לפני כן
+   * המשיך להריץ את 104 מהזיכרון — ובדיוק את הבאג שתוקן ב-105: לקוחה אישרה
+   * הצעה ב-09:52, והיומן הישן סימן אותה כ"פגה" ב-09:57 ושלח את אותה שעה
+   * לבאה. כל תיקון עובד רק ביומנים שרועננו אחריו.
+   *
+   * כל 3 דקות (ובכל חזרה ללשונית) נקראים רק 1,500 הבתים הראשונים של הקובץ
+   * באתר, ומהם תגית app-build. אם היא שונה מזו שבדף הזה — הדף מתרענן, אבל
+   * רק כשבטוח: אין שמירה בדרך, אין שינוי שלא נשמר, ואף אחד לא מקליד או
+   * באמצע חלון פתוח. רק ליומן של בעלת העסק — לקוחה באמצע קביעת תור לא
+   * תאבד את מה שבחרה. */
+  (function(){
+    let rangeUnsupported = false, busy = false;
+    const mine = () => { const m = document.querySelector('meta[name="app-build"]'); return m ? m.getAttribute('content') : ''; };
+    function safeToReload(){
+      try {
+        if (!isOwnerSession() || !cloudLoadComplete) return false;
+        if (pendingSaveCount > 0 || unsavedChangePending) return false;
+      } catch (e) { return false; }
+      const a = document.activeElement;
+      if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return false;
+      if (document.querySelector('.overlay.show, .modal.show, [class*="overlay"].show')) return false;
+      return true;
+    }
+    async function check(){
+      if (busy || rangeUnsupported || document.hidden) return;
+      busy = true;
+      try {
+        const res = await fetch(location.pathname || '/', { headers: { Range: 'bytes=0-1499' }, cache: 'no-store' });
+        if (res.status === 200) rangeUnsupported = true;   // שרת שמחזיר הכול — לא מורידים את כל הקובץ כל 3 דקות
+        if (!res.ok) return;
+        const head = (await res.text()).slice(0, 4000);
+        const m = /<meta name="app-build" content="([^"]+)"/.exec(head);
+        if (!m || !mine() || m[1] === mine()) return;
+        // הגנה מלולאה: אם כבר רועננו לפני פחות מ-10 דקות ועדיין יש פער
+        // (מטמון בדרך), מחכים.
+        let lastAt = 0;
+        try { lastAt = Number(sessionStorage.getItem('hk_auto_reload_at') || 0); } catch (e) {}
+        if (Date.now() - lastAt < 10 * 60 * 1000) return;
+        if (!safeToReload()) return;   // ננסה שוב בבדיקה הבאה
+        try { sessionStorage.setItem('hk_auto_reload_at', String(Date.now())); } catch (e) {}
+        reportDiag('auto-reload', { key: mine() + ' > ' + m[1] });
+        location.reload();
+      } catch (e) {
+      } finally { busy = false; }
+    }
+    setTimeout(check, 60 * 1000);
+    setInterval(check, 3 * 60 * 1000);
+    document.addEventListener('visibilitychange', function(){ if (!document.hidden) setTimeout(check, 1500); });
+  })();
+  /* "מפתח" קצר לפס: מה שלפני המקף הראשון ("⚠ השינוי האחרון לא נשמר"). שמות
+   * ופרטים מופיעים בפסים רק אחרי המקף, ולכן הם לא נשלחים. */
+  function bannerKey(message){
+    return String(message || '').split(/[—\-:]/)[0].replace(/[0-9]/g, '').trim().slice(0, 40);
+  }
+  try {
+    window.addEventListener('error', function(ev){
+      // שגיאות מתוספי דפדפן ומקבצים זרים ("Script error.") — לא שלנו.
+      const src = String((ev && ev.filename) || '');
+      if (!src || src.indexOf(location.origin) !== 0) return;
+      reportDiag('js-error', { key: String((ev && ev.message) || '').slice(0, 60), code: 'line ' + ((ev && ev.lineno) || '') });
+    });
+    window.addEventListener('unhandledrejection', function(ev){
+      const r = ev && ev.reason;
+      reportDiag('js-promise', { key: String((r && (r.message || r.code)) || r || '').slice(0, 60), code: String((r && r.code) || '') });
+    });
+  } catch (e) {}
+
   /* הודעת "✓ ... בהצלחה" מוצגת רק אחרי שהענן אישר.
    * עד היום כל פעולה קראה saveState() ומיד אחריה showAdminToast('✓ ...'),
    * כלומר ההודעה הופיעה לפני שהשמירה התחילה בכלל — ואם השמירה נכשלה, היא
@@ -20289,6 +20537,7 @@
     });
     return runWithRetries(0).then(committedPayload => {
       saveDiag('committed', { ms: Date.now() - saveStartedAt, wrote: !!(committedPayload && !committedPayload.__stale && !committedPayload.__repairedOnly) });
+      if (Date.now() - saveStartedAt > 8000) reportDiag('save-slow', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024 });
       if (!committedPayload || !committedPayload.__stale){
         clearLocalPendingBackupIfCurrent(saveRevision);
         flushDeferredSuccessToast(saveRevision);
@@ -20364,6 +20613,7 @@
     }).catch(err => {
       console.error('Cloud save failed:', err);
       saveDiag('failed', { code: String((err && err.code) || ''), ms: Date.now() - saveStartedAt });
+      reportDiag('save-failed', { code: String((err && err.code) || 'unknown'), ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024 });
       hideSaveStatus();
       unsavedChangePending = true;
       const failCode = String((err && err.code) || '').toLowerCase();
@@ -20675,12 +20925,15 @@
   }
   function buildPublicView(){
     const busy = [];
+    // רק מהיום והלאה — זהה לשרת (client-api). שעות תפוסות של ימים שעברו
+    // היו חצי מהמסמך הציבורי שכל מבקרת מורידה. (15.10.2026)
+    const busyFrom = formatDateKey(new Date());
     (weekAppointments || []).forEach(a => {
-      if (!a || !a.date || !a.time) return;
+      if (!a || !a.date || !a.time || a.date < busyFrom) return;
       busy.push({ id: a.id, date: a.date, time: a.time, dur: a.dur || 30, staff: a.staff, kind: 'appt' });
     });
     (personalBlocks || []).forEach(b => {
-      if (!b || !b.date || !b.time) return;
+      if (!b || !b.date || !b.time || b.date < busyFrom) return;
       busy.push({ id: b.id, date: b.date, time: b.time, dur: b.duration || 15, staff: b.staff, kind: 'block' });
     });
     return {
@@ -20794,7 +21047,10 @@
       // בקשה נוספת, ומוצג מיד; הלוגו המלא מחליף אותו כשהוא נטען. נוצר כאן
       // מהלוגו של העסק — לכל עסק, בלי שום דבר קבוע בקוד. אם האחסון לא מאפשר
       // לקרוא את התמונה (CORS), פשוט אין עותק זעיר והכול עובד כמו קודם.
-      const thumb = tinyLogoThumb(logoUrl, function(){ lastPublishedSiteThemeJson = null; publishSiteTheme(); });
+      // קודם העותק שנוצר בהעלאת הלוגו (תמיד עובד); אחרת ניסיון ליצור אותו
+      // מהכתובת (עובד רק אם האחסון מתיר CORS).
+      const saved = (branding.logoThumbFor === logoUrl && typeof branding.logoThumb === 'string' && branding.logoThumb.indexOf('data:image/') === 0) ? branding.logoThumb : '';
+      const thumb = saved || tinyLogoThumb(logoUrl, function(){ lastPublishedSiteThemeJson = null; publishSiteTheme(); });
       if (thumb) lite.logoThumb = thumb;
     }
     const json = JSON.stringify(lite);
@@ -20861,6 +21117,7 @@
   let __publicPublishFailures = 0;
   function showSaveErrorBanner(message, opts){
     const bannerId = (opts && opts.id) || 'saveErrorBanner';
+    if (!(opts && opts.tone === 'info')) { try { reportDiag('banner', { key: bannerKey(message), code: bannerId }); } catch (e) {} }
     const existing = document.getElementById(bannerId);
     if (existing) existing.remove();
     const banner = document.createElement('div');
@@ -21145,6 +21402,7 @@
   }
   function showCloudErrorBanner(customText){
     if (document.getElementById('cloudErrorBanner')) return;
+    try { reportDiag('cloud-banner', { key: bannerKey(customText || 'cloud'), code: String((typeof lastCloudErrorCode !== 'undefined' && lastCloudErrorCode) || '') }); } catch (e) {}
     const banner = document.createElement('div');
     banner.id = 'cloudErrorBanner';
     banner.style.cssText = 'position:fixed; top:0; left:0; right:0; background:var(--wine); color:#fff; text-align:center; padding:10px 14px; font-size:13.5px; z-index:999999; direction:rtl; box-shadow:0 2px 10px rgba(0,0,0,.25);';
@@ -21325,6 +21583,9 @@
     let approxKb = null;
     try { if (rawCloudData) approxKb = Math.round(JSON.stringify(rawCloudData).length / 1024); } catch (e) { /* ignore */ }
     window.__lastCloudLoadDiag = { elapsedSec: Math.round(elapsedSec * 10) / 10, approxKb };
+    if (elapsedSec > 5) reportDiag('load-slow', { ms: elapsedSec * 1000, kb: approxKb });
+    // מסמך שמתקרב שוב לגבול (אחרי הארכיון הוא אמור להישאר סביב 400–450 ק"ב).
+    if (approxKb && approxKb > 800) reportDiag('doc-size', { kb: approxKb });
     console.log(`Cloud data load took ${elapsedSec.toFixed(1)}s` + (approxKb !== null ? ` (~${approxKb}KB document)` : ' (no document)') + '.');
   }
   function getNetworkTimingBreakdown(sinceMs){
@@ -21770,6 +22031,7 @@
     const readViaRequest = (err) => {
       if (!isTransientCloudError(err) || !db || typeof db.runTransaction !== 'function') throw err;
       if (typeof saveDiag === 'function') saveDiag('read-fallback', { label: label || '', code: String(err && err.code || '') });
+      if (typeof reportDiag === 'function') reportDiag('stream-blocked', { key: label || '', code: String(err && err.code || '') });
       return Promise.race([
         db.runTransaction(tx => tx.get(ref)),
         new Promise((_, rej) => setTimeout(() => rej(err), 15000)),
@@ -21859,6 +22121,7 @@
         saveState({ silent: true });
       }
       publishPublicView(); // מפרסם את החצי הלא-רגיש; אצל לקוחה זה לא עושה כלום
+      setTimeout(function(){ try { migrateInlinePhotos(); } catch (e) {} }, 8000);
       console.log('Loaded saved data from the cloud.');
       reportCloudLoadTiming(cloudLoadStartedAt, rawCloudData);
       if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
