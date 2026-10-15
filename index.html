@@ -231,11 +231,16 @@
         return window.__signInAnonymouslyNow();
       });
     };
+    // התחברות אנונימית אחת בכל רגע נתון. עד גרסה 102 שני מסלולים (טעינת
+    // הדף והניסיון החוזר של קריאת המסמך הציבורי) התחברו במקביל: כל מבקרת
+    // יצרה שני משתמשים אנונימיים, והשני החליף את הראשון באמצע הטעינה.
+    let anonSignInInFlight = null;
     window.__signInAnonymouslyNow = function(){
       if (auth.currentUser) { window.__anonAuthState = 'ok'; return Promise.resolve(auth.currentUser); }
+      if (anonSignInInFlight) return anonSignInInFlight;
       const startedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
       anonAuthAttempts++;
-      return auth.signInAnonymously().then(function(cred){
+      anonSignInInFlight = auth.signInAnonymously().then(function(cred){
         const elapsed = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt) / 1000;
         window.__lastAnonAuthDiag = { elapsedSec: Math.round(elapsed * 10) / 10, attempts: anonAuthAttempts };
         window.__anonAuthState = 'ok';
@@ -246,7 +251,8 @@
         window.__lastAnonAuthError = String((err && err.code) || err);
         console.error('Anonymous sign-in failed (attempt ' + anonAuthAttempts + '):', err);
         return null;
-      });
+      }).then(function(u){ anonSignInInFlight = null; return u; });
+      return anonSignInInFlight;
     };
     anonAuthPromise = window.__ensureAnonAuth();
   } catch (e) {
@@ -4258,7 +4264,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-12 · 102';
+        window.__APP_BUILD = '2026-10-15 · 103';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -6922,7 +6928,11 @@
   function minutesToTimeGlobal(m){
     return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
   }
-  function showAdminToast(message, duration){
+  function showAdminToast(message, duration, opts){
+    // "✓ ... בהצלחה" שנאמר בזמן ששמירה עוד בדרך — ממתין לאישור הענן.
+    if (!(opts && opts.noDefer)){
+      try { if (typeof window.__deferSuccessToast === 'function' && window.__deferSuccessToast(message, duration)) return; } catch (e) {}
+    }
     const el = document.getElementById('adminToast');
     if (!el) { alert(message); return; }
     el.textContent = message;
@@ -15280,6 +15290,20 @@
       tile.onclick = () => showCategoryServices(cat);
       gridEl.appendChild(tile);
     });
+    // כרטיס ריק בלי שום הסבר נראה ללקוחה כמו אתר שבור ("חצי דף נטען").
+    let loadDone = false;
+    try { loadDone = !!cloudLoadComplete; } catch (e) { loadDone = false; }   // עוד לפני שהמשתנה הוגדר
+    const failed = window.__publicLoadState === 'fail';
+    if (!gridEl.children.length && (failed || !loadDone)){
+      const phone = (branding && branding.phone) || window.__cachedPhone || '';
+      const note = document.createElement('div');
+      note.className = 'cat-grid-status';
+      note.style.cssText = 'grid-column:1/-1; text-align:center; padding:22px 8px; color:#8A8178; font-size:14px; line-height:1.6;';
+      note.textContent = failed
+        ? 'לא הצלחנו לטעון את רשימת הטיפולים. מנסים שוב לבד — אפשר גם לרענן את הדף' + (phone ? ', או להתקשר: ' + phone : '.')
+        : 'טוענים את רשימת הטיפולים…';
+      gridEl.appendChild(note);
+    }
   }
   function showCategoryGrid(){
     selectedCategoryForBooking = null;
@@ -19604,6 +19628,186 @@
     __cloudSaveQueue = result.then(() => undefined, () => undefined);
     return result;
   }
+  const TRANSIENT_SAVE_ERRORS = ['aborted', 'failed-precondition', 'unavailable', 'deadline-exceeded', 'cancelled', 'internal'];
+  function isTransientSaveError(err){
+    const code = String((err && err.code) || '').toLowerCase();
+    return TRANSIENT_SAVE_ERRORS.some(c => code.indexOf(c) !== -1);
+  }
+
+  /* יומן אבחון זמני לשמירה (15.10.2026). כל שורה מתחילה ב-[save] כדי שאפשר
+   * לסנן אותה ב-F12 ← Console. נרשמים רק שמות שדות, גדלים, קודי שגיאה
+   * וזמנים — לא שמות, טלפונים, תעודות זהות או טוקנים.
+   * לכיבוי בלי העלאה חדשה: localStorage.setItem('hk_save_diag', 'off') */
+  function saveDiag(stage, info){
+    try {
+      if (localStorage.getItem('hk_save_diag') === 'off') return;
+    } catch (e) {}
+    try { console.log('[save] ' + stage, info || ''); } catch (e) {}
+  }
+
+  /* הודעת "✓ ... בהצלחה" מוצגת רק אחרי שהענן אישר.
+   * עד היום כל פעולה קראה saveState() ומיד אחריה showAdminToast('✓ ...'),
+   * כלומר ההודעה הופיעה לפני שהשמירה התחילה בכלל — ואם השמירה נכשלה, היא
+   * הופיעה לצד פס אדום ("השירות נוסף בהצלחה" ואז "לצאת מהאתר? ייתכן
+   * שהשינויים לא יישמרו"). עכשיו ההודעה ממתינה לאישור. */
+  let __deferredSuccessToast = null;
+  window.__deferSuccessToast = function(message, duration){
+    if (typeof message !== 'string' || message.trim().charAt(0) !== '✓') return false;
+    if (!(pendingSaveCount > 0 || unsavedChangePending)) return false;
+    __deferredSuccessToast = { message: message, duration: duration, rev: __saveRequestRevision };
+    return true;
+  };
+  function flushDeferredSuccessToast(committedRevision){
+    const t = __deferredSuccessToast;
+    if (!t) return;
+    if (committedRevision !== undefined && committedRevision < t.rev) return;
+    __deferredSuccessToast = null;
+    if (typeof showAdminToast === 'function') showAdminToast(t.message, t.duration, { noDefer: true });
+  }
+  function dropDeferredSuccessToast(){ __deferredSuccessToast = null; }
+
+  /* גיבוי מקומי לפני כל שמירה לענן (15.10.2026).
+   *
+   * נשמר רק ההפרש מול מה שנטען מהענן — התורים, הלקוחות והפריטים שנוספו,
+   * שונו או נמחקו במכשיר הזה — ולא כל הנתונים, כדי שהכרטסת המלאה לא
+   * תישב בזיכרון הדפדפן. לכל פריט נשמר גם איך הוא נראה לפני השינוי:
+   * בשחזור, שינוי מוחל רק אם הענן עדיין מחזיק את הגרסה הקודמת. כך שחזור
+   * לעולם אינו דורס שינוי שמכשיר אחר עשה בינתיים, ושחזור כפול לא עושה דבר.
+   * הגיבוי נמחק כשהענן אישר את השמירה. */
+  const LOCAL_BACKUP_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+  function localBackupKey(){ return 'hk_pending_changes_' + (BIZ_ID || 'none'); }
+  function clientListKey(c){
+    return c && c.teudatZehut ? 'tz:' + c.teudatZehut : (c && c.phone ? 'p:' + String(c.phone).replace(/[^0-9]/g, '') : null);
+  }
+  const BACKUP_LIST_KEYS = {
+    weekAppointments: a => a && a.id,
+    waitlist: w => w && w.id,
+    cancellationLog: c => c && c.id,
+    lateCancellations: c => c && c.id,
+    clients: clientListKey,
+  };
+  function liveListByName(name){
+    switch (name){
+      case 'weekAppointments': return weekAppointments;
+      case 'waitlist': return waitlist;
+      case 'cancellationLog': return cancellationLog;
+      case 'lateCancellations': return lateCancellations;
+      case 'clients': return clients;
+    }
+    return null;
+  }
+  // השדות ש-saveState משווה בשלמותם. ownerAccessCode לא נכנס לגיבוי המקומי.
+  const BACKUP_SIMPLE_FIELDS = {
+    branding: [() => branding, v => { branding = v; }],
+    customTemplates: [() => customTemplates, v => { customTemplates = v; }],
+    staff: [() => staff, v => { staff = v; }],
+    categories: [() => categories, v => { categories = v; }],
+    services: [() => services, v => { services = v; }],
+    whatsNewItems: [() => whatsNewItems, v => { whatsNewItems = v; }],
+    invAlertEmail: [() => invAlertEmail, v => { invAlertEmail = v; }],
+    inventory: [() => inventory, v => { inventory = v; }],
+    gatedTabsConfig: [() => gatedTabsConfig, v => { gatedTabsConfig = v; }],
+    personalBlocks: [() => personalBlocks, v => { personalBlocks = v; }],
+    specialRequests: [() => specialRequests, v => { specialRequests = v; }],
+    categoryMessages: [() => categoryMessages, v => { categoryMessages = v; }],
+    categoryColors: [() => categoryColors, v => { categoryColors = v; }],
+    holidayOverrides: [() => holidayOverrides, v => { holidayOverrides = v; }],
+    pendingOffers: [() => pendingOffers, v => { pendingOffers = v; }],
+    about: [() => aboutMe, v => { aboutMe = v; }],
+    recommendations: [() => recommendations, v => { recommendations = v; }],
+  };
+  function diffListForBackup(lastArr, liveArr, keyFn){
+    lastArr = Array.isArray(lastArr) ? lastArr : [];
+    liveArr = Array.isArray(liveArr) ? liveArr : [];
+    const lastKeys = keysWithOccurrence(lastArr, keyFn);
+    const liveKeys = keysWithOccurrence(liveArr, keyFn);
+    const lastByKey = new Map();
+    lastArr.forEach((item, i) => { if (lastKeys[i]) lastByKey.set(lastKeys[i], item); });
+    const out = [];
+    const seen = new Set();
+    liveArr.forEach((item, i) => {
+      const k = liveKeys[i];
+      if (!k) return;                      // פריט בלי מזהה אי אפשר לשחזר בבטחה
+      seen.add(k);
+      const before = lastByKey.has(k) ? lastByKey.get(k) : null;
+      if (before === null) { out.push({ k: k, before: null, after: item }); return; }
+      if (JSON.stringify(before) !== JSON.stringify(item)) out.push({ k: k, before: before, after: item });
+    });
+    lastByKey.forEach((before, k) => { if (!seen.has(k)) out.push({ k: k, before: before, after: null }); });
+    return out;
+  }
+  function writeLocalPendingBackup(){
+    if (!lastLoadedSnapshot || !isOwnerSession()) return;
+    const lists = {};
+    let count = 0;
+    Object.keys(BACKUP_LIST_KEYS).forEach(name => {
+      const d = diffListForBackup(lastLoadedSnapshot[name], liveListByName(name), BACKUP_LIST_KEYS[name]);
+      if (d.length) { lists[name] = d; count += d.length; }
+    });
+    const simple = {};
+    Object.keys(BACKUP_SIMPLE_FIELDS).forEach(name => {
+      const now = BACKUP_SIMPLE_FIELDS[name][0]();
+      const before = lastLoadedSnapshot[name];
+      if (JSON.stringify(before) !== JSON.stringify(now)) {
+        simple[name] = { before: before === undefined ? null : before, after: now === undefined ? null : now };
+        count++;
+      }
+    });
+    if (!count) { try { localStorage.removeItem(localBackupKey()); } catch (e) {} return; }
+    const record = { v: 1, biz: BIZ_ID, at: new Date().toISOString(), rev: __saveRequestRevision, lists: lists, simple: simple };
+    try {
+      localStorage.setItem(localBackupKey(), JSON.stringify(record));
+      saveDiag('local-backup', { changes: count });
+    } catch (e) {
+      console.warn('[save] local backup could not be written (storage full?):', e && e.name);
+    }
+  }
+  function clearLocalPendingBackupIfCurrent(committedRevision){
+    // רק אם לא נעשה שינוי חדש מאז שהשמירה הזו יצאה. אחרת הגיבוי נשאר,
+    // והשמירה הבאה כותבת אותו מחדש לפני שהיא יוצאת.
+    if (committedRevision !== __saveRequestRevision) return;
+    try { localStorage.removeItem(localBackupKey()); } catch (e) {}
+  }
+  function restoreLocalPendingBackup(){
+    let rec = null;
+    try { rec = JSON.parse(localStorage.getItem(localBackupKey()) || 'null'); } catch (e) { rec = null; }
+    if (!rec || rec.v !== 1 || rec.biz !== BIZ_ID) return 0;
+    if (!(Date.now() - new Date(rec.at).getTime() < LOCAL_BACKUP_MAX_AGE_MS)) {
+      try { localStorage.removeItem(localBackupKey()); } catch (e) {}
+      return 0;
+    }
+    let applied = 0;
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    Object.keys(rec.lists || {}).forEach(name => {
+      const live = liveListByName(name);
+      const keyFn = BACKUP_LIST_KEYS[name];
+      if (!Array.isArray(live) || !keyFn) return;
+      (rec.lists[name] || []).forEach(ch => {
+        const keys = keysWithOccurrence(live, keyFn);
+        const at = keys.indexOf(ch.k);
+        const cur = at === -1 ? null : live[at];
+        if (ch.before === null) {                       // נוסף במכשיר הזה
+          if (at === -1 && ch.after) { live.push(ch.after); applied++; }
+          return;
+        }
+        if (at === -1 || !same(cur, ch.before)) return; // הענן כבר אחר — לא דורסים
+        if (ch.after === null) live.splice(at, 1); else live[at] = ch.after;
+        applied++;
+      });
+    });
+    Object.keys(rec.simple || {}).forEach(name => {
+      const f = BACKUP_SIMPLE_FIELDS[name];
+      if (!f) return;
+      const ch = rec.simple[name];
+      const cur = f[0]();
+      if (same(cur, ch.after)) return;
+      if (!same(cur === undefined ? null : cur, ch.before)) return;
+      f[1](ch.after);
+      applied++;
+    });
+    saveDiag('local-backup-restore', { applied: applied });
+    return applied;
+  }
   let __cloudDocWasMissing = false;
   let __staleBaselineDetected = false;
   let __lastWriteRepairs = [];
@@ -19750,8 +19954,10 @@
     });
     return { fixed: fixed, moreToRemove: moreToRemove };
   }
+  let __syncPendingShown = false;   // מוצגת "נשמר מקומית — מסנכרנים"; ההצלחה הבאה מחליפה אותה ב"נשמר ✓"
   function saveState(opts){
-    const silent = !!(opts && opts.silent);
+    let silent = !!(opts && opts.silent);
+    if (__syncPendingShown) silent = false;
     if (runningOnPublicData){
       console.warn('saveState was called while running on public data — refused.');
       const uHere = auth && auth.currentUser;
@@ -19767,7 +19973,10 @@
     }
     if (!cloudLoadComplete || !lastLoadedSnapshot){
       unsavedChangePending = true;
-      __changeBlockedByLoading = true;
+      // רק שינוי שהמשתמשת עשתה בעצמה מצדיק את ההודעה "שינוי שהוקלד... לא
+      // נקלט". שמירה שקטה ברקע (טיימרים) הופיעה עד היום כאילו מישהי הקלידה
+      // משהו — וזו הייתה הודעה שמופיעה "גם כשלא עשו שינוי".
+      if (!silent) __changeBlockedByLoading = true;
       scheduleUnsavedRetry({ quiet: true });
       if (!silent) showSaveStatus('⚠ עוד לא נשמר — הדף עדיין נטען', 6000, 'bad');
       return Promise.resolve();
@@ -19818,21 +20027,50 @@
       __moreRemovalsPending = repairs.moreToRemove;
       if (!changedKeys.size) return repairs.fixed.length ? { __repairedOnly: true, fixed: repairs.fixed } : null;
       if (!silent) showSaveStatus('שומר...');
-      lastSavePayloadBytes = measurePayloadBytes(payload);
-      tx.set(CLOUD_DOC, payload, { merge: true });
+      // נכתב לענן רק מה שבאמת השתנה. עד גרסה 102 כל שמירה העלתה את כל
+      // הכרטסת, כל התורים ויומן הביטולים (~400 ק"ב) גם כשהשתנה תור אחד —
+      // ובטלפון עם קליטה חלשה זה החזיק את הטרנזקציה פתוחה שניות ארוכות,
+      // מספיק כדי שמכשיר אחר יכתוב באמצע וכל הניסיונות ייכשלו
+      // ב-[failed-precondition]. הרשימות הממוזגות נשארות ב-payload כדי
+      // שהדפדפן יתעדכן מהן, אבל רק השדות ב-changedKeys יוצאים לרשת.
+      const writePayload = { savedAt: payload.savedAt };
+      changedKeys.forEach(key => { if (Object.prototype.hasOwnProperty.call(payload, key)) writePayload[key] = payload[key]; });
+      lastSavePayloadBytes = measurePayloadBytes(writePayload);
+      saveDiag('write', { attempt: ++__saveTxAttempts, keys: Array.from(changedKeys), kb: Math.round(lastSavePayloadBytes / 1024) });
+      tx.set(CLOUD_DOC, writePayload, { merge: true });
+      // עותק קפוא של מה שנכתב. הרשימות ב-payload הן אותם אובייקטים שעל המסך,
+      // ועריכה שנעשית בזמן שהשמירה בדרך משנה גם אותם — ואז הבסיס החדש היה
+      // "כולל" אותה, והיא לא נשמרה לעולם.
+      Object.defineProperty(payload, '__committedCopy', { value: cloneJSON(payload), enumerable: false });
       return payload;
     }));
-    const TRANSIENT_SAVE_ERRORS = ['aborted', 'unavailable', 'deadline-exceeded', 'cancelled', 'internal'];
-    const isTransientSaveError = err => {
-      const code = String((err && err.code) || '').toLowerCase();
-      return TRANSIENT_SAVE_ERRORS.some(c => code.indexOf(c) !== -1);
-    };
-    return enqueueCloudSave(runSaveTransaction).catch(err => {
-      if (!isTransientSaveError(err)) throw err;
-      console.warn('Cloud save hit a transient error, retrying once:', err && err.code);
-      if (!silent) showSaveStatus('שומר... (ניסיון נוסף)');
-      return new Promise(r => setTimeout(r, 900)).then(() => enqueueCloudSave(runSaveTransaction));
-    }).then(committedPayload => {
+    let __saveTxAttempts = 0;
+    const saveStartedAt = Date.now();
+    saveDiag('start', { revision: saveRevision, silent: silent, online: navigator.onLine });
+    try { writeLocalPendingBackup(); } catch (e) { console.warn('[save] local backup failed:', e); }
+    // שלושה ניסיונות נוספים בהמתנה הולכת וגדלה (כ-1, 2, 4 שניות + רעש אקראי),
+    // מעל חמשת הניסיונות הפנימיים של Firestore בכל טרנזקציה.
+    // failed-precondition נכלל: ב-SDK של הדפדפן זה הקוד שמוחזר כשמכשיר אחר
+    // כתב למסמך בין הקריאה לכתיבה, כלומר תקלה חולפת ולא תקלה בשמירה עצמה.
+    const MAX_SAVE_RETRIES = 3;
+    const runWithRetries = (retry) => enqueueCloudSave(runSaveTransaction).catch(err => {
+      const code = String((err && err.code) || '');
+      saveDiag('attempt-failed', { retry: retry, code: code, ms: Date.now() - saveStartedAt });
+      if (!isTransientSaveError(err) || retry >= MAX_SAVE_RETRIES) throw err;
+      const wait = Math.round(1000 * Math.pow(2, retry) * (0.75 + Math.random() * 0.5));
+      // הגיבוי המקומי כבר נכתב, ולכן מהניסיון הכושל הראשון זה המצב האמיתי.
+      if (!silent) showSaveStatus(navigator.onLine === false
+        ? 'אין חיבור — נשמר מקומית, יסונכרן אוטומטית'
+        : 'נשמר מקומית — מסנכרנים עם הענן…');
+      return new Promise(r => setTimeout(r, wait)).then(() => runWithRetries(retry + 1));
+    });
+    return runWithRetries(0).then(committedPayload => {
+      saveDiag('committed', { ms: Date.now() - saveStartedAt, wrote: !!(committedPayload && !committedPayload.__stale && !committedPayload.__repairedOnly) });
+      if (!committedPayload || !committedPayload.__stale){
+        clearLocalPendingBackupIfCurrent(saveRevision);
+        flushDeferredSuccessToast(saveRevision);
+        __syncPendingShown = false;
+      }
       __deniedSaveRetried = false;
       if (committedPayload && committedPayload.__stale){
         console.warn('Save aborted: this tab holds starter data while the cloud holds a real business. Reloading.');
@@ -19863,12 +20101,22 @@
       hideSaveErrorBanner();
       if (!silent) showSaveStatus('נשמר ✓', 2600);
       checkSaveSizeHeadroom();
-      if (Array.isArray(committedPayload.weekAppointments)) weekAppointments = committedPayload.weekAppointments;
-      if (Array.isArray(committedPayload.waitlist)) waitlist = committedPayload.waitlist;
-      if (Array.isArray(committedPayload.clients)) clients = committedPayload.clients;
-      if (Array.isArray(committedPayload.cancellationLog)) cancellationLog = committedPayload.cancellationLog;
-      if (Array.isArray(committedPayload.lateCancellations)) lateCancellations = committedPayload.lateCancellations;
-      lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(committedPayload));
+      // עד גרסה 102 הרשימות על המסך הוחלפו כאן ברשימות מרגע תחילת השמירה —
+      // ותור שנוסף בזמן שהשמירה הייתה בדרך נמחק מהמסך ולא הגיע לענן לעולם
+      // (בבדיקה: 10 תורים ברצף, 2 נשארו). עכשיו מה שהענן החזיר ממוזג עם מה
+      // שעל המסך, בדיוק כמו בשמירה הבאה: תוספות ושינויים חדשים נשארים,
+      // ותורים ממכשירים אחרים נכנסים.
+      const committedCopy = committedPayload.__committedCopy || cloneJSON(committedPayload);
+      const prevBase = lastLoadedSnapshot || {};
+      const reconcile = (key, live, keyFn) => Array.isArray(committedCopy[key])
+        ? mergeListField(cloneJSON(committedCopy[key]), prevBase[key], live, keyFn)
+        : live;
+      weekAppointments = reconcile('weekAppointments', weekAppointments, a => a && a.id);
+      waitlist = reconcile('waitlist', waitlist, w => w && w.id);
+      clients = reconcile('clients', clients, clientListKey);
+      cancellationLog = reconcile('cancellationLog', cancellationLog, c => c && c.id);
+      lateCancellations = reconcile('lateCancellations', lateCancellations, c => c && c.id);
+      lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(committedCopy));
       publishPublicView(); // כל שינוי שנשמר מתעדכן גם במסמך הציבורי
       if (__lastWriteRepairs.length){
         const whatWasKept = __lastWriteRepairs.join(', ');
@@ -19890,12 +20138,27 @@
       }
     }).catch(err => {
       console.error('Cloud save failed:', err);
+      saveDiag('failed', { code: String((err && err.code) || ''), ms: Date.now() - saveStartedAt });
       hideSaveStatus();
       unsavedChangePending = true;
       const failCode = String((err && err.code) || '').toLowerCase();
       if (failCode.indexOf('permission') !== -1 || failCode.indexOf('unauthenticated') !== -1){
+        dropDeferredSuccessToast();
         return diagnoseDeniedSave(err, silent);
       }
+      // תקלה חולפת (רשת, או מכשיר אחר שכתב באותו רגע) אינה סיבה לפס אדום:
+      // השינוי שמור במכשיר הזה (writeLocalPendingBackup) והניסיון הבא כבר
+      // מתוזמן. הפס האדום נשאר לתקלות שדורשות מישהו — גודל, הרשאה, אחר.
+      // הודעת ה-✓ הממתינה נשארת ותוצג כשהסנכרון יצליח.
+      if (isTransientSaveError(err) && lastSavePayloadBytes <= FIRESTORE_DOC_LIMIT){
+        __syncPendingShown = true;
+        showSaveStatus(navigator.onLine === false
+          ? 'אין חיבור — נשמר מקומית, יסונכרן אוטומטית'
+          : 'נשמר מקומית — מסנכרנים עם הענן…', 0, 'bad');
+        scheduleUnsavedRetry({ quiet: true, soon: true });
+        return;
+      }
+      dropDeferredSuccessToast();
       showSaveErrorBanner(describeSaveFailure(err), { retry: true });
       scheduleUnsavedRetry();
     }).finally(() => {
@@ -20003,7 +20266,7 @@
              'אין טעם לנסות שוב עד שמצמצמים — נא לא לרענן את הדף, ולפנות לתמיכה.' + tail;
     }
     if (code.indexOf('failed-precondition') !== -1){
-      return '⚠ השינוי האחרון לא נשמר — הדפדפן לא הצליח להשלים את השמירה מול הענן. השינוי לא אבד: אפשר ללחוץ כאן על "לנסות לשמור שוב", והמערכת גם מנסה לבד כל חצי דקה. בשום אופן לא לרענן את הדף עד שייכתב "נשמר ✓".' + tail;
+      return '⚠ השינוי האחרון עוד לא הגיע לענן — מכשיר אחר (מזכירה, לשונית נוספת או לקוחה שקבעה תור) שמר בדיוק באותו זמן. השינוי שמור במכשיר הזה ולא יאבד גם ברענון; המערכת ממשיכה לנסות לבד, ואפשר גם ללחוץ כאן.' + tail;
     }
     if (code.indexOf('permission') !== -1 || code.indexOf('unauthenticated') !== -1){
       return '⚠ השינוי האחרון לא נשמר — הענן סירב לכתיבה. זה קורה או כשהחשבון אינו מזוהה כבעל היומן, או כשהכתיבה נראתה לענן כמו מחיקת נתונים. המערכת בודקת עכשיו מה משניהם ומנסה שוב לבד. לא לרענן את הדף בינתיים.' + tail + whoamiSuffix();
@@ -20358,7 +20621,7 @@
       __unsavedAlarmTimer = null;
       if (!unsavedChangePending) return;
       if (document.getElementById('saveErrorBanner')) return;
-      showSaveErrorBanner('⚠ שינוי שביצעת עדיין לא נשמר בענן — התור או הביטול לא קיימים עדיין אצל אף אחד אחר.', { retry: true });
+      showSaveErrorBanner('⚠ שינוי שביצעת שמור במכשיר הזה אבל עדיין לא הגיע לענן — עד שיגיע, אחרים (המזכירה, הלקוחות) לא רואים אותו. המערכת ממשיכה לנסות לבד; אפשר גם ללחוץ כאן.', { retry: true });
     }, 10000);
   }
   let __changeBlockedByLoading = false;
@@ -20369,9 +20632,18 @@
       __unsavedRetryTimer = null;
       if (!unsavedChangePending) return;
       saveState({ silent: true });
-      if (unsavedChangePending) scheduleUnsavedRetry();
-    }, 30000);
+      if (unsavedChangePending) scheduleUnsavedRetry({ quiet: true, soon: !!(opts && opts.soon) });
+    }, (opts && opts.soon) ? 8000 : 30000);
   }
+  // הרשת חזרה — לא מחכים לטיימר.
+  try {
+    window.addEventListener('online', function(){
+      if (!unsavedChangePending) return;
+      saveDiag('online-retry');
+      if (__unsavedRetryTimer){ clearTimeout(__unsavedRetryTimer); __unsavedRetryTimer = null; }
+      saveState({ silent: true });
+    });
+  } catch (e) {}
   function showSaveStatus(text, autoHideMs, tone){
     const el = document.getElementById('saveStatusIndicator');
     if (!el) return;
@@ -20960,6 +21232,14 @@
       return false;
     });
   }
+  function awaitAnonAuthBriefly(maxMs){
+    if (auth && auth.currentUser) return Promise.resolve(auth.currentUser);
+    const ensure = (typeof window.__ensureAnonAuth === 'function') ? window.__ensureAnonAuth() : Promise.resolve(null);
+    return Promise.race([
+      ensure.catch(function(){ return null; }),
+      new Promise(function(r){ setTimeout(function(){ r(null); }, maxMs || 4000); }),
+    ]);
+  }
   function loadPublicData(){
     const pre = (typeof window !== 'undefined') ? window.__publicViewPrefetch : null;
     const firstTry = pre ? Promise.resolve(pre).then(function(p){
@@ -20968,8 +21248,13 @@
       try { window.__publicViewPrefetch = null; } catch (e) {}
       return { exists: true, data: function(){ return p.data; } };
     }, function(){ return null; }) : Promise.resolve(null);
+    window.__publicLoadState = 'loading';
     return firstTry.then(function(pd){
-      return pd || getDocWithRetry(PUBLIC_DOC, 'publicView');
+      if (pd) return pd;
+      // הקריאה המוקדמת לא הביאה כלום (היום: 403, כי החוקים דורשים התחברות
+      // גם למסמך הציבורי). לפני שקוראים שוב, מחכים להתחברות האנונימית
+      // שכבר בדרך — אחרת הקריאה הזו נדחית בוודאות ועולה עוד סבב רשת שלם.
+      return awaitAnonAuthBriefly(4000).then(function(){ return getDocWithRetry(PUBLIC_DOC, 'publicView'); });
     }).then(doc => {
       const data = doc.exists ? doc.data() : null;
       if (!data) return 'empty';
@@ -21099,7 +21384,11 @@
     }
     if (!isOwnerSession()){
       return loadPublicData().then(loaded => {
-        if (loaded === 'fail') return retryPublicLoadLater();
+        window.__publicLoadState = (loaded === 'fail') ? 'fail' : 'ok';
+        if (loaded === 'fail'){
+          try { renderCategoryGrid(); } catch (e) {}
+          return retryPublicLoadLater();
+        }
         if (loaded === 'empty'){
           hideCloudErrorBanner();
           cloudLoadRetryCount = 0;
@@ -21227,10 +21516,25 @@
       rebindOpenRecords();
       rerenderEverything();
       alignSnapshotWithNormalisedData();
+      // שינויים שנשמרו במכשיר הזה ולא הגיעו לענן (רענון, סגירת הדפדפן, נפילת
+      // רשת). מוחלים רק אם הענן עדיין מחזיק את הגרסה שלפני השינוי — ואז
+      // נשמרים כרגיל, דרך אותה שמירה ממוזגת.
+      let __restoredFromLocal = 0;
+      if (isOwnerSession()){
+        try { __restoredFromLocal = restoreLocalPendingBackup(); } catch (e) { console.warn('[save] local backup restore failed:', e); }
+      }
+      if (__restoredFromLocal){
+        unsavedChangePending = true;
+        rerenderEverything();
+      }
       cloudLoadComplete = true;
       __ownerDataLoadedOnce = true;
       __changeBlockedByLoading = false;
-      if (__hadBlockedEdit){
+      if (__restoredFromLocal){
+        showSaveErrorBanner('✓ נמצאו במכשיר הזה ' + __restoredFromLocal + ' שינויים שלא הספיקו להגיע לענן בביקור הקודם. הם נשמרים עכשיו — אין צורך לעשות דבר.', { tone: 'info', id: 'restoreInfoBanner' });
+        setTimeout(function(){ const b = document.getElementById('restoreInfoBanner'); if (b) b.remove(); }, 12000);
+        saveState({ silent: true });
+      } else if (__hadBlockedEdit){
         unsavedChangePending = false;
         if (__unsavedAlarmTimer){ clearTimeout(__unsavedAlarmTimer); __unsavedAlarmTimer = null; }
         showSaveErrorBanner('⚠ שינוי שהוקלד לפני שהנתונים סיימו לרדת מהענן לא נקלט — הגרסה מהענן הגיעה אחריו. צריך לבצע אותו שוב. שום דבר אחר לא נפגע.');
