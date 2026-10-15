@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-15 · 106">
+<meta name="app-build" content="2026-10-15 · 107">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -1734,6 +1734,10 @@
   }
   .inner-subpanel{display:none;}
   .inner-subpanel.active{display:block; animation:fadeUp 0.4s ease forwards;}
+  /* יומן העסק מופיע מיד, בלי הבהרה (15.10.2026). שלוש שכבות — הלשונית,
+   * תת-הלשונית והיומן — נכנסו כל אחת מ-0, והשקיפות שלהן הוכפלה: התורים
+   * נראו אפורים-דהויים כחצי שנייה בכל כניסה ליומן. בצד הלקוחות נשאר. */
+  #panel-business, #panel-business .subpanel.active, #panel-business .inner-subpanel.active{ animation:none; opacity:1; transform:none; }
   .hours-list{border:1px solid rgba(var(--panel-line-rgb),0.12); border-radius:16px; overflow:hidden;}
   .hours-row{
     display:flex;
@@ -4293,7 +4297,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-15 · 106';
+        window.__APP_BUILD = '2026-10-15 · 107';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
