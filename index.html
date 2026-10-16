@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-15 · 110">
+<meta name="app-build" content="2026-10-16 · 112">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -3887,7 +3887,7 @@
         
         <div class="inv-alert bday" id="birthdayAlert"></div>
         <div class="search-with-add-row">
-          <input type="text" id="clientSearch" class="search-input" placeholder="חיפוש לקוחה לפי שם, טלפון או תעודת זהות..." oninput="renderClients()">
+          <input type="text" id="clientSearch" class="search-input" placeholder="חיפוש לקוחה לפי שם, טלפון, ת״ז או מייל..." oninput="renderClients()">
           <button type="button" class="quick-add-fab" onclick="openAddClientModal()" title="הוספת לקוחה" aria-label="הוספת לקוחה">+</button>
         </div>
         <div class="client-list" id="clientList"></div>
@@ -4023,7 +4023,7 @@
         </div>
       </div>
 
-      <div class="label" style="margin:28px 0 10px;">המלצות של לקוחות<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">לקוחה מקבלת הצעה לכתוב מילה טובה מיד אחרי שהיא קובעת תור. ההמלצה עולה לאתר מיד, וחמש האחרונות מוצגות בטאב "קצת עלינו" ← "לקוחות ממליצות". אפשר למחוק המלצה בודדת, או את כולן.</span></span></div>
+      <div class="label" style="margin:28px 0 10px;">המלצות של לקוחות<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">לקוחה מקבלת הצעה לכתוב מילה טובה מיד אחרי שהיא קובעת תור. ההמלצה עולה לאתר מיד, ותשע האחרונות מוצגות בטאב "קצת עלינו" ← "לקוחות ממליצות". אפשר למחוק המלצה בודדת, או את כולן.</span></span></div>
       <div id="recAdminList"></div>
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
         <button type="button" class="template-btn" id="recAdminToggleBtn" style="display:none;" onclick="toggleRecAdminExpanded()"></button>
@@ -4067,6 +4067,48 @@
           <div id="eveningStaffPicker" style="display:flex; flex-direction:column; gap:7px; max-width:420px;"></div>
           <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:8px;">
             בלי סימון כלל — ההגבלה חלה על כולן, כפי שהיה עד היום.
+          </div>
+        </div>
+      </div>
+      <div class="settings-section" data-settings-section="cancelfee">
+        <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
+          <span class="settings-section-title">💸 כללי ביטול</span>
+          <span class="settings-section-sub">ביטול ראשון (קנס לטיפול ארוך) · ביטול שני (כל השאר)</span>
+          <span class="settings-section-chevron">▾</span>
+        </button>
+        <div class="settings-section-body">
+          <div style="max-width:480px;">
+          <div class="label" style="margin:10px 0 6px; font-size:14px;">ביטול ראשון — טיפול ארוך (קנס)<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">טיפול ארוך שמתבטל ברגע האחרון הוא זמן שכמעט אי אפשר למלא. כאן קובעים מאיזה אורך טיפול, ועד כמה שעות לפני התור, ביטול נחשב "ביטול עם קנס" — כבר בפעם הראשונה, ולא אחרי שני ביטולים כמו בשאר הטיפולים.
+              כשלקוחה מבטלת טיפול כזה בזמן הזה (באתר או בהקשה 2 בשיחת התזכורת): (1) היא מקבלת את המייל שכתוב למטה, ובאתר רואה את אותו נוסח על המסך. (2) היא נחסמת מקביעת תור באתר, עד שתשחררי אותה מכרטיס הלקוחה ← "ביטולים מאוחרים" ← "איפוס מונה" (למשל אחרי שהסדירה את התשלום). (3) את מקבלת מייל על כך, למייל המנהלת שבהגדרות "הודעות ותזכורות".
+              כל עוד "אורך הטיפול" ריק — אין קנס, וכל הטיפולים לפי "ביטול שני".</span></span></div>
+
+          <div class="label" style="margin:14px 0 6px;">טיפול של יותר מ- (דקות)</div>
+          <input type="number" id="cancelFeeMinDuration" min="0" max="600" step="5" class="field-dark" style="max-width:160px;"
+                 placeholder="למשל 30" oninput="updateCancelFeeSettings()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ אורך הטיפול נשמר')">
+          <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:5px;">30 = כל טיפול של 31 דקות ומעלה. ריק = הקנס כבוי.</div>
+
+          <div class="label" style="margin:14px 0 6px;">ביטול פחות מ- (שעות) לפני התור</div>
+          <input type="number" id="cancelFeeHours" min="1" max="168" step="1" class="field-dark" style="max-width:160px;"
+                 placeholder="12" oninput="updateCancelFeeSettings()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ מספר השעות נשמר')">
+          <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:5px;">ריק = 12 שעות.</div>
+
+          <div class="label" style="margin:14px 0 6px;">המייל ללקוחה — נושא</div>
+          <input class="field" id="cancelFeeSubject" type="text" placeholder="ביטול התור שלך" oninput="updateCancelFeeSettings()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ הנושא נשמר')">
+
+          <div class="label" style="margin:14px 0 6px;">המייל ללקוחה — גוף ההודעה</div>
+          <textarea id="cancelFeeBody" class="client-note" style="min-height:120px; margin:0;" placeholder="היי {שם}, התור שלך ל{טיפול} ב-{תאריך} בשעה {שעה} בוטל פחות מ-{שעות} שעות לפני המועד. כדי לקבוע את התור הבא יש להסדיר את דמי הביטול מול הסלון." oninput="updateCancelFeeSettings()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ ההודעה נשמרה')"></textarea>
+          <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:5px; line-height:1.6;">
+            אפשר לשלב: {שם} — השם הפרטי שלה · {טיפול} · {תאריך} · {שעה} · {שעות} — מספר השעות שלמעלה · {סלון} — שם העסק.
+            שדה ריק = הנוסח האפור שבתוך השדה.
+          </div>
+          <div id="cancelFeePreview" style="font-size:12px; color:var(--panel-text-dim); margin-top:10px; line-height:1.6;"></div>
+
+          <div class="label" style="margin:26px 0 6px; font-size:14px;">ביטול שני — כל שאר הטיפולים<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">הכלל הרגיל: ביטול (או אי-הגעה) פחות מהשעות שכאן לפני התור נחשב "ביטול מאוחר". בביטול המאוחר הראשון הלקוחה רואה אזהרה; בשני היא נחסמת מקביעת תור באתר עד שתשחררי אותה מהכרטיס, ואת מקבלת מייל.
+              הכלל חל על כל הטיפולים — חוץ מהטיפולים הארוכים שמוגדרים למעלה ב"ביטול ראשון" (אם הוגדר שם אורך). כל מייל והודעה על ביטול מאוחר כותבים את מספר השעות שכאן.</span></span></div>
+          <div class="label" style="margin:10px 0 6px;">ביטול פחות מ- (שעות) לפני התור</div>
+          <input type="number" id="cancelRegularHours" min="1" max="168" step="1" class="field-dark" style="max-width:160px;"
+                 placeholder="12" oninput="updateCancelFeeSettings()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ מספר השעות נשמר')">
+          <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:5px;">ריק = 12 שעות.</div>
           </div>
         </div>
       </div>
@@ -4306,7 +4348,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-15 · 110';
+        window.__APP_BUILD = '2026-10-16 · 112';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -7137,7 +7179,7 @@
     if (!appt) return;
     const lateStatus = isLateCancellationAttempt(appt) ? getLateCancelStatusForAppt(appt) : null;
     if (lateStatus && lateStatus.blocked){
-      const overrideConfirmed = confirm(`שימו לב: ${appt.client} כבר ביטלה/לא הגיעה ${lateStatus.count} פעמים בפחות מ-12 שעות לפני התור, ואמורה להיות חסומה מביטול נוסף באיחור.\n\nלבטל בכל זאת כחריגה (למשל אם המנהלת עצמה מוותרת על התשלום)?`);
+      const overrideConfirmed = confirm(`שימו לב: ${appt.client} כבר ביטלה/לא הגיעה ${lateStatus.count} פעמים בפחות מ-${regularLateHours()} שעות לפני התור, ואמורה להיות חסומה מביטול נוסף באיחור.\n\nלבטל בכל זאת כחריגה (למשל אם המנהלת עצמה מוותרת על התשלום)?`);
       if (!overrideConfirmed) return;
     } else {
       const confirmed = confirm(`לבטל את התור של ${appt.client} ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time}?`);
@@ -8268,7 +8310,7 @@
         <div style="font-size:13.5px;${blocked ? ' color:#B3261E; font-weight:700;' : ''}">
           ${blocked
             ? `⛔ חסומה (${count} ביטולים/אי-הגעות מאוחרים) — גם מביטול תור וגם מקביעת תור חדש`
-            : `${count} / 2 ביטולים/אי-הגעות מאוחרים (פחות מ-12 שעות לפני התור)`}
+            : `${count} / 2 ביטולים/אי-הגעות מאוחרים (פחות מ-${regularLateHours()} שעות לפני התור)`}
         </div>
         ${allEntries.length ? `<button type="button" class="template-btn" id="cpResetLateCancelBtn" style="width:auto; padding:6px 14px; font-size:12.5px;">איפוס מונה</button>` : ''}
       </div>`;
@@ -9273,8 +9315,18 @@
     const ext = (mime.split('/')[1] || 'png').split('+')[0];
     return { filename: cid + '.' + ext, content: match[2], encoding: 'base64', cid: cid, contentType: mime };
   }
+  // כתובת אתר במייל — קישור שאפשר ללחוץ עליו (16.10.2026). עד היום הכתובת
+  // הופיעה כטקסט רגיל, ובטלפון ובעברית רוב תוכנות המייל לא הפכו אותה לקישור.
+  function linkifyEscapedHtml(html){
+    return String(html || '').replace(/https?:\/\/[^\s<]+/g, function(url){
+      const m = /^(.*?)([.,;:!?)\]]*)$/.exec(url);
+      const href = m ? m[1] : url;
+      const tail = m ? m[2] : '';
+      return '<a href="' + href.replace(/"/g, '&quot;') + '" style="color:#1a5fb4; direction:ltr; unicode-bidi:embed;">' + href + '</a>' + tail;
+    });
+  }
   function textToHtmlBlock(text, imageDataUrl, cid){
-    const escaped = (text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+    const escaped = linkifyEscapedHtml((text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'));
     const imgHtml = imageDataUrl ? `<img src="cid:${cid}" style="max-width:100%; border-radius:8px; margin-bottom:12px; display:block;">` : '';
     return `${imgHtml}<p style="font-family:sans-serif; font-size:15px; line-height:1.6; direction:rtl; text-align:right;">${escaped}</p>`;
   }
@@ -9568,6 +9620,41 @@
     branding.contactIntro.mailBody = g('contactMailBody');
     renderContactIntroPreview();
     try { renderHeroContact(document.body.classList.contains('th-on')); } catch (e) {}
+  }
+  // קנס ביטול (16.10.2026) — נשמר ב-branding.cancelFee; השרת (client-api)
+  // קורא את אותו שדה בכל ביטול שלקוחה עושה באתר.
+  function updateCancelFeeSettings(){
+    const g = (id) => { const e = document.getElementById(id); return e ? e.value : ''; };
+    const num = (v) => { const n = Number(String(v).trim()); return String(v).trim() !== '' && Number.isFinite(n) && n > 0 ? n : null; };
+    if (!branding.cancelFee || typeof branding.cancelFee !== 'object') branding.cancelFee = {};
+    branding.cancelFee.minDurationMin = num(g('cancelFeeMinDuration'));
+    branding.cancelFee.hours = num(g('cancelFeeHours'));
+    branding.cancelFee.subject = g('cancelFeeSubject');
+    branding.cancelFee.body = g('cancelFeeBody');
+    branding.cancelFee.regularHours = num(g('cancelRegularHours'));
+    renderCancelFeePreview();
+  }
+  function renderCancelFeeSettings(){
+    const s = (id, v) => { const e = document.getElementById(id); if (e) e.value = (v === null || v === undefined) ? '' : v; };
+    const c = (branding && branding.cancelFee) || {};
+    s('cancelFeeMinDuration', c.minDurationMin);
+    s('cancelFeeHours', c.hours);
+    s('cancelFeeSubject', c.subject);
+    s('cancelFeeBody', c.body);
+    s('cancelRegularHours', c.regularHours);
+    renderCancelFeePreview();
+  }
+  function renderCancelFeePreview(){
+    const el = document.getElementById('cancelFeePreview');
+    if (!el) return;
+    const c = (branding && branding.cancelFee) || {};
+    const min = Number(c.minDurationMin);
+    if (!(min > 0)) { el.textContent = 'הקנס כבוי — לא נקבע אורך טיפול.'; return; }
+    const hours = Number(c.hours) > 0 ? Number(c.hours) : 12;
+    const long = (Array.isArray(services) ? services : []).filter(s => s && Number(s.duration) > min).map(s => s.name);
+    el.textContent = 'פעיל: ביטול באתר פחות מ-' + hours + ' שעות לפני טיפול של יותר מ-' + min + ' דקות. '
+      + (long.length ? ('חל על ' + long.length + ' טיפולים, למשל: ' + long.slice(0, 4).join(', ') + (long.length > 4 ? '…' : '') + '.') : 'כרגע אין טיפול ארוך כזה ברשימת השירותים.')
+      + ' (בתור עם כמה טיפולים — לפי האורך הכולל של התור.)';
   }
   function renderContactIntroSettings(){
     const s = (id, v) => { const e = document.getElementById(id); if (e) e.value = v || ''; };
@@ -11145,6 +11232,7 @@
     applySiteTheme();
     renderThemeSettings();
     try { renderContactIntroSettings(); } catch (e) {}
+    try { renderCancelFeeSettings(); } catch (e) {}
     const logoHtml = branding.logo
       ? `<img src="${branding.logo}">`
       : branding.name.trim().charAt(0);
@@ -11594,11 +11682,14 @@
       const c = clients[i];
       if (searchTerm){
         const nameMatch = c.name.toLowerCase().includes(searchTerm)
-          || String(c.note || '').toLowerCase().includes(searchTerm);
+          || String(c.note || '').toLowerCase().includes(searchTerm)
+          // גם לפי מייל (16.10.2026)
+          || String(c.email || '').toLowerCase().includes(searchTerm);
         const digitsInTerm = searchTerm.replace(/[^0-9]/g, '');
         const phoneMatch = (c.phone || '').replace(/[^0-9]/g, '').includes(digitsInTerm);
         const idMatch = (c.teudatZehut || '').includes(digitsInTerm);
-        const searchIsDigits = /\d/.test(searchTerm);
+        // חיפוש מייל (יש @) — לא לפי ספרות: "c0@..." לא אמור להתאים לכל טלפון עם 0.
+        const searchIsDigits = /\d/.test(searchTerm) && searchTerm.indexOf('@') === -1;
         if (!nameMatch && !(searchIsDigits && (phoneMatch || idMatch))) return;
       }
       matchedCount++;
@@ -15511,7 +15602,12 @@
   }
   function availableServicesOf(cat){
     const key = normalizeCategoryKey(cat);
-    return services.filter(s => s && normalizeCategoryKey(s.category) === key && isServiceAvailable(s));
+    // מהקצר לארוך (16.10.2026): לקוחה רואה 20 דק' ואז 25, ולא לפי סדר ההוספה.
+    // מיון יציב — טיפולים באותו אורך נשארים בסדר שבו הוגדרו.
+    return services.filter(s => s && normalizeCategoryKey(s.category) === key && isServiceAvailable(s))
+      .map((s, i) => ({ s, i }))
+      .sort((a, b) => ((Number(a.s.duration) || 0) - (Number(b.s.duration) || 0)) || (a.i - b.i))
+      .map(x => x.s);
   }
   function setServiceAvailability(idx, available){
     const svc = services[idx];
@@ -16926,7 +17022,21 @@
     if (dParts.length !== 3 || tParts.length !== 2) return false;
     const apptDateTime = new Date(dParts[0], dParts[1] - 1, dParts[2], tParts[0], tParts[1]);
     const hoursUntil = (apptDateTime.getTime() - Date.now()) / 3600000;
-    return hoursUntil < 12;
+    return hoursUntil < cancelRuleForAppt(appt).hours;
+  }
+  // כללי ביטול (16.10.2026) — הגדרות ← "כללי ביטול". אותו כלל בדיוק כמו בשרת:
+  // טיפול ארוך (מעל המשך שב"ביטול ראשון") — כלל הקנס; כל השאר — "ביטול
+  // שני", עם מספר השעות שבהגדרות. שום מספר שעות לא כתוב יותר בקוד.
+  function cancelFeeConfig(){
+    const c = (typeof branding !== 'undefined' && branding && branding.cancelFee) || {};
+    const num = (v, d) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : d; };
+    return { minDurationMin: num(c.minDurationMin, 0), feeHours: num(c.hours, 12), regularHours: num(c.regularHours, 12) };
+  }
+  function regularLateHours(){ return cancelFeeConfig().regularHours; }
+  function cancelRuleForAppt(appt){
+    const c = cancelFeeConfig();
+    if (c.minDurationMin > 0 && appt && (Number(appt.dur) || 0) > c.minDurationMin) return { kind: 'fee', hours: c.feeHours };
+    return { kind: 'regular', hours: c.regularHours };
   }
   function lateCancelEntryBelongsTo(entry, clientRecord, appt){
     if (!entry) return false;
@@ -16946,16 +17056,37 @@
     return true;
   }
   let lateCancelNoticeCount = 0;
-  function openLateCancelNotice(countAfterThis){
+  let lateCancelFeeNotice = null;
+  // ביטול שעבר דרך השרת: הוא — ולא הדפדפן — יודע כמה ביטולים מאוחרים היו
+  // ללקוחה (הדפדפן שלה רואה רק נתונים ציבוריים, בלי ביטולים), והאם חל קנס
+  // ביטול. עד היום הדפדפן ספר בעצמו, ולכן בביטול השני הוצגה שוב ההודעה של
+  // "פעם ראשונה, זה בסדר". את ההתראה לבעלת העסק שולח עכשיו השרת. (16.10.2026)
+  function applyServerCancelOutcome(srvCancel){
+    if (!srvCancel) return;
+    if (srvCancel.fee && srvCancel.feeNotice){
+      lateCancelFeeNotice = srvCancel.feeNotice;
+      lateCancelNoticeCount = srvCancel.lateCount || 1;
+    } else if (srvCancel.late){
+      lateCancelNoticeCount = srvCancel.lateCount || 1;
+    }
+  }
+  function openLateCancelNotice(countAfterThis, feeNotice){
     const overlay = document.getElementById('lateCancelNoticeOverlay');
     const titleEl = document.getElementById('lateCancelNoticeTitle');
     const textEl = document.getElementById('lateCancelNoticeText');
     if (!overlay || !textEl) return;
+    if (feeNotice){
+      // קנס ביטול: אותו נוסח בדיוק כמו במייל שנשלח אליה (הגדרות ← קנס ביטול).
+      if (titleEl) titleEl.textContent = feeNotice.subject || 'ביטול באיחור';
+      textEl.textContent = feeNotice.text || '';
+      overlay.classList.add('show');
+      return;
+    }
     const blocked = countAfterThis >= 2;
     if (titleEl) titleEl.textContent = blocked ? 'שימי לב — ביטול שני באיחור' : 'שימי לב';
     textEl.textContent = blocked
-      ? 'זהו הביטול השני שלך בפחות מ-12 שעות לפני התור. מעכשיו לא ניתן לקבוע או לבטל תור דרך האתר — נא ליצור איתנו קשר ישירות, ונשמח לסדר.'
-      : 'התור בוטל בפחות מ-12 שעות לפני המועד. הפעם זה בסדר גמור ולא חויבת — אבל ביטול נוסף בפחות מ-12 שעות כבר יחויב, ולא יתאפשר לקבוע תור דרך האתר. נשמח שתעדכני אותנו מוקדם ככל שאפשר.';
+      ? 'זהו הביטול השני שלך בפחות מ-' + regularLateHours() + ' שעות לפני התור. מעכשיו לא ניתן לקבוע או לבטל תור דרך האתר — נא ליצור איתנו קשר ישירות, ונשמח לסדר.'
+      : 'התור בוטל בפחות מ-' + regularLateHours() + ' שעות לפני המועד. הפעם זה בסדר גמור ולא חויבת — אבל ביטול נוסף בפחות מ-' + regularLateHours() + ' שעות כבר יחויב, ולא יתאפשר לקבוע תור דרך האתר. נשמח שתעדכני אותנו מוקדם ככל שאפשר.';
     overlay.classList.add('show');
   }
   function closeLateCancelNotice(){
@@ -16969,7 +17100,9 @@
     if (!key) return { key: null, count: 0, blocked: false, client };
     const resetAt = client && client.lateCancelResetAt;
     const relevant = lateCancellations.filter(e => lateCancelEntryBelongsTo(e, client, appt) && (!resetAt || (e.cancelledAtIso && e.cancelledAtIso > resetAt)));
-    return { key, count: relevant.length, blocked: relevant.length >= 2, client, entries: relevant };
+    // קנס ביטול (טיפול ארוך) חוסם כבר בפעם הראשונה — כמו בשרת. (16.10.2026)
+    const feeOpen = relevant.some(e => e && e.fee);
+    return { key, count: relevant.length, blocked: relevant.length >= 2 || feeOpen, fee: feeOpen, client, entries: relevant };
   }
   function getLateCancelStatusForIdentity(identity){
     const empty = { count: 0, blocked: false, client: null, entries: [] };
@@ -16991,10 +17124,10 @@
     return { count: relevant.length, blocked: relevant.length >= 2, client, entries: relevant };
   }
   function buildBlockedBookingClientMessage(){
-    return 'לא ניתן לקבוע תור אונליין — רשומים על שמך שני ביטולים או אי-הגעות בפחות מ-12 שעות לפני התור, שטרם הוסדרו. כדי לקבוע תור נוסף יש ליצור קשר טלפוני עם הסלון ולהסדיר את התשלום על הטיפולים שבוטלו.';
+    return 'לא ניתן לקבוע תור אונליין — רשומים על שמך ביטולים או אי-הגעות מאוחרים שטרם הוסדרו. כדי לקבוע תור נוסף יש ליצור קשר טלפוני עם הסלון ולהסדיר את התשלום על הטיפולים שבוטלו.';
   }
   function buildBlockedBookingAdminWarning(status, name){
-    return `${name || 'הלקוחה'} חסומה — רשומים לה ${status.count} ביטולים/אי-הגעות בפחות מ-12 שעות לפני התור, שטרם הוסדרו.`;
+    return `${name || 'הלקוחה'} חסומה — רשומים לה ${status.count} ביטולים/אי-הגעות בפחות מ-${regularLateHours()} שעות לפני התור, שטרם הוסדרו.`;
   }
   function buildBlockedBookingAdminConfirm(status, name){
     return `⚠️ ${buildBlockedBookingAdminWarning(status, name)}\n\nלפי המדיניות אין לקבוע לה תור נוסף לפני תשלום על הטיפולים שבוטלו.\n\nלקבוע לה את התור בכל זאת?`;
@@ -17014,18 +17147,20 @@
       apptId: appt.id || null,
       type: type === 'no-show' ? 'no-show' : 'cancel'
     });
+    // טיפול ארוך ("ביטול ראשון" בהגדרות): חוסם כבר בפעם הראשונה, כמו בשרת.
+    if (type !== 'no-show' && cancelRuleForAppt(appt).kind === 'fee') lateCancellations[lateCancellations.length - 1].fee = true;
   }
   function sendLateCancelAdminAlert(appt, count, wasBlockedAttempt){
     if (!invAlertEmail) return;
     const dateLbl = formatDateDMY(appt.date);
     const subject = wasBlockedAttempt ? 'לקוחה ניסתה לבטל תור באיחור — חסומה' : 'לקוחה עם ביטולים מאוחרים חוזרים';
     const body = wasBlockedAttempt
-      ? `שימי לב: ${appt.client} ניסתה לבטל שוב תור בפחות מ-12 שעות לפניו (${appt.service}, ${dateLbl} ${appt.time}) — זו כבר הפעם השלישית, אז הביטול נחסם אוטומטית. מומלץ להתקשר אליה ולעדכן אותה: או שהיא מגיעה לתור, או שהיא משלמת את מחיר הטיפול, אחרת לא תוכל לקבוע תור נוסף בלי תשלום מראש.`
-      : `שימי לב: ${appt.client} הגיעה ל-${count} ביטולים/אי-הגעות בפחות מ-12 שעות לפני התור (הכי אחרון: ${appt.service}, ${dateLbl} ${appt.time}). ביטול מאוחר נוסף שלה ייחסם אוטומטית — ניתן לראות את ההיסטוריה המלאה בכרטסת הלקוחה, בטאב "ביטולים מאוחרים".`;
+      ? `שימי לב: ${appt.client} ניסתה לבטל שוב תור בפחות מ-${regularLateHours()} שעות לפניו (${appt.service}, ${dateLbl} ${appt.time}) — זו כבר הפעם השלישית, אז הביטול נחסם אוטומטית. מומלץ להתקשר אליה ולעדכן אותה: או שהיא מגיעה לתור, או שהיא משלמת את מחיר הטיפול, אחרת לא תוכל לקבוע תור נוסף בלי תשלום מראש.`
+      : `שימי לב: ${appt.client} הגיעה ל-${count} ביטולים/אי-הגעות בפחות מ-${regularLateHours()} שעות לפני התור (הכי אחרון: ${appt.service}, ${dateLbl} ${appt.time}). ביטול מאוחר נוסף שלה ייחסם אוטומטית — ניתן לראות את ההיסטוריה המלאה בכרטסת הלקוחה, בטאב "ביטולים מאוחרים".`;
     sendEmail(invAlertEmail, subject, body);
   }
   function buildBlockedLateCancelMessage(appt){
-    return `לא ניתן לבטל את התור (${appt.service}, ${formatDateDMY(appt.date)} ${appt.time}) — ביטלת כבר פעמיים בפחות מ-12 שעות לפני התור. כדי להימנע מחיוב יש להגיע לתור כרגיל; אחרת יהיה עליך לשלם את מחיר הטיפול לפני קביעת תור נוסף.`;
+    return `לא ניתן לבטל את התור (${appt.service}, ${formatDateDMY(appt.date)} ${appt.time}) — ביטלת כבר פעמיים בפחות מ-${regularLateHours()} שעות לפני התור. כדי להימנע מחיוב יש להגיע לתור כרגיל; אחרת יהיה עליך לשלם את מחיר הטיפול לפני קביעת תור נוסף.`;
   }
   function buildBlockedLateCancelSmsMessage(appt){
     return 'לא ניתן לבטל את התור — כבר ביטלת פעמיים באיחור. יש להגיע או להתקשר.';
@@ -18671,15 +18806,13 @@
       }
       removeCurrentBookedAppointment();
     } else {
-      if (srvCancel.late && lateStatus){
-        const updatedStatus = getLateCancelStatusForAppt(apptBeingCancelled);
-        if (updatedStatus.count + 1 === 2) sendLateCancelAdminAlert(apptBeingCancelled, 2, false);
-        lateCancelNoticeCount = updatedStatus.count + 1;
-      }
+      applyServerCancelOutcome(srvCancel);
       removeCurrentBookedAppointment({ skipSave: true });
     }
-    if (lateCancelNoticeCount && !isOwnerSession()) openLateCancelNotice(lateCancelNoticeCount);
+    if (lateCancelFeeNotice && !isOwnerSession()) openLateCancelNotice(lateCancelNoticeCount || 1, lateCancelFeeNotice);
+    else if (lateCancelNoticeCount && !isOwnerSession()) openLateCancelNotice(lateCancelNoticeCount);
     lateCancelNoticeCount = 0;
+    lateCancelFeeNotice = null;
     if (apptBeingCancelled){
       const client = findClientForAppt(apptBeingCancelled);
       if (client && client.email){
@@ -19034,13 +19167,13 @@
         if (updatedStatus.count === 2) sendLateCancelAdminAlert(appt, 2, false);
       }
       if (lateStatus) lateCancelNoticeCount = getLateCancelStatusForAppt(appt).count;
-    } else if (srvCancel.late && lateStatus){
-      const updatedStatus = getLateCancelStatusForAppt(appt);
-      if (updatedStatus.count + 1 === 2) sendLateCancelAdminAlert(appt, 2, false);
-      lateCancelNoticeCount = updatedStatus.count + 1;
+    } else {
+      applyServerCancelOutcome(srvCancel);
     }
-    if (lateCancelNoticeCount && !isOwnerSession()) openLateCancelNotice(lateCancelNoticeCount);
+    if (lateCancelFeeNotice && !isOwnerSession()) openLateCancelNotice(lateCancelNoticeCount || 1, lateCancelFeeNotice);
+    else if (lateCancelNoticeCount && !isOwnerSession()) openLateCancelNotice(lateCancelNoticeCount);
     lateCancelNoticeCount = 0;
+    lateCancelFeeNotice = null;
     const pos = appt.id ? weekAppointments.findIndex(a => a.id === appt.id) : weekAppointments.indexOf(appt);
     if (pos !== -1) weekAppointments.splice(pos, 1);
     if (typeof renderWeekCal === 'function') renderWeekCal();
@@ -19121,7 +19254,7 @@
     if (appt){
       appt.status = status;
       if (status === 'no-show'){
-        const shouldCount = confirm(`"${appt.client}" לא הגיעה לתור (${appt.service}, ${appt.time}) — לרשום את זה כאי-הגעה מאוחרת (פחות מ-12 שעות), שתיכנס להיסטוריית "ביטולים מאוחרים" שלה?`);
+        const shouldCount = confirm(`"${appt.client}" לא הגיעה לתור (${appt.service}, ${appt.time}) — לרשום את זה כאי-הגעה מאוחרת (פחות מ-${regularLateHours()} שעות), שתיכנס להיסטוריית "ביטולים מאוחרים" שלה?`);
         if (shouldCount){
           logLateCancellation(appt, 'no-show');
           const updatedStatus = getLateCancelStatusForAppt(appt);
@@ -19173,7 +19306,7 @@
       .filter(r => r && r.text && r.approved !== false)
       .slice()
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
-      .slice(0, 5);
+      .slice(0, 9);   // תשע האחרונות (16.10.2026; עד היום חמש)
   }
   function renderRecommendations(){
     const listEl = document.getElementById('recList');
@@ -20547,6 +20680,10 @@
     }));
     let __saveTxAttempts = 0;
     const saveStartedAt = Date.now();
+    // כמה מזמן השמירה הלשונית הייתה ברקע — דפדפן מאט לשוניות ברקע, ולכן
+    // "שמירה איטית" ברקע אינה בהכרח המתנה אמיתית. (16.10.2026)
+    const saveHiddenAtStart = (typeof getPageHiddenMsSoFar === 'function') ? getPageHiddenMsSoFar() : 0;
+    const saveHiddenMs = () => Math.max(0, Math.round(((typeof getPageHiddenMsSoFar === 'function') ? getPageHiddenMsSoFar() : 0) - saveHiddenAtStart));
     saveDiag('start', { revision: saveRevision, silent: silent, online: navigator.onLine });
     try { writeLocalPendingBackup(); } catch (e) { console.warn('[save] local backup failed:', e); }
     // שלושה ניסיונות נוספים בהמתנה הולכת וגדלה (כ-1, 2, 4 שניות + רעש אקראי),
@@ -20567,7 +20704,7 @@
     });
     return runWithRetries(0).then(committedPayload => {
       saveDiag('committed', { ms: Date.now() - saveStartedAt, wrote: !!(committedPayload && !committedPayload.__stale && !committedPayload.__repairedOnly) });
-      if (Date.now() - saveStartedAt > 8000) reportDiag('save-slow', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024 });
+      if (Date.now() - saveStartedAt > 8000) reportDiag('save-slow', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024, hiddenMs: saveHiddenMs() });
       if (!committedPayload || !committedPayload.__stale){
         clearLocalPendingBackupIfCurrent(saveRevision);
         flushDeferredSuccessToast(saveRevision);
@@ -20643,7 +20780,7 @@
     }).catch(err => {
       console.error('Cloud save failed:', err);
       saveDiag('failed', { code: String((err && err.code) || ''), ms: Date.now() - saveStartedAt });
-      reportDiag('save-failed', { code: String((err && err.code) || 'unknown'), ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024 });
+      reportDiag('save-failed', { code: String((err && err.code) || 'unknown'), ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024, hiddenMs: saveHiddenMs() });
       hideSaveStatus();
       unsavedChangePending = true;
       const failCode = String((err && err.code) || '').toLowerCase();
@@ -20866,7 +21003,9 @@
         apptId: appt.id,
       });
       if (!res || !res.ok) return { ok: false, error: (res && res.error) || 'לא הצלחנו לבטל את התור. נא לנסות שוב או ליצור איתנו קשר.' };
-      return { ok: true, late: !!res.late };
+      // השרת יודע כמה ביטולים מאוחרים היו לה (הדפדפן של לקוחה לא רואה אותם),
+      // והאם חל קנס ביטול — ולכן ההודעה שעל המסך נקבעת לפיו. (16.10.2026)
+      return { ok: true, late: !!res.late, lateCount: Number(res.lateCount) || 0, fee: !!res.fee, feeNotice: res.feeNotice || null, ownerAlerted: !!res.ownerAlerted };
     } catch (err) {
       console.error('Cancelling through the server failed:', err);
       if (runningOnPublicData){
@@ -21557,6 +21696,18 @@
   }
 
   let autoLookupFromUrlDone = false;
+  // "טוענים את התורים שלך…" — פס קטן בראש המסך בזמן שהתורים נטענים מקישור.
+  function showQuietLookupLoading(on){
+    let el = document.getElementById('quietLookupLoading');
+    if (!on){ if (el) el.remove(); return; }
+    if (el) return;
+    el = document.createElement('div');
+    el.id = 'quietLookupLoading';
+    el.setAttribute('role', 'status');
+    el.textContent = 'טוענים את התורים שלך…';
+    el.style.cssText = 'position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:9000; background:rgba(255,255,255,0.96); color:#5a4f47; border-radius:999px; padding:8px 18px; font-size:14px; box-shadow:0 4px 16px rgba(0,0,0,0.12); direction:rtl;';
+    document.body.appendChild(el);
+  }
   function handleAppointmentLookupFromUrl(){
     if (autoLookupFromUrlDone) return;
     autoLookupFromUrlDone = true;
@@ -21564,10 +21715,24 @@
       const params = new URLSearchParams(window.location.search);
       const idOrPhone = params.get('lookupId') || params.get('lookupPhone');
       if (!idOrPhone) return;
-      if (typeof openApptLookup === 'function') openApptLookup();
+      // מקישור (אישור תור, הצעה): בלי לפתוח קודם את חלון "מצאי את התור שלך".
+      // עד 111 החלון קפץ עם "מחפשת..." ונסגר אחרי חצי שנייה — הבהוב שנראה
+      // כמו תקלה. עכשיו מוצגת הודעה שקטה במקום, והחלון נפתח רק אם יש מה
+      // להגיד בו (לא נמצא תור, אין חיבור). (16.10.2026)
       const lookupInput = document.getElementById('lookupId');
+      const resultEl = document.getElementById('lookupResult');
       if (lookupInput) lookupInput.value = idOrPhone;
-      if (typeof searchMyAppointment === 'function') searchMyAppointment();
+      if (resultEl) resultEl.innerHTML = '';
+      if (typeof warmClientApi === 'function') { try { warmClientApi(); } catch (e) {} }
+      showQuietLookupLoading(true);
+      if (typeof searchMyAppointment === 'function'){
+        Promise.resolve(searchMyAppointment()).then(function(){
+          showQuietLookupLoading(false);
+          const msg = resultEl ? resultEl.textContent.trim() : '';
+          const overlay = document.getElementById('apptLookupOverlay');
+          if (msg && overlay) overlay.classList.add('show');
+        }, function(){ showQuietLookupLoading(false); });
+      }
     } catch (e) {
       console.error('Auto appointment lookup from link failed:', e);
     }
@@ -21613,7 +21778,10 @@
     let approxKb = null;
     try { if (rawCloudData) approxKb = Math.round(JSON.stringify(rawCloudData).length / 1024); } catch (e) { /* ignore */ }
     window.__lastCloudLoadDiag = { elapsedSec: Math.round(elapsedSec * 10) / 10, approxKb };
-    if (elapsedSec > 5) reportDiag('load-slow', { ms: elapsedSec * 1000, kb: approxKb });
+    // כמה מזמן הטעינה הלשונית הייתה ברקע (16.10.2026) — ר' saveHiddenMs.
+    const loadHiddenMs = (typeof getPageHiddenMsSoFar === 'function')
+      ? Math.max(0, Math.round(getPageHiddenMsSoFar() - (window.__loadHiddenAtStart || 0))) : 0;
+    if (elapsedSec > 5) reportDiag('load-slow', { ms: elapsedSec * 1000, kb: approxKb, hiddenMs: loadHiddenMs });
     // מסמך שמתקרב שוב לגבול (אחרי הארכיון הוא אמור להישאר סביב 400–450 ק"ב).
     if (approxKb && approxKb > 800) reportDiag('doc-size', { kb: approxKb });
     console.log(`Cloud data load took ${elapsedSec.toFixed(1)}s` + (approxKb !== null ? ` (~${approxKb}KB document)` : ' (no document)') + '.');
@@ -21944,6 +22112,7 @@
       });
     }
     const cloudLoadStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    try { window.__loadHiddenAtStart = (typeof getPageHiddenMsSoFar === 'function') ? getPageHiddenMsSoFar() : 0; } catch (e) {}
     const __signedInWithEmail = (function(){
       try { const u = auth && auth.currentUser; return !!(u && !u.isAnonymous && u.email); }
       catch (e) { return false; }
