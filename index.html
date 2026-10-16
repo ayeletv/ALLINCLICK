@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-16 · 112">
+<meta name="app-build" content="2026-10-16 · 113">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4348,7 +4348,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-16 · 112';
+        window.__APP_BUILD = '2026-10-16 · 113';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5567,7 +5567,7 @@
     const listEl = document.getElementById('mbSvcList');
     if (!listEl) return;
     listEl.innerHTML = '';
-    services.forEach((s, i) => {
+    servicesByDuration().forEach(({ s, i }) => {
       if (s.category !== cat) return;
       const selected = mbSelectedServices.some(sel => sel.svcIndex === i);
       const off = !isServiceAvailable(s);
@@ -5676,7 +5676,7 @@
     const listEl = document.getElementById('frSvcList');
     if (!listEl) return;
     listEl.innerHTML = '';
-    services.forEach((s, i) => {
+    servicesByDuration().forEach(({ s, i }) => {
       if (s.category !== cat) return;
       const selected = frSelectedServices.some(sel => sel.svcIndex === i);
       const el = document.createElement('div');
@@ -7509,7 +7509,7 @@
     if (!catSel || !svcSel) return;
     const cat = catSel.value;
     svcSel.innerHTML = '';
-    services.forEach((s, i) => {
+    servicesByDuration().forEach(({ s, i }) => {
       if (!s || s.category !== cat) return;
       const o = document.createElement('option');
       o.value = String(i);
@@ -15600,7 +15600,12 @@
   function normalizeCategoryKey(value){
     return String(value == null ? '' : value).normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
   }
-  function availableServicesOf(cat){
+  // כל הטיפולים מהקצר לארוך, עם המספור המקורי (i) — לכל רשימה שמציגה טיפולים
+  // לבחירה: קביעת תור, בקשה מיוחדת, קביעה ידנית ועריכת תור. (16.10.2026)
+  function servicesByDuration(){
+    return services.map((s, i) => ({ s, i })).filter(x => x.s)
+      .sort((a, b) => ((Number(a.s.duration) || 0) - (Number(b.s.duration) || 0)) || (a.i - b.i));
+  }  function availableServicesOf(cat){
     const key = normalizeCategoryKey(cat);
     // מהקצר לארוך (16.10.2026): לקוחה רואה 20 דק' ואז 25, ולא לפי סדר ההוספה.
     // מיון יציב — טיפולים באותו אורך נשארים בסדר שבו הוגדרו.
@@ -15691,7 +15696,10 @@
     const custList = document.getElementById('custSvcList');
     if (!custList) return;
     custList.innerHTML = '';
-    services.forEach((s, i) => {
+    // מהקצר לארוך (16.10.2026) — זו הרשימה שהלקוחה באמת רואה. ב-112 המיון
+    // נוסף רק ל-availableServicesOf, וכאן הרשימה נשארה לפי סדר ההוספה (טיפול
+    // של 30 דק' שנוסף אחרון הופיע בסוף). המספור i נשאר המקורי — הבחירה לפיו.
+    servicesByDuration().forEach(({ s, i }) => {
       if (s.category !== cat) return;
       if (!isServiceAvailable(s)) return;   // כבוי — לא מוצג ללקוחה
       const selected = bkSelectedServices.some(sel => sel.svcIndex === i);
