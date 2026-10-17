@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-17 · 115">
+<meta name="app-build" content="2026-10-17 · 116">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4103,12 +4103,22 @@
           </div>
           <div id="cancelFeePreview" style="font-size:12px; color:var(--panel-text-dim); margin-top:10px; line-height:1.6;"></div>
 
+          <div class="label" style="margin:14px 0 6px;">אזהרה ללקוחה לפני שהיא מבטלת טיפול כזה<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">כשלקוחה לוחצת "ביטול תור" באתר על טיפול ארוך, פחות מהשעות שלמעלה לפני התור — לפני הביטול מופיע חלון עם הנוסח הזה, ושני כפתורים: "לא, להשאיר את התור" ו"כן, לבטל". אולי תתחרט. {שעות} = מספר השעות שלמעלה. שדה ריק = הנוסח האפור.</span></span></div>
+          <textarea id="cancelWarnFee" class="client-note" style="min-height:80px; margin:0;" placeholder="שימי לב: הביטול הוא פחות מ-{שעות} שעות לפני הטיפול. ביטול כזה מחייב תשלום, ולא ניתן יהיה לקבוע את התור הבא באתר עד הסדרת התשלום מול הסלון." oninput="updateCancelFeeSettings()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ האזהרה נשמרה')"></textarea>
+
           <div class="label" style="margin:26px 0 6px; font-size:14px;">ביטול שני — כל שאר הטיפולים<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">הכלל הרגיל: ביטול (או אי-הגעה) פחות מהשעות שכאן לפני התור נחשב "ביטול מאוחר". בביטול המאוחר הראשון הלקוחה רואה אזהרה; בשני היא נחסמת מקביעת תור באתר עד שתשחררי אותה מהכרטיס, ואת מקבלת מייל.
               הכלל חל על כל הטיפולים — חוץ מהטיפולים הארוכים שמוגדרים למעלה ב"ביטול ראשון" (אם הוגדר שם אורך). כל מייל והודעה על ביטול מאוחר כותבים את מספר השעות שכאן.</span></span></div>
           <div class="label" style="margin:10px 0 6px;">ביטול פחות מ- (שעות) לפני התור</div>
           <input type="number" id="cancelRegularHours" min="1" max="168" step="1" class="field-dark" style="max-width:160px;"
                  placeholder="12" oninput="updateCancelFeeSettings()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ מספר השעות נשמר')">
           <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:5px;">ריק = 12 שעות.</div>
+
+          <div class="label" style="margin:14px 0 6px;">אזהרה לפני ביטול מאוחר ראשון<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">מופיעה ללקוחה לפני שהיא מבטלת באתר פחות מהשעות שלמעלה לפני התור, כשעוד אין לה ביטול מאוחר. {שעות} = מספר השעות שלמעלה. שדה ריק = הנוסח האפור.</span></span></div>
+          <textarea id="cancelWarnFirst" class="client-note" style="min-height:80px; margin:0;" placeholder="שימי לב: הביטול הוא פחות מ-{שעות} שעות לפני התור, ולכן ייחשב &quot;ביטול מאוחר&quot;. ביטול מאוחר נוסף יחסום את קביעת התורים באתר עד הסדרת תשלום מול הסלון." oninput="updateCancelFeeSettings()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ האזהרה נשמרה')"></textarea>
+
+          <div class="label" style="margin:14px 0 6px;">אזהרה לפני ביטול מאוחר שני (שאחריו חסימה)<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">מופיעה כשכבר יש לה ביטול מאוחר אחד, והביטול הזה יהיה השני — ואחריו היא תיחסם מקביעת תורים באתר. {שעות} = מספר השעות שלמעלה. שדה ריק = הנוסח האפור.</span></span></div>
+          <textarea id="cancelWarnSecond" class="client-note" style="min-height:80px; margin:0;" placeholder="שימי לב: זה יהיה הביטול המאוחר השני שלך (פחות מ-{שעות} שעות לפני התור). אחריו לא ניתן יהיה לקבוע תור באתר עד הסדרת התשלום מול הסלון." oninput="updateCancelFeeSettings()" onfocus="this.dataset.prevVal=this.value" onblur="saveSettingsFieldOnBlur(this, '✓ האזהרה נשמרה')"></textarea>
+          <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:5px;">ביטול שאינו מאוחר — הלקוחה נשאלת רק "לבטל את התור?".</div>
           </div>
         </div>
       </div>
@@ -4351,7 +4361,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-17 · 115';
+        window.__APP_BUILD = '2026-10-17 · 116';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9637,6 +9647,7 @@
     branding.cancelFee.subject = g('cancelFeeSubject');
     branding.cancelFee.body = g('cancelFeeBody');
     branding.cancelFee.regularHours = num(g('cancelRegularHours'));
+    branding.cancelFee.warnings = { fee: g('cancelWarnFee'), first: g('cancelWarnFirst'), second: g('cancelWarnSecond') };
     renderCancelFeePreview();
   }
   function renderCancelFeeSettings(){
@@ -9647,6 +9658,8 @@
     s('cancelFeeSubject', c.subject);
     s('cancelFeeBody', c.body);
     s('cancelRegularHours', c.regularHours);
+    const w = c.warnings || {};
+    s('cancelWarnFee', w.fee); s('cancelWarnFirst', w.first); s('cancelWarnSecond', w.second);
     renderCancelFeePreview();
   }
   function renderCancelFeePreview(){
@@ -18798,8 +18811,60 @@
     if (typeof showCategoryGrid === 'function') showCategoryGrid();
     if (typeof renderMiniCal === 'function') renderMiniCal();
   }
+  /* אזהרה לפני ביטול (17.10.2026). עד היום לחיצה על "ביטול תור" ביטלה מיד,
+   * בלי שום שאלה. עכשיו: תמיד "בטוחה?", וכשהביטול מאוחר — הסבר מה יקרה:
+   * קנס (טיפול ארוך), ביטול מאוחר ראשון, או שני (= חסימה). השרת אומר איזה
+   * מקרה (cancelPreview) — הדפדפן של הלקוחה לא רואה את הביטולים הקודמים שלה.
+   * הנוסחים נערכים בהגדרות ← כללי ביטול; {שעות} = מספר השעות מההגדרות. */
+  const CANCEL_WARN_DEFAULTS = {
+    fee: 'שימי לב: הביטול הוא פחות מ-{שעות} שעות לפני הטיפול. ביטול כזה מחייב תשלום, ולא ניתן יהיה לקבוע את התור הבא באתר עד הסדרת התשלום מול הסלון.',
+    first: 'שימי לב: הביטול הוא פחות מ-{שעות} שעות לפני התור, ולכן ייחשב "ביטול מאוחר". ביטול מאוחר נוסף יחסום את קביעת התורים באתר עד הסדרת תשלום מול הסלון.',
+    second: 'שימי לב: זה יהיה הביטול המאוחר השני שלך (פחות מ-{שעות} שעות לפני התור). אחריו לא ניתן יהיה לקבוע תור באתר עד הסדרת התשלום מול הסלון.',
+  };
+  function fillCancelWarn(t, appt, hours){
+    const p = String((appt && appt.date) || '').split('-');
+    const dateLbl = p.length === 3 ? Number(p[2]) + '/' + Number(p[1]) : '';
+    return String(t || '').replace(/\{שעות\}/g, String(hours || regularLateHours()))
+      .replace(/\{טיפול\}/g, (appt && appt.service) || '').replace(/\{תאריך\}/g, dateLbl).replace(/\{שעה\}/g, (appt && appt.time) || '');
+  }
+  function askCancelConfirm(title, text){
+    return new Promise(resolve => {
+      const ov = document.createElement('div');
+      ov.id = 'cancelConfirmOverlay';
+      ov.style.cssText = 'position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; direction:rtl;';
+      ov.innerHTML = '<div style="background:#fff; color:#2b2420; border-radius:16px; padding:22px; width:min(380px, 90vw); box-shadow:0 10px 30px rgba(0,0,0,0.25);">'
+        + '<div class="cc-title" style="font-size:17px; font-weight:700; margin-bottom:10px;"></div>'
+        + '<div class="cc-text" style="font-size:14.5px; line-height:1.7; white-space:pre-wrap;"></div>'
+        + '<div style="display:flex; flex-direction:column; gap:8px; margin-top:18px;">'
+        + '<button type="button" class="cc-keep" style="padding:11px; border-radius:11px; border:none; background:#2b2420; color:#fff; font-size:15px; cursor:pointer;">לא, להשאיר את התור</button>'
+        + '<button type="button" class="cc-yes" style="padding:10px; border-radius:11px; border:1px solid #b33; background:#fff; color:#b33; font-size:14.5px; cursor:pointer;">כן, לבטל</button>'
+        + '</div></div>';
+      ov.querySelector('.cc-title').textContent = title;
+      ov.querySelector('.cc-text').textContent = text;
+      const done = v => { ov.remove(); resolve(v); };
+      ov.querySelector('.cc-keep').onclick = () => done(false);
+      ov.querySelector('.cc-yes').onclick = () => done(true);
+      document.body.appendChild(ov);
+    });
+  }
+  async function confirmCustomerCancel(appt){
+    if (!appt || isOwnerSession()) return true;   // ביומן של הסלון יש אישור משלו
+    const p = String(appt.date || '').split('-');
+    const what = (appt.service || 'התור') + (p.length === 3 ? ' ב-' + Number(p[2]) + '/' + Number(p[1]) : '') + (appt.time ? ' בשעה ' + appt.time : '');
+    let preview = null;
+    try { preview = await callClientApi('cancelPreview', { id: appt.teudatZehut || lastIdentifiedLookupId || '', apptId: appt.id }); } catch (e) { preview = null; }
+    const w = preview && preview.ok ? preview.warning : null;
+    const texts = Object.assign({}, CANCEL_WARN_DEFAULTS, ((branding && branding.cancelFee) || {}).warnings || {});
+    if (w === 'fee' || w === 'first' || w === 'second'){
+      const custom = String(texts[w] || '').trim() || CANCEL_WARN_DEFAULTS[w];
+      return askCancelConfirm('לבטל את ' + what + '?', fillCancelWarn(custom, appt, preview.hours) + '\n\nלהמשיך בביטול?');
+    }
+    return askCancelConfirm('לבטל את ' + what + '?', 'התור יבוטל, והשעה תתפנה לאחרות.');
+  }
+  window.__confirmCustomerCancel = confirmCustomerCancel;
   async function cancelAppointment(){
     const apptBeingCancelled = currentBookedAppointment;
+    if (!(await confirmCustomerCancel(apptBeingCancelled))) return;
     const lateStatus = apptBeingCancelled && isLateCancellationAttempt(apptBeingCancelled) ? getLateCancelStatusForAppt(apptBeingCancelled) : null;
     if (lateStatus && lateStatus.blocked){
       alert(buildBlockedLateCancelMessage(apptBeingCancelled));
@@ -19161,6 +19226,7 @@
   async function cancelListedAppointment(idx){
     const listAppt = lookedUpAppointmentsList[idx];
     if (!listAppt) return;
+    if (!(await confirmCustomerCancel(resolveCurrentAppt(listAppt)))) return;
     const appt = resolveCurrentAppt(listAppt);
     const lateStatus = isLateCancellationAttempt(appt) ? getLateCancelStatusForAppt(appt) : null;
     if (lateStatus && lateStatus.blocked){
@@ -21230,6 +21296,10 @@
     if (ownerBizId === BIZ_ID) return true;
     try { return isPlatformAdmin(); } catch (e) { return false; }
   }
+  function publicCancelRules(b){
+    const c = (b && b.cancelFee) || {};
+    return { minDurationMin: c.minDurationMin || null, hours: c.hours || null, regularHours: c.regularHours || null, warnings: c.warnings || null };
+  }
   function buildPublicView(){
     const busy = [];
     // רק מהיום והלאה — זהה לשרת (client-api). שעות תפוסות של ימים שעברו
@@ -21256,6 +21326,9 @@
         eveningMaxDuration: (branding && branding.eveningMaxDuration !== undefined && branding.eveningMaxDuration !== null)
           ? branding.eveningMaxDuration : null,
         eveningMaxStaff: (branding && Array.isArray(branding.eveningMaxStaff)) ? branding.eveningMaxStaff : [],
+        // כללי הביטול — מה שהלקוחה צריכה כדי לראות את מספר השעות הנכון באזהרה
+        // ובהודעה (17.10.2026). עד 115 לא נשלחו, והלקוחה ראתה תמיד "12".
+        cancelFee: publicCancelRules(branding),
       },
       staff: (staff || []).map(s => ({
         name: (s && s.name) || '',
