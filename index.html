@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-16 · 113">
+<meta name="app-build" content="2026-10-17 · 114">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4348,7 +4348,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-16 · 113';
+        window.__APP_BUILD = '2026-10-17 · 114';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -20584,6 +20584,24 @@
     return { fixed: fixed, moreToRemove: moreToRemove };
   }
   let __syncPendingShown = false;   // מוצגת "נשמר מקומית — מסנכרנים"; ההצלחה הבאה מחליפה אותה ב"נשמר ✓"
+  /* השוואה "עניינית" בין שתי גרסאות של שדה (17.10.2026): סדר המפתחות לא משנה,
+   * ושדה ריק ('' / null / undefined / [] / {}) שווה לשדה שאינו קיים. עד היום
+   * ההשוואה הייתה JSON.stringify רגיל — ולכן "הערה ריקה במקום הערה חסרה" או
+   * סדר מפתחות אחר בכרטיס אחד נחשבו שינוי, וכל רשימת הלקוחות (~200 ק"ב, 1,456
+   * כרטיסים) נשלחה מחדש כמעט בכל קביעת תור ידנית. נמדד ב-15.10: שמירה של
+   * 462 ק"ב, 18 שניות. שינוי אמיתי (גם מחיקת ערך קיים) עדיין מזוהה. */
+  function stableJson(v){
+    if (v === undefined || v === null || v === '') return '';
+    if (Array.isArray(v)) return v.length ? '[' + v.map(stableJson).join(',') + ']' : '';
+    if (typeof v === 'object') {
+      const keys = Object.keys(v).filter(function(k){ return stableJson(v[k]) !== ''; }).sort();
+      if (!keys.length) return '';
+      return '{' + keys.map(function(k){ return JSON.stringify(k) + ':' + stableJson(v[k]); }).join(',') + '}';
+    }
+    return JSON.stringify(v);
+  }
+  function sameStable(a, b){ return stableJson(a) === stableJson(b); }
+  window.__sameStable = sameStable;
   function saveState(opts){
     let silent = !!(opts && opts.silent);
     if (__syncPendingShown) silent = false;
@@ -20633,36 +20651,36 @@
       Object.keys(simpleFields).forEach(key => {
         const beforeJson = JSON.stringify(lastLoadedSnapshot[key]);
         const nowJson = JSON.stringify(simpleFields[key]);
-        if (beforeJson !== nowJson){ payload[key] = simpleFields[key]; changedKeys.add(key); }
+        if (beforeJson !== nowJson && !sameStable(lastLoadedSnapshot[key], simpleFields[key])){ payload[key] = simpleFields[key]; changedKeys.add(key); }
       });
       const mergedAppts = mergeListField(server.weekAppointments, lastLoadedSnapshot.weekAppointments, weekAppointments, a => a && a.id);
-      if (JSON.stringify(mergedAppts) !== JSON.stringify(server.weekAppointments || [])) changedKeys.add('weekAppointments');
+      if (!sameStable(mergedAppts, server.weekAppointments || [])) changedKeys.add('weekAppointments');
       payload.weekAppointments = mergedAppts;
       const mergedWaitlist = mergeListField(server.waitlist, lastLoadedSnapshot.waitlist, waitlist, w => w && w.id);
-      if (JSON.stringify(mergedWaitlist) !== JSON.stringify(server.waitlist || [])) changedKeys.add('waitlist');
+      if (!sameStable(mergedWaitlist, server.waitlist || [])) changedKeys.add('waitlist');
       payload.waitlist = mergedWaitlist;
       const mergedClients = mergeListField(server.clients, lastLoadedSnapshot.clients, clients, c => c && c.teudatZehut ? 'tz:' + c.teudatZehut : (c && c.phone ? 'p:' + String(c.phone).replace(/[^0-9]/g, '') : null));
-      if (JSON.stringify(mergedClients) !== JSON.stringify(server.clients || [])) changedKeys.add('clients');
+      if (!sameStable(mergedClients, server.clients || [])) changedKeys.add('clients');
       payload.clients = mergedClients;
       const mergedCancellationLog = mergeListField(server.cancellationLog, lastLoadedSnapshot.cancellationLog, cancellationLog, c => c && c.id);
       const cancelLogCutoff = new Date();
       cancelLogCutoff.setDate(cancelLogCutoff.getDate() - 400);
       const cancelLogCutoffKey = formatDateKey(cancelLogCutoff);
       const trimmedCancellationLog = mergedCancellationLog.filter(c => c && c.cancelledAt >= cancelLogCutoffKey);
-      if (JSON.stringify(trimmedCancellationLog) !== JSON.stringify(server.cancellationLog || [])) changedKeys.add('cancellationLog');
+      if (!sameStable(trimmedCancellationLog, server.cancellationLog || [])) changedKeys.add('cancellationLog');
       payload.cancellationLog = trimmedCancellationLog;
       const mergedLateCancellations = mergeListField(server.lateCancellations, lastLoadedSnapshot.lateCancellations, lateCancellations, c => c && c.id);
-      if (JSON.stringify(mergedLateCancellations) !== JSON.stringify(server.lateCancellations || [])) changedKeys.add('lateCancellations');
+      if (!sameStable(mergedLateCancellations, server.lateCancellations || [])) changedKeys.add('lateCancellations');
       payload.lateCancellations = mergedLateCancellations;
       const mergedOffers = keepServerDecisions(
         mergeListField(server.pendingOffers, lastLoadedSnapshot.pendingOffers, pendingOffers, o => o && o.id),
         server.pendingOffers, isFinalOfferDecision);
-      if (JSON.stringify(mergedOffers) !== JSON.stringify(server.pendingOffers || [])) changedKeys.add('pendingOffers');
+      if (!sameStable(mergedOffers, server.pendingOffers || [])) changedKeys.add('pendingOffers');
       payload.pendingOffers = mergedOffers;
       const mergedRequests = keepServerDecisions(
         mergeListField(server.specialRequests, lastLoadedSnapshot.specialRequests, specialRequests, r => r && r.id),
         server.specialRequests, isFinalRequestDecision);
-      if (JSON.stringify(mergedRequests) !== JSON.stringify(server.specialRequests || [])) changedKeys.add('specialRequests');
+      if (!sameStable(mergedRequests, server.specialRequests || [])) changedKeys.add('specialRequests');
       payload.specialRequests = mergedRequests;
       const repairs = repairPayloadBeforeWrite(payload, server, changedKeys);
       __lastWriteRepairs = repairs.fixed;
@@ -20678,6 +20696,12 @@
       const writePayload = { savedAt: payload.savedAt };
       changedKeys.forEach(key => { if (Object.prototype.hasOwnProperty.call(payload, key)) writePayload[key] = payload[key]; });
       lastSavePayloadBytes = measurePayloadBytes(writePayload);
+      // אילו רשימות יצאו ובאיזה גודל — ליומן האבחון ולסיכום היומי. (17.10.2026)
+      try {
+        lastSaveWrittenKeys = Array.from(changedKeys).map(function(k){
+          return k + ':' + Math.round(measurePayloadBytes({ v: payload[k] }) / 1024);
+        }).join(',');
+      } catch (e) { lastSaveWrittenKeys = Array.from(changedKeys).join(','); }
       saveDiag('write', { attempt: ++__saveTxAttempts, keys: Array.from(changedKeys), kb: Math.round(lastSavePayloadBytes / 1024) });
       tx.set(CLOUD_DOC, writePayload, { merge: true });
       // עותק קפוא של מה שנכתב. הרשימות ב-payload הן אותם אובייקטים שעל המסך,
@@ -20712,7 +20736,11 @@
     });
     return runWithRetries(0).then(committedPayload => {
       saveDiag('committed', { ms: Date.now() - saveStartedAt, wrote: !!(committedPayload && !committedPayload.__stale && !committedPayload.__repairedOnly) });
-      if (Date.now() - saveStartedAt > 8000) reportDiag('save-slow', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024, hiddenMs: saveHiddenMs() });
+      const __wroteSomething = !!(committedPayload && !committedPayload.__stale && !committedPayload.__repairedOnly);
+      if (Date.now() - saveStartedAt > 8000) reportDiag('save-slow', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024, hiddenMs: saveHiddenMs(), keys: lastSaveWrittenKeys });
+      // שמירה גדולה (מעל 150 ק"ב), גם אם הייתה מהירה — כדי לראות בסיכום היומי
+      // מה עדיין נשלח בשלמותו. (17.10.2026)
+      else if (__wroteSomething && lastSavePayloadBytes > 150 * 1024) reportDiag('save-big', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024, keys: lastSaveWrittenKeys });
       if (!committedPayload || !committedPayload.__stale){
         clearLocalPendingBackupIfCurrent(saveRevision);
         flushDeferredSuccessToast(saveRevision);
@@ -20882,6 +20910,7 @@
     });
   }
   let lastSavePayloadBytes = 0;
+  let lastSaveWrittenKeys = '';
   const FIRESTORE_DOC_LIMIT = 1048576;   // מגבלה קשיחה של Firestore למסמך אחד
   function measurePayloadBytes(payload){
     try {
