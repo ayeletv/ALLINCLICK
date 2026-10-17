@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-17 · 114">
+<meta name="app-build" content="2026-10-17 · 115">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4259,6 +4259,9 @@
       </div>
       <div style="font-size:12px; color:var(--panel-text-dim); margin-bottom:8px;">הקוד יידרש רק בטאבים המסומנים כאן:</div>
       <div id="gatedTabsCheckboxes" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:28px;"></div>
+
+      <div class="label" style="margin-bottom:10px;">קוד לדוחות<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">קוד נפרד רק לטאב הדוחות (ההכנסות), שאינו תלוי בקוד שלמעלה. אחרי השמירה הקוד לא מוצג יותר בשום מקום — לא כאן ולא בשום מסך — ורואים רק שהוא מוגדר. כדי לשנות או להסיר אותו צריך להקליד קודם את הקוד הנוכחי. כל עוד לא הוגדר קוד — הדוחות פתוחים.</span></span></div>
+      <div id="reportsCodeBox" style="max-width:420px; margin-bottom:28px;"></div>
       
         </div>
       </div>
@@ -4348,7 +4351,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-17 · 114';
+        window.__APP_BUILD = '2026-10-17 · 115';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9298,7 +9301,9 @@
   }
   let ownerAccessCode = '';
   let gatedTabsConfig = { clients: true, staff: true, servicesgroup: true, inventory: true, settings: true, reports: true };
-  const GATED_TAB_LABELS = { clients: 'לקוחות', staff: 'צוות', servicesgroup: 'שירותים', inventory: 'מלאי', settings: 'הגדרות', reports: 'דוחות' };
+  // הדוחות יצאו מהרשימה (17.10.2026): יש להם קוד משלהם ("קוד לדוחות"), שנשמר
+  // ב-gatedTabsConfig.reportsCode ולא מוצג באף מסך.
+  const GATED_TAB_LABELS = { clients: 'לקוחות', staff: 'צוות', servicesgroup: 'שירותים', inventory: 'מלאי', settings: 'הגדרות' };
   const pendingEmailQueue = {};
   function sendEmail(to, subject, text, imageDataUrl){
     if (!to) return;
@@ -11305,6 +11310,7 @@
     if (ownerCodeInputEl && document.activeElement !== ownerCodeInputEl) ownerCodeInputEl.value = ownerAccessCode || '';
     if (typeof renderHolidayOverrides === 'function') renderHolidayOverrides();
     if (typeof renderGatedTabsCheckboxes === 'function') renderGatedTabsCheckboxes();
+    if (typeof renderReportsCodeBox === 'function') renderReportsCodeBox();
     const heroBizNameEl = document.getElementById('heroBizName');
     const heroPlatformLineEl = document.getElementById('heroPlatformLine');
     const bizNameTrimmed = (branding.name || '').trim();
@@ -19555,15 +19561,110 @@
     }));
   }
   function guardedShowInnerTab(containerId, innerId, btn){
-    if (innerId !== 'inner-overview-reports' || !gatedTabsConfig.reports){ showInnerTab(containerId, innerId, btn); return Promise.resolve(true); }
-    return refreshOwnerAccessCodeFromCloud().then(() => new Promise(resolve => {
-      if (isSensitiveAccessLocked()){
-        promptOwnerAccessCode(() => { showInnerTab(containerId, innerId, btn); resolve(true); }, () => resolve(false));
-      } else {
-        showInnerTab(containerId, innerId, btn);
-        resolve(true);
+    if (innerId !== 'inner-overview-reports'){ showInnerTab(containerId, innerId, btn); return Promise.resolve(true); }
+    // הדוחות — רק לפי "קוד לדוחות" (17.10.2026). הקוד הכללי כבר לא חל עליהם.
+    return refreshOwnerAccessCodeFromCloud().then(() => {
+      if (!reportsCodeIsSet() || reportsAccessUnlocked){ showInnerTab(containerId, innerId, btn); return true; }
+      return askHiddenCode('הדוחות מוגנים בקוד — נא להקליד את הקוד לדוחות:').then(entered => {
+        if (entered === null) return false;
+        if (entered === reportsCodeValue()){ reportsAccessUnlocked = true; showInnerTab(containerId, innerId, btn); return true; }
+        alert('קוד שגוי.');
+        return false;
+      });
+    });
+  }
+  /* קוד לדוחות (17.10.2026) — קוד נפרד רק לטאב הדוחות. נשמר בנתוני העסק
+   * (gatedTabsConfig.reportsCode), אבל לא מוצג באף מסך: בהגדרות רואים רק
+   * שהוא מוגדר, והקלדה שלו תמיד מוסתרת (••••). שינוי או הסרה — רק אחרי
+   * הקלדת הקוד הנוכחי. אם נשכח — אפשר לראות אותו ב-Firebase. */
+  let reportsAccessUnlocked = false;
+  function reportsCodeValue(){ return String((gatedTabsConfig && gatedTabsConfig.reportsCode) || ''); }
+  function reportsCodeIsSet(){ return reportsCodeValue().length > 0; }
+  // חלון קטן עם שדה מוסתר — prompt() הרגיל מציג את מה שמקלידים.
+  function askHiddenCode(message){
+    return new Promise(resolve => {
+      const ov = document.createElement('div');
+      ov.id = 'hiddenCodeOverlay';
+      ov.style.cssText = 'position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; direction:rtl;';
+      ov.innerHTML = '<div style="background:#fff; color:#2b2420; border-radius:14px; padding:20px; width:min(340px, 90vw); box-shadow:0 10px 30px rgba(0,0,0,0.25); font-family:inherit;">'
+        + '<div class="hc-msg" style="font-size:14.5px; line-height:1.6; margin-bottom:12px;"></div>'
+        + '<input type="password" class="hc-input" autocomplete="new-password" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ccc; border-radius:9px; font-size:16px;">'
+        + '<div style="display:flex; gap:8px; margin-top:14px; justify-content:flex-start;">'
+        + '<button type="button" class="hc-ok" style="padding:8px 16px; border-radius:9px; border:none; background:#2b2420; color:#fff; cursor:pointer;">אישור</button>'
+        + '<button type="button" class="hc-cancel" style="padding:8px 16px; border-radius:9px; border:1px solid #ccc; background:#fff; cursor:pointer;">ביטול</button>'
+        + '</div></div>';
+      ov.querySelector('.hc-msg').textContent = message;
+      const input = ov.querySelector('.hc-input');
+      const done = (v) => { ov.remove(); resolve(v); };
+      ov.querySelector('.hc-ok').onclick = () => done(input.value.trim());
+      ov.querySelector('.hc-cancel').onclick = () => done(null);
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') done(input.value.trim()); if (e.key === 'Escape') done(null); });
+      document.body.appendChild(ov);
+      setTimeout(() => input.focus(), 30);
+    });
+  }
+  window.__askHiddenCode = askHiddenCode;
+  function renderReportsCodeBox(){
+    const box = document.getElementById('reportsCodeBox');
+    if (!box) return;
+    box.innerHTML = '';
+    if (reportsCodeIsSet()){
+      const st = document.createElement('div');
+      st.style.cssText = 'font-size:13.5px; margin-bottom:10px;';
+      st.textContent = '✓ קוד לדוחות מוגדר. הוא לא מוצג כאן.';
+      const change = document.createElement('button');
+      change.type = 'button'; change.className = 'template-btn'; change.textContent = '🔁 שינוי קוד';
+      change.onclick = () => changeReportsCode(false);
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.className = 'template-btn'; remove.style.marginInlineStart = '8px'; remove.textContent = '🗑 הסרת הקוד';
+      remove.onclick = () => changeReportsCode(true);
+      box.appendChild(st); box.appendChild(change); box.appendChild(remove);
+    } else {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex; align-items:center; gap:10px; flex-wrap:wrap;';
+      const input = document.createElement('input');
+      input.type = 'password'; input.id = 'reportsCodeInput'; input.className = 'field-dark';
+      input.autocomplete = 'new-password'; input.placeholder = 'קוד לדוחות (מוסתר)'; input.style.maxWidth = '220px';
+      const save = document.createElement('button');
+      save.type = 'button'; save.className = 'template-btn'; save.textContent = '💾 שמירת קוד לדוחות';
+      save.onclick = () => {
+        const v = input.value.trim();
+        if (!v) { alert('יש להקליד קוד.'); return; }
+        if (v.length < 4) { alert('קוד של 4 תווים לפחות.'); return; }
+        gatedTabsConfig.reportsCode = v;
+        reportsAccessUnlocked = true;   // מי שהגדירה עכשיו כבר בפנים
+        if (typeof saveState === 'function') saveState();
+        renderReportsCodeBox();
+        if (typeof showAdminToast === 'function') showAdminToast('✓ הקוד לדוחות נשמר — הוא לא יוצג יותר');
+      };
+      row.appendChild(input); row.appendChild(save);
+      const note = document.createElement('div');
+      note.style.cssText = 'font-size:11.5px; color:var(--panel-text-dim); margin-top:6px;';
+      note.textContent = 'כל עוד לא הוגדר קוד — הדוחות פתוחים לכל מי שמחוברת ליומן.';
+      box.appendChild(row); box.appendChild(note);
+    }
+  }
+  function changeReportsCode(removeIt){
+    askHiddenCode('כדי ' + (removeIt ? 'להסיר' : 'לשנות') + ' את הקוד לדוחות — נא להקליד את הקוד הנוכחי:').then(cur => {
+      if (cur === null) return;
+      if (cur !== reportsCodeValue()) { alert('קוד שגוי.'); return; }
+      if (removeIt) {
+        delete gatedTabsConfig.reportsCode;
+        gatedTabsConfig.reportsCode = '';
+        if (typeof saveState === 'function') saveState();
+        renderReportsCodeBox();
+        if (typeof showAdminToast === 'function') showAdminToast('✓ הקוד לדוחות הוסר — הדוחות פתוחים');
+        return;
       }
-    }));
+      askHiddenCode('הקוד החדש לדוחות:').then(nv => {
+        if (nv === null) return;
+        if (nv.length < 4) { alert('קוד של 4 תווים לפחות.'); return; }
+        gatedTabsConfig.reportsCode = nv;
+        if (typeof saveState === 'function') saveState();
+        renderReportsCodeBox();
+        if (typeof showAdminToast === 'function') showAdminToast('✓ הקוד לדוחות עודכן');
+      });
+    });
   }
   function renderGatedTabsCheckboxes(){
     const wrapEl = document.getElementById('gatedTabsCheckboxes');
