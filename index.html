@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-18 · 124">
+<meta name="app-build" content="2026-10-18 · 125">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4377,7 +4377,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-18 · 124';
+        window.__APP_BUILD = '2026-10-18 · 125';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5822,7 +5822,20 @@
   function closeFlexibleRequestOverlay(){
     document.getElementById('flexibleRequestOverlay').classList.remove('show');
   }
+  // 124: לחיצה אחת = בקשה אחת. בזמן שהבקשה נשלחת הכפתור נעול ("שולחת…").
+  // ב-18.10 נוצרו 13 בקשות זהות של אותה לקוחה — השרת לפעמים "מתעורר" כמה
+  // שניות, והיא לחצה שוב ושוב.
+  let __frSubmitBusy = false;
   async function submitFlexibleRequest(){
+    if (__frSubmitBusy) return;
+    __frSubmitBusy = true;
+    const btn = document.querySelector('button[onclick="submitFlexibleRequest()"]');
+    const label = btn ? btn.textContent : '';
+    if (btn){ btn.disabled = true; btn.textContent = 'שולחת…'; }
+    try { return await submitFlexibleRequestNow(); }
+    finally { __frSubmitBusy = false; if (btn){ btn.disabled = false; btn.textContent = label; } }
+  }
+  async function submitFlexibleRequestNow(){
     const errorEl = document.getElementById('frError');
     const svcObjs = frSelectedServiceObjs();
     const idDigits = (document.getElementById('frId').value || '').replace(/[^0-9]/g, '');
@@ -14756,9 +14769,37 @@
   function requestIsOpen(r){ return !!r && CLOSED_REQUEST_STATUSES.indexOf(r.status) === -1; }
   function specialColumnPendingRequests(){
     const now = new Date();
-    return specialRequests.filter(r => r && r.status !== 'cancelledByClient' && r.status !== 'expired'
+    return specialRequests.filter(r => r && r.status !== 'cancelledByClient' && r.status !== 'expired' && r.status !== 'duplicate'
       && !(r.mode === 'flexible' && r.status === 'matched')
       && !specialRequestIsExpired(r, now));
+  }
+  // 124: בקשות זהות של אותה לקוחה (לחיצות חוזרות על "שליחה") — הראשונה נשארת,
+  // השאר מסומנות 'duplicate' (לא נמחקות; אפשר להחזיר) ויוצאות מהרשימה ומההצעות.
+  function sameRequestKey(r){
+    const p = r.preference || {};
+    const who = String(r.teudatZehut || '').replace(/[^0-9]/g, '') || (String(r.phone || '').replace(/[^0-9]/g, '') + '|' + String(r.name || '').trim());
+    return [r.mode || '', who, (r.services || []).map(s => String((s && s.name) || '')).sort().join('|'),
+      p.timeOfDay || '', p.timeFrom || '', p.timeTo || '', (p.days || []).slice().sort().join(','), p.dateFrom || '', p.dateTo || '', Number(p.leadMinutes) || 0, String(r.text || r.note || '')].join('§');
+  }
+  function markDuplicateRequests(){
+    const firstByKey = Object.create(null);
+    let marked = 0;
+    specialRequests.slice()
+      .filter(r => r && (r.status === 'pending' || r.status === 'offerExpired'))
+      .sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')))
+      .forEach(r => {
+        const k = sameRequestKey(r);
+        if (!firstByKey[k]) { firstByKey[k] = r; return; }
+        r.status = 'duplicate';
+        r.duplicateOf = firstByKey[k].id;
+        r.duplicateMarkedAt = new Date().toISOString();
+        marked++;
+      });
+    if (marked){
+      console.log('[requests] marked ' + marked + ' duplicate request(s)');
+      try { reportDiag('dup-requests', { key: String(marked) }); } catch (e) {}
+    }
+    return marked;
   }
   function renderSpecialRequestsColumn(bodyHeight){
     const col = document.createElement('div');
@@ -22872,6 +22913,15 @@
       }
       publishPublicView(); // מפרסם את החצי הלא-רגיש; אצל לקוחה זה לא עושה כלום
       setTimeout(function(){ try { migrateInlinePhotos(); } catch (e) {} }, 8000);
+      // 124: בקשות כפולות (לחיצות חוזרות) — רק אצל בעלת העסק, אחרי שהכל נטען.
+      setTimeout(function(){
+        try {
+          if (isOwnerSession() && cloudLoadComplete && markDuplicateRequests()){
+            if (typeof saveState === 'function') saveState({ silent: true });
+            if (typeof renderWeekCal === 'function') renderWeekCal();
+          }
+        } catch (e) { console.warn('[requests] duplicate cleanup failed:', e); }
+      }, 1500);
       console.log('Loaded saved data from the cloud.');
       reportCloudLoadTiming(cloudLoadStartedAt, rawCloudData);
       if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
