@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-18 · 117">
+<meta name="app-build" content="2026-10-18 · 118">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4361,7 +4361,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-18 · 117';
+        window.__APP_BUILD = '2026-10-18 · 118';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5847,7 +5847,10 @@
       errorEl.style.display = 'block';
       return;
     }
-    if (!email && !(frKnown && frKnown.hasEmail)){
+    // בקשה גמישה בלי מייל — לא נכנסת (18.10.2026): ההצעה לשעה שהתפנתה יוצאת
+    // במייל, ובלי מייל (ובטלפון כשר) היא לא מגיעה לעולם. ביומן של הסלון —
+    // רק מייל אמיתי (מהכרטיס או מוקלד); באתר — גם "יש מייל בכרטיס" לפי השרת.
+    if (!email && !(runningOnPublicData && frKnown && frKnown.hasEmail)){
       errorEl.textContent = 'יש להזין כתובת אימייל כדי שנוכל לעדכן אותך כשיימצא תור מתאים.';
       errorEl.style.display = 'block';
       return;
@@ -14946,9 +14949,37 @@
       recheckBtn.onclick = () => {
         recheckBtn.disabled = true;
         recheckBtn.textContent = 'בודקת…';
-        attemptMatchFlexibleRequest(r).then(found => {
+        const offersBefore = (pendingOffers || []).length;
+        attemptMatchFlexibleRequest(r).then(async found => {
+          // "בדוק שוב" שבעלת העסק לוחצת (18.10.2026): כששעה מתאימה קרובה (עד 3
+          // ימים), המערכת שולחת הצעה במקום לקבוע. אבל כשאי אפשר לשלוח לה הצעה —
+          // כבר נשלחה לה הצעה לאותה שעה, או שאין לה מייל ו-SMS (טלפון כשר) —
+          // עד היום הכפתור אמר "לא נמצאה שעה" למרות שיש. עכשיו: שואלים אם לקבוע
+          // לה ישירות.
+          if (!found){
+            const match = tryFindFlexibleSlot(r);
+            if (match){
+              const dur = flexReqDuration(r);
+              const startMin = timeToMinutes(match.time);
+              const held = slotIsHeldByOffer(match.date, match.staffIdx, startMin, startMin + dur, new Date());
+              const who = (staff[match.staffIdx] && staff[match.staffIdx].name) ? ' אצל ' + staff[match.staffIdx].name : '';
+              if (held){
+                if (typeof showAdminToast === 'function') showAdminToast('נמצאה שעה (' + formatDateDMY(match.date) + ' ' + match.time + ') — אבל היא כרגע מוצעת ללקוחה אחרת. ננסה שוב כשההצעה תיסגר.');
+              } else if (confirm('נמצאה שעה פנויה שמתאימה לבקשה: ' + formatDateDMY(match.date) + ' בשעה ' + match.time + who + '.\n\n'
+                  + 'אי אפשר לשלוח ל' + (r.name || 'לקוחה') + ' הצעה לשעה הזו (כבר נשלחה לה הצעה, או שאין לה מייל או SMS).\n\nלקבוע לה את התור ישירות?')){
+                const appt = await bookFlexibleRequest(r, match);
+                if (typeof showAdminToast === 'function') showAdminToast(appt ? '✓ התור נקבע ל' + (r.name || 'לקוחה') + ' — ' + formatDateDMY(match.date) + ' ' + match.time : 'לא הצלחנו לקבוע — ייתכן שהשעה נתפסה בינתיים. נא לרענן ולנסות שוב.');
+                if (appt){ closeSpecialRequestDetailOverlay(); if (typeof renderWeekCal === 'function') renderWeekCal(); return; }
+              }
+              renderSpecialRequestDetailOverlay();
+              if (typeof renderWeekCal === 'function') renderWeekCal();
+              return;
+            }
+          }
+          const offered = found && (pendingOffers || []).length > offersBefore;
           if (typeof showAdminToast === 'function'){
-            showAdminToast(found ? `✓ נמצא תור ל-${r.name || 'הבקשה'} ונקבע אוטומטית` : 'עדיין לא נמצאה שעה מתאימה — ננסה שוב מאוחר יותר.');
+            showAdminToast(!found ? 'עדיין לא נמצאה שעה מתאימה — ננסה שוב מאוחר יותר.'
+              : (offered ? `✓ נמצאה שעה ל-${r.name || 'הבקשה'} — נשלחה לה הצעה לאישור` : `✓ נמצא תור ל-${r.name || 'הבקשה'} ונקבע אוטומטית`));
           }
           if (found) closeSpecialRequestDetailOverlay();
           else renderSpecialRequestDetailOverlay();
