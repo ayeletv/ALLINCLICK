@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-17 · 116">
+<meta name="app-build" content="2026-10-18 · 117">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4361,7 +4361,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-17 · 116';
+        window.__APP_BUILD = '2026-10-18 · 117';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -20769,6 +20769,79 @@
   }
   function sameStable(a, b){ return stableJson(a) === stableJson(b); }
   window.__sameStable = sameStable;
+
+  /* שמירה "רק השינוי" (18.10.2026).
+   *
+   * כל הנתונים במסמך אחד, והתורים הם שדה אחד בו (רשימה). שמירה רגילה של
+   * רשימה מחליפה את כולה — ולכן כל תור חדש שלח את כל רשימת התורים (~150 ק"ב)
+   * ולפעמים גם את כל הלקוחות (~200 ק"ב). בסיכום היומי של 17.10: 5 שמירות
+   * גדולות, ממוצע 246 ק"ב.
+   *
+   * ל-Firebase יש "הוספת פריט לרשימה" (arrayUnion) ו"הסרת פריט" (arrayRemove)
+   * ששולחות רק את הפריט. כאן:
+   *   • הוספה — לכל הרשימות.
+   *   • שינוי/מחיקה — הסרת הגרסה הישנה + הוספת החדשה, רק ברשימות שלכל פריט
+   *     בהן מזהה ייחודי (תורים, יומן ביטולים, ביטולים מאוחרים, רשימת המתנה,
+   *     הצעות, בקשות). בלקוחות אין מזהה אמין — שינוי בכרטיס נשלח כמו היום.
+   *   • כל ספק (פריט בלי מזהה, מזהה כפול, שינוי גדול) — שמירה מלאה כמו היום.
+   * הסרה עובדת רק כשהפריט שנשלח זהה בדיוק למה שבענן — ולכן נשלח העותק
+   * שנקרא מהענן באותה טרנזקציה, לפני כל עיבוד.
+   * רשת ביטחון: אם Firebase דוחה את השיטה (invalid-argument), אותה שמירה
+   * נשלחת מיד במלואה והדפדפן חוזר לשיטה הישנה; תור שמופיע פעמיים (הסרה
+   * שלא תפסה) — נשאר רק האחרון; ומתג כיבוי: branding.deltaSave = false. */
+  const DELTA_ID_LISTS = { weekAppointments: 1, cancellationLog: 1, lateCancellations: 1, waitlist: 1, pendingOffers: 1, specialRequests: 1 };
+  const DELTA_ADD_ONLY_LISTS = { clients: 1 };
+  let __deltaSaveEnabled = true;
+  function deltaSaveAllowed(){
+    if (!__deltaSaveEnabled) return false;
+    try { if (localStorage.getItem('hk_save_delta') === 'off') return false; } catch (e) {}
+    try { if (branding && branding.deltaSave === false) return false; } catch (e) {}
+    return !!(firebase && firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.arrayUnion && firebase.firestore.FieldValue.arrayRemove);
+  }
+  function planListDelta(rawServerArr, serverArr, mergedArr, withIds){
+    rawServerArr = Array.isArray(rawServerArr) ? rawServerArr : [];
+    serverArr = Array.isArray(serverArr) ? serverArr : [];
+    mergedArr = Array.isArray(mergedArr) ? mergedArr : [];
+    if (rawServerArr.length !== serverArr.length) return null;
+    if (withIds){
+      const ids = new Set(), mids = new Set();
+      for (let i = 0; i < rawServerArr.length; i++){
+        const it = rawServerArr[i];
+        if (!it || !it.id || ids.has(it.id)) return null;          // פריט בלי מזהה / מזהה כפול — שמירה מלאה
+        ids.add(it.id);
+      }
+      for (const it of mergedArr){ if (!it || !it.id || mids.has(it.id)) return null; mids.add(it.id); }
+    }
+    const sSig = serverArr.map(stableJson), mSig = mergedArr.map(stableJson);
+    const sSet = new Set(sSig), mSet = new Set(mSig);
+    if (sSet.size !== sSig.length || mSet.size !== mSig.length) return null;   // פריטים זהים — שמירה מלאה
+    const removedIdx = [];
+    sSig.forEach((s, i) => { if (!mSet.has(s)) removedIdx.push(i); });
+    const added = [];
+    mSig.forEach((s, i) => { if (!sSet.has(s)) added.push(JSON.parse(JSON.stringify(mergedArr[i]))); });
+    const removedRaw = removedIdx.map(i => rawServerArr[i]);
+    if (!removedIdx.length && !added.length) return { noop: true, result: rawServerArr.map(x => JSON.parse(JSON.stringify(x))) };
+    if (removedIdx.length && !withIds) return null;                 // לקוחות: רק הוספות
+    const bytes = measurePayloadBytes({ r: removedRaw, a: added });
+    if (bytes > measurePayloadBytes({ m: mergedArr }) * 0.5) return null;   // שינוי גדול — שמירה מלאה
+    const removedSet = new Set(removedIdx);
+    const result = rawServerArr.filter((x, i) => !removedSet.has(i)).map(x => JSON.parse(JSON.stringify(x))).concat(added.map(x => JSON.parse(JSON.stringify(x))));
+    return { removedRaw, added, result, bytes };
+  }
+  // תור (או פריט אחר עם מזהה) שמופיע פעמיים — נשאר רק המופע האחרון.
+  function dedupeListsById(data){
+    if (!data) return 0;
+    let fixed = 0;
+    Object.keys(DELTA_ID_LISTS).forEach(k => {
+      const arr = data[k];
+      if (!Array.isArray(arr) || arr.length < 2) return;
+      const lastIdx = Object.create(null);
+      arr.forEach((it, i) => { if (it && it.id) lastIdx[it.id] = i; });
+      const out = arr.filter((it, i) => !(it && it.id) || lastIdx[it.id] === i);
+      if (out.length !== arr.length){ fixed += arr.length - out.length; data[k] = out; }
+    });
+    return fixed;
+  }
   function saveState(opts){
     let silent = !!(opts && opts.silent);
     if (__syncPendingShown) silent = false;
@@ -20809,10 +20882,14 @@
     };
     unsavedChangePending = true;
     pendingSaveCount++;
+    let __useDeltaThisSave = deltaSaveAllowed();
     const runSaveTransaction = () => db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
       const server = doc.exists ? doc.data() : {};
+      // עותק "גולמי" נפרד, בדיוק כמו בענן — רק ממנו אפשר להסיר פריט.
+      const rawServer = doc.exists ? doc.data() : {};
       if (__cloudDocWasMissing && doc.exists && serverHasRealContent(server)) return { __stale: true };
       backfillMissingListIds(server);
+      if (dedupeListsById(server)) { try { reportDiag('dup-fixed', {}); } catch (e) {} }
       const payload = { savedAt: nowIso };
       const changedKeys = new Set();
       Object.keys(simpleFields).forEach(key => {
@@ -20852,6 +20929,17 @@
       const repairs = repairPayloadBeforeWrite(payload, server, changedKeys);
       __lastWriteRepairs = repairs.fixed;
       __moreRemovalsPending = repairs.moreToRemove;
+      // "רק השינוי" — לכל רשימה שאפשר; כל השאר נשלח במלואו כמו היום.
+      const deltaPlans = {};
+      if (__useDeltaThisSave){
+        Array.from(changedKeys).forEach(key => {
+          if (!DELTA_ID_LISTS[key] && !DELTA_ADD_ONLY_LISTS[key]) return;
+          const plan = planListDelta(rawServer[key], server[key], payload[key], !!DELTA_ID_LISTS[key]);
+          if (!plan) return;
+          if (plan.noop){ changedKeys.delete(key); payload[key] = plan.result; return; }   // רק סדר שונה — אין מה לשלוח
+          deltaPlans[key] = plan;
+        });
+      }
       if (!changedKeys.size) return repairs.fixed.length ? { __repairedOnly: true, fixed: repairs.fixed } : null;
       if (!silent) showSaveStatus('שומר...');
       // נכתב לענן רק מה שבאמת השתנה. עד גרסה 102 כל שמירה העלתה את כל
@@ -20861,16 +20949,31 @@
       // ב-[failed-precondition]. הרשימות הממוזגות נשארות ב-payload כדי
       // שהדפדפן יתעדכן מהן, אבל רק השדות ב-changedKeys יוצאים לרשת.
       const writePayload = { savedAt: payload.savedAt };
-      changedKeys.forEach(key => { if (Object.prototype.hasOwnProperty.call(payload, key)) writePayload[key] = payload[key]; });
-      lastSavePayloadBytes = measurePayloadBytes(writePayload);
+      changedKeys.forEach(key => { if (!deltaPlans[key] && Object.prototype.hasOwnProperty.call(payload, key)) writePayload[key] = payload[key]; });
+      const deltaKeys = Object.keys(deltaPlans);
+      lastSavePayloadBytes = measurePayloadBytes(writePayload) + deltaKeys.reduce((s, k) => s + deltaPlans[k].bytes, 0);
       // אילו רשימות יצאו ובאיזה גודל — ליומן האבחון ולסיכום היומי. (17.10.2026)
       try {
         lastSaveWrittenKeys = Array.from(changedKeys).map(function(k){
-          return k + ':' + Math.round(measurePayloadBytes({ v: payload[k] }) / 1024);
+          return k + ':' + Math.round((deltaPlans[k] ? deltaPlans[k].bytes : measurePayloadBytes({ v: payload[k] })) / 1024);
         }).join(',');
       } catch (e) { lastSaveWrittenKeys = Array.from(changedKeys).join(','); }
-      saveDiag('write', { attempt: ++__saveTxAttempts, keys: Array.from(changedKeys), kb: Math.round(lastSavePayloadBytes / 1024) });
+      saveDiag('write', { attempt: ++__saveTxAttempts, keys: Array.from(changedKeys), delta: deltaKeys, kb: Math.round(lastSavePayloadBytes / 1024) });
       tx.set(CLOUD_DOC, writePayload, { merge: true });
+      if (deltaKeys.length){
+        const FV = firebase.firestore.FieldValue;
+        const removes = {}, adds = {};
+        deltaKeys.forEach(k => {
+          const p = deltaPlans[k];
+          if (p.removedRaw.length) removes[k] = FV.arrayRemove.apply(FV, p.removedRaw);
+          if (p.added.length) adds[k] = FV.arrayUnion.apply(FV, p.added);
+          payload[k] = p.result;   // מה שיהיה בענן אחרי הכתיבה — בסדר של הענן
+        });
+        // הסרה קודם, הוספה אחר כך — שתי כתיבות לאותו מסמך באותה טרנזקציה
+        // (Firebase לא מקבל הסרה והוספה לאותו שדה בכתיבה אחת).
+        if (Object.keys(removes).length) tx.update(CLOUD_DOC, removes);
+        if (Object.keys(adds).length) tx.update(CLOUD_DOC, adds);
+      }
       // עותק קפוא של מה שנכתב. הרשימות ב-payload הן אותם אובייקטים שעל המסך,
       // ועריכה שנעשית בזמן שהשמירה בדרך משנה גם אותם — ואז הבסיס החדש היה
       // "כולל" אותה, והיא לא נשמרה לעולם.
@@ -20893,6 +20996,14 @@
     const runWithRetries = (retry) => enqueueCloudSave(runSaveTransaction).catch(err => {
       const code = String((err && err.code) || '');
       saveDiag('attempt-failed', { retry: retry, code: code, ms: Date.now() - saveStartedAt });
+      // Firebase דחה את שיטת "רק השינוי" — אותה שמירה, מיד, במלואה; והדפדפן
+      // הזה חוזר לשיטה הישנה עד הרענון הבא. (18.10.2026)
+      if (__useDeltaThisSave && code.toLowerCase().indexOf('invalid-argument') !== -1){
+        __useDeltaThisSave = false;
+        __deltaSaveEnabled = false;
+        try { reportDiag('delta-off', { code: code }); } catch (e) {}
+        return runWithRetries(retry);
+      }
       if (!isTransientSaveError(err) || retry >= MAX_SAVE_RETRIES) throw err;
       const wait = Math.round(1000 * Math.pow(2, retry) * (0.75 + Math.random() * 0.5));
       // הגיבוי המקומי כבר נכתב, ולכן מהניסיון הכושל הראשון זה המצב האמיתי.
