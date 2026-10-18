@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-18 · 119">
+<meta name="app-build" content="2026-10-18 · 121">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4361,7 +4361,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-18 · 119';
+        window.__APP_BUILD = '2026-10-18 · 121';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -4701,9 +4701,9 @@
       <div class="label" style="margin-top:6px;">איזו שעה ביום מתאימה?</div>
       <div class="reminder-choice" id="frTimeOfDayRadios">
         <label><input type="radio" name="frTimeOfDay" value="any" checked> הכל</label>
-        <label><input type="radio" name="frTimeOfDay" value="morning"> בוקר</label>
-        <label><input type="radio" name="frTimeOfDay" value="afternoon"> צהריים</label>
-        <label><input type="radio" name="frTimeOfDay" value="evening"> ערב</label>
+        <label><input type="radio" name="frTimeOfDay" value="morning"> בוקר (עד 12:00)</label>
+        <label><input type="radio" name="frTimeOfDay" value="afternoon"> צהריים (12:00–17:00)</label>
+        <label><input type="radio" name="frTimeOfDay" value="evening"> ערב (19:00–23:00)</label>
         <label><input type="radio" name="frTimeOfDay" value="custom"> טווח מותאם אישית</label>
       </div>
       <div id="frCustomTimeWrap" style="display:none; flex-direction:column; gap:6px;">
@@ -13793,9 +13793,21 @@
   const FLEX_TIME_WINDOWS = {
     morning: [0, 12 * 60],
     afternoon: [12 * 60, 17 * 60],
-    evening: [17 * 60, 24 * 60],
+    evening: [19 * 60, 23 * 60],   // 120: "ערב" = 19:00–23:00 (עד 119: 17:00–24:00)
     any: [0, 24 * 60]
   };
+  // 120: השעה מתאימה לבקשה? — כולל בוקר/צהריים/ערב. עד 119 ההצעות (בדפדפן
+  // ובשרת) בדקו רק טווח מותאם אישית, ובקשת "ערב" קיבלה הצעות לכל שעה.
+  function flexReqAcceptsStart(req, startMin){
+    const [from, to] = flexReqTimeWindow(req);
+    return startMin >= from && startMin <= to;
+  }
+  const FLEX_LEAD_LABELS = { 30: 'חצי שעה', 60: 'שעה', 120: 'שעתיים', 1440: 'רק מחר והלאה' };
+  function flexLeadLabel(req){
+    const n = requestLeadMinutes(req);
+    if (FLEX_LEAD_LABELS[n]) return n === 1440 ? 'רק מיום המחרת' : FLEX_LEAD_LABELS[n] + ' מראש';
+    return n >= 60 ? (Math.round(n / 6) / 10) + ' שעות מראש' : n + ' דקות מראש';
+  }
   function flexReqDuration(req){
     return ((req && req.services) || []).reduce((sum, s) => sum + (s.duration || 0), 0) || 30;
   }
@@ -13811,7 +13823,7 @@
   function summarizeFlexiblePreference(req){
     const pref = (req && req.preference) || {};
     const parts = [];
-    const timeLabels = { morning: 'בקרים בלבד', afternoon: 'צהריים בלבד', evening: 'ערבים בלבד', any: 'כל שעה' };
+    const timeLabels = { morning: 'בקרים בלבד (עד 12:00)', afternoon: 'צהריים בלבד (12:00–17:00)', evening: 'ערבים בלבד (19:00–23:00)', any: 'כל שעה' };
     if (pref.timeFrom && pref.timeTo) parts.push(`בין ${pref.timeFrom} ל-${pref.timeTo}`);
     else parts.push(timeLabels[pref.timeOfDay] || timeLabels.any);
     const days = Array.isArray(pref.days) ? pref.days.slice().sort((a, b) => a - b) : [];
@@ -13833,6 +13845,7 @@
       else if (fromLabel) parts.push(`מ-${fromLabel}`);
       else if (toLabel) parts.push(`עד ${toLabel}`);
     }
+    if (pref.leadMinutes) parts.push('צריכה ' + flexLeadLabel(req));
     return parts.join(', ');
   }
   function tryFindFlexibleSlot(req){
@@ -14027,6 +14040,9 @@
     const previouslyOffered = new Set();
     (pendingOffers || []).forEach(function(o){
       if (!o || String(o.date || '') + '|' + String(o.time || '') + '|' + String(o.staff) !== slotKey) return;
+      // 120: "לקחת את השעה — קביעה ידנית" בלי שנקבע תור בסוף — ההצעה לא נחשבת.
+      // השעה עדיין פנויה (אחרת לא היינו כאן), והלקוחה לא קיבלה הזדמנות לאשר.
+      if (o.status === 'takenByOwner') return;
       (o.recipients || []).forEach(function(rec){
         if (rec && rec.requestId != null) previouslyOffered.add(String(rec.requestId));
       });
@@ -14042,8 +14058,7 @@
       if (pref.dateFrom && slot.date < pref.dateFrom) return false;
       if (pref.dateTo && slot.date > pref.dateTo) return false;
       if (Array.isArray(pref.days) && pref.days.length && pref.days.indexOf(dow) === -1) return false;
-      if (pref.timeFrom && startMin < timeToMinutes(pref.timeFrom)) return false;
-      if (pref.timeTo && startMin > timeToMinutes(pref.timeTo)) return false;
+      if (!flexReqAcceptsStart(r, startMin)) return false;
       if (typeof r.preferredStaffIdx === 'number' && r.preferredStaffIdx !== slot.staff) return false;
       const dur = (r.services || []).reduce(function(a, sv){ return a + (sv.duration || 0); }, 0) || 30;
       if (dur > (slot.dur || 30)) return false;
@@ -14057,7 +14072,7 @@
         return startMin < e && end > s;
       });
       return !clash;
-    }).sort(function(a, b){
+    }).concat(eligibleWaitlistForSlot(slot, previouslyOffered, now)).sort(function(a, b){
       function createdMs(r){
         const raw = r && (r.createdAt || r.createdDate || r.timestamp || r.created);
         if (typeof raw === 'number') return raw;
@@ -14069,6 +14084,50 @@
       if (delta) return delta;
       return String(a.id || '').localeCompare(String(b.id || ''));
     });
+  }
+  // 121: רשימת ההמתנה באותו תור כמו הבקשות הגמישות — זהה ל-eligibleRequestsFor
+  // בשרת. ממתינה = תאריך ושעה מסוימים: אותו יום, השעה שביקשה בתוך השעה
+  // שהתפנתה, והטיפול שלה נכנס בה. מוחזרת באותה צורה כמו בקשה (source: 'waitlist').
+  function eligibleWaitlistForSlot(slot, previouslyOffered, now){
+    const startMin = timeToMinutes(slot.time);
+    const slotDur = Number(slot.dur || 30);
+    const todayKey = formatDateKey(now || new Date());
+    return (waitlist || []).filter(function(w){
+      if (!w || w.status === 'matched' || !w.date || w.date !== slot.date || w.date < todayKey) return false;
+      if (previouslyOffered && previouslyOffered.has(String(w.id))) return false;
+      const req = timeToMinutes(w.requestedTime || '');
+      if (!(req >= startMin && req < startMin + slotDur)) return false;
+      const svc = (services || []).find(function(s){ return s && s.name === w.service; }) || null;
+      const dur = Number(svc && svc.duration) || 30;
+      if (dur > slotDur) return false;
+      const emp = staff[Number(slot.staff)];
+      if (w.staffName){ if (!emp || emp.name !== w.staffName) return false; }
+      else if (svc && svc.category && !isStaffCapableOf(Number(slot.staff), svc.category)) return false;
+      return !(weekAppointments || []).some(function(a){
+        if (!a || a.date !== slot.date || a.status === 'cancelled') return false;
+        if (String(a.client || '') !== String(w.name || '')) return false;
+        const s = timeToMinutes(a.time), e = s + (a.dur || 30);
+        return startMin < e && (startMin + dur) > s;
+      });
+    }).map(function(w){
+      const svc = (services || []).find(function(s){ return s && s.name === w.service; }) || null;
+      return {
+        id: w.id, source: 'waitlist', name: w.name || '', phone: w.phone || '', email: w.email || '',
+        teudatZehut: w.teudatZehut || null, createdAt: w.createdAt, reminderChannels: w.reminderChannels,
+        services: w.service ? [{ name: w.service, duration: Number(svc && svc.duration) || 30, price: Number(svc && svc.price) || 0, category: (svc && svc.category) || '' }] : [],
+      };
+    });
+  }
+  // 121: מה ייקבע לה אם תאשר — הטיפול שלה (זהה ל-recipientBookingOf בשרת).
+  function recipientBookingOf(r){
+    const svcs = (r && Array.isArray(r.services)) ? r.services.filter(function(s){ return s && s.name; }) : [];
+    if (!svcs.length) return {};
+    return {
+      service: svcs.map(function(s){ return s.name; }).join(' + '),
+      dur: svcs.reduce(function(a, s){ return a + (Number(s.duration) || 0); }, 0) || 30,
+      price: svcs.reduce(function(a, s){ return a + (Number(s.price) || 0); }, 0),
+      services: svcs.map(function(s){ return { name: String(s.name), duration: Number(s.duration) || 0, price: Number(s.price) || 0 }; }),
+    };
   }
   function offerById(id){ return (pendingOffers || []).filter(function(o){ return o && o.id === id; })[0] || null; }
   function offerIsLive(o, now){
@@ -14136,7 +14195,10 @@
       serviceName: slot.serviceName || '',
       requestIds: chosen.map(function(r){ return r.id; }),
       recipients: chosen.map(function(r){
-        return { requestId: r.id, name: r.name || '', phone: r.phone || '', email: r.email || '', status: 'notified' };
+        return Object.assign(
+          { requestId: r.id, name: r.name || '', phone: r.phone || '', email: r.email || '', status: 'notified' },
+          r.source === 'waitlist' ? { source: 'waitlist', waitlistId: r.id } : {},
+          { booking: recipientBookingOf(r) });
       }),
       broadcast: broadcast,
       freedFrom: slot.freedFrom || '',
@@ -14169,7 +14231,10 @@
     weekAppointments = pull('weekAppointments', weekAppointments, a => a && a.id);
     pendingOffers = keepServerDecisions(pull('pendingOffers', pendingOffers, o => o && o.id), server.pendingOffers, isFinalOfferDecision);
     specialRequests = keepServerDecisions(pull('specialRequests', specialRequests, r => r && r.id), server.specialRequests, isFinalRequestDecision);
-    ['weekAppointments', 'pendingOffers', 'specialRequests'].forEach(k => { lastLoadedSnapshot[k] = cloneJSON(server[k] || []); });
+    // 121: גם רשימת ההמתנה — ממתינה שאישרה הצעה בשרת מסומנת matched, ובלי זה
+    // היומן היה מציע לה שוב את השעה שכבר יש לה.
+    waitlist = keepServerDecisions(pull('waitlist', waitlist, w => w && w.id), server.waitlist, w => !!(w && w.status === 'matched'));
+    ['weekAppointments', 'pendingOffers', 'specialRequests', 'waitlist'].forEach(k => { lastLoadedSnapshot[k] = cloneJSON(server[k] || []); });
     saveDiag('offers-refresh', { offers: pendingOffers.length });
     return true;
   }
@@ -14252,15 +14317,17 @@
   }
   function notifyOfferRecipients(offer, requests){
     requests.forEach(function(r){
+      // 121: בהודעה — הטיפול שהיא ביקשה, לא זה שבוטל.
+      const mineOffer = Object.assign({}, offer, { serviceName: recipientBookingOf(r).service || offer.serviceName });
       try {
         const fake = { id: offer.id, client: r.name, teudatZehut: r.teudatZehut,
                        reminderChannels: r.reminderChannels || ['sms'] };
-        if (typeof queueApptSms === 'function') queueApptSms(fake, offerSmsText(offer, r.phone));
+        if (typeof queueApptSms === 'function') queueApptSms(fake, offerSmsText(mineOffer, r.phone));
       } catch (e){ console.error('Offer SMS failed for', r.name, e); }
       try {
         const email = (r.email || (typeof findClientEmailByPhone === 'function' ? findClientEmailByPhone(r.phone) : '') || '').trim();
         if (email && typeof sendEmail === 'function') {
-          sendEmail(email, 'התפנה תור — לאישור לחצי כאן', offerEmailText(offer, r));
+          sendEmail(email, 'התפנה תור — לאישור לחצי כאן', offerEmailText(mineOffer, r));
         }
       } catch (e){ console.error('Offer email failed for', r.name, e); }
     });
@@ -14570,7 +14637,7 @@
         const dateLabel = dateObj.getDate() + ' ב' + hebrewMonths[dateObj.getMonth()];
         sendEmail(
           customerEmail,
-          'התפנה תור אצלנו!',
+          'התור שלך אושר',   // 121: כמו בקביעה ישירה מבקשה גמישה
           getAppointmentEmailText(w.name || '', appt.service, dateLabel, match.time, emp ? emp.name : '', 'לביטול, שינוי מועד או קביעת תור נוסף, היכנסי לקישור הבא:', idDigits, phone)
         );
       }
@@ -14581,56 +14648,6 @@
     }
     return appt;
   }
-  async function createWaitlistOfferForMatch(w, match){
-    if (!w || !match || !w.id) return false;
-    const dur = (services.find(s => s.name === w.service) || {}).duration || 30;
-    const startMin = timeToMinutes(match.time);
-    const endMin = startMin + dur;
-    if (typeof slotIsHeldByOffer === 'function' &&
-        slotIsHeldByOffer(match.date, match.staffIdx, startMin, endMin, new Date())) return false;
-
-    const duplicate = (pendingOffers || []).some(o =>
-      o && o.status === 'offered' && o.date === match.date &&
-      String(o.staff) === String(match.staffIdx) &&
-      timeToMinutes(o.time) < endMin &&
-      timeToMinutes(o.time) + Number(o.dur || 30) > startMin &&
-      (o.recipients || []).some(r => String(r.waitlistId || r.requestId || '') === String(w.id))
-    );
-    if (duplicate) return false;
-
-    const now = new Date();
-    const offer = {
-      id: 'offer_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
-      date: match.date, time: match.time, dur, staff: match.staffIdx,
-      serviceName: w.service || '',
-      requestIds: [w.id],
-      recipients: [{
-        requestId: w.id, waitlistId: w.id, source: 'waitlist',
-        name: w.name || '', phone: w.phone || '', email: w.email || '',
-        teudatZehut: w.teudatZehut || '', status: 'notified'
-      }],
-      broadcast: false,
-      freedFrom: 'waitlist',
-      createdAt: now.toISOString(),
-      expiresAt: new Date(now.getTime() + offerSetting('windowMin') * 60000).toISOString(),
-      status: 'offered'
-    };
-    pendingOffers.push(offer);
-    // Save before notifying, so the unique link resolves on the server immediately.
-    try {
-      if (typeof saveState === 'function') await saveState();
-    } catch (e) {
-      pendingOffers = pendingOffers.filter(o => o && o.id !== offer.id);
-      console.error('Waitlist offer was not saved; not sending an acceptance link.', e);
-      if (typeof showAdminToast === 'function') showAdminToast('⚠ ההצעה לא נשמרה ולכן לא נשלח קישור. נסי שוב.');
-      return false;
-    }
-    notifyOfferRecipients(offer, offer.recipients);
-    if (typeof renderWeekCal === 'function') renderWeekCal();
-    if (typeof showAdminToast === 'function') showAdminToast('✓ נשלחה הצעה ל-' + (w.name || 'הלקוחה') + ' לאישור התור');
-    return true;
-  }
-
   function waitlistCreatedMs(w){
     const raw = w && (w.createdAt || w.createdDate || w.timestamp || w.created);
     if (typeof raw === 'number') return raw;
@@ -14651,11 +14668,26 @@
     if (alreadyOffered) return false;
     const match = recheckWaitlistEntry(w);
     if (!match) return false;
-    // A waitlist match is an offer, not an appointment yet. The appointment
-    // is created only after the recipient confirms through the unique link.
-    return await createWaitlistOfferForMatch(w, match);
+    // 121: בדיוק כמו בקשה גמישה (attemptMatchFlexibleRequest): עד maxDaysAhead
+    // — הצעה דרך createOfferForFreedSlot (אותו תור לפי סדר ההרשמה, יחד עם
+    // הבקשות הגמישות; פחות מ-3 שעות — לכולן יחד; מי שלא ענתה לא מקבלת את אותה
+    // שעה שוב). מעבר לזה — קביעה ישירה. עד 120: תמיד הצעה, תמיד לאחת, ואחרי
+    // שפגה — שוב לאותה אחת, כך שהבאה בתור לא קיבלה אף פעם.
+    const dur = Number((services.find(s => s.name === w.service) || {}).duration) || 30;
+    const now = new Date();
+    const away = offerMinutesUntil(match.date, match.time, now);
+    if (away !== null && away <= offerSetting('maxDaysAhead') * 24 * 60){
+      if (away < offerSetting('floorMin')) return false;
+      const startMin = timeToMinutes(match.time);
+      if (slotIsHeldByOffer(match.date, match.staffIdx, startMin, startMin + dur, now)) return false;
+      return !!createOfferForFreedSlot({ date: match.date, time: match.time, dur: dur, staff: match.staffIdx, serviceName: w.service || '', freedFrom: 'waitlist' });
+    }
+    const appt = await bookWaitlistAutoMatch(w, match);
+    return !!appt;
   }
   async function recheckAllPendingWaitlist(){
+    // 121: אותם תנאים כמו לבקשות הגמישות — רק ביומן של בעלת העסק, על נתונים מלאים.
+    try { if (!isOwnerSession() || !cloudLoadComplete || runningOnPublicData) return false; } catch (e) { return false; }
     let matchedAny = false;
     // FIFO: oldest request first; use id as a stable tie-breaker.
     const pending = waitlist.filter(w => w.status !== 'matched').slice().sort((a, b) => {
@@ -19127,6 +19159,7 @@
         return `<div class="my-appt-card" style="margin-top:${i ? 12 : 6}px;">
           <h4>${escHtml(w.service || 'תור')}</h4>
           <div class="appt-meta">${x.length === 3 ? x[2] + '/' + x[1] : ''}${w.requestedTime ? ' · ' + escHtml(w.requestedTime) : ''}${w.staffName ? ' · אצל ' + escHtml(w.staffName) : ''}</div>
+          ${w.liveOffer ? myOfferBoxHtml(w.liveOffer, 'claimMyWaitlistOffer(' + i + ')') : ''}
           <div class="my-appt-actions"><button class="danger" onclick="cancelMyWaitlist(${i})">יציאה מרשימת ההמתנה</button></div>
         </div>`;
       }).join('')}
@@ -19137,7 +19170,7 @@
     if (!w) return;
     if (!confirm('לצאת מרשימת ההמתנה לשעה הזו?')) return;
     let res = null;
-    try { res = await callClientApi('cancelWaitlist', { id: lastIdentifiedLookupId, waitlistId: w.id }); }
+    try { res = await callClientApi('cancelWaitlist', { id: lastIdentifiedLookupId, waitlistId: w.id, siteUrl: getSiteUrl() }); }
     catch (e) { res = { ok: false, error: 'לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.' }; }
     if (!res || !res.ok){ alert((res && res.error) || 'לא הצלחנו לבטל. נא לנסות שוב.'); return; }
     lookedUpWaitlist.splice(idx, 1);
@@ -19152,11 +19185,7 @@
         <div class="my-appt-card" style="${i > 0 ? 'margin-top:12px;' : 'margin-top:6px;'}">
           <h4>${escHtml((r.services || []).join(' + ') || 'בקשה מיוחדת')}</h4>
           <div class="appt-meta">${escHtml(myRequestSummary(r))}</div>
-          ${r.liveOffer ? `<div class="my-offer" id="myOffer_${escHtml(r.liveOffer.id)}" style="margin-top:10px; padding:10px 12px; border-radius:10px; background:rgba(28,138,75,0.10); border:1px solid rgba(28,138,75,0.45);">
-            <div style="font-weight:700;">✨ התפנתה לך שעה: ${escHtml(myOfferDateLabel(r.liveOffer))} בשעה ${escHtml(r.liveOffer.time)}</div>
-            <div style="font-size:12.5px; opacity:.85; margin-top:2px;">ההצעה שמורה לך עד ${escHtml(new Date(r.liveOffer.expiresAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }))}</div>
-            <div class="my-appt-actions" style="margin-top:8px;"><button onclick="claimMyOffer(${i})" style="border-color:#1c8a4b; color:#1c8a4b; font-weight:700;">✓ אני מגיעה — לאישור התור</button></div>
-          </div>` : ''}
+          ${r.liveOffer ? myOfferBoxHtml(r.liveOffer, 'claimMyOffer(' + i + ')') : ''}
           <div class="my-appt-actions"><button class="danger" onclick="cancelMyRequest(${i})">ביטול הבקשה</button></div>
         </div>`).join('')}
     </div>`;
@@ -19168,10 +19197,28 @@
     const isToday = formatDateKey(new Date()) === o.date;
     return (isToday ? 'היום' : (days[dt.getDay()] ? days[dt.getDay()].name : '')) + ', ' + x[2] + ' ב' + hebrewMonths[x[1] - 1];
   }
+  // 121: אותה תיבת הצעה לבקשה גמישה ולרשימת המתנה. עד 120 לממתינה לא הייתה
+  // תיבה כזו — הקישור מההודעה הביא אותה ל"התורים שלי" בלי כפתור אישור.
+  function myOfferBoxHtml(o, onclickExpr){
+    return `<div class="my-offer" id="myOffer_${escHtml(o.id)}" style="margin-top:10px; padding:10px 12px; border-radius:10px; background:rgba(28,138,75,0.10); border:1px solid rgba(28,138,75,0.45);">
+            <div style="font-weight:700;">✨ התפנתה לך שעה: ${escHtml(myOfferDateLabel(o))} בשעה ${escHtml(o.time)}</div>
+            <div style="font-size:12.5px; opacity:.85; margin-top:2px;">ההצעה שמורה לך עד ${escHtml(new Date(o.expiresAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }))}</div>
+            <div class="my-appt-actions" style="margin-top:8px;"><button onclick="${onclickExpr}" style="border-color:#1c8a4b; color:#1c8a4b; font-weight:700;">✓ אני מגיעה — לאישור התור</button></div>
+          </div>`;
+  }
+  function claimMyWaitlistOffer(idx){
+    const w = lookedUpWaitlist[idx];
+    if (!w || !w.liveOffer) return;
+    return claimOfferById(w.liveOffer.id);
+  }
   /* אישור ההצעה מתוך "התורים שלי" — אותה פעולה בשרת כמו בחלון ההצעה הישן. */
   async function claimMyOffer(idx){
     const r = lookedUpRequests[idx];
     if (!r || !r.liveOffer) return;
+    return claimOfferById(r.liveOffer.id);
+  }
+  async function claimOfferById(offerId){
+    const r = { liveOffer: { id: offerId } };
     let res = null;
     try { res = await callClientApi('claimOffer', { id: lastIdentifiedLookupId, offerId: r.liveOffer.id, siteUrl: getSiteUrl() }); }
     catch (e) { res = { ok: false, error: 'לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.' }; }
@@ -22620,6 +22667,7 @@
     const code = String((err && err.code) || '').toLowerCase();
     return TRANSIENT_CLOUD_CODES.indexOf(code) !== -1;
   }
+  let __streamReadBlocked = false;
   function getDocWithRetry(ref, label){
     let attempt = 0;
     // קריאה רגילה עוברת בערוץ הרציף של Firestore. כשהוא חסום, קריאה בתוך
@@ -22635,9 +22683,19 @@
       ]).then(doc => {
         // הערוץ הרציף נכשל והבקשה הרגילה עברה — זה מכשיר מסונן, לא מכשיר בלי רשת.
         try { localStorage.setItem('hk_force_long_polling', '1'); } catch (e) {}
+        __streamReadBlocked = true;
         return doc;
       });
     };
+    // 120: אחרי שהתברר שהערוץ חסום (בעיקר בחלון גלישה בסתר, שבו הזיכרון
+    // מהביקור הקודם לא נשמר), כל קריאה נוספת — "רענון יומן", הסנכרון ברקע,
+    // חזרה ללשונית — הולכת ישר בבקשה הרגילה, ולא נתקעת שוב 10 שניות.
+    if (__streamReadBlocked && db && typeof db.runTransaction === 'function'){
+      return Promise.race([
+        db.runTransaction(tx => tx.get(ref)),
+        new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('read timeout'), { code: 'deadline-exceeded' })), 15000)),
+      ]);
+    }
     const tryOnce = () => ref.get().catch(err => {
       attempt++;
       if (isTransientCloudError(err) && attempt > 2) return readViaRequest(err);
@@ -22822,8 +22880,8 @@
       return;
     }
     if (unsavedChangePending){ saveState(); return; }
-    CLOUD_DOC.get().then(doc => {
-      if (!doc.exists) return;
+    getDocWithRetry(CLOUD_DOC, 'tab-return').then(doc => {
+      if (!doc.exists || unsavedChangePending || pendingSaveCount > 0) return;
       const rawCloudData = doc.data();
       backfillMissingListIds(rawCloudData);
       lastLoadedSnapshot = cloneJSON(rawCloudData);
@@ -22856,8 +22914,11 @@
     if (isTyping || overlayOpen) return;
     if (pendingSaveCount > 0) return;
     if (unsavedChangePending){ saveState({ silent: true }); return; }
-    CLOUD_DOC.get().then(doc => {
-      if (!doc.exists) return;
+    // 120: דרך getDocWithRetry (עוקף ערוץ חסום), ולא יותר מקריאה אחת בכל רגע.
+    if (__remotePollInFlight) return;
+    __remotePollInFlight = true;
+    getDocWithRetry(CLOUD_DOC, 'poll').then(doc => {
+      if (!doc.exists || unsavedChangePending || pendingSaveCount > 0) return;
       const rawCloudData = doc.data();
       if (rawCloudData.savedAt === lastLoadedSnapshot.savedAt){ __idlePolls++; return; } // שום דבר לא השתנה
       __idlePolls = 0;
@@ -22869,8 +22930,10 @@
       rebindOpenRecords();
       rerenderEverything();
       alignSnapshotWithNormalisedData();
-    }).catch(err => console.error('Background live-sync check failed:', err));
+    }).catch(err => console.error('Background live-sync check failed:', err))
+      .then(() => { __remotePollInFlight = false; });
   }
+  let __remotePollInFlight = false;
   let __pendingRemoteUpdatePollTimeout = null;
   function scheduleNextRemoteUpdatePoll(){
     const delay = pollIntervalMs();
@@ -23206,21 +23269,34 @@
   function refreshCalendarFromCloud(){
     refreshCalendarView();
     if (!isOwnerSession() || calendarRefreshInFlight) return Promise.resolve(false);
+    // 120: שינוי שעוד לא הגיע לענן לא נדרס ברענון — הוא נשמר, והשמירה עצמה
+    // מביאה את הגרסה העדכנית מהענן וממזגת.
+    if (unsavedChangePending || pendingSaveCount > 0){
+      if (unsavedChangePending && typeof saveState === 'function') saveState({ silent: true });
+      if (typeof showSaveStatus === 'function') showSaveStatus('שומרת שינוי — היומן יתעדכן מיד אחרי', 2200);
+      return Promise.resolve(false);
+    }
     calendarRefreshInFlight = true;
     if (typeof showSaveStatus === 'function') showSaveStatus('מרעננת...');
-    return CLOUD_DOC.get().then(doc => {
+    // 120: הקריאה עוברת דרך getDocWithRetry, כמו הטעינה הראשונה — כולל הדרך
+    // העוקפת כשהערוץ הרציף חסום (חלון גלישה בסתר). עד 119 הרענון השתמש
+    // בקריאה הרגילה בלבד, ונתקע על "מרעננת..." עד שנכשל.
+    return getDocWithRetry(CLOUD_DOC, 'refresh').then(doc => {
       if (!doc.exists) return false;
+      if (unsavedChangePending || pendingSaveCount > 0) return true; // שינוי נכנס בזמן הקריאה — השמירה תביא את הגרסה העדכנית
       const rawCloudData = doc.data();
       if (typeof backfillMissingListIds === 'function') backfillMissingListIds(rawCloudData);
       lastLoadedSnapshot = cloneJSON(rawCloudData);
       applyCloudData(rawCloudData);
       alignSnapshotWithNormalisedData();
       if (typeof pruneExpiredWaitlistEntries === 'function') pruneExpiredWaitlistEntries();
+      rebindOpenRecords();
       rerenderEverything();
       refreshCalendarView();
       return true;
     }).catch(err => {
       console.error('Refreshing the calendar from the cloud failed:', err);
+      try { reportDiag('refresh-failed', { code: String((err && (err.code || err.message)) || '').slice(0, 60) }); } catch (e) {}
       return false;
     }).then(ok => {
       calendarRefreshInFlight = false;
