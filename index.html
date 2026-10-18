@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-18 · 125">
+<meta name="app-build" content="2026-10-18 · 126">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4377,7 +4377,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-18 · 125';
+        window.__APP_BUILD = '2026-10-18 · 126';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -22810,16 +22810,43 @@
     // 123: רענון שלחצת עליו — 5 שניות (הקריאה הרגילה לוקחת בדרך כלל פחות
     // משתיים); ברקע — 12. ביומן האבחון אחרי 122: שלוש תקיעות, כל אחת חיכתה
     // 12 שניות מלאות.
-    const limitMs = label === 'business' ? 0 : (label === 'refresh' ? 5000 : 12000);
-    const getOnce = () => !limitMs ? ref.get() : Promise.race([
-      ref.get(),
-      new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('read timed out'), { code: 'deadline-exceeded' })), limitMs)),
-    ]);
+    // 126: "מירוץ" במקום ויתור. אם הקריאה הרגילה לא ענתה תוך X שניות — הדרך
+    // העוקפת יוצאת במקביל (בלי לבטל את הראשונה), ומה שמגיע קודם מנצח. כך
+    // חיבור איטי-אבל-עובד לא ננטש, וחיבור תקוע לא מחזיק את הכל. עד 125 לטעינה
+    // הראשונה לא הייתה שום הגבלה: ביומן האבחון 18.10 16:04 בטלפון — 42 שניות
+    // של לוגו מסתובב בלי קטגוריות.
+    // ו-source:'server': בלי זה, כש-Firebase חושב שהוא "לא מחובר", קריאה
+    // רגילה מחזירה בשקט את העותק הישן ששמור במכשיר — כך המחשב הציג נתונים
+    // ישנים גם אחרי "רענון", עד ש"קפץ" כמה דקות אחר כך (18.10).
+    // האתר ללקוחות (publicView) — 6 שניות: לקוחה ברחוב לא תחכה יותר.
+    const hedgeMs = label === 'business' ? 7000 : label === 'refresh' ? 5000 : (label === 'publicView' || label === 'owners') ? 6000 : 12000;
+    const plainGet = () => { try { return ref.get({ source: 'server' }); } catch (e) { return ref.get(); } };
+    const getOnce = () => new Promise((resolve, reject) => {
+      let done = false, primaryErr = null, hedgeErr = null, hedgeStarted = false;
+      const win = v => { if (!done) { done = true; clearTimeout(timer); resolve(v); } };
+      const lose = () => {
+        if (done) return;
+        if (primaryErr && (!hedgeStarted || hedgeErr)) { done = true; clearTimeout(timer); reject(primaryErr); }
+        else if (hedgeErr && !primaryErr) {
+          // הדרך העוקפת נכשלה והרגילה עוד תקועה — עד 15 שניות נוספות, לא לנצח.
+          setTimeout(() => { if (!done) { done = true; reject(hedgeErr); } }, 15000);
+        }
+      };
+      plainGet().then(win, e => { primaryErr = e; lose(); });
+      const timer = setTimeout(() => {
+        if (done || !db || typeof db.runTransaction !== 'function') return;
+        hedgeStarted = true;
+        try { reportDiag('stream-blocked', { key: label || '', code: 'slow-' + Math.round(hedgeMs / 1000) + 's' }); } catch (e) {}
+        db.runTransaction(tx => tx.get(ref)).then(v => {
+          if (!done) {
+            __streamReadBlocked = true;   // מעכשיו בדף הזה — ישר בדרך העוקפת
+            try { localStorage.setItem('hk_force_long_polling', '1'); } catch (e) {}
+          }
+          win(v);
+        }, e => { hedgeErr = e; lose(); });
+      }, hedgeMs);
+    });
     const tryOnce = () => getOnce().catch(err => {
-      // נתקעה — לא מחכים עוד סבב; ישר בדרך העוקפת. ומעכשיו כל קריאה בדף
-      // הזה הולכת ישר בה (123: עד 122 הסימון חיכה להצלחת הדרך העוקפת, ובינתיים
-      // הקריאה הבאה נתקעה שוב — פעמיים ברצף ביומן האבחון).
-      if (err && err.message === 'read timed out') { __streamReadBlocked = true; return readViaRequest(err); }
       attempt++;
       if (isTransientCloudError(err) && attempt > 2) return readViaRequest(err);
       if (!isTransientCloudError(err) || attempt > 2) throw err;
