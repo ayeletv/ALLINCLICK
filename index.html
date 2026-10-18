@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-18 · 122">
+<meta name="app-build" content="2026-10-18 · 123">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4361,7 +4361,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-18 · 122';
+        window.__APP_BUILD = '2026-10-18 · 123';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -20920,7 +20920,9 @@
    * נשלחת מיד במלואה והדפדפן חוזר לשיטה הישנה; תור שמופיע פעמיים (הסרה
    * שלא תפסה) — נשאר רק האחרון; ומתג כיבוי: branding.deltaSave = false. */
   const DELTA_ID_LISTS = { weekAppointments: 1, cancellationLog: 1, lateCancellations: 1, waitlist: 1, pendingOffers: 1, specialRequests: 1 };
-  const DELTA_ADD_ONLY_LISTS = { clients: 1 };
+  const DELTA_ADD_ONLY_LISTS = { clients: 1 };   // בלי מזהה — אבל מ-123 גם שינוי (עד 10 כרטיסים)
+  const CLIENT_DELTA_MAX_CHANGED = 10;
+  let __knownClientDupTz = 0;
   let __deltaSaveEnabled = true;
   function deltaSaveAllowed(){
     if (!__deltaSaveEnabled) return false;
@@ -20951,7 +20953,11 @@
     mSig.forEach((s, i) => { if (!sSet.has(s)) added.push(JSON.parse(JSON.stringify(mergedArr[i]))); });
     const removedRaw = removedIdx.map(i => rawServerArr[i]);
     if (!removedIdx.length && !added.length) return { noop: true, result: rawServerArr.map(x => JSON.parse(JSON.stringify(x))) };
-    if (removedIdx.length && !withIds) return null;                 // לקוחות: רק הוספות
+    // 123: גם בלקוחות — שינוי בכרטיס = הסרת הגרסה הישנה + הוספת החדשה. ההסרה
+    // היא לפי התוכן המדויק שנקרא מהענן באותה טרנזקציה, ולכן לא צריך מזהה.
+    // עד 122 כל שינוי בכרטיס קיים שלח את כל הכרטסת (~198 ק"ב, 1,456 כרטיסים)
+    // — כ-15 פעמים ביום ביומן האבחון של 18.10. יותר מ-10 כרטיסים — שמירה מלאה.
+    if (removedIdx.length && !withIds && removedIdx.length > CLIENT_DELTA_MAX_CHANGED) return null;
     const bytes = measurePayloadBytes({ r: removedRaw, a: added });
     if (bytes > measurePayloadBytes({ m: mergedArr }) * 0.5) return null;   // שינוי גדול — שמירה מלאה
     const removedSet = new Set(removedIdx);
@@ -21020,6 +21026,13 @@
       if (__cloudDocWasMissing && doc.exists && serverHasRealContent(server)) return { __stale: true };
       backfillMissingListIds(server);
       if (dedupeListsById(server)) { try { reportDiag('dup-fixed', {}); } catch (e) {} }
+      // 123: כרטיס לקוחה ששמור פעמיים (אותה ת"ז) — רק מדווח, לא מתקן לבד. אחרי
+      // השינוי שכרטיס נשלח לבד, זה הסימן היחיד לכך שהסרת הגרסה הישנה לא תפסה.
+      try {
+        const seenTz = Object.create(null); let dupTz = 0;
+        (rawServer.clients || []).forEach(c => { const t = c && String(c.teudatZehut || '').trim(); if (t) { if (seenTz[t]) dupTz++; seenTz[t] = 1; } });
+        if (dupTz && dupTz !== __knownClientDupTz) { __knownClientDupTz = dupTz; reportDiag('client-dup', { key: String(dupTz) }); }
+      } catch (e) {}
       const payload = { savedAt: nowIso };
       const changedKeys = new Set();
       Object.keys(simpleFields).forEach(key => {
