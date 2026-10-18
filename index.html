@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-18 · 121">
+<meta name="app-build" content="2026-10-18 · 122">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4361,7 +4361,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-18 · 121';
+        window.__APP_BUILD = '2026-10-18 · 122';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -14301,7 +14301,12 @@
       ? ' ההודעה נשלחה לכמה לקוחות — הראשונה שתאשר מקבלת.'
       : '';
     return 'התפנה תור ' + when + ' ב-' + offer.time + (offer.serviceName ? ' (' + offer.serviceName + ')' : '') +
-      '. לאישור: ' + link + race;
+      '. לאישור עד ' + offerUntilLabel(offer) + ': ' + link + race;
+  }
+  // 122: עד מתי ההצעה שמורה לה — בהודעה ובמסך שהקישור פותח.
+  function offerUntilLabel(offer){
+    const t = new Date(offer && offer.expiresAt);
+    return isNaN(t.getTime()) ? '' : t.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Jerusalem' });
   }
   function offerEmailText(offer, recipient){
     const parts = String(offer.date || '').split('-').map(Number);
@@ -14311,9 +14316,11 @@
     return 'היי ' + (recipient.name || '') + ',\n\nהתפנה תור' +
       (offer.serviceName ? ' ל' + offer.serviceName : '') +
       ' בתאריך ' + dateLabel + ' בשעה ' + offer.time + '.\n\n' +
+      (offer.broadcast
+        ? 'ההודעה נשלחה לכמה לקוחות — הראשונה שתאשר מקבלת. ההצעה בתוקף עד ' + offerUntilLabel(offer) + '.\n\n'
+        : 'השעה שמורה לך עד ' + offerUntilLabel(offer) + '. אחרי זה היא עוברת ללקוחה הבאה בתור.\n\n') +
       'לאישור התור לחצי כאן: ' + link + '\n\n' +
-      'התור יישמר ביומן רק לאחר שתפתחי את הקישור ותאשרי אותו. ' +
-      'אם לקוחה אחרת תאשר קודם או שההצעה תפוג, יוצג לך עדכון מתאים.';
+      'התור יישמר ביומן רק לאחר שתפתחי את הקישור ותאשרי אותו.';
   }
   function notifyOfferRecipients(offer, requests){
     requests.forEach(function(r){
@@ -22056,17 +22063,19 @@
     if (autoOfferFromUrlDone) return;
     autoOfferFromUrlDone = true;
     let offerId = '';
-    let viaMyAppointments = false;
+    let linkPhone = '';
     try {
       const q = new URLSearchParams(window.location.search);
       offerId = q.get('offer') || '';
-      viaMyAppointments = !!(q.get('lookupPhone') || q.get('lookupId'));
+      linkPhone = String(q.get('lookupPhone') || q.get('lookupId') || '').replace(/[^0-9]/g, '');
     } catch (e) { return; }
     if (!offerId) return;
-    // קישור חדש (עם הטלפון): ההצעה מוצגת בתוך "התורים שלי", שנפתח לבד
-    // (handleAppointmentLookupFromUrl), ושם היא מאשרת. קישורים ישנים בלי
-    // טלפון ממשיכים לעבוד כמו קודם — בחלון ההצעה. (15.10.2026)
-    if (viaMyAppointments) { window.__offerFromLink = offerId; return; }
+    // 122: הקישור תמיד פותח את חלון ההצעה, עם תשובה ברורה: אפשר לאשר (עד
+    // HH:MM) / עבר הזמן / השעה נתפסה / ההצעה בוטלה. עד 121 קישור עם טלפון רק
+    // פתח את "התורים שלי" — ולקוחה שאין לה שם כלום קיבלה "לא נמצא תור"
+    // בלי שום הסבר על ההצעה (דבורי, 18.10, לחצה אחרי שהזמן עבר). הטלפון
+    // מהקישור כבר ממולא, כך שאישור הוא לחיצה אחת.
+    window.__offerFromLink = '';
     const ov = document.getElementById('claimOfferOverlay');
     const body = document.getElementById('claimOfferBody');
     const actions = document.getElementById('claimOfferActions');
@@ -22079,15 +22088,24 @@
       try {
         // Do not rely on pendingOffers in the public browser: it may not be loaded
         // because it is private business data. Fetch the offer by ID from clientApi.
-        result = await callClientApi('offerInfo', { offerId: offerId, siteUrl: getSiteUrl() });
+        result = await callClientApi('offerInfo', { offerId: offerId, phone: linkPhone, siteUrl: getSiteUrl() });
       } catch(e) {
-        result = { ok:false, error:'לא הצלחנו לטעון את ההצעה כרגע. נא לפתוח שוב את הקישור בעוד רגע.' };
+        result = { ok:false, error:'לא הצלחנו לטעון את ההצעה כרגע. נא לפתוח שוב את הקישור בעוד רגע.', network: true };
       }
       if (!result || !result.ok || !result.offer) {
-        body.innerHTML = '<div class="claim-gone">' +
-          (result && result.error ? String(result.error) : 'לא הצלחנו לטעון את פרטי התור.') +
-          '<br><span>אם ההצעה עדיין בתוקף, נסי לפתוח שוב את הקישור מהמייל.</span></div>';
-        if (actions) actions.innerHTML = '';
+        const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        const title = !result || result.network ? 'לא הצלחנו לטעון את ההצעה'
+          : result.expired ? '⌛ עבר הזמן לאשר'
+          : result.taken ? 'השעה כבר נתפסה'
+          : 'ההצעה כבר לא בתוקף';
+        const what = (result && result.time) ? '<div class="claim-meta" style="margin-top:6px;">ההצעה: ' + esc(myOfferDateLabel(result)) + ' בשעה ' + esc(result.time) + '</div>' : '';
+        body.innerHTML = '<div class="claim-gone"><b style="display:block; font-size:17px; margin-bottom:6px;">' + title + '</b>' +
+          esc(result && result.error ? String(result.error).replace(/^עבר הזמן לאשר:\s*/, '') : 'לא הצלחנו לטעון את פרטי התור.') + what + '</div>';
+        if (actions) {
+          actions.innerHTML = (result && result.expired && result.stillFree)
+            ? '<button class="btn-primary" onclick="closeClaimOfferOverlay(true)">לקביעת התור באתר</button>'
+            : '<button class="btn-primary" onclick="closeClaimOfferOverlay(false)">סגירה</button>';
+        }
         return;
       }
       const o = result.offer;
@@ -22101,13 +22119,21 @@
         '<div class="claim-time">' + o.time + '</div>' +
         '<div class="claim-date">' + (isToday ? 'היום' : dayName) + ', ' + p[2] + ' ב' + monthName + '</div>' +
         '<div class="claim-meta">' + (o.serviceName || 'תור') + ' · ' + (o.dur || 30) + ' דקות</div>' +
-        '<div class="claim-timer">⏳ נותרו ' + left + ' דקות לאישור</div>' +
+        '<div class="claim-timer">⏳ שמורה לך עד ' + (o.until || offerUntilLabel(o)) + ' (נותרו ' + left + ' דקות)</div>' +
         '<div class="claim-note">האישור יינתן ללקוחה שההצעה נשלחה אליה. אם ההודעה נשלחה לכמה לקוחות, הראשונה שתאשר תקבל את התור.</div>' +
         '<label class="label" style="margin:16px 0 6px; display:block;">תעודת זהות או טלפון</label>' +
-        '<input id="claimOfferId" class="field-dark" inputmode="numeric" autocomplete="tel" placeholder="תעודת זהות או טלפון" style="width:100%;">' +
+        '<input id="claimOfferId" class="field-dark" inputmode="numeric" autocomplete="tel" placeholder="תעודת זהות או טלפון" style="width:100%;" value="' + linkPhone + '">' +
         '<div id="claimOfferError" class="claim-error" style="display:none;"></div>';
       if (actions) actions.innerHTML = '<button id="claimOfferBtn" class="btn-primary" onclick="submitClaimOffer()">✓ אני מגיעה — לאשר את התור</button>';
     })();
+  }
+  function closeClaimOfferOverlay(toBooking){
+    const ov = document.getElementById('claimOfferOverlay');
+    if (ov) ov.classList.remove('show');
+    if (toBooking){
+      const grid = document.getElementById('catGrid');
+      if (grid) { try { grid.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} }
+    }
   }
   async function submitClaimOffer(){
     const idEl = document.getElementById('claimOfferId');
@@ -22160,6 +22186,9 @@
       const params = new URLSearchParams(window.location.search);
       const idOrPhone = params.get('lookupId') || params.get('lookupPhone');
       if (!idOrPhone) return;
+      // 122: קישור של הצעה — חלון ההצעה מטפל בו (handleOfferFromUrl), בלי
+      // שהחיפוש של "התורים שלי" ייפתח מתחתיו עם "לא נמצא תור".
+      if (params.get('offer')) return;
       // מקישור (אישור תור, הצעה): בלי לפתוח קודם את חלון "מצאי את התור שלך".
       // עד 111 החלון קפץ עם "מחפשת..." ונסגר אחרי חצי שנייה — הבהוב שנראה
       // כמו תקלה. עכשיו מוצגת הודעה שקטה במקום, והחלון נפתח רק אם יש מה
@@ -22696,7 +22725,17 @@
         new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('read timeout'), { code: 'deadline-exceeded' })), 15000)),
       ]);
     }
-    const tryOnce = () => ref.get().catch(err => {
+    // 122: קריאה רגילה בלי הגבלת זמן — כשהחיבור "נתקע" בשקט (בלי שגיאה),
+    // רענון היומן חיכה לנצח על "מרעננת...". לכל קריאה חוץ מהטעינה הראשונה
+    // (שגדולה ויכולה להיות איטית באמת) — עד 12 שניות, ואז ניסיון חוזר ודרך עוקפת.
+    const limitMs = label === 'business' ? 0 : 12000;
+    const getOnce = () => !limitMs ? ref.get() : Promise.race([
+      ref.get(),
+      new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('read timed out'), { code: 'deadline-exceeded' })), limitMs)),
+    ]);
+    const tryOnce = () => getOnce().catch(err => {
+      // נתקעה 12 שניות — לא מחכים עוד סבב; ישר בדרך העוקפת.
+      if (err && err.message === 'read timed out') return readViaRequest(err);
       attempt++;
       if (isTransientCloudError(err) && attempt > 2) return readViaRequest(err);
       if (!isTransientCloudError(err) || attempt > 2) throw err;
