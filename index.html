@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-18 · 118">
+<meta name="app-build" content="2026-10-18 · 119">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4361,7 +4361,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-18 · 118';
+        window.__APP_BUILD = '2026-10-18 · 119';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -7224,7 +7224,7 @@
         `היי ${appt.client}, התור שלך ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time} בוטל. נשמח לראותך שוב בקרוב!\n\nלקביעת תור חדש:\n${getSiteUrl()}`
       );
     }
-    queueApptSms(appt, getShortApptSmsText('cancelled', appt.service, formatDateDMY(appt.date), appt.time));
+    queueApptSms(appt, getShortApptSmsText('cancelled', appt.service, formatDateDMY(appt.date), appt.time, appt.date));
     showAdminToast('✓ התור בוטל בהצלחה' + (cancelledClient && cancelledClient.email ? ' — נשלח מייל לעדכון הלקוחה' : ''));
     const freshMatches = filterStillPendingWaitlistMatches(matches);
     if (freshMatches.length) renderWaitlistMatchAlert(freshMatches, appt);
@@ -7610,7 +7610,7 @@
     }
     const moveMsg = `התור של ${appt.client} הוזז מ-${previousTime} ל-${appt.time}.\n\nלשלוח לה עכשיו הודעה על השעה החדשה?\n\n(בכל מקרה התזכורת האוטומטית שתצא לפני התור תנקוב בשעה החדשה.)`;
     if (confirm(moveMsg)){
-      queueApptSms(appt, getShortApptSmsText('moved', appt.service, formatDateDMY(appt.date), appt.time));
+      queueApptSms(appt, getShortApptSmsText('moved', appt.service, formatDateDMY(appt.date), appt.time, appt.date));
       const movedClient = findClientForAppt(appt);
       if (movedClient && movedClient.email){
         sendEmail(
@@ -8540,7 +8540,7 @@
       }
       const label = `${formatDateDMY(dateVal)} בשעה ${timeVal}`;
       if (confirm(`התור של ${target.client} הוזז מ-${formatDateDMY(prevDate)} ${prevTime} ל-${label}.\n\nלשלוח לה עכשיו הודעה על המועד החדש?\n\n(בכל מקרה התזכורת האוטומטית שתצא לפני התור תנקוב במועד החדש.)`)){
-        queueApptSms(target, getShortApptSmsText('moved', target.service, formatDateDMY(target.date), target.time));
+        queueApptSms(target, getShortApptSmsText('moved', target.service, formatDateDMY(target.date), target.time, target.date));
         const movedClient = findClientForAppt(target);
         if (movedClient && movedClient.email){
           sendEmail(
@@ -18229,12 +18229,57 @@
     const withName = first + ', ' + base;
     return smsSegmentCount(withName) > smsSegmentCount(base) ? base : withName;
   }
-  function getShortApptSmsText(kind, service, dateLabel, time){
-    if (kind === 'cancelled') return `התור לטיפול ${service} ביום ${dateLabel} בשעה ${time} בוטל.`;
-    if (kind === 'moved') return `התור לטיפול ${service} ביום ${dateLabel} הועבר לשעה ${time}.`;
-    const addr = (branding && branding.address && branding.address.trim()) ? `, ${branding.address.trim()}` : '';
-    return `התור נקבע: ${service} ${dateLabel} ${time}${addr}.`;
+  /* הודעות ביטול / הזזה / אישור — תמיד מקטע אחד (18.10.2026).
+   * "טובי, התור לטיפול ידיים, רגליים מלאות, שחי ומפשעה ביום 25 באוקטובר 2026
+   *  בשעה 20:45 בוטל." — שני מקטעים, כי שם הטיפול ארוך והתאריך מלא. עכשיו
+   * ההודעה נבנית מהנוסח המלא לקצר, ונבחר הראשון שנכנס במקטע אחד: קודם התאריך
+   * מתקצר ל-25/10, אחר כך "לטיפול"/"בשעה" יורדים, ורק אז שם הטיפול מתקצר
+   * (… בסוף). התאריך והשעה לא יורדים לעולם. השם הפרטי נוסף רק אם הוא עדיין
+   * נכנס באותו מקטע (withClientName). */
+  function shortDM(dateKeyOrLabel){
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKeyOrLabel || ''));
+    return m ? Number(m[3]) + '/' + Number(m[2]) : String(dateKeyOrLabel || '');
   }
+  function fitOneSmsSegment(variants, shortenable){
+    for (const v of variants){ if (smsSegmentCount(v) <= 1) return v; }
+    // שם הטיפול מתקצר עד שנכנס
+    if (shortenable){
+      const { build, service } = shortenable;
+      for (let n = service.length - 1; n >= 3; n--){
+        const v = build(service.slice(0, n).trim() + '…');
+        if (smsSegmentCount(v) <= 1) return v;
+      }
+      const bare = build('');
+      if (smsSegmentCount(bare) <= 1) return bare;
+    }
+    return variants[variants.length - 1];
+  }
+  function getShortApptSmsText(kind, service, dateLabel, time, dateKey){
+    service = String(service || '').trim();
+    const dm = dateKey ? shortDM(dateKey) : shortDM(dateLabel);
+    if (kind === 'cancelled'){
+      return fitOneSmsSegment([
+        `התור לטיפול ${service} ביום ${dateLabel} בשעה ${time} בוטל.`,
+        `התור לטיפול ${service} ביום ${dm} בשעה ${time} בוטל.`,
+        `התור ל${service} ב-${dm} בשעה ${time} בוטל.`,
+        `התור ל${service} ב-${dm} ${time} בוטל.`,
+      ], { service, build: s => s ? `התור ל${s} ב-${dm} ${time} בוטל.` : `התור שלך ב-${dm} בשעה ${time} בוטל.` });
+    }
+    if (kind === 'moved'){
+      return fitOneSmsSegment([
+        `התור לטיפול ${service} ביום ${dateLabel} הועבר לשעה ${time}.`,
+        `התור לטיפול ${service} ביום ${dm} הועבר לשעה ${time}.`,
+        `התור ל${service} ב-${dm} הועבר לשעה ${time}.`,
+      ], { service, build: s => s ? `התור ל${s} ב-${dm} הועבר ל-${time}.` : `התור שלך ב-${dm} הועבר לשעה ${time}.` });
+    }
+    const addr = (branding && branding.address && branding.address.trim()) ? `, ${branding.address.trim()}` : '';
+    return fitOneSmsSegment([
+      `התור נקבע: ${service} ${dateLabel} ${time}${addr}.`,
+      `התור נקבע: ${service} ${dm} ${time}${addr}.`,
+      `התור נקבע: ${service} ${dm} ${time}.`,
+    ], { service, build: s => s ? `התור נקבע: ${s} ${dm} ${time}.` : `התור שלך נקבע ל-${dm} בשעה ${time}.` });
+  }
+  window.__getShortApptSmsText = getShortApptSmsText;
   const SMS_FUNCTION_URL = 'https://sendqueuedsms-737599524118.me-west1.run.app';
   const SMS_APP_KEY = 'rz-sms-9f3k2m8x-2026';
   const SMS_DUPLICATE_WINDOW_MS = 5 * 60 * 1000;
