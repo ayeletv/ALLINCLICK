@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-18 · 123">
+<meta name="app-build" content="2026-10-18 · 124">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -911,20 +911,35 @@
     pointer-events:none;
     opacity:0;
   }
-  .cloud-loading-overlay.show{display:flex; animation:cloudVeilIn .3s ease .5s forwards;}
+  .cloud-loading-overlay.show{display:flex; animation:cloudVeilIn .2s ease forwards;}
   @keyframes cloudVeilIn{ from{opacity:0;} to{opacity:1;} }
   @media (prefers-reduced-motion: reduce){
-    .cloud-loading-overlay.show{animation:cloudVeilIn .01s linear .5s forwards;}
+    .cloud-loading-overlay.show{animation:cloudVeilIn .01s linear forwards;}
   }
+  /* 123: שעון מסתובב בכרטיס לבן — בלי תלות בצבעי העיצוב. עד 122 הטבעת
+     והטקסט קיבלו את צבעי העיצוב, ובעיצוב בהיר היו כמעט שקופים: נראה כמו
+     יומן ריק. וגם הופיעו רק אחרי חצי שנייה. */
+  .cloud-loading-overlay{ background:rgba(255,255,255,0.55); justify-content:flex-start; padding-top:110px; z-index:500; }
+  .cloud-loading-card{
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    background:#fff; color:#3b2f2a; border-radius:16px; padding:22px 28px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.18); font-size:15px; font-weight:600;
+  }
+  .cloud-loading-card .cloud-elapsed{ font-weight:400; font-size:12.5px; color:#7a6c64; }
   .cloud-spinner{
-    width:34px; height:34px; border-radius:50%;
-    border:3px solid rgba(var(--th-primary-rgb, 245,238,228),0.22);
-    border-top-color:var(--th-primary, var(--gold-soft));
-    animation:cloudSpin 0.8s linear infinite;
+    position:relative; width:58px; height:58px; border-radius:50%;
+    border:4px solid #b8925a; background:#fffaf2;
   }
+  .cloud-spinner::before, .cloud-spinner::after{
+    content:''; position:absolute; left:50%; bottom:50%; width:3px; margin-left:-1.5px;
+    background:#7a5a2e; border-radius:2px; transform-origin:50% 100%;
+  }
+  .cloud-spinner::before{ height:15px; animation:cloudSpin 6s linear infinite; }     /* מחוג שעות */
+  .cloud-spinner::after{ height:22px; animation:cloudSpin 1s linear infinite; }      /* מחוג דקות */
+  .cloud-loading-card{ font-size:16.5px; padding:26px 34px; }
   @keyframes cloudSpin{ to{ transform:rotate(360deg); } }
   @media (prefers-reduced-motion: reduce){
-    .cloud-spinner{ animation:none; border-top-color:rgba(var(--th-primary-rgb, 245,238,228),0.22); }
+    .cloud-spinner::before, .cloud-spinner::after{ animation-duration:12s; }
   }
   .phone{
     max-width:380px;
@@ -3728,10 +3743,11 @@
     
     
     <div id="cloudLoadingOverlay" class="cloud-loading-overlay">
-      <div class="cloud-spinner"></div>
-      <div>טוענת את הנתונים…</div>
-      
-      <div id="cloudLoadingElapsed" style="margin-top:6px; font-size:12.5px; opacity:0.75;"></div>
+      <div class="cloud-loading-card">
+        <div class="cloud-spinner" aria-hidden="true"></div>
+        <div>טוענת את התורים…</div>
+        <div id="cloudLoadingElapsed" class="cloud-elapsed"></div>
+      </div>
     </div>
     <div id="sub-overview" class="subpanel active">
       
@@ -4361,7 +4377,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-18 · 123';
+        window.__APP_BUILD = '2026-10-18 · 124';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -18967,7 +18983,7 @@
     const p = String(appt.date || '').split('-');
     const what = (appt.service || 'התור') + (p.length === 3 ? ' ב-' + Number(p[2]) + '/' + Number(p[1]) : '') + (appt.time ? ' בשעה ' + appt.time : '');
     let preview = null;
-    try { preview = await callClientApi('cancelPreview', { id: appt.teudatZehut || lastIdentifiedLookupId || '', apptId: appt.id }); } catch (e) { preview = null; }
+    try { preview = await callClientApi('cancelPreview', withCi({ id: appt.teudatZehut || lastIdentifiedLookupId || '', apptId: appt.id }, appt)); } catch (e) { preview = null; }
     const w = preview && preview.ok ? preview.warning : null;
     const texts = Object.assign({}, CANCEL_WARN_DEFAULTS, ((branding && branding.cancelFee) || {}).warnings || {});
     if (w === 'fee' || w === 'first' || w === 'second'){
@@ -19041,6 +19057,11 @@
     try { return new URLSearchParams(window.location.search).get('diag') === '1'; }
     catch (e) { return false; }
   }
+  // 124: טלפון משותף (אמא ובת) — כל פריט מהשרת נושא ci (הכרטיס שלו). כל פעולה
+  // עליו נשלחת עם הכרטיס הזה, אחרת השרת לא יודע של מי התור.
+  function withCi(payload, item){
+    return (item && item.__ci !== undefined && item.__ci !== null) ? Object.assign({}, payload, { clientIndex: item.__ci }) : payload;
+  }
   async function searchMyAppointment(){
     const raw = document.getElementById('lookupId').value.trim();
     const digits = raw.replace(/[^0-9]/g, '');
@@ -19060,8 +19081,9 @@
         resultEl.innerHTML = '<p style="color:var(--wine); font-size:13px;">לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.</p>';
         return;
       }
-      lookedUpRequests = (res && Array.isArray(res.requests)) ? res.requests : [];
-      lookedUpWaitlist = (res && Array.isArray(res.waitlist)) ? res.waitlist : [];
+      const keepCi = x => Object.assign({}, x, (x && x.ci !== undefined) ? { __ci: x.ci } : {});
+      lookedUpRequests = (res && Array.isArray(res.requests)) ? res.requests.map(keepCi) : [];
+      lookedUpWaitlist = (res && Array.isArray(res.waitlist)) ? res.waitlist.map(keepCi) : [];
       if (!res || !res.found || (!(res.appointments || []).length && !lookedUpRequests.length && !lookedUpWaitlist.length)){
         resultEl.innerHTML = '<p style="color:#8A8178; font-size:13px;">לא נמצא תור עתידי עבור הפרטים שהוזנו. אפשר לנסות את הפרטים האחרים, או ליצור איתנו קשר.</p>';
         return;
@@ -19076,6 +19098,9 @@
         status: a.status || 'pending', note: '',
         confirmedByClient: !!a.confirmedByClient,
         confirmedAt: a.confirmedAt || null,
+        // 124: טלפון משותף — של מי התור (מוצג על הכרטיס) ובאיזה כרטיס לפעול
+        __ci: (a.ci !== undefined) ? a.ci : undefined,
+        __ownerName: a.ownerName || '',
       }));
       mine.forEach(a => {
         const pos = weekAppointments.findIndex(x => x && x.id === a.id);
@@ -19164,7 +19189,7 @@
       ${lookedUpWaitlist.map((w, i) => {
         const x = String(w.date || '').split('-').map(Number);
         return `<div class="my-appt-card" style="margin-top:${i ? 12 : 6}px;">
-          <h4>${escHtml(w.service || 'תור')}</h4>
+          <h4>${escHtml(w.service || 'תור')}${w.ownerName ? ' <span style="font-weight:400; font-size:.85em; opacity:.85;">· של ' + escHtml(w.ownerName) + '</span>' : ''}</h4>
           <div class="appt-meta">${x.length === 3 ? x[2] + '/' + x[1] : ''}${w.requestedTime ? ' · ' + escHtml(w.requestedTime) : ''}${w.staffName ? ' · אצל ' + escHtml(w.staffName) : ''}</div>
           ${w.liveOffer ? myOfferBoxHtml(w.liveOffer, 'claimMyWaitlistOffer(' + i + ')') : ''}
           <div class="my-appt-actions"><button class="danger" onclick="cancelMyWaitlist(${i})">יציאה מרשימת ההמתנה</button></div>
@@ -19177,7 +19202,7 @@
     if (!w) return;
     if (!confirm('לצאת מרשימת ההמתנה לשעה הזו?')) return;
     let res = null;
-    try { res = await callClientApi('cancelWaitlist', { id: lastIdentifiedLookupId, waitlistId: w.id, siteUrl: getSiteUrl() }); }
+    try { res = await callClientApi('cancelWaitlist', withCi({ id: lastIdentifiedLookupId, waitlistId: w.id, siteUrl: getSiteUrl() }, w)); }
     catch (e) { res = { ok: false, error: 'לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.' }; }
     if (!res || !res.ok){ alert((res && res.error) || 'לא הצלחנו לבטל. נא לנסות שוב.'); return; }
     lookedUpWaitlist.splice(idx, 1);
@@ -19190,7 +19215,7 @@
       <div class="status-dot">⏳ ${lookedUpRequests.length === 1 ? 'בקשה מיוחדת שממתינה לשעה מתאימה' : lookedUpRequests.length + ' בקשות מיוחדות שממתינות לשעה מתאימה'}</div>
       ${lookedUpRequests.map((r, i) => `
         <div class="my-appt-card" style="${i > 0 ? 'margin-top:12px;' : 'margin-top:6px;'}">
-          <h4>${escHtml((r.services || []).join(' + ') || 'בקשה מיוחדת')}</h4>
+          <h4>${escHtml((r.services || []).join(' + ') || 'בקשה מיוחדת')}${r.ownerName ? ' <span style="font-weight:400; font-size:.85em; opacity:.85;">· של ' + escHtml(r.ownerName) + '</span>' : ''}</h4>
           <div class="appt-meta">${escHtml(myRequestSummary(r))}</div>
           ${r.liveOffer ? myOfferBoxHtml(r.liveOffer, 'claimMyOffer(' + i + ')') : ''}
           <div class="my-appt-actions"><button class="danger" onclick="cancelMyRequest(${i})">ביטול הבקשה</button></div>
@@ -19216,18 +19241,18 @@
   function claimMyWaitlistOffer(idx){
     const w = lookedUpWaitlist[idx];
     if (!w || !w.liveOffer) return;
-    return claimOfferById(w.liveOffer.id);
+    return claimOfferById(w.liveOffer.id, w);
   }
   /* אישור ההצעה מתוך "התורים שלי" — אותה פעולה בשרת כמו בחלון ההצעה הישן. */
   async function claimMyOffer(idx){
     const r = lookedUpRequests[idx];
     if (!r || !r.liveOffer) return;
-    return claimOfferById(r.liveOffer.id);
+    return claimOfferById(r.liveOffer.id, r);
   }
-  async function claimOfferById(offerId){
-    const r = { liveOffer: { id: offerId } };
+  async function claimOfferById(offerId, item){
+    const r = Object.assign({}, item || {}, { liveOffer: { id: offerId } });
     let res = null;
-    try { res = await callClientApi('claimOffer', { id: lastIdentifiedLookupId, offerId: r.liveOffer.id, siteUrl: getSiteUrl() }); }
+    try { res = await callClientApi('claimOffer', withCi({ id: lastIdentifiedLookupId, offerId: r.liveOffer.id, siteUrl: getSiteUrl() }, r)); }
     catch (e) { res = { ok: false, error: 'לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.' }; }
     if (!res || !res.ok){
       alert((res && res.error) || 'לא הצלחנו לאשר את התור.');
@@ -19261,7 +19286,7 @@
     if (!confirm('לבטל את הבקשה המיוחדת? לא נציע לך יותר שעות לפיה.')) return;
     let res = null;
     try {
-      res = await callClientApi('cancelSpecialRequest', { id: lastIdentifiedLookupId, requestId: r.id, siteUrl: getSiteUrl() });
+      res = await callClientApi('cancelSpecialRequest', withCi({ id: lastIdentifiedLookupId, requestId: r.id, siteUrl: getSiteUrl() }, r));
     } catch (e) {
       res = { ok: false, error: 'לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.' };
     }
@@ -19297,7 +19322,7 @@
       return `
       <div class="my-appt-card" style="${idx > 0 ? 'margin-top:14px; padding-top:14px; border-top:1px solid rgba(245,238,228,0.12);' : ''}">
         <div class="status-dot">✓ ${list.length > 1 ? `תור ${idx + 1} מתוך ${list.length}` : 'נמצא תור קיים'}</div>
-        <h4>${appt.service}</h4>
+        <h4>${appt.service}${appt.__ownerName ? ' <span style="font-weight:400; font-size:.85em; opacity:.85;">· של ' + escHtml(appt.__ownerName) + '</span>' : ''}</h4>
         <div class="appt-meta">${apptDate.getDate()} ב${hebrewMonths[apptDate.getMonth()]} (${hebrewDateStr(apptDate)}), ${appt.time}${emp ? ' · אצל ' + emp.name : ''}</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <a href="${gcalUrl}" target="_blank" rel="noopener" class="gcal-link">📅 הוספה ל-Google Calendar</a>
@@ -19326,7 +19351,7 @@
     if (bookingGoesThroughServer()){
       let res = null;
       try {
-        res = await callClientApi('confirm', { id: appt.teudatZehut || lastIdentifiedLookupId || '', apptId: appt.id });
+        res = await callClientApi('confirm', withCi({ id: appt.teudatZehut || lastIdentifiedLookupId || '', apptId: appt.id }, appt));
       } catch (err) {
         console.error('Confirming through the server failed — falling back to a direct write:', err);
         res = null;
@@ -21456,10 +21481,10 @@
   async function cancelApptViaServer(appt){
     if (!bookingGoesThroughServer() || !appt) return { ok: true, direct: true };
     try {
-      const res = await callClientApi('cancel', {
+      const res = await callClientApi('cancel', withCi({
         id: appt.teudatZehut || lastIdentifiedLookupId || '',
         apptId: appt.id,
-      });
+      }, appt));
       if (!res || !res.ok) return { ok: false, error: (res && res.error) || 'לא הצלחנו לבטל את התור. נא לנסות שוב או ליצור איתנו קשר.' };
       // השרת יודע כמה ביטולים מאוחרים היו לה (הדפדפן של לקוחה לא רואה אותם),
       // והאם חל קנס ביטול — ולכן ההודעה שעל המסך נקבעת לפיו. (16.10.2026)
@@ -22741,14 +22766,19 @@
     // 122: קריאה רגילה בלי הגבלת זמן — כשהחיבור "נתקע" בשקט (בלי שגיאה),
     // רענון היומן חיכה לנצח על "מרעננת...". לכל קריאה חוץ מהטעינה הראשונה
     // (שגדולה ויכולה להיות איטית באמת) — עד 12 שניות, ואז ניסיון חוזר ודרך עוקפת.
-    const limitMs = label === 'business' ? 0 : 12000;
+    // 123: רענון שלחצת עליו — 5 שניות (הקריאה הרגילה לוקחת בדרך כלל פחות
+    // משתיים); ברקע — 12. ביומן האבחון אחרי 122: שלוש תקיעות, כל אחת חיכתה
+    // 12 שניות מלאות.
+    const limitMs = label === 'business' ? 0 : (label === 'refresh' ? 5000 : 12000);
     const getOnce = () => !limitMs ? ref.get() : Promise.race([
       ref.get(),
       new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('read timed out'), { code: 'deadline-exceeded' })), limitMs)),
     ]);
     const tryOnce = () => getOnce().catch(err => {
-      // נתקעה 12 שניות — לא מחכים עוד סבב; ישר בדרך העוקפת.
-      if (err && err.message === 'read timed out') return readViaRequest(err);
+      // נתקעה — לא מחכים עוד סבב; ישר בדרך העוקפת. ומעכשיו כל קריאה בדף
+      // הזה הולכת ישר בה (123: עד 122 הסימון חיכה להצלחת הדרך העוקפת, ובינתיים
+      // הקריאה הבאה נתקעה שוב — פעמיים ברצף ביומן האבחון).
+      if (err && err.message === 'read timed out') { __streamReadBlocked = true; return readViaRequest(err); }
       attempt++;
       if (isTransientCloudError(err) && attempt > 2) return readViaRequest(err);
       if (!isTransientCloudError(err) || attempt > 2) throw err;
@@ -23330,6 +23360,10 @@
     }
     calendarRefreshInFlight = true;
     if (typeof showSaveStatus === 'function') showSaveStatus('מרעננת...');
+    // 123: שלא ייראה תקוע — אחרי 3 שניות אומרים שהחיבור איטי ושזה בטיפול.
+    const slowNote = setTimeout(() => {
+      if (calendarRefreshInFlight && typeof showSaveStatus === 'function') showSaveStatus('מרעננת… החיבור איטי, עוד רגע');
+    }, 3000);
     // 120: הקריאה עוברת דרך getDocWithRetry, כמו הטעינה הראשונה — כולל הדרך
     // העוקפת כשהערוץ הרציף חסום (חלון גלישה בסתר). עד 119 הרענון השתמש
     // בקריאה הרגילה בלבד, ונתקע על "מרעננת..." עד שנכשל.
@@ -23351,6 +23385,7 @@
       try { reportDiag('refresh-failed', { code: String((err && (err.code || err.message)) || '').slice(0, 60) }); } catch (e) {}
       return false;
     }).then(ok => {
+      clearTimeout(slowNote);
       calendarRefreshInFlight = false;
       if (typeof showSaveStatus === 'function') showSaveStatus(ok ? 'מעודכן ✓' : 'לא הצלחנו לרענן', 1800);
       return ok;
