@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-19 · 129">
+<meta name="app-build" content="2026-10-19 · 130">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -74,17 +74,14 @@
   try {
     if (/[?&](lookupPhone|lookupId|offer)=/.test(location.search)) {
       document.documentElement.classList.add('hk-deeplink');
+      // קישור לתורים (לא להצעה — שם נפתח חלון ההצעה): עד שהתורים מגיעים
+      if (/[?&](lookupPhone|lookupId)=/.test(location.search) && !/[?&]offer=/.test(location.search)) {
+        document.documentElement.classList.add('hk-deeplink-wait');
+        // רשת ביטחון: אם משהו נתקע — אחרי 25 שניות חוזרים לתצוגה הרגילה
+        setTimeout(function(){ document.documentElement.classList.remove('hk-deeplink-wait'); }, 25000);
+      }
       window.__deepLinkLookup = true;
       try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) {}
-      var __jumpToBooking = function(){
-        try {
-          var sw = document.querySelector('.switcher');
-          // 'instant' — האתר מוגדר scroll-behavior: smooth, ובלי זה גם "קפיצה" הופכת לגלילה איטית
-          if (sw) window.scrollTo({ top: Math.max(0, sw.getBoundingClientRect().top + window.scrollY - 8), behavior: 'instant' });
-        } catch (e) {}
-      };
-      document.addEventListener('DOMContentLoaded', __jumpToBooking);
-      window.addEventListener('load', __jumpToBooking);
     }
   } catch (e) {}
   // 127: עותק של הצבעים והלוגו הזעיר (4 ק"ב) בתוך הקובץ עצמו — מוצג מיד בביקור
@@ -371,8 +368,15 @@
   html.ground-unknown{background:#F6F1EA;}
   html.ground-unknown body{background:transparent; color:#2E2522;}
   html.ground-unknown .hero{background:#f7f2ec; border-bottom-color:transparent;}
-  /* 129: קישור לתורים — הרקע של האתר נשאר; רק התוכן של מסך הלוגו לא מהבהב לפני הקפיצה */
-  html.hk-deeplink .hero > *:not(.hero-ground){visibility:hidden;}
+  /* 130: קישור לתורים — בלי קפיצות בכלל. מסך הלוגו מתכווץ לפס דק בצבעי האתר
+     (הרקע נשאר), ותיבת הקביעה מראה "טוענת את התורים שלך…" במקום הקטגוריות —
+     עד שהתור מגיע ומופיע באותו מקום, בראש המסך. עד 129: קפיצה בפתיחה, תזוזות
+     כשהצבעים/הלוגו/הקטגוריות הגיעו, קפיצה שנייה, ועוד אחת לתור. */
+  html.hk-deeplink .hero{min-height:0 !important; height:64px !important; padding:0 !important; overflow:hidden;}
+  html.hk-deeplink .hero > *:not(.hero-ground){display:none !important;}
+  html.hk-deeplink-wait #bookingFormWrap{display:none !important;}
+  html.hk-deeplink-wait #myAppointment::before{content:'טוענת את התורים שלך…'; display:block; text-align:center; padding:28px 10px; font-size:15px; opacity:.8;}
+  html.hk-deeplink-wait #myAppointment{display:block !important;}
   html.ground-unknown .hero-ground{opacity:0;}
   html.ground-unknown .hero, html.ground-unknown .hero *{color:#3A2E2E;}
   html.theme-unknown .hero > *:not(.hero-ground){opacity:0;}
@@ -4422,7 +4426,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-19 · 129';
+        window.__APP_BUILD = '2026-10-19 · 130';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -22401,13 +22405,17 @@
           if (msg && !/^מחפשת/.test(msg) && !shownAppts && overlay) overlay.classList.add('show');
           // 128: ישר לתורים — בלי גלילה מונפשת.
           const mine = document.getElementById('myAppointment');
+          // 130: התורים הגיעו — "טוענת…" יורד, והתור מופיע באותו מקום. קפיצה רק
+          // אם הוא בכל זאת לא בחצי העליון של המסך (מיידית — בלי גלילה רכה).
+          document.documentElement.classList.remove('hk-deeplink-wait');
           if (mine && mine.offsetParent !== null) {
-            try {
-              // 129: קפיצה מיידית ('instant' גובר על scroll-behavior: smooth של האתר)
-              window.scrollTo({ top: Math.max(0, mine.getBoundingClientRect().top + window.scrollY - 12), behavior: 'instant' });
-            } catch (e) { try { mine.scrollIntoView(); } catch (e2) {} }
+            const topNow = mine.getBoundingClientRect().top;
+            if (topNow < 0 || topNow > window.innerHeight * 0.5) {
+              try { window.scrollTo({ top: Math.max(0, topNow + window.scrollY - 12), behavior: 'instant' }); }
+              catch (e) { try { mine.scrollIntoView(); } catch (e2) {} }
+            }
           }
-        }, function(){ showQuietLookupLoading(false); });
+        }, function(){ showQuietLookupLoading(false); document.documentElement.classList.remove('hk-deeplink-wait'); });
       }
     } catch (e) {
       console.error('Auto appointment lookup from link failed:', e);
