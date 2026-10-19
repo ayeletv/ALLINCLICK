@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-19 · 128">
+<meta name="app-build" content="2026-10-19 · 129">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -68,10 +68,23 @@
   // 128: קישור ל"התורים שלי" / להצעה (מ-SMS או מייל) — בלי מסך הלוגו ובלי גלילה:
   // הדף נפתח ישר במקום של התורים. (בקשה של איילת, 19.10: "שיביא אותי כבר לאיפה
   // שרואים את התורים, כאילו כבר גללו".)
+  // 129: בלי להסתיר את מסך הלוגו (ב-128 הוא הוסתר — ואיתו גם הרקע והצבעים של
+  // האתר, והדף נראה לבן ו"לא חלק מהאתר"). עכשיו קופצים מיד — בלי אנימציה —
+  // לאזור הקביעה, ואחר כך לתורים עצמם כשהם מגיעים.
   try {
     if (/[?&](lookupPhone|lookupId|offer)=/.test(location.search)) {
       document.documentElement.classList.add('hk-deeplink');
       window.__deepLinkLookup = true;
+      try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) {}
+      var __jumpToBooking = function(){
+        try {
+          var sw = document.querySelector('.switcher');
+          // 'instant' — האתר מוגדר scroll-behavior: smooth, ובלי זה גם "קפיצה" הופכת לגלילה איטית
+          if (sw) window.scrollTo({ top: Math.max(0, sw.getBoundingClientRect().top + window.scrollY - 8), behavior: 'instant' });
+        } catch (e) {}
+      };
+      document.addEventListener('DOMContentLoaded', __jumpToBooking);
+      window.addEventListener('load', __jumpToBooking);
     }
   } catch (e) {}
   // 127: עותק של הצבעים והלוגו הזעיר (4 ק"ב) בתוך הקובץ עצמו — מוצג מיד בביקור
@@ -358,7 +371,8 @@
   html.ground-unknown{background:#F6F1EA;}
   html.ground-unknown body{background:transparent; color:#2E2522;}
   html.ground-unknown .hero{background:#f7f2ec; border-bottom-color:transparent;}
-  html.hk-deeplink .hero{display:none !important;}   /* 128: קישור לתורים — בלי מסך הלוגו */
+  /* 129: קישור לתורים — הרקע של האתר נשאר; רק התוכן של מסך הלוגו לא מהבהב לפני הקפיצה */
+  html.hk-deeplink .hero > *:not(.hero-ground){visibility:hidden;}
   html.ground-unknown .hero-ground{opacity:0;}
   html.ground-unknown .hero, html.ground-unknown .hero *{color:#3A2E2E;}
   html.theme-unknown .hero > *:not(.hero-ground){opacity:0;}
@@ -3345,7 +3359,19 @@
       window.__cachedContact = { phone: t.phone || '', whatsapp: t.wa || '', email: t.mail || '' };
     }
     if (t.logo){
-      window.__cachedLogo = t.logo;
+      // 129: העותק הזעיר (שמור במכשיר) קודם — מוצג יחד עם השם. עד 128 נשמרה רק
+      // הכתובת של הלוגו ב-Storage, ובכל כניסה חוזרת השם הופיע והלוגו אחריו (~2 שנ').
+      var tinyLocal = (typeof t.logoThumb === 'string' && t.logoThumb.indexOf('data:image/') === 0) ? t.logoThumb : '';
+      if (!tinyLocal) {
+        // אין עותק זעיר שמור — אם זה אותו לוגו כמו בעותק שבתוך הקובץ, משם.
+        try {
+          var hostNow = String(location.hostname || '').toLowerCase().replace(/^www\./, '');
+          var inl = JSON.parse(((window.__THEME_BY_DOMAIN || {})[hostNow]) || 'null');
+          if (inl && inl.logo === t.logo && typeof inl.logoThumb === 'string' && inl.logoThumb.indexOf('data:image/') === 0) tinyLocal = inl.logoThumb;
+        } catch (e) {}
+      }
+      window.__cachedLogo = tinyLocal || t.logo;
+      if (tinyLocal && !/^data:/i.test(t.logo)) { try { var preFull = new Image(); preFull.src = t.logo; window.__earlyLogoImg = preFull; } catch (e) {} }
       window.__cachedLogoFill = !!t.logoFill;
       window.__cachedLogoZoom = Number(t.logoZoom) || 1;
     }
@@ -4396,7 +4422,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-19 · 128';
+        window.__APP_BUILD = '2026-10-19 · 129';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -10765,6 +10791,9 @@
         hasContact: !!((typeof branding !== 'undefined' && branding)
           && (branding.phone || branding.whatsapp || branding.email)),
         logo: logoForCache,
+        // 129: גם העותק הזעיר — כדי שבכניסה הבאה הלוגו יופיע יחד עם השם
+        logoThumb: (typeof branding !== 'undefined' && branding && branding.logoThumbFor === logoRaw
+          && typeof branding.logoThumb === 'string' && branding.logoThumb.indexOf('data:image/') === 0) ? branding.logoThumb : '',
         logoFill: !!thNow.logoFill,
         logoZoom: (typeof thNow.logoZoom === 'number') ? thNow.logoZoom : 1,
         theme: (typeof branding !== 'undefined' && branding && branding.theme) || null,
@@ -19270,6 +19299,9 @@
       if (isDiagMode()) alert('אבחון חיפוש תור: טעינת נתונים ' + cloudElapsedSec.toFixed(1) + ' שניות (אין תור עתידי)');
       return;
     }
+    // 129: "מחפשת..." נשאר בחלון אחרי שנמצא — והקישור מהתזכורת פתח שוב את חלון
+    // "בדיקת תור קיים" עם "מחפשת..." מעל התור שכבר הוצג. (19.10)
+    resultEl.innerHTML = '';
     closeApptLookup();
     renderLookedUpAppointment(upcoming);
     if (isDiagMode()){
@@ -22362,10 +22394,19 @@
           showQuietLookupLoading(false);
           const msg = resultEl ? resultEl.textContent.trim() : '';
           const overlay = document.getElementById('apptLookupOverlay');
-          if (msg && overlay) overlay.classList.add('show');
+          // 129: חלון החיפוש נפתח רק כשבאמת יש מה להגיד (לא נמצא / אין חיבור) —
+          // לא כשהתורים כבר על המסך, ולא בשביל "מחפשת...".
+          const shownAppts = (document.getElementById('myAppointment') || {}).offsetParent !== null
+            && ((document.getElementById('myAppointment') || {}).textContent || '').trim().length > 0;
+          if (msg && !/^מחפשת/.test(msg) && !shownAppts && overlay) overlay.classList.add('show');
           // 128: ישר לתורים — בלי גלילה מונפשת.
           const mine = document.getElementById('myAppointment');
-          if (mine && mine.offsetParent !== null) { try { mine.scrollIntoView({ block: 'start', behavior: 'auto' }); } catch (e) {} }
+          if (mine && mine.offsetParent !== null) {
+            try {
+              // 129: קפיצה מיידית ('instant' גובר על scroll-behavior: smooth של האתר)
+              window.scrollTo({ top: Math.max(0, mine.getBoundingClientRect().top + window.scrollY - 12), behavior: 'instant' });
+            } catch (e) { try { mine.scrollIntoView(); } catch (e2) {} }
+          }
         }, function(){ showQuietLookupLoading(false); });
       }
     } catch (e) {
