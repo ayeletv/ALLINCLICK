@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-18 · 126">
+<meta name="app-build" content="2026-10-19 · 127">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -64,6 +64,12 @@
   };
   window.__BIZ_BY_DOMAIN = {
     'rutizolberg.com': 'default',
+  };
+  // 127: עותק של הצבעים והלוגו הזעיר (4 ק"ב) בתוך הקובץ עצמו — מוצג מיד בביקור
+  // ראשון, בלי לחכות לשרת. בביקור ראשון בטלפון: חיבור ראשון לשרת לקח 4 שניות,
+  // והלוגו המלא עוד ~2 שניות. מתחלף בנתונים האמיתיים ברגע שהם מגיעים.
+  window.__THEME_BY_DOMAIN = {
+    'rutizolberg.com': "{\"vars\":{\"--th-primary\":\"#f2a396\",\"--th-primary-deep\":\"#ea6b56\",\"--th-secondary\":\"#e8cc3b\",\"--th-secondary-soft\":\"#efdb76\",\"--th-c1\":\"#e79688\",\"--th-c1-lt\":\"#f2cbc5\",\"--th-c2\":\"#e6d88f\",\"--th-c2-lt\":\"#f0eac6\",\"--th-c3\":\"#e5b98f\",\"--th-c3-lt\":\"#f1dbc5\",\"--th-c1-pale\":\"#f6e9e7\",\"--th-c2-pale\":\"#f4f2e6\",\"--th-card\":\"#f8ecea\",\"--th-card-2\":\"#f5f4ed\",\"--th-panel-bg\":\"#f8e3e0\",\"--th-panel-card-bg\":\"#fbf1f0\",\"--th-panel-gold\":\"#77660e\",\"--th-panel-line-rgb\":\"242,163,150\",\"--th-font\":\"\u0027Assistant\u0027\",\"--th-primary-rgb\":\"242,163,150\",\"--th-primary-deep-rgb\":\"234,107,86\",\"--th-secondary-rgb\":\"232,204,59\",\"--th-secondary-soft-rgb\":\"239,219,118\",\"--th-on-primary\":\"#241B1E\",\"--th-on-secondary\":\"#241B1E\",\"--th-action\":\"#ea6b56\",\"--th-action-press\":\"#e5472d\",\"--th-action-rgb\":\"234,107,86\",\"--th-on-action\":\"#241B1E\",\"--th-ink-brand\":\"#d5351a\"},\"classes\":\"th-on th-arc\",\"name\":\"רותי זולברג\",\"phone\":\"0583244485\",\"wa\":\"0583244485\",\"mail\":\"rutcosmetic@gmail.com‏\",\"hasContact\":true,\"theme\":{\"palette\":[\"#d1aa29\",\"#d1b529\",\"#867b47\",\"#dfc12a\",\"#eacf48\",\"#e1c747\",\"#e6d47a\",\"#ea9c92\",\"#f4aea4\",\"#af9e4b\",\"#715f04\",\"#917903\",\"#f5d847\",\"#ffffff\",\"#e5eda6\",\"#efe4af\",\"#ede5c0\",\"#e8e2ca\",\"#f2efde\",\"#f8f8f7\",\"#af9c60\",\"#ee8273\"],\"logoFillV\":2,\"secondary\":\"#e8cc3b\",\"font\":\"assistant\",\"tone\":\"mid\",\"primary\":\"#f2a396\",\"logoColors\":[\"#f69284\"],\"logoFill\":true,\"logoZoom\":1,\"style\":\"arc\"},\"bizId\":\"default\",\"logo\":\"https://firebasestorage.googleapis.com/v0/b/allinklik.firebasestorage.app/o/public%2Fbranding%2F1792056494465-en5nbn8r.png?alt=media\u0026token=31945bf3-c300-43ad-9761-4ed467097a09\",\"logoFill\":true,\"logoZoom\":1,\"logoThumb\":\"data:image/webp;base64,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\"}",
   };
 (function(){
   try {
@@ -186,6 +192,9 @@
       if (typeof window.__applySiteTheme === 'function') window.__applySiteTheme();
     } catch (e) {}
   };
+  // 127: העותק שבתוך הקובץ — מיד, בלי לחכות לשרת (ביקור ראשון).
+  var inlineSnap = (window.__THEME_BY_DOMAIN || {})[host];
+  if (inlineSnap) { try { paint({ fields: { snapshot: { stringValue: inlineSnap } } }); } catch (e) {} }
   var known = (window.__BIZ_BY_DOMAIN || {})[host];
   if (known){
     get('siteTheme/' + encodeURIComponent(known)).then(paint);
@@ -4377,7 +4386,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-18 · 126';
+        window.__APP_BUILD = '2026-10-19 · 127';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5506,6 +5515,16 @@
     const themed = (typeof themeCategoryPalette === 'function') ? themeCategoryPalette() : null;
     return themed || mbCatTilePalette;
   }
+  // 127: צבע הקטגוריה בקביעה מהיומן ובבקשה מיוחדת — אותו צבע שהלקוחה רואה
+  // (categoryBaseColor: הצבע שרותי בחרה, אחרת ברירת המחדל של העיצוב). עד 126
+  // שני החלונות לקחו צבעים מפלטת העיצוב לפי הסדר — חזקים ושונים (אפילציה
+  // יצאה כתומה-אדומה במקום הוורוד שבחרה).
+  function mbTileColor(cat, colorIdx){
+    const own = (typeof categoryBaseColor === 'function') ? categoryBaseColor(cat) : null;
+    if (own) return own;
+    const mbPal = mbTilePalette();
+    return mbPal[colorIdx % mbPal.length];
+  }
   function renderMbCategoryGrid(){
     const gridEl = document.getElementById('mbCatGrid');
     if (!gridEl) return;
@@ -5516,8 +5535,7 @@
       if (!catServices.length) return;
       const tile = document.createElement('div');
       tile.className = 'cat-tile';
-      const mbPal = mbTilePalette();
-      tile.style.background = mbPal[colorIdx % mbPal.length];
+      tile.style.background = mbTileColor(cat, colorIdx);
       tile.style.color = tileTextColor(tile.style.background);
       colorIdx++;
       const selectedCount = catServices.filter(s => mbSelectedServices.some(sel => sel.svcIndex === services.indexOf(s))).length;
@@ -5673,8 +5691,7 @@
       if (!catServices.length) return;
       const tile = document.createElement('div');
       tile.className = 'cat-tile';
-      const mbPal = mbTilePalette();
-      tile.style.background = mbPal[colorIdx % mbPal.length];
+      tile.style.background = mbTileColor(cat, colorIdx);
       tile.style.color = tileTextColor(tile.style.background);
       colorIdx++;
       const selectedCount = catServices.filter(s => frSelectedServices.some(sel => sel.svcIndex === services.indexOf(s))).length;
@@ -5826,13 +5843,47 @@
   // ב-18.10 נוצרו 13 בקשות זהות של אותה לקוחה — השרת לפעמים "מתעורר" כמה
   // שניות, והיא לחצה שוב ושוב.
   let __frSubmitBusy = false;
+  // הנתונים שהבדיקה צריכה — הגיעו? אצל בעלת העסק: הטעינה המלאה; אצל לקוחה:
+  // הנתונים הציבוריים (צוות עם שעות עבודה).
+  function flexDataReady(){
+    try {
+      const haveStaff = Array.isArray(staff) && staff.some(s => s && !s.deleted);
+      if (isOwnerSession()) return !!cloudLoadComplete && haveStaff;
+      return haveStaff && (!!window.__publicDataApplied || !!cloudLoadComplete);
+    } catch (e) { return true; }
+  }
   async function submitFlexibleRequest(){
     if (__frSubmitBusy) return;
     __frSubmitBusy = true;
     const btn = document.querySelector('button[onclick="submitFlexibleRequest()"]');
     const label = btn ? btn.textContent : '';
     if (btn){ btn.disabled = true; btn.textContent = 'שולחת…'; }
-    try { return await submitFlexibleRequestNow(); }
+    try {
+      // 127: הבדיקה "יש עובדת ושעות מתאימות" נשענת על הצוות ושעות העבודה. בכניסה
+      // ראשונה ואיטית (טלפון) הם עוד לא הגיעו — והטופס החזיר שגיאה שלא הייתה
+      // צריכה להיות ("אין עובדת…"/"אין שעות…"); בפעם השנייה — בלי שגיאה. עכשיו
+      // מחכים לנתונים (עד 20 שניות) ורק אז בודקים.
+      if (!flexDataReady()){
+        if (btn) btn.textContent = 'רגע, האתר עוד נטען…';
+        for (let i = 0; i < 100 && !flexDataReady(); i++) await new Promise(r => setTimeout(r, 200));
+        if (btn) btn.textContent = 'שולחת…';
+        if (!flexDataReady()){
+          const errorEl = document.getElementById('frError');
+          if (errorEl){ errorEl.textContent = 'האתר עוד נטען — נסי שוב בעוד כמה שניות.'; errorEl.style.display = 'block'; }
+          return;
+        }
+      }
+      const out = await submitFlexibleRequestNow();
+      // 127: כל שגיאה בטופס נרשמת ביומן האבחון בנוסח המדויק — כדי לדעת מה
+      // ראתה המזכירה כשקיבלה שגיאה ובפעם השנייה עבר (19.10).
+      try {
+        const errEl = document.getElementById('frError');
+        if (errEl && errEl.style.display !== 'none' && errEl.textContent.trim()){
+          reportDiag('form-error', { key: 'flex:' + errEl.textContent.trim().slice(0, 70), code: isOwnerSession() ? 'owner' : 'customer' });
+        }
+      } catch (e) {}
+      return out;
+    }
     finally { __frSubmitBusy = false; if (btn){ btn.disabled = false; btn.textContent = label; } }
   }
   async function submitFlexibleRequestNow(){
@@ -5855,8 +5906,20 @@
       errorEl.style.display = 'block';
       return;
     }
+    // 127: "עובדת מועדפת" נשמרת רק אם היא באמת עושה את הטיפולים שנבחרו. החלון
+    // לוקח אותה מהעובדת שנבחרה באותו רגע במסך הראשי — ובקשה לקטגוריה של רותי
+    // נבדקה מול שילת (שלא עובדת בשישי): "הטווח חופף רק לימים שהעסק סגור בהם".
+    // יציאה וכניסה — העובדת שבמסך התחלפה, ועבר. (המזכירה, 19.10)
+    if (frPreferredStaffIdx !== null && frPreferredStaffIdx !== undefined){
+      const frCats = Array.from(new Set(svcObjs.map(s => s && s.category).filter(Boolean)));
+      const capable = frCats.length ? getCapableStaffIndicesForCats(frCats) : [];
+      if (!capable.includes(frPreferredStaffIdx)) frPreferredStaffIdx = null;
+    }
     if (!frKnown && !/^\d{9}$/.test(idDigits)){
-      errorEl.textContent = 'יש להזין תעודת זהות תקנית (9 ספרות), או מספר טלפון שכבר רשום אצלנו.';
+      // 127: טלפון שרשום על כמה כרטיסים (אמא ובת) — לא "לא תקין", אלא לא ברור מי.
+      errorEl.textContent = (frResolvedLocal && frResolvedLocal.ambiguousPhone)
+        ? 'המספר הזה רשום על כמה כרטיסים (למשל אמא ובת) — יש להקליד תעודת זהות כדי שנדע למי הבקשה.'
+        : 'יש להזין תעודת זהות תקנית (9 ספרות), או מספר טלפון שכבר רשום אצלנו.';
       errorEl.style.display = 'block';
       return;
     }
@@ -22480,6 +22543,7 @@
   let __ownerReverifyBusy = false;
   function applyPublicData(data){
     runningOnPublicData = true;
+    window.__publicDataApplied = true;   // 127: הנתונים הציבוריים (צוות, שעות) הגיעו
     if (data.branding) branding = Object.assign({ name: '', logo: null, phone: '', whatsapp: '', address: '', email: '', theme: null }, data.branding);
     if (Array.isArray(data.staff)){
       staff = data.staff;
@@ -22819,7 +22883,12 @@
     // רגילה מחזירה בשקט את העותק הישן ששמור במכשיר — כך המחשב הציג נתונים
     // ישנים גם אחרי "רענון", עד ש"קפץ" כמה דקות אחר כך (18.10).
     // האתר ללקוחות (publicView) — 6 שניות: לקוחה ברחוב לא תחכה יותר.
-    const hedgeMs = label === 'business' ? 7000 : label === 'refresh' ? 5000 : (label === 'publicView' || label === 'owners') ? 6000 : 12000;
+    // 127: מכשיר שכבר נזקק לדרך העוקפת — זוכר, ושתי הדרכים יוצאות יחד מהשנייה
+    // הראשונה. ביומן 19.10: הטלפון של רותי נטען כל פעם 8–9 שניות (7 שניות המתנה
+    // לקריאה הרגילה התקועה + הדרך העוקפת).
+    let hedgeNow = false;
+    try { hedgeNow = localStorage.getItem('hk_hedge_now') === '1'; } catch (e) {}
+    const hedgeMs = hedgeNow ? 0 : label === 'business' ? 7000 : label === 'refresh' ? 5000 : (label === 'publicView' || label === 'owners') ? 6000 : 12000;
     const plainGet = () => { try { return ref.get({ source: 'server' }); } catch (e) { return ref.get(); } };
     const getOnce = () => new Promise((resolve, reject) => {
       let done = false, primaryErr = null, hedgeErr = null, hedgeStarted = false;
@@ -22836,11 +22905,11 @@
       const timer = setTimeout(() => {
         if (done || !db || typeof db.runTransaction !== 'function') return;
         hedgeStarted = true;
-        try { reportDiag('stream-blocked', { key: label || '', code: 'slow-' + Math.round(hedgeMs / 1000) + 's' }); } catch (e) {}
+        if (!hedgeNow) { try { reportDiag('stream-blocked', { key: label || '', code: 'slow-' + Math.round(hedgeMs / 1000) + 's' }); } catch (e) {} }
         db.runTransaction(tx => tx.get(ref)).then(v => {
           if (!done) {
             __streamReadBlocked = true;   // מעכשיו בדף הזה — ישר בדרך העוקפת
-            try { localStorage.setItem('hk_force_long_polling', '1'); } catch (e) {}
+            try { localStorage.setItem('hk_force_long_polling', '1'); localStorage.setItem('hk_hedge_now', '1'); } catch (e) {}
           }
           win(v);
         }, e => { hedgeErr = e; lose(); });
