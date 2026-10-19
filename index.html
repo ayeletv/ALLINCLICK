@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-19 · 127">
+<meta name="app-build" content="2026-10-19 · 128">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -65,6 +65,15 @@
   window.__BIZ_BY_DOMAIN = {
     'rutizolberg.com': 'default',
   };
+  // 128: קישור ל"התורים שלי" / להצעה (מ-SMS או מייל) — בלי מסך הלוגו ובלי גלילה:
+  // הדף נפתח ישר במקום של התורים. (בקשה של איילת, 19.10: "שיביא אותי כבר לאיפה
+  // שרואים את התורים, כאילו כבר גללו".)
+  try {
+    if (/[?&](lookupPhone|lookupId|offer)=/.test(location.search)) {
+      document.documentElement.classList.add('hk-deeplink');
+      window.__deepLinkLookup = true;
+    }
+  } catch (e) {}
   // 127: עותק של הצבעים והלוגו הזעיר (4 ק"ב) בתוך הקובץ עצמו — מוצג מיד בביקור
   // ראשון, בלי לחכות לשרת. בביקור ראשון בטלפון: חיבור ראשון לשרת לקח 4 שניות,
   // והלוגו המלא עוד ~2 שניות. מתחלף בנתונים האמיתיים ברגע שהם מגיעים.
@@ -349,6 +358,7 @@
   html.ground-unknown{background:#F6F1EA;}
   html.ground-unknown body{background:transparent; color:#2E2522;}
   html.ground-unknown .hero{background:#f7f2ec; border-bottom-color:transparent;}
+  html.hk-deeplink .hero{display:none !important;}   /* 128: קישור לתורים — בלי מסך הלוגו */
   html.ground-unknown .hero-ground{opacity:0;}
   html.ground-unknown .hero, html.ground-unknown .hero *{color:#3A2E2E;}
   html.theme-unknown .hero > *:not(.hero-ground){opacity:0;}
@@ -4386,7 +4396,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-19 · 127';
+        window.__APP_BUILD = '2026-10-19 · 128';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -10271,6 +10281,7 @@
   window.__applySensitiveSettingsLock = applySensitiveSettingsLock;
 
   function scheduleAutoScrollToBooking(){
+    if (window.__deepLinkLookup) return;   // 128: הדף כבר פתוח במקום הנכון
     if (window.__autoScrollToBookingTimer) clearTimeout(window.__autoScrollToBookingTimer);
     if (window.__autoScrollUserScrolledHandler) window.removeEventListener('scroll', window.__autoScrollUserScrolledHandler);
     let userScrolled = false;
@@ -10285,7 +10296,7 @@
       if (document.body.classList.contains('admin-mode')) return;
       const target = document.querySelector('.switcher');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 2000);
+    }, 900);   // 128: 0.9 שנייה אחרי שהשם מופיע (עד 127 — 2 שניות)
   }
   function revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, name, skipFontWait){
     const alreadyShown = heroBizNameEl.classList.contains('biz-name-visible');
@@ -10326,7 +10337,12 @@
       return;
     }
     const fp = (window.__suezFontPromise && typeof window.__suezFontPromise.then === 'function') ? window.__suezFontPromise : Promise.resolve();
-    fp.then(doReveal);
+    // 128: לא מחכים לגופן יותר מ-0.4 שנייה — בטלפון בביקור ראשון הוא מתעכב,
+    // וכל הגלילה חיכתה לו.
+    let revealed = false;
+    const once = function(){ if (revealed) return; revealed = true; doReveal(); };
+    fp.then(once, once);
+    setTimeout(once, 400);
   }
 
   const THEME_STYLES = [
@@ -22347,6 +22363,9 @@
           const msg = resultEl ? resultEl.textContent.trim() : '';
           const overlay = document.getElementById('apptLookupOverlay');
           if (msg && overlay) overlay.classList.add('show');
+          // 128: ישר לתורים — בלי גלילה מונפשת.
+          const mine = document.getElementById('myAppointment');
+          if (mine && mine.offsetParent !== null) { try { mine.scrollIntoView({ block: 'start', behavior: 'auto' }); } catch (e) {} }
         }, function(){ showQuietLookupLoading(false); });
       }
     } catch (e) {
