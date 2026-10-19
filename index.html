@@ -440,6 +440,10 @@
   body.th-on .hero-medallion.has-logo{display:flex;}
   body.th-on .hero-medallion.logo-pending{display:flex; visibility:hidden;}
   body.th-on .hero-medallion.has-logo{visibility:visible;}
+  /* 130: שם הסלון מוצג רק יחד עם הלוגו — "חייב לבוא בול". כל עוד הלוגו
+     בדרך (logo-pending בלי has-logo), גם השם מוסתר. רשת ביטחון: אחרי 3 שניות
+     בלי לוגו (תמונה שבורה) — logo-gaveup, והשם מוצג לבד. */
+  body.th-on .hero:not(.logo-gaveup):has(.hero-medallion.logo-pending:not(.has-logo)) #heroBizName{visibility:hidden;}
 
   .theme-style-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:9px; max-width:460px;}
   @media (max-width:480px){ .theme-style-grid{grid-template-columns:repeat(3,1fr);} }
@@ -3504,7 +3508,13 @@
         im.onerror = function(){ med.removeAttribute('data-src'); showName(); };
         im.src = window.__cachedLogo;
         if (im.complete && im.naturalWidth) revealBoth();
-        else setTimeout(showName, 250);   // רשת ביטחון: שם בלי לוגו עדיף על כלום
+        // 130: השם מחכה ללוגו (עד 129 — רבע שנייה, ואז השם לבד ולוגו אחריו).
+        // רשת ביטחון רק אחרי 3 שניות.
+        else setTimeout(function(){
+          if (med.classList.contains('has-logo')) return;
+          var heroSec = document.querySelector('.hero'); if (heroSec) heroSec.classList.add('logo-gaveup');
+          showName();
+        }, 3000);
       } else {
         showName();
       }
@@ -10884,6 +10894,11 @@
       };
       if (!el.querySelector('img') || !el.classList.contains('has-logo')){
         el.classList.add('logo-pending');
+        // 130: השם מחכה ללוגו (CSS); אם הלוגו לא הגיע אחרי 3 שניות — השם לבד
+        setTimeout(function(){
+          if (el.classList.contains('has-logo')) return;
+          const heroSec = document.querySelector('.hero'); if (heroSec) heroSec.classList.add('logo-gaveup');
+        }, 3000);
       }
       if (el.dataset.src !== logo){
         const next = new Image();
