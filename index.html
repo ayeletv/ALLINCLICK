@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-19 · 130">
+<meta name="app-build" content="2026-10-20 · 131">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -652,6 +652,9 @@
   .th-reveal{opacity:0; transform:translateY(26px);
     transition:opacity 0.6s ease, transform 0.6s cubic-bezier(.2,.7,.3,1);}
   .th-reveal.th-in{opacity:1; transform:none;}
+  /* 131: קישור לתורים — בלי אנימציית "החלקה" של שורת הטאבים ותיבת הקביעה
+     (מתחילה שקופה ו-26 פיקסלים נמוך, ועולה) — נראתה כמו קפיצה. (19.10) */
+  html.hk-deeplink .th-reveal{opacity:1 !important; transform:none !important; transition:none !important;}
   body.th-on .cta, body.th-on .cat-tile, body.th-on .switcher button,
   body.th-on .slot, body.th-on .hero-ghost{transition:transform .14s ease, box-shadow .18s ease, background .2s ease;}
   body.th-on .cta:active, body.th-on .hero-ghost:active{transform:scale(0.975);}
@@ -4436,7 +4439,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-19 · 130';
+        window.__APP_BUILD = '2026-10-20 · 131';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -16721,7 +16724,22 @@
       guard++;
     }
     if (!sawOpenCandidateDay){
-      return { reason: 'all-closed', message: 'טווח התאריכים שבחרת חופף רק לימים שהעסק סגור בהם — יש לבחור טווח אחר.' };
+      // 131: לא "העסק סגור" — העסק פתוח; זו העובדת שעושה את הטיפול שלא עובדת
+      // בימים האלה (למשל לייזר — שילת, ביום שישי). ב-19.10 לקוחה קיבלה
+      // "חופף רק לימים שהעסק סגור בהם" — מבלבל. עכשיו: מי, ובאילו ימים כן.
+      const dayNames = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
+      const workDays = new Set();
+      const probe = new Date(); probe.setHours(0, 0, 0, 0);
+      for (let k = 0; k < 21; k++){
+        const d = new Date(probe); d.setDate(d.getDate() + k);
+        if (liveIndices.some(i => { const di = dayInfoForDate(i, d); return di && di.open && !isDateClosedForStaff(i, d); })) workDays.add(d.getDay());
+      }
+      const names = liveIndices.map(i => String((staff[i] && staff[i].name) || '').split(/\s+-\s+|\s+/)[0]).filter(Boolean);
+      const who = names.length === 1 ? names[0] : 'מי שעושה את הטיפול';
+      const daysTxt = Array.from(workDays).sort().map(d => dayNames[d]).join(', ');
+      return { reason: 'all-closed', message: daysTxt
+        ? `בטווח התאריכים שבחרת ${who} לא עובדת. ימי העבודה שלה: ${daysTxt} — יש לבחור טווח שכולל אחד מהם.`
+        : 'בטווח התאריכים שבחרת אין ימי עבודה לטיפול הזה — יש לבחור טווח אחר.' };
     }
     return { reason: 'time-window', message: '' }; // ההודעה נבנית אצל הקורא, עם שעות העבודה בפועל
   }
@@ -22425,7 +22443,11 @@
           document.documentElement.classList.remove('hk-deeplink-wait');
           if (mine && mine.offsetParent !== null) {
             const topNow = mine.getBoundingClientRect().top;
-            if (topNow < 0 || topNow > window.innerHeight * 0.5) {
+            // 131: קופצים רק אם התור באמת מחוץ למסך. ב-130 — "לא בחצי העליון"
+            // הספיק, והדף קפץ 400 פיקסלים גם כשהתור כבר נראה: השורה של הטאבים
+            // הקטנים (פינוקים חדשים…) "עפה" למעלה. (19.10)
+            const vh = window.innerHeight || document.documentElement.clientHeight || 700;
+            if (topNow < 0 || topNow > vh - 120) {
               try { window.scrollTo({ top: Math.max(0, topNow + window.scrollY - 12), behavior: 'instant' }); }
               catch (e) { try { mine.scrollIntoView(); } catch (e2) {} }
             }
