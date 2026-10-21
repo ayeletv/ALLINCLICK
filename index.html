@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-21 · 136">
+<meta name="app-build" content="2026-10-21 · 137">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4482,7 +4482,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-21 · 136';
+        window.__APP_BUILD = '2026-10-21 · 137';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -13987,7 +13987,7 @@
          * קיבלו לפניה. בריחוף — כל השרשרת. לחיצה — החלון המלא. */
         const escB = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
         const slotKeyB = x => String(x.date) + '|' + String(x.time) + '|' + String(x.staff);
-        const chain = pendingOffers.filter(x => x && slotKeyB(x) === slotKeyB(o) && x.status !== 'takenByOwner')
+        const chain = currentOfferChain(slotKeyB(o)).filter(x => x && x.status !== 'takenByOwner')
           .sort((a, b) => (Date.parse(a.createdAt) || 0) - (Date.parse(b.createdAt) || 0));
         const recNames = (o.recipients || []).map(r => r && r.name).filter(Boolean);
         // 135: הסבב האחרון — אותן לקוחות שכבר קיבלו, יחד; "8 לפניה" היה מטעה
@@ -14329,6 +14329,26 @@
     if (!y || !mo || !d || isNaN(h) || isNaN(mi)) return null;
     return Math.round((new Date(y, mo - 1, d, h, mi).getTime() - (now || new Date()).getTime()) / 60000);
   }
+  /* 136: הסבב הנוכחי של שעה — זהה ל-currentChainOf בשרת. תור שנקבע (הצעה
+   * שאושרה, או שנסגרה כי השעה נתפסה) סוגר את הסבב; אם הוא מתבטל, מתחיל סבב
+   * חדש ובו כולן חוזרות לרשימה. ("התור שנתפס בוטל — למה לא מתחילה שוב
+   * רשימה?", 21.10.2026) */
+  function offerChainBoundaryMs(key){
+    let b = 0;
+    (pendingOffers || []).forEach(function(o){
+      if (!o || String(o.date || '') + '|' + String(o.time || '') + '|' + String(o.staff) !== key) return;
+      if (o.status !== 'claimed' && o.status !== 'taken') return;
+      const t = Date.parse(o.createdAt || '') || 0;
+      if (t > b) b = t;
+    });
+    return b;
+  }
+  function currentOfferChain(key){
+    const b = offerChainBoundaryMs(key);
+    return (pendingOffers || []).filter(function(o){
+      return o && String(o.date || '') + '|' + String(o.time || '') + '|' + String(o.staff) === key && (Date.parse(o.createdAt || '') || 0) > b;
+    });
+  }
   function eligibleRequestsForSlot(slot, now){
     const minutesAway = offerMinutesUntil(slot.date, slot.time, now);
     if (minutesAway === null) return [];
@@ -14338,8 +14358,8 @@
     const startMin = timeToMinutes(slot.time);
     const slotKey = String(slot.date || '') + '|' + String(slot.time || '') + '|' + String(slot.staff);
     const previouslyOffered = new Set();
-    (pendingOffers || []).forEach(function(o){
-      if (!o || String(o.date || '') + '|' + String(o.time || '') + '|' + String(o.staff) !== slotKey) return;
+    currentOfferChain(slotKey).forEach(function(o){
+      if (!o) return;
       // 120: "לקחת את השעה — קביעה ידנית" בלי שנקבע תור בסוף — ההצעה לא נחשבת.
       // השעה עדיין פנויה (אחרת לא היינו כאן), והלקוחה לא קיבלה הזדמנות לאשר.
       if (o.status === 'takenByOwner') return;
@@ -14503,9 +14523,8 @@
       broadcast: broadcast,
       // 134: השעה כבר הוצעה קודם — מי שקיבלה לפניה עדיין יכולה לאשר (השרת:
       // lateClaimOpen), ולכן בהודעה "הראשונה שתאשר מקבלת", לא "שמורה לך".
-      shared: (pendingOffers || []).some(function(o){
-        return o && String(o.date) + '|' + String(o.time) + '|' + String(o.staff) === String(slot.date) + '|' + String(slot.time) + '|' + String(slot.staff)
-          && o.status !== 'takenByOwner';
+      shared: currentOfferChain(String(slot.date) + '|' + String(slot.time) + '|' + String(slot.staff)).some(function(o){
+        return o && o.status !== 'takenByOwner';
       }),
       freedFrom: slot.freedFrom || '',
       createdAt: now.toISOString(),
@@ -14697,8 +14716,15 @@
     const keyOf = function(x){ return String(x.date || '') + '|' + String(x.time || '') + '|' + String(x.staff); };
     const key = keyOf(o);
     const ms = function(v){ const n = Date.parse(v || ''); return Number.isFinite(n) ? n : 0; };
+    // 136: רק מאותו סבב — מאז התור האחרון שנקבע לשעה הזו (ובוטל)
+    let epochStart = 0;
+    (pendingOffers || []).forEach(function(x){
+      if (x && keyOf(x) === key && x.id !== o.id && (x.status === 'claimed' || x.status === 'taken')
+        && ms(x.createdAt) < ms(o.createdAt) && ms(x.createdAt) > epochStart) epochStart = ms(x.createdAt);
+    });
     const earlier = (pendingOffers || []).filter(function(x){
-      return x && x.id !== o.id && keyOf(x) === key && x.status !== 'takenByOwner' && ms(x.createdAt) <= ms(o.createdAt);
+      return x && x.id !== o.id && keyOf(x) === key && x.status !== 'takenByOwner'
+        && ms(x.createdAt) <= ms(o.createdAt) && ms(x.createdAt) > epochStart;
     }).sort(function(a, b){ return ms(a.createdAt) - ms(b.createdAt); });
     if (!earlier.length) return '';
     const esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
