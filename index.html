@@ -746,12 +746,13 @@
    * לבקשת איילת). אותם ירוקים כמו בעיצוב הבסיסי (cal-day-today / cal-now-fill
    * למטה) ושל תגית השעה, שכבר הייתה ירוקה. */
   body.th-on .cal-day-head.cal-day-today{
-    background:#E3EBDF;
-    border-bottom:3px solid #3E6B2E;
+    background:#BFDAB0;
+    border-bottom:4px solid #2F6B22;
   }
-  body.th-on .cal-day-head.cal-day-today .cal-day-name{color:#4A6141;}
-  body.th-on .cal-day-head.cal-day-today .cal-day-num{color:#3D5436;}
-  body.th-on .cal-now-fill{background:rgba(122,153,106,0.22);}
+  body.th-on .cal-day-head.cal-day-today .cal-day-name{color:#1F4A17; font-weight:700;}
+  body.th-on .cal-day-head.cal-day-today .cal-day-num{color:#1F4A17; font-weight:800;}
+  /* "היה בהיר מדי, לא רואים" (21.10) — מ-0.22 ל-0.38 */
+  body.th-on .cal-now-fill{background:rgba(62,120,46,0.38);}
   body.th-on .cal-now-pin{color:#3E6B2E;}
   body.th-on .cal-now-pin i{background:#3E6B2E; box-shadow:0 0 0 2px rgba(62,107,46,0.3);}
 
@@ -2599,11 +2600,11 @@
   }
   .cal-day-head .heb-date{font-size:8.5px; color:var(--panel-text-dim); opacity:0.75;}
   .cal-day-head.cal-day-today{
-    background:#E3EBDF;
-    border-bottom:3px solid var(--sage);
+    background:#BFDAB0;
+    border-bottom:4px solid #2F6B22;
   }
-  .cal-day-head.cal-day-today .cal-day-name{color:#4A6141; font-weight:700;}
-  .cal-day-head.cal-day-today .cal-day-num{color:#3D5436; font-weight:800;}
+  .cal-day-head.cal-day-today .cal-day-name{color:#1F4A17; font-weight:700;}
+  .cal-day-head.cal-day-today .cal-day-num{color:#1F4A17; font-weight:800;}
   .oh-slot{
     border:1.5px solid rgba(var(--panel-line-rgb),0.55);
     background:var(--panel-card-bg);
@@ -2622,7 +2623,7 @@
   .cal-day-body{position:relative;}
   .cal-now-fill{
     position:absolute; inset-inline:0; top:0; z-index:0; pointer-events:none;
-    background:rgba(122,153,106,0.22);
+    background:rgba(62,120,46,0.38);
   }
   .cal-day-head.day-closed{background:rgba(var(--wine-rgb),0.07);}
   .cal-day-head.day-closed .cal-day-name, .cal-day-head.day-closed .cal-day-num{color:var(--wine);}
@@ -13928,14 +13929,29 @@
         block.style.height = heightPx + 'px';
         const left = Math.max(0, Math.round((new Date(o.expiresAt).getTime() - Date.now()) / 60000));
         const howMany = Array.isArray(o.requestIds) ? o.requestIds.length : 0;
+        /* 134: "אני רוצה לראות ביומן למי נשלח ומה הסטטוס" (21.10.2026). עד היום
+         * הריבוע אמר רק "מוצע ל-1". עכשיו: למי (שם), כמה זמן נשאר, וכמה כבר
+         * קיבלו לפניה. בריחוף — כל השרשרת. לחיצה — החלון המלא. */
+        const escB = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        const slotKeyB = x => String(x.date) + '|' + String(x.time) + '|' + String(x.staff);
+        const chain = pendingOffers.filter(x => x && slotKeyB(x) === slotKeyB(o) && x.status !== 'takenByOwner')
+          .sort((a, b) => (Date.parse(a.createdAt) || 0) - (Date.parse(b.createdAt) || 0));
+        const recNames = (o.recipients || []).map(r => r && r.name).filter(Boolean);
+        const who = recNames.length === 1 ? recNames[0] : ('מוצע ל-' + (recNames.length || howMany));
+        const before = chain.filter(x => x.id !== o.id).reduce((n, x) => n + (x.recipients || []).length, 0);
+        const hhmmB = v => { const t = Date.parse(v || ''); return t ? new Date(t).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : ''; };
         block.innerHTML =
           '<span class="cal-offer-pulse" aria-hidden="true"></span>' +
-          '<span class="cal-appt-name">⏳ מוצע' + (howMany ? ' ל-' + howMany : '') + '</span>' +
+          '<span class="cal-appt-name">⏳ ' + escB(who) + '</span>' +
           '<span class="cal-appt-meta">' + o.time.slice(0, 5) +
-            (left > 0 ? ' · ' + left + ' דק׳' : ' · פג') + '</span>';
-        block.title = 'השעה הזו התפנתה והוצעה ל' + (howMany || 0) + ' לקוחות. היא נשמרת עד ' +
-          (o.expiresAt ? new Date(o.expiresAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '') +
-          ' — אם אף אחת לא תאשר, היא תחזור להיות פנויה. לחיצה לפרטים.';
+            (left > 0 ? ' · עוד ' + left + ' דק׳' : ' · פג') +
+            (before ? ' · ' + before + ' לפניה' : '') + '</span>';
+        block.title = 'השעה ' + o.time.slice(0, 5) + ' התפנתה. ההצעות לפי הסדר:\n' +
+          chain.map((x, i) => (i + 1) + '. ' + (x.recipients || []).map(r => r && r.name).filter(Boolean).join(', ') +
+            ' — נשלחה ' + hhmmB(x.createdAt) + ' — ' +
+            (x.id === o.id ? (left > 0 ? 'ממתינה לתשובה עד ' + hhmmB(x.expiresAt) : 'פג הזמן')
+              : x.status === 'claimed' ? 'אישרה' : x.status === 'withdrawn' ? 'ביטלה' : 'לא ענתה עד ' + hhmmB(x.expiresAt))).join('\n') +
+          '\nלחיצה לפרטים.';
         block.onclick = (e) => {
           e.stopPropagation();
           if (typeof openOfferDetail === 'function') openOfferDetail(o.id);
@@ -14427,6 +14443,12 @@
           { booking: recipientBookingOf(r) });
       }),
       broadcast: broadcast,
+      // 134: השעה כבר הוצעה קודם — מי שקיבלה לפניה עדיין יכולה לאשר (השרת:
+      // lateClaimOpen), ולכן בהודעה "הראשונה שתאשר מקבלת", לא "שמורה לך".
+      shared: (pendingOffers || []).some(function(o){
+        return o && String(o.date) + '|' + String(o.time) + '|' + String(o.staff) === String(slot.date) + '|' + String(slot.time) + '|' + String(slot.staff)
+          && o.status !== 'takenByOwner';
+      }),
       freedFrom: slot.freedFrom || '',
       createdAt: now.toISOString(),
       expiresAt: new Date(now.getTime() + offerSetting('windowMin') * 60000).toISOString(),
@@ -14526,6 +14548,10 @@
     const race = offer.broadcast
       ? ' ההודעה נשלחה לכמה לקוחות — הראשונה שתאשר מקבלת.'
       : '';
+    if (offer.shared && !offer.broadcast){
+      return 'התפנה תור ' + when + ' ב-' + offer.time + (offer.serviceName ? ' (' + offer.serviceName + ')' : '') +
+        '. הראשונה שתאשר מקבלת: ' + link;
+    }
     return 'התפנה תור ' + when + ' ב-' + offer.time + (offer.serviceName ? ' (' + offer.serviceName + ')' : '') +
       '. לאישור עד ' + offerUntilLabel(offer) + ': ' + link + race;
   }
@@ -14544,6 +14570,8 @@
       ' בתאריך ' + dateLabel + ' בשעה ' + offer.time + '.\n\n' +
       (offer.broadcast
         ? 'ההודעה נשלחה לכמה לקוחות — הראשונה שתאשר מקבלת. ההצעה בתוקף עד ' + offerUntilLabel(offer) + '.\n\n'
+        : offer.shared
+        ? 'השעה הוצעה קודם גם ללקוחות אחרות והיא עדיין פנויה — הראשונה שתאשר מקבלת, אז כדאי לאשר מהר.\n\n'
         : 'השעה שמורה לך עד ' + offerUntilLabel(offer) + '. אחרי זה היא עוברת ללקוחה הבאה בתור.\n\n') +
       'לאישור התור לחצי כאן: ' + link + '\n\n' +
       'התור יישמר ביומן רק לאחר שתפתחי את הקישור ותאשרי אותו.';
@@ -14601,6 +14629,45 @@
    *
    * החליף את "סדר הפניות שמבקשות את השעה הזאת", שהראה רק רשימת המתנה לאותה
    * שעה בדיוק — כולל מי שכבר קיבלה — ולא את הבקשות הגמישות. */
+  /* מי קיבלה את ההצעה לשעה הזו לפני הנוכחית (21.10.2026).
+   *
+   * "התפנה תור נשלח לעוד אחת שלא ברשימה" — רבקי קיבלה את 22:15 ראשונה, לא
+   * ענתה עד 11:19, וההצעה עברה לאסתי. החלון הראה רק את ההצעה הנוכחית (אסתי),
+   * ולכן נראה כאילו המייל לרבקי יצא בלי סיבה. כל העברה לבאה בתור היא הצעה
+   * נפרדת לאותה שעה — כאן הן מוצגות לפי הסדר. */
+  function offerHistoryHtml(o){
+    const keyOf = function(x){ return String(x.date || '') + '|' + String(x.time || '') + '|' + String(x.staff); };
+    const key = keyOf(o);
+    const ms = function(v){ const n = Date.parse(v || ''); return Number.isFinite(n) ? n : 0; };
+    const earlier = (pendingOffers || []).filter(function(x){
+      return x && x.id !== o.id && keyOf(x) === key && x.status !== 'takenByOwner' && ms(x.createdAt) <= ms(o.createdAt);
+    }).sort(function(a, b){ return ms(a.createdAt) - ms(b.createdAt); });
+    if (!earlier.length) return '';
+    const esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+    const hhmm = function(v){ const n = ms(v); return n ? new Date(n).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : ''; };
+    let i = 0;
+    const rows = [];
+    earlier.forEach(function(x){
+      (x.recipients || []).forEach(function(rec){
+        if (!rec) return;
+        const what = rec.status === 'withdrawn' ? 'ביטלה את הבקשה'
+          : rec.status === 'declined' ? 'סירבה'
+          : rec.status === 'missed' ? 'לקוחה אחרת אישרה קודם'
+          : 'לא ענתה עד ' + hhmm(x.expiresAt);
+        rows.push('<div class="offer-rec-row">' +
+          '<div class="offer-rec-num">' + (++i) + '</div>' +
+          '<div class="offer-rec-main"><div class="offer-rec-name">' + esc(rec.name || 'ללא שם') + '</div>' +
+            '<div class="offer-rec-phone offer-rec-nophone">נשלחה ב-' + esc(hhmm(x.createdAt)) + '</div></div>' +
+          '<div class="offer-rec-status">' + esc(what) + '</div>' +
+        '</div>');
+      });
+    });
+    if (!rows.length) return '';
+    return '<div class="offer-list-title" style="margin-top:12px">קיבלו את ההצעה לשעה הזו לפני כן:</div>' +
+      '<div class="offer-rec-list">' + rows.join('') + '</div>' +
+      // 134: הן עדיין יכולות לאשר (השרת: lateClaimOpen)
+      '<div class="offer-note">כל עוד השעה לא נתפסה, גם הן יכולות עדיין לאשר מהקישור שקיבלו — הראשונה שמאשרת מקבלת.</div>';
+  }
   function offerNextInLineHtml(o){
     if (!offerIsLive(o)) return '';
     let next = [];
@@ -14633,9 +14700,30 @@
     }).join('') + '</div>' +
     '<div class="offer-note">הסדר נבדק שוב ברגע המעבר: מי שבינתיים קבעה תור, ביטלה את הבקשה, או שכבר קרוב מדי בשבילה — מדולגת.</div>';
   }
+  /* 134: החלון הולך אחרי השעה, לא אחרי הצעה אחת (21.10.2026). החלון של
+   * 22:15 נשאר פתוח על ההצעה לאסתי, וב-13:26 הודיע "פג הזמן. השעה חזרה להיות
+   * פנויה" — כשההצעה כבר עברה למיכל. מעכשיו: הצעה שפגה ויש אחריה הצעה פתוחה
+   * לאותה שעה — מוצגת הפתוחה (ההיסטוריה מופיעה בתוכה), והחלון הפתוח מתרענן
+   * לבד כל 30 שניות. */
+  function latestLiveOfferForSlotOf(o){
+    if (!o || offerIsLive(o)) return o;
+    const key = String(o.date) + '|' + String(o.time) + '|' + String(o.staff);
+    const ms = function(v){ const n = Date.parse(v || ''); return Number.isFinite(n) ? n : 0; };
+    const newer = (pendingOffers || []).filter(function(x){
+      return x && x.id !== o.id && offerIsLive(x) && String(x.date) + '|' + String(x.time) + '|' + String(x.staff) === key;
+    }).sort(function(a, b){ return ms(b.createdAt) - ms(a.createdAt); })[0];
+    return newer || o;
+  }
+  setInterval(function(){
+    try {
+      const ov = document.getElementById('offerDetailOverlay');
+      if (offerDetailCurrentId && ov && ov.classList.contains('show')) openOfferDetail(offerDetailCurrentId);
+    } catch (e) {}
+  }, 30000);
   function openOfferDetail(id){
-    const o = offerById(id);
+    const o = latestLiveOfferForSlotOf(offerById(id));
     if (!o) return;
+    id = o.id;
     offerDetailCurrentId = id;
     const card = document.getElementById('offerDetailCard');
     const actions = document.getElementById('offerDetailActions');
@@ -14666,7 +14754,9 @@
       '<div class="offer-countdown' + (left <= 5 ? ' offer-countdown-soon' : '') + '">' +
         (left > 0
           ? '⏳ השעה שמורה עוד <b>' + left + ' דקות</b> — עד ' + until
-          : 'פג הזמן. השעה חזרה להיות פנויה.') +
+          : (o.status === 'claimed' ? '✓ ' + (o.claimedBy || 'לקוחה') + ' אישרה — התור נקבע.'
+            : o.status === 'taken' ? 'השעה נתפסה.'
+            : 'פג הזמן ואף אחת לא אישרה. השעה פנויה — מי שקיבלו את ההצעה עדיין יכולות לאשר מהקישור, הראשונה מקבלת.')) +
       '</div>' +
       '<div class="offer-why">' + why + '</div>' +
       '<div class="offer-list-title">ההצעה נשלחה ל-' + n +
@@ -14674,6 +14764,7 @@
       '<div class="offer-rec-list">' +
         (o.recipients || []).map(offerRecipientRow).join('') +
       '</div>' +
+      offerHistoryHtml(o) +
       offerNextInLineHtml(o) +
       '<div class="offer-foot">ההודעה נשלחה ב-' +
         new Date(o.createdAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) +
@@ -22591,7 +22682,10 @@
         '<div class="claim-time">' + o.time + '</div>' +
         '<div class="claim-date">' + (isToday ? 'היום' : dayName) + ', ' + p[2] + ' ב' + monthName + '</div>' +
         '<div class="claim-meta">' + (o.serviceName || 'תור') + ' · ' + (o.dur || 30) + ' דקות</div>' +
-        '<div class="claim-timer">⏳ שמורה לך עד ' + (o.until || offerUntilLabel(o)) + ' (נותרו ' + left + ' דקות)</div>' +
+        // 134: עבר הזמן השמור שלה, אבל השעה עדיין פנויה — אפשר לאשר, ראשונה מקבלת.
+        (o.late || result.late
+          ? '<div class="claim-timer">⏳ הזמן השמור לך עבר — אבל השעה עדיין פנויה. הראשונה שתאשר מקבלת.</div>'
+          : '<div class="claim-timer">⏳ שמורה לך עד ' + (o.until || offerUntilLabel(o)) + ' (נותרו ' + left + ' דקות)</div>') +
         '<div class="claim-note">האישור יינתן ללקוחה שההצעה נשלחה אליה. אם ההודעה נשלחה לכמה לקוחות, הראשונה שתאשר תקבל את התור.</div>' +
         '<label class="label" style="margin:16px 0 6px; display:block;">תעודת זהות או טלפון</label>' +
         '<input id="claimOfferId" class="field-dark" inputmode="numeric" autocomplete="tel" placeholder="תעודת זהות או טלפון" style="width:100%;" value="' + linkPhone + '">' +
