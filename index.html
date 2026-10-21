@@ -742,15 +742,18 @@
     border-color:rgba(255,255,255,0.6);
     color:var(--th-on-primary, #fff);
   }
+  /* היום והשעה הנוכחית ביומן — ירוק, לא צבע הזהב של הערכה (21.10.2026,
+   * לבקשת איילת). אותם ירוקים כמו בעיצוב הבסיסי (cal-day-today / cal-now-fill
+   * למטה) ושל תגית השעה, שכבר הייתה ירוקה. */
   body.th-on .cal-day-head.cal-day-today{
-    background:rgba(var(--gold-rgb),0.15);
-    border-bottom:3px solid var(--gold);
+    background:#E3EBDF;
+    border-bottom:3px solid #3E6B2E;
   }
-  body.th-on .cal-day-head.cal-day-today .cal-day-name,
-  body.th-on .cal-day-head.cal-day-today .cal-day-num{color:var(--panel-gold);}
-  body.th-on .cal-now-fill{background:rgba(var(--gold-rgb),0.16);}
-  body.th-on .cal-now-pin{color:var(--panel-gold);}
-  body.th-on .cal-now-pin i{background:var(--panel-gold); box-shadow:0 0 0 2px rgba(var(--gold-rgb),0.3);}
+  body.th-on .cal-day-head.cal-day-today .cal-day-name{color:#4A6141;}
+  body.th-on .cal-day-head.cal-day-today .cal-day-num{color:#3D5436;}
+  body.th-on .cal-now-fill{background:rgba(122,153,106,0.22);}
+  body.th-on .cal-now-pin{color:#3E6B2E;}
+  body.th-on .cal-now-pin i{background:#3E6B2E; box-shadow:0 0 0 2px rgba(62,107,46,0.3);}
 
   body.th-on .cta{
     background:var(--th-action, var(--wine));
