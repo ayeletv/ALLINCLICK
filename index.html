@@ -2941,6 +2941,28 @@
     cursor:pointer; box-shadow:0 3px 10px rgba(0,0,0,0.15);
   }
   #claimOfferActions .btn-primary:disabled{opacity:0.6; cursor:wait;}
+  /* 136: "לא נראה שצריך ללחוץ על הכפתור — אולי הבהוב" (21.10.2026). "אשרי שאת
+   * מגיעה" היה כפתור לבן עם מסגרת, באותו משקל כמו "ביטול תור" שמתחתיו. עכשיו
+   * ירוק מלא, עם הילה שפועמת בעדינות — עד שמאשרים. בלי תנועה למי שביקשה
+   * להפחית תנועה במכשיר. וגם "אני מגיעה" במסך ההצעה פועם. */
+  .my-appt-actions button.confirm-arrival-btn,
+  #claimOfferActions #claimOfferBtn{
+    animation:confirmPulse 1.8s ease-out infinite;
+  }
+  .my-appt-actions button.confirm-arrival-btn{
+    background:#1c8a4b !important; border-color:#1c8a4b !important; color:#fff !important;
+    font-weight:700; font-size:15px;
+  }
+  .my-appt-actions button.confirm-arrival-btn:hover{background:#167a41 !important;}
+  #claimOfferActions #claimOfferBtn{background:#1c8a4b;}
+  @keyframes confirmPulse{
+    0%{box-shadow:0 0 0 0 rgba(28,138,75,0.55);}
+    70%{box-shadow:0 0 0 12px rgba(28,138,75,0);}
+    100%{box-shadow:0 0 0 0 rgba(28,138,75,0);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .my-appt-actions button.confirm-arrival-btn, #claimOfferActions #claimOfferBtn{animation:none;}
+  }
   .claim-note{font-size:12px; color:#8A8178; text-align:center; line-height:1.6;}
   .claim-error{color:var(--wine); font-size:12.5px; margin-top:8px;}
   .claim-done{font-size:18px; font-weight:700; text-align:center; color:var(--wine); line-height:1.8;}
@@ -19747,7 +19769,7 @@
         </div>
         ${appt.confirmedByClient
           ? `<div style="color:#1c8a4b; font-weight:700; font-size:13px; margin-top:8px;">✓ אישרת שאת מגיעה</div>`
-          : `<div class="my-appt-actions" style="margin-top:8px;"><button onclick="confirmListedAppointment(${idx})" style="border-color:#1c8a4b; color:#1c8a4b;">✓ אשרי שאת מגיעה</button></div>`}
+          : `<div class="my-appt-actions" style="margin-top:8px;"><button class="confirm-arrival-btn" onclick="confirmListedAppointment(${idx})">✓ אשרי שאת מגיעה</button></div>`}
         
         <div class="my-appt-actions">
           <button class="danger" onclick="cancelListedAppointment(${idx})">ביטול תור</button>
