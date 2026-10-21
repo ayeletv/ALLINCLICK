@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-21 · 135">
+<meta name="app-build" content="2026-10-21 · 136">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -2844,15 +2844,20 @@
   .myday-row:last-child{border-bottom:none;}
   .myday-row .t{font-family:'JetBrains Mono'; font-weight:500; color:var(--wine);}
   .myday-row .who{color:#8A8178; font-size:12px;}
+  /* 135: "ביומן ריבוע לבן ריק" (21.10.2026) — הפסים בזהב של הערכה היו כמעט
+   * שקופים על הרקע הבהיר. עכשיו ענבר מלא, מסגרת כהה וטקסט כהה, קבועים בכל
+   * ערכת צבעים. */
   .cal-offer{
     background:
       repeating-linear-gradient(135deg,
-        rgba(var(--gold-rgb),0.16) 0 7px,
-        rgba(var(--gold-rgb),0.05) 7px 14px) !important;
-    border:2px dashed rgba(var(--gold-rgb),0.85) !important;
-    color:var(--panel-gold) !important;
-    box-shadow:none !important;
+        #FFE8A3 0 7px,
+        #FFF4CC 7px 14px) !important;
+    border:2px dashed #A0720A !important;
+    color:#5A3E00 !important;
+    box-shadow:0 1px 3px rgba(90,62,0,0.25) !important;
+    overflow:hidden;
   }
+  .cal-offer.cal-offer-final{ background:repeating-linear-gradient(135deg, #FFD9A0 0 7px, #FFEBCC 7px 14px) !important; border-style:solid !important; }
   .cal-offer .cal-appt-name{font-weight:700;}
   .cal-offer .cal-appt-meta{opacity:0.85;}
   .cal-offer-pulse{
@@ -4444,7 +4449,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-21 · 135';
+        window.__APP_BUILD = '2026-10-21 · 136';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -13913,8 +13918,23 @@
         };
         body.appendChild(block);
       });
-      const dayOffers = (typeof pendingOffers !== 'undefined' && Array.isArray(pendingOffers) ? pendingOffers : [])
-        .filter(o => o && offerIsLive(o) && o.date === formatDateKey(day.fullDate)
+      /* 135: "זה נראה ריק" (21.10.2026). בין הרגע שהצעה פגה לרגע שהשעון של
+       * השרת שולח את הבאה (עד 2 דקות) לא הייתה אף הצעה פתוחה, והשעה נראתה
+       * ריקה לגמרי — ואז "התמלאה". עכשיו בזמן הזה נשאר הריבוע, עם "מעבירה
+       * לבאה בתור…". (לא אחרי הסבב האחרון — שם הסוף הוא באמת סוף.) */
+      const allOffersNow = (typeof pendingOffers !== 'undefined' && Array.isArray(pendingOffers) ? pendingOffers : []);
+      const offerSlotKey = x => String(x.date) + '|' + String(x.time) + '|' + String(x.staff);
+      const handingOver = o => {
+        if (!o || o.final || offerIsLive(o) || (o.status !== 'offered' && o.status !== 'expired')) return false;
+        const expMs = new Date(o.expiresAt).getTime();
+        if (!(expMs <= Date.now() && Date.now() - expMs < 5 * 60000)) return false;
+        const k = offerSlotKey(o);
+        if (allOffersNow.some(x => x && x.id !== o.id && offerSlotKey(x) === k
+          && (offerIsLive(x) || ['claimed', 'taken', 'takenByOwner'].includes(x.status) || (Date.parse(x.createdAt) || 0) > (Date.parse(o.createdAt) || 0)))) return false;
+        return !slotHasAppointmentConflict(o);
+      };
+      const dayOffers = allOffersNow
+        .filter(o => o && (offerIsLive(o) || handingOver(o)) && o.date === formatDateKey(day.fullDate)
           && (selectedStaffFilter === 'all' || o.staff === selectedStaffFilter));
       dayOffers.forEach(o => {
         const mins = timeToMinutes(o.time);
@@ -13937,19 +13957,24 @@
         const chain = pendingOffers.filter(x => x && slotKeyB(x) === slotKeyB(o) && x.status !== 'takenByOwner')
           .sort((a, b) => (Date.parse(a.createdAt) || 0) - (Date.parse(b.createdAt) || 0));
         const recNames = (o.recipients || []).map(r => r && r.name).filter(Boolean);
-        const who = recNames.length === 1 ? recNames[0] : ('מוצע ל-' + (recNames.length || howMany));
-        const before = chain.filter(x => x.id !== o.id).reduce((n, x) => n + (x.recipients || []).length, 0);
+        // 135: הסבב האחרון — אותן לקוחות שכבר קיבלו, יחד; "8 לפניה" היה מטעה
+        const who = o.final ? ('📣 לכולן (' + recNames.length + ')')
+          : recNames.length === 1 ? recNames[0] : ('מוצע ל-' + (recNames.length || howMany));
+        if (o.final) block.classList.add('cal-offer-final');
+        const before = o.final ? 0 : chain.filter(x => x.id !== o.id).reduce((n, x) => n + (x.recipients || []).length, 0);
         const hhmmB = v => { const t = Date.parse(v || ''); return t ? new Date(t).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : ''; };
+        const passing = !offerIsLive(o);
         block.innerHTML =
           '<span class="cal-offer-pulse" aria-hidden="true"></span>' +
-          '<span class="cal-appt-name">⏳ ' + escB(who) + '</span>' +
+          '<span class="cal-appt-name">⏳ ' + (passing ? 'מעבירה לבאה בתור…' : escB(who)) + '</span>' +
           '<span class="cal-appt-meta">' + o.time.slice(0, 5) +
             (left > 0 ? ' · עוד ' + left + ' דק׳' : ' · פג') +
             (before ? ' · ' + before + ' לפניה' : '') + '</span>';
         block.title = 'השעה ' + o.time.slice(0, 5) + ' התפנתה. ההצעות לפי הסדר:\n' +
           chain.map((x, i) => (i + 1) + '. ' + (x.recipients || []).map(r => r && r.name).filter(Boolean).join(', ') +
             ' — נשלחה ' + hhmmB(x.createdAt) + ' — ' +
-            (x.id === o.id ? (left > 0 ? 'ממתינה לתשובה עד ' + hhmmB(x.expiresAt) : 'פג הזמן')
+            (x.final ? 'הודעה אחרונה לכולן — הראשונה שתאשר מקבלת' : '') +
+            (x.final ? '' : x.id === o.id ? (left > 0 ? 'ממתינה לתשובה עד ' + hhmmB(x.expiresAt) : 'פג הזמן')
               : x.status === 'claimed' ? 'אישרה' : x.status === 'withdrawn' ? 'ביטלה' : 'לא ענתה עד ' + hhmmB(x.expiresAt))).join('\n') +
           '\nלחיצה לפרטים.';
         block.onclick = (e) => {
