@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-21 · 134">
+<meta name="app-build" content="2026-10-21 · 135">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4444,7 +4444,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-21 · 134';
+        window.__APP_BUILD = '2026-10-21 · 135';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -14732,7 +14732,11 @@
     const until = o.expiresAt
       ? new Date(o.expiresAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '';
     const n = (o.recipients || []).length;
-    const why = o.broadcast
+    const why = o.final
+      // 134: הסבב האחרון — נשלח פעם אחת בלבד (השרת: finalRoundOffers)
+      ? 'הצעות נשלחו לכל הלקוחות המתאימות לפי הסדר, ואף אחת לא אישרה. לכן נשלחה הודעה אחת לכל ' + n +
+        ' הלקוחות שקיבלו הצעה לשעה הזו: "השעה עדיין פנויה — <b>הראשונה שתאשר מקבלת</b>". זו ההודעה האחרונה — לא יישלח שוב.'
+      : o.broadcast
       ? 'מכיוון שהתור הזה מתחיל ב-' + o.time + ' ב' + offerHebDate(o.date) +
         ' — כלומר בעוד פחות מ-' + offerSetting('broadcastHours') + ' שעות — לא היה זמן להציע אותו ' +
         'ללקוחה אחת בכל פעם. לכן ההצעה נשלחה לכל ' + n + ' הלקוחות המתאימות יחד, ' +
