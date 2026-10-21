@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-20 · 131">
+<meta name="app-build" content="2026-10-20 · 133">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4439,7 +4439,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-20 · 131';
+        window.__APP_BUILD = '2026-10-20 · 133';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -20681,7 +20681,9 @@
   function reportDiag(kind, info){
     try {
       if (__diagState.n >= 20) return;
-      const sig = kind + '|' + ((info && (info.code || info.key)) || '');
+      const sig = kind + '|' + ((info && (info.code || info.key)) || '')
+        // api-failed: אותו קוד בשתי פעולות (קביעה + חיפוש תור) — שני אירועים
+        + (kind === 'api-failed' && info ? '|' + (info.key || '') : '');
       const now = Date.now();
       if (__diagState.last[sig] && now - __diagState.last[sig] < 60000) return;
       __diagState.last[sig] = now;
@@ -21655,15 +21657,161 @@
   window.__resolveBizIdFromCloud = resolveBizIdFromCloud;
   let lastPublishedPublicJson = null;
   const CLIENT_API_URL = 'https://client-api-737599524118.me-west1.run.app';
-  async function callClientApi(action, payload){
-    const res = await fetch(CLIENT_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ action }, payload || {}, { bizId: BIZ_ID })),
+  /* חיבור שנכשל ל-client-api נרשם ביומן האבחון (20.10.2026).
+   *
+   * לקוחה קיבלה "לא הצלחנו להתחבר כרגע" גם בקביעת תור וגם ב"יש לי תור
+   * קיים", ולא היה שום דרך לדעת למה: הכישלון לא נרשם בכלל. וגם אילו נרשם —
+   * הרישום עצמו עובר דרך אותו שרת, כך שבמכשיר מסונן גם הוא היה נחסם.
+   *
+   * לכן הכישלון נשמר קודם בדפדפן, ונשלח בפעם הבאה שקריאה לשרת מצליחה (באותו
+   * ביקור, או בביקור הבא — offersTick רץ בכל כניסה). נשמר רק מה שמבחין בין
+   * הסיבות: איזו פעולה, ואיך נכשלה —
+   *   offline:…   — הדפדפן עצמו יודע שאין רשת;
+   *   network:…   — הבקשה לא יצאה / נחסמה (סינון, חיבור שנפל);
+   *   http-503-html — השרת או Google החזירו דף שגיאה (עומס, קריסה);
+   *   http-200-html / http-403-html — כמעט תמיד דף חסימה של סינון;
+   *   queue-ok    — ערוץ הגיבוי (Firestore, ר' למטה) הציל את הבקשה;
+   *   queue:…     — גם ערוץ הגיבוי נכשל.
+   * בלי ת"ז, בלי טלפון ובלי תוכן הבקשה. */
+  const API_FAIL_STORE_KEY = 'hk_api_fail_v1';
+  function noteApiFailure(action, code, ms){
+    if (action === 'diag') return;   // כישלון של הרישום עצמו לא נרשם — אחרת לולאה
+    try {
+      const list = JSON.parse(localStorage.getItem(API_FAIL_STORE_KEY) || '[]');
+      const key = String(action || '').slice(0, 30);
+      const cleanCode = String(code || '').slice(0, 40);
+      // אותו כישלון שחוזר (היא לחצה "לנסות שוב") — נספר, לא נשמר שוב.
+      const same = list.find(f => f && f.action === key && f.code === cleanCode);
+      if (same) { same.count = (same.count || 1) + 1; same.lastAt = Date.now(); }
+      else list.push({ at: Date.now(), action: key, code: cleanCode, ms: Math.round(ms || 0), count: 1 });
+      localStorage.setItem(API_FAIL_STORE_KEY, JSON.stringify(list.slice(-10)));
+    } catch (e) { /* בלי זיכרון מקומי — אין איפה לשמור, וזה בסדר */ }
+  }
+  function flushApiFailures(){
+    let list = [];
+    try {
+      list = JSON.parse(localStorage.getItem(API_FAIL_STORE_KEY) || '[]');
+      if (!list.length) return;
+      localStorage.removeItem(API_FAIL_STORE_KEY);
+    } catch (e) { return; }
+    list.forEach(f => {
+      if (!f || typeof reportDiag !== 'function') return;
+      reportDiag('api-failed', { code: f.code, key: f.action, ms: f.ms, count: f.count || 1,
+        delayMin: Math.max(0, Math.round((Date.now() - (f.at || Date.now())) / 60000)) });
     });
-    let body = null;
-    try { body = await res.json(); } catch (e) { body = null; }
-    if (!body) throw new Error('שגיאת תקשורת מול השרת. נא לנסות שוב.');
+  }
+  window.__flushApiFailures = flushApiFailures;
+
+  /* ערוץ גיבוי דרך Firestore (20.10.2026, גרסה 133).
+   *
+   * אצל הלקוחה מ-20.10 Firebase עבד (היא ראתה את הטיפולים, שמגיעים
+   * מ-publicView), ורק הכתובת של השרת (run.app) לא הגיעה — כנראה סינון.
+   * בלוג של client-api לא הייתה אף בקשה ממנה.
+   *
+   * לכן, כשהבקשה הישירה לא יוצאת — הבקשה נכתבת כמסמך ב-apiQueue, בערוץ
+   * שכבר עובד אצלה. טריגר Firestore על client-api עצמו מעיר אותו, והוא
+   * מריץ עליה את אותו handle בדיוק, וכותב את התשובה על אותו מסמך. החוקים
+   * מרשים רק ליצור בקשה עם ה-uid שלך ולקרוא רק את שלך.
+   *
+   * מתי עוברים לגיבוי — רק כשבטוח שהבקשה לא הגיעה לשרת:
+   *   • fetch נכשל (הבקשה לא יצאה / נחסמה);
+   *   • חזר דף HTML שאינו שגיאת שרת (200/403 — דף חסימה של סינון).
+   * שגיאת שרת (5xx) לא עוברת לגיבוי: ייתכן שהבקשה כן בוצעה, וקביעה כפולה
+   * גרועה מהודעת שגיאה.
+   *
+   * אחרי שהגיבוי הצליח פעם אחת בביקור, הבקשות הבאות הולכות ישר אליו — אין
+   * טעם לחכות שוב לחסימה בכל לחיצה. offersTick לא עובר בגיבוי: הוא שעון רקע,
+   * והשרת מריץ אותו ממילא מ-Cloud Scheduler. */
+  const API_QUEUE_TIMEOUT_MS = 30000;
+  let apiViaQueue = false;
+  function apiQueueAvailable(){
+    return !!(db && typeof db.collection === 'function' && typeof firebase !== 'undefined'
+      && firebase.firestore && firebase.firestore.FieldValue && typeof window.__ensureAnonAuth === 'function');
+  }
+  async function callClientApiViaQueue(action, payload){
+    if (!apiQueueAvailable()) throw new Error('queue unavailable');
+    const user = await window.__ensureAnonAuth();
+    if (!user || !user.uid) throw new Error('queue: no user');
+    const ref = db.collection('apiQueue').doc();
+    // הבקשה נשמרת כמחרוזת JSON: כך Firestore לא דוחה ערך undefined או מערך
+    // בתוך מערך, והשרת מקבל בדיוק את מה ש-fetch היה שולח.
+    await ref.set({
+      uid: user.uid,
+      action: String(action || ''),
+      bizId: String(BIZ_ID || ''),
+      payloadJson: JSON.stringify(payload || {}),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      // מחיקה אוטומטית (TTL) — גם אם הפונקציה לא רצה מעולם.
+      expireAt: new Date(Date.now() + 24 * 3600 * 1000),
+      build: String(window.__APP_BUILD || '').slice(0, 30),
+    });
+    const started = Date.now();
+    let wait = 700;
+    while (Date.now() - started < API_QUEUE_TIMEOUT_MS) {
+      await new Promise(r => setTimeout(r, wait));
+      wait = Math.min(Math.round(wait * 1.4), 2000);
+      let snap = null;
+      try { snap = await ref.get({ source: 'server' }); } catch (e) { continue; }
+      const d = (snap && snap.exists) ? snap.data() : null;
+      if (!d || d.status !== 'done') continue;
+      let body = null;
+      try { body = JSON.parse(d.responseJson || 'null'); } catch (e) { body = null; }
+      if (!body) throw new Error('queue: empty response');
+      return body;
+    }
+    throw new Error('queue: timeout');
+  }
+  window.__callClientApiViaQueue = callClientApiViaQueue;
+
+  async function callClientApi(action, payload){
+    if (apiViaQueue && action !== 'offersTick') {
+      const body = await callClientApiViaQueue(action, payload);
+      if (action !== 'diag') flushApiFailures();
+      return body;
+    }
+    const started = Date.now();
+    let res;
+    let blockedErr = null;
+    try {
+      res = await fetch(CLIENT_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({ action }, payload || {}, { bizId: BIZ_ID })),
+      });
+    } catch (err) {
+      const offline = (typeof navigator !== 'undefined' && navigator.onLine === false);
+      noteApiFailure(action, (offline ? 'offline:' : 'network:') + String((err && (err.message || err.name)) || err || ''), Date.now() - started);
+      // בלי רשת בכלל — גם Firestore לא יעבור; אין טעם לנסות.
+      if (offline) throw err;
+      blockedErr = err;
+    }
+    if (!blockedErr) {
+      let body = null;
+      try { body = await res.json(); } catch (e) { body = null; }
+      if (body) {
+        // השרת עונה — זה הרגע לשלוח את מה שנכשל קודם.
+        if (action !== 'diag') flushApiFailures();
+        return body;
+      }
+      let ct = '';
+      try { ct = String((res.headers && res.headers.get('content-type')) || '').split(';')[0].trim(); } catch (e) {}
+      noteApiFailure(action, 'http-' + res.status + '-' + (ct.indexOf('html') !== -1 ? 'html' : (ct || 'none')), Date.now() - started);
+      blockedErr = new Error('שגיאת תקשורת מול השרת. נא לנסות שוב.');
+      // שגיאת שרת — ייתכן שהבקשה בוצעה. לא שולחים אותה שוב.
+      if (res.status >= 500) throw blockedErr;
+    }
+    if (action === 'offersTick') throw blockedErr;
+    let body;
+    try {
+      body = await callClientApiViaQueue(action, payload);
+    } catch (qErr) {
+      console.error('The Firestore fallback for client-api failed too:', qErr);
+      noteApiFailure(action, 'queue:' + String((qErr && (qErr.code || qErr.message)) || qErr || ''), Date.now() - started);
+      throw blockedErr;
+    }
+    apiViaQueue = true;
+    noteApiFailure(action, 'queue-ok', Date.now() - started);
+    if (action !== 'diag') flushApiFailures();
     return body;
   }
   function bookingGoesThroughServer(){ return !isOwnerSession(); }
@@ -23010,7 +23158,9 @@
       const timer = setTimeout(() => {
         if (done || !db || typeof db.runTransaction !== 'function') return;
         hedgeStarted = true;
-        if (!hedgeNow) { try { reportDiag('stream-blocked', { key: label || '', code: 'slow-' + Math.round(hedgeMs / 1000) + 's' }); } catch (e) {} }
+        // השניות ב-ms ולא בתוך code: השרת מחליף כל ספרה ב-#, ובסיכום היומי
+        // יצא "slow-##s" — בלי לדעת כמה זמן חיכו. (21.10.2026)
+        if (!hedgeNow) { try { reportDiag('stream-blocked', { key: label || '', code: 'slow:' + (label || ''), ms: hedgeMs }); } catch (e) {} }
         db.runTransaction(tx => tx.get(ref)).then(v => {
           if (!done) {
             __streamReadBlocked = true;   // מעכשיו בדף הזה — ישר בדרך העוקפת
