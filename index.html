@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-21 · 139">
+<meta name="app-build" content="2026-10-21 · 140">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -21,10 +21,10 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://firebasestorage.googleapis.com">
 
-<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js">
-<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js">
-<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js">
-<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js">
+<link rel="preload" as="script" href="firebase/firebase-app-compat.js">
+<link rel="preload" as="script" href="firebase/firebase-firestore-compat.js">
+<link rel="preload" as="script" href="firebase/firebase-auth-compat.js">
+<link rel="preload" as="script" href="firebase/firebase-storage-compat.js">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&family=Assistant:wght@200;300;400;600;700&family=Secular+One&family=Frank+Ruhl+Libre:wght@300;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
 
 <style>
@@ -49,11 +49,25 @@
 <!-- אייקוני tabler הוסרו (21.10.2026): הכתובת ב-cdnjs מחזירה 404 כבר זמן רב,
      כך שהאייקונים ממילא לא הופיעו — והדף ביזבז על כל טעינה בקשה שנכשלת
      ובקשת preload שחוסמת עיבוד. האתר נראה בדיוק כמו עד היום. -->
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
+<!-- קוד Firebase מהאתר עצמו (21.10.2026, גרסה 140). לקוחות עם סינון: אם האתר
+     נפתח — גם הקוד נפתח, כי הוא מאותה כתובת. עד היום הוא הגיע מ-www.gstatic.com,
+     וסינון שחוסם את הכתובת הזו השאיר את כל האתר בלי חיבור לענן.
+     נפילה אוטומטית: אם הקובץ המקומי חסר (לא הועלה, או אתר של עסק אחר) — הקובץ
+     נטען מ-gstatic כמו עד היום. document.write עובד כאן כי זה עדיין שלב הניתוח
+     של הדף, והסקריפט שנכתב רץ לפני הבא בתור — אותו סדר בדיוק. -->
+<script src="firebase/firebase-app-compat.js"></script>
+<script>window.__fbSdkFrom = {};
+  window.__fbSdkFrom.app = window.firebase ? 'site' : 'cdn';
+  if (!window.firebase) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"><\/script>');</script>
+<script src="firebase/firebase-firestore-compat.js"></script>
+<script>window.__fbSdkFrom.firestore = (window.firebase && window.firebase.firestore) ? 'site' : 'cdn';
+  if (!(window.firebase && window.firebase.firestore)) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"><\/script>');</script>
+<script src="firebase/firebase-auth-compat.js"></script>
+<script>window.__fbSdkFrom.auth = (window.firebase && window.firebase.auth) ? 'site' : 'cdn';
+  if (!(window.firebase && window.firebase.auth)) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"><\/script>');</script>
+<script src="firebase/firebase-storage-compat.js"></script>
+<script>window.__fbSdkFrom.storage = (window.firebase && window.firebase.storage) ? 'site' : 'cdn';
+  if (!(window.firebase && window.firebase.storage)) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"><\/script>');</script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyDdFyCz3er-cxE0uoa5bGGTxe37cBFA12w",
@@ -304,6 +318,8 @@
       }).catch(function(err){
         window.__anonAuthState = 'failed';
         window.__lastAnonAuthError = String((err && err.code) || err);
+        // 140: התחברות שנכשלה — בדיקת חיבור שקטה (מוגדרת בהמשך הדף)
+        setTimeout(function(){ try { if (typeof window.__silentNetCheck === 'function') window.__silentNetCheck('auth ' + window.__lastAnonAuthError); } catch (e) {} }, 0);
         console.error('Anonymous sign-in failed (attempt ' + anonAuthAttempts + '):', err);
         return null;
       }).then(function(u){ anonSignInInFlight = null; return u; });
@@ -2981,6 +2997,20 @@
   .booked-banner-sub{font-size:14px; margin-top:6px; opacity:0.92;}
   @keyframes bookedPop{ 0%{transform:scale(0.92); opacity:0;} 100%{transform:scale(1); opacity:1;} }
   @media (prefers-reduced-motion: reduce){ .booked-banner{animation:none;} }
+  /* 140: אותו גודל ובולטות כמו "התור נקבע בהצלחה" — בצבע אחר, כדי שלא יתבלבלו */
+  .cancelled-banner{
+    background:#5d4a52; color:#fff; border-radius:16px;
+    padding:18px 14px 16px; margin:0 0 16px; text-align:center;
+    box-shadow:0 4px 14px rgba(60,40,48,0.28);
+    animation:bookedPop 0.45s ease-out;
+  }
+  .cancelled-banner-icon{
+    width:46px; height:46px; margin:0 auto 8px; border-radius:50%;
+    background:#fff; color:#5d4a52; font-size:26px; font-weight:800; line-height:46px;
+  }
+  .cancelled-banner-title{font-size:24px; font-weight:800; line-height:1.25;}
+  .cancelled-banner-sub{font-size:14px; margin-top:6px; opacity:0.92;}
+  @media (prefers-reduced-motion: reduce){ .cancelled-banner{animation:none;} }
   .claim-error{color:var(--wine); font-size:12.5px; margin-top:8px;}
   .claim-done{font-size:18px; font-weight:700; text-align:center; color:var(--wine); line-height:1.8;}
   .claim-done span{font-size:14px; font-weight:400; color:#8A8178;}
@@ -4499,7 +4529,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-21 · 139';
+        window.__APP_BUILD = '2026-10-21 · 140';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -19537,7 +19567,7 @@
     }
     const apptEl = document.getElementById('myAppointment');
     apptEl.innerHTML = `
-      <div class="waitlist-confirmed">✓ &nbsp;התור בוטל.</div>
+      ${cancelledBannerHtml(apptBeingCancelled)}
       <div class="my-appt-actions" style="margin-top:14px;">
         <button onclick="rescheduleAppointment()">קביעת תור חדש</button>
       </div>`;
@@ -19933,6 +19963,33 @@
     }
     const remaining = lookedUpAppointmentsList.filter(a => a !== listAppt);
     renderLookedUpAppointment(remaining);
+    // 140: עד היום הביטול מהרשימה פשוט העלים את התור — בלי שום אישור על המסך
+    showCancelledBanner(appt);
+  }
+  /* 140: "כמו 'התור נקבע בהצלחה' — גם כשמבטלים, שיהיה ברור בגדול מה קרה לתור"
+   * (איילת, 21.10.2026). עד היום: שורה קטנה "✓ התור בוטל." — ובביטול מתוך
+   * רשימת התורים אפילו לא זה. עכשיו ריבוע בולט בראש האזור, עם איזה תור בוטל. */
+  function cancelledBannerHtml(appt){
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    let when = '';
+    try {
+      const p = String(appt && appt.date || '').split('-').map(Number);
+      if (p.length === 3 && p[0]) when = p[2] + ' ב' + hebrewMonths[p[1] - 1] + (appt.time ? ', ' + appt.time : '');
+    } catch (e) {}
+    const what = [appt && appt.service, when].filter(Boolean).map(esc).join(' · ');
+    return `<div class="cancelled-banner" role="status">
+        <div class="cancelled-banner-icon" aria-hidden="true">✕</div>
+        <div class="cancelled-banner-title">התור בוטל</div>
+        ${what ? `<div class="cancelled-banner-sub">${what}</div>` : ''}
+        <div class="cancelled-banner-sub">התור כבר לא קיים ביומן. נשמח לראותך שוב!</div>
+      </div>`;
+  }
+  function showCancelledBanner(appt){
+    const apptEl = document.getElementById('myAppointment');
+    if (!apptEl) return;
+    apptEl.style.display = 'block';
+    apptEl.insertAdjacentHTML('afterbegin', cancelledBannerHtml(appt));
+    try { setTimeout(function(){ const r = apptEl.getBoundingClientRect(); if (r.top < 0 || r.top > window.innerHeight * 0.6) apptEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); } catch (e) {}
   }
   const shownArrivalPopups = new Set();
   let arrivalQueue = [];
@@ -21010,6 +21067,83 @@
   }
   window.__reportDiag = reportDiag;
 
+  /* בדיקת חיבור שקטה (21.10.2026, גרסה 140).
+   *
+   * "יש עדיין שמתלוננות שלא נפתח להן. אני רוצה לדעת בוודאות" — ובלי שלקוחה
+   * תראה סימנים או הודעות תקלה. לכן: כשמשהו נכשל אצלה (בקשה לשרת, התחברות,
+   * הנתונים הציבוריים לא הגיעו), הדפדפן בודק ברקע — בלי שום דבר על המסך —
+   * אילו מהכתובות שהאתר צריך עונות לו, ורושם ביומן האבחון. בסיכום היומי:
+   * "אצל לקוחה, טלפון: identitytoolkit חסום, gstatic תקין".
+   *
+   * לכל כתובת: + עונה, - נדחתה (חסימה/שגיאת רשת), ~ לא ענתה תוך 6 שניות
+   * (סינון שתוקע). fetch במצב no-cors: לא קוראים כלום מהתשובה, רק בודקים
+   * שהגיעה. פעם בביקור, ולא יותר מפעם ב-6 שעות לכל מכשיר. התוצאה נשמרת
+   * במכשיר עד שהיא מגיעה ליומן — כי אם השרת חסום, גם הדיווח עלול להיחסם. */
+  const NET_CHECK_LAST_KEY = 'hk_netcheck_last';
+  const NET_CHECK_PENDING_KEY = 'hk_netcheck_pending';
+  // אות אחת לכל כתובת — השדה ביומן מוגבל ל-40 תווים. הסיכום היומי מתרגם.
+  const NET_CHECK_TARGETS = [
+    ['s', location.origin + '/?ping=1'],                                         // האתר
+    ['g', 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js'],   // gstatic
+    ['f', 'https://firestore.googleapis.com/'],                                  // firestore
+    ['i', 'https://identitytoolkit.googleapis.com/'],                            // התחברות
+    ['t', 'https://securetoken.googleapis.com/'],                                // התחברות (רענון)
+    ['a', 'https://client-api-737599524118.me-west1.run.app/'],                  // השרת
+    ['m', 'https://firebasestorage.googleapis.com/'],                            // תמונות
+    ['o', 'https://fonts.googleapis.com/css2?family=Heebo'],                     // גופנים
+  ];
+  let __netCheckRan = false;
+  function sendNetCheckPending(){
+    let ev = null;
+    try { ev = JSON.parse(localStorage.getItem(NET_CHECK_PENDING_KEY) || 'null'); } catch (e) { ev = null; }
+    if (!ev || typeof callClientApi !== 'function') return;
+    let role = 'customer';
+    try { if (isOwnerSession()) role = 'owner'; } catch (e) {}
+    const event = Object.assign({ kind: 'net-check', role: role, build: window.__APP_BUILD || '',
+      net: (navigator.connection && navigator.connection.effectiveType) || '',
+      device: /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '') ? 'mobile' : 'desktop',
+      delayMin: Math.max(0, Math.round((Date.now() - (ev.at || Date.now())) / 60000)) }, { code: ev.code, key: ev.key });
+    callClientApi('diag', { event: event }).then(function(r){
+      if (r && r.ok) { try { localStorage.removeItem(NET_CHECK_PENDING_KEY); } catch (e) {} }
+    }).catch(function(){});
+  }
+  function silentNetCheck(reason){
+    if (__netCheckRan) return;
+    __netCheckRan = true;
+    try {
+      const last = Number(localStorage.getItem(NET_CHECK_LAST_KEY) || 0);
+      if (Date.now() - last < 6 * 3600 * 1000) return;
+      localStorage.setItem(NET_CHECK_LAST_KEY, String(Date.now()));
+    } catch (e) {}
+    const probe = function(t){
+      return new Promise(function(resolve){
+        let done = false;
+        const ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+        const finish = function(mark){ if (done) return; done = true; clearTimeout(timer); resolve(t[0] + mark); };
+        const timer = setTimeout(function(){ try { if (ctl) ctl.abort(); } catch (e) {} finish('~'); }, 6000);
+        try {
+          fetch(t[1], { mode: 'no-cors', cache: 'no-store', credentials: 'omit', signal: ctl ? ctl.signal : undefined })
+            .then(function(){ finish('+'); }, function(){ finish('-'); });
+        } catch (e) { finish('-'); }
+      });
+    };
+    Promise.all(NET_CHECK_TARGETS.map(probe)).then(function(parts){
+      const sdk = window.__fbSdkFrom || {};
+      const src = ['app', 'firestore', 'auth', 'storage'].map(function(n){ return sdk[n] === 'cdn' ? 'cdn' : 'site'; });
+      const ev = { at: Date.now(), code: parts.join(' ').slice(0, 120),
+        key: String(reason || '').slice(0, 24) + ' sdk:' + (src.every(function(x){ return x === 'site'; }) ? 'site' : src.join('/')) };
+      try { localStorage.setItem(NET_CHECK_PENDING_KEY, JSON.stringify(ev)); } catch (e) {}
+      sendNetCheckPending();
+    });
+  }
+  window.__silentNetCheck = silentNetCheck;
+  // לקוחה שהנתונים הציבוריים (טיפולים, שעות) לא הגיעו אליה תוך 20 שניות
+  setTimeout(function(){
+    try { if (!isOwnerSession() && !window.__publicDataApplied && !(typeof cloudLoadComplete !== 'undefined' && cloudLoadComplete)) silentNetCheck('no-public-data'); } catch (e) {}
+  }, 20000);
+  // Firebase לא נטען בכלל (גם לא מ-gstatic)
+  if (typeof firebase === 'undefined') setTimeout(function(){ silentNetCheck('no-firebase'); }, 3000);
+
   /* יומן פתוח מתרענן לבד כשמועלית גרסה חדשה (15.10.2026).
    *
    * מה שקרה ביום שישי 16.10: גרסה 105 עלתה ב-09:16, אבל יומן שנפתח לפני כן
@@ -21998,8 +22132,14 @@
       else list.push({ at: Date.now(), action: key, code: cleanCode, ms: Math.round(ms || 0), count: 1 });
       localStorage.setItem(API_FAIL_STORE_KEY, JSON.stringify(list.slice(-10)));
     } catch (e) { /* בלי זיכרון מקומי — אין איפה לשמור, וזה בסדר */ }
+    // 140: כישלון אמיתי — בדיקת חיבור שקטה ברקע (פעם בביקור, פעם ב-6 שעות)
+    if (code !== 'queue-ok' && typeof window.__silentNetCheck === 'function') {
+      try { window.__silentNetCheck('api ' + String(action || '')); } catch (e) {}
+    }
   }
   function flushApiFailures(){
+    // 140: בדיקת חיבור שעוד לא הגיעה ליומן — עכשיו יש חיבור
+    try { if (typeof sendNetCheckPending === 'function') sendNetCheckPending(); } catch (e) {}
     let list = [];
     try {
       list = JSON.parse(localStorage.getItem(API_FAIL_STORE_KEY) || '[]');
