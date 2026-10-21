@@ -15942,6 +15942,18 @@
               if (idx !== -1) s.categories[idx] = newName;
             });
             delete categoryMessages[cat];
+            /* 138: "רותי עדכנה את הקטגוריה ואז הצבע חזר להיות לא מה שהיה" (21.10.2026).
+             * הצבע שנבחר שמור לפי שם הקטגוריה — ונשאר על השם הישן ("שעוות"),
+             * והקטגוריה בשמה החדש קיבלה צבע ברירת מחדל כהה. ובשקט גרוע יותר:
+             * הבקשות הגמישות הפתוחות שמרו את הקטגוריה בשם הישן — ואף עובדת כבר
+             * לא "עושה" אותה, כך שהן הפסיקו לקבל הצעות לשעות שמתפנות. */
+            if (categoryColors && categoryColors[cat]){
+              if (!categoryColors[newName]) categoryColors[newName] = categoryColors[cat];
+              delete categoryColors[cat];
+            }
+            (specialRequests || []).forEach(r => {
+              if (r && Array.isArray(r.services)) r.services.forEach(sv => { if (sv && sv.category === cat) sv.category = newName; });
+            });
           }
           if (newMsg) categoryMessages[newName] = newMsg;
           else delete categoryMessages[newName];
