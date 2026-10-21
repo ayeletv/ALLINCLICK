@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-21 · 138">
+<meta name="app-build" content="2026-10-21 · 139">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -2964,6 +2964,23 @@
     .my-appt-actions button.confirm-arrival-btn, #claimOfferActions #claimOfferBtn{animation:none;}
   }
   .claim-note{font-size:12px; color:#8A8178; text-align:center; line-height:1.6;}
+  /* 139: "אחרי שנקבע תור — לרשום בגדול 'התור נקבע בהצלחה', יש כאלו שלא מובן
+   * להן" (איילת, 21.10.2026). עד היום: שורה קטנה "✓ מאושר — אישור נשלח למייל"
+   * מעל פרטי התור, שנראתה כמו עוד שורת פרטים. */
+  .booked-banner{
+    background:#1c8a4b; color:#fff; border-radius:16px;
+    padding:18px 14px 16px; margin:0 0 16px; text-align:center;
+    box-shadow:0 4px 14px rgba(28,138,75,0.28);
+    animation:bookedPop 0.45s ease-out;
+  }
+  .booked-banner-icon{
+    width:46px; height:46px; margin:0 auto 8px; border-radius:50%;
+    background:#fff; color:#1c8a4b; font-size:28px; font-weight:800; line-height:46px;
+  }
+  .booked-banner-title{font-size:24px; font-weight:800; line-height:1.25;}
+  .booked-banner-sub{font-size:14px; margin-top:6px; opacity:0.92;}
+  @keyframes bookedPop{ 0%{transform:scale(0.92); opacity:0;} 100%{transform:scale(1); opacity:1;} }
+  @media (prefers-reduced-motion: reduce){ .booked-banner{animation:none;} }
   .claim-error{color:var(--wine); font-size:12.5px; margin-top:8px;}
   .claim-done{font-size:18px; font-weight:700; text-align:center; color:var(--wine); line-height:1.8;}
   .claim-done span{font-size:14px; font-weight:400; color:#8A8178;}
@@ -4482,7 +4499,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-21 · 138';
+        window.__APP_BUILD = '2026-10-21 · 139';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -19257,7 +19274,11 @@
       ? bookedCategoryMessages.map(m => `<div class="billing-notice show" style="margin-top:12px;">${m.replace(/\n/g, '<br>')}</div>`).join('')
       : '';
     apptEl.innerHTML = `
-      <div class="status-dot">✓ מאושר${customerEmail ? ' — אישור נשלח למייל' : ''}</div>
+      <div class="booked-banner" role="status">
+        <div class="booked-banner-icon" aria-hidden="true">✓</div>
+        <div class="booked-banner-title">התור נקבע בהצלחה!</div>
+        ${customerEmail ? '<div class="booked-banner-sub">אישור נשלח גם למייל שלך</div>' : ''}
+      </div>
       <h4>${svc ? svc.name : 'שירות'}</h4>
       <div class="appt-meta">${bookingSelectedDate.getDate()} ב${hebrewMonths[bookingSelectedDate.getMonth()]} (${hebrewDateStr(bookingSelectedDate)}), ${selectedSlot}${svc ? ' · ' + svc.price + ' ש"ח' : ''}${emp ? ' · אצל ' + emp.name : ''}</div>
       <div class="appt-meta" style="margin-top:2px;">תזכורת באמצעות: ${reminderText}</div>
@@ -19271,6 +19292,8 @@
         <button class="danger" onclick="cancelAppointment()">ביטול תור</button>
       </div>
       <button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
+    // 139: שהיא תראה את "התור נקבע בהצלחה" — בטלפון הוא יכול להיפתח מתחת למסך
+    try { setTimeout(function(){ const r = apptEl.getBoundingClientRect(); if (r.top < 0 || r.top > window.innerHeight * 0.6) apptEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); } catch (e) {}
     try {
       if (typeof renderWeekCal === 'function') renderWeekCal();
       if (typeof renderMiniCal === 'function') renderMiniCal();
@@ -22012,6 +22035,23 @@
    * טעם לחכות שוב לחסימה בכל לחיצה. offersTick לא עובר בגיבוי: הוא שעון רקע,
    * והשרת מריץ אותו ממילא מ-Cloud Scheduler. */
   const API_QUEUE_TIMEOUT_MS = 30000;
+  // 139: פעולות שרק קוראות — מותר לוותר עליהן ולעבור לגיבוי (ר' callClientApi)
+  const API_READ_ACTIONS = { lookup: 1, myAppointments: 1, offerInfo: 1, cancelPreview: 1 };
+  // "למה 9 שניות? זה יותר מדי" / "תקצר ל-4" (איילת, 21.10) — 4. השרת עונה בדרך כלל תוך
+  // פחות משנייה (0.35 במדידה), והשעון של Cloud Scheduler כל 2 דקות שומר אותו
+  // ער. ואם בכל זאת ויתרנו על שרת איטי — הגיבוי עונה אותה תשובה, רק לאט קצת.
+  const API_READ_TIMEOUT_MS = 4000;
+  /* 139: המכשיר זוכר. מכשיר שהגיבוי כבר הציל בו בקשה (סינון) הולך בכניסות
+   * הבאות ישר לגיבוי — בלי לחכות שוב 4 שניות בכל ביקור. ל-3 ימים; אחר כך
+   * מנסים שוב את הדרך הרגילה (אולי הסינון שוחרר). */
+  const API_VIA_QUEUE_KEY = 'hk_api_via_queue_until';
+  const API_VIA_QUEUE_REMEMBER_MS = 3 * 24 * 3600 * 1000;
+  function rememberApiViaQueue(){
+    try { localStorage.setItem(API_VIA_QUEUE_KEY, String(Date.now() + API_VIA_QUEUE_REMEMBER_MS)); } catch (e) {}
+  }
+  function apiViaQueueRemembered(){
+    try { return Number(localStorage.getItem(API_VIA_QUEUE_KEY) || 0) > Date.now(); } catch (e) { return false; }
+  }
   let apiViaQueue = false;
   function apiQueueAvailable(){
     return !!(db && typeof db.collection === 'function' && typeof firebase !== 'undefined'
@@ -22053,6 +22093,7 @@
   window.__callClientApiViaQueue = callClientApiViaQueue;
 
   async function callClientApi(action, payload){
+    if (!apiViaQueue && apiViaQueueRemembered() && apiQueueAvailable()) apiViaQueue = true;
     if (apiViaQueue && action !== 'offersTick') {
       const body = await callClientApiViaQueue(action, payload);
       if (action !== 'diag') flushApiFailures();
@@ -22061,22 +22102,37 @@
     const started = Date.now();
     let res;
     let blockedErr = null;
+    /* 139: מגבלת זמן לקריאה (21.10.2026). הלקוחה עם נטפרי ניסתה שוב אחרי 133
+     * וקיבלה "מחפשת..." במשך דקות: הסינון שלה לא חוסם את הבקשה — הוא תוקע
+     * אותה, היא לא חוזרת ולא נכשלת, ולכן ערוץ הגיבוי מעולם לא הופעל.
+     *
+     * רק בפעולות קריאה: אחרי API_READ_TIMEOUT_MS מוותרים ועוברים לגיבוי — וזה
+     * בטוח, כי קריאה שהגיעה בכל זאת לשרת לא שינתה כלום. בכתיבה (קביעה,
+     * ביטול) לא מוותרים: ייתכן שהבקשה כבר בוצעה, ושליחה חוזרת הייתה קובעת
+     * פעמיים. אבל לקוחה שהקריאה שלה נתקעה כבר עברה לגיבוי (apiViaQueue),
+     * וקביעה תמיד באה אחרי זיהוי — כך שגם הכתיבה שלה הולכת ישר לגיבוי. */
+    const isRead = Object.prototype.hasOwnProperty.call(API_READ_ACTIONS, action);
+    const controller = (isRead && typeof AbortController === 'function') ? new AbortController() : null;
+    let timedOut = false;
+    const timer = controller ? setTimeout(function(){ timedOut = true; try { controller.abort(); } catch (e) {} }, API_READ_TIMEOUT_MS) : null;
+    let body = null;
     try {
       res = await fetch(CLIENT_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(Object.assign({ action }, payload || {}, { bizId: BIZ_ID })),
+        signal: controller ? controller.signal : undefined,
       });
+      try { body = await res.json(); } catch (e) { body = null; if (timedOut) throw e; }
     } catch (err) {
       const offline = (typeof navigator !== 'undefined' && navigator.onLine === false);
-      noteApiFailure(action, (offline ? 'offline:' : 'network:') + String((err && (err.message || err.name)) || err || ''), Date.now() - started);
+      noteApiFailure(action, (offline ? 'offline:' : timedOut ? 'timeout:' : 'network:') + (timedOut ? Math.round(API_READ_TIMEOUT_MS / 1000) + 's' : String((err && (err.message || err.name)) || err || '')), Date.now() - started);
       // בלי רשת בכלל — גם Firestore לא יעבור; אין טעם לנסות.
-      if (offline) throw err;
-      blockedErr = err;
+      if (offline) { if (timer) clearTimeout(timer); throw err; }
+      blockedErr = timedOut ? new Error('השרת לא ענה בזמן') : err;
     }
+    if (timer) clearTimeout(timer);
     if (!blockedErr) {
-      let body = null;
-      try { body = await res.json(); } catch (e) { body = null; }
       if (body) {
         // השרת עונה — זה הרגע לשלוח את מה שנכשל קודם.
         if (action !== 'diag') flushApiFailures();
@@ -22090,18 +22146,19 @@
       if (res.status >= 500) throw blockedErr;
     }
     if (action === 'offersTick') throw blockedErr;
-    let body;
+    let qBody;
     try {
-      body = await callClientApiViaQueue(action, payload);
+      qBody = await callClientApiViaQueue(action, payload);
     } catch (qErr) {
       console.error('The Firestore fallback for client-api failed too:', qErr);
       noteApiFailure(action, 'queue:' + String((qErr && (qErr.code || qErr.message)) || qErr || ''), Date.now() - started);
       throw blockedErr;
     }
     apiViaQueue = true;
+    rememberApiViaQueue();
     noteApiFailure(action, 'queue-ok', Date.now() - started);
     if (action !== 'diag') flushApiFailures();
-    return body;
+    return qBody;
   }
   function bookingGoesThroughServer(){ return !isOwnerSession(); }
   async function cancelApptViaServer(appt){
