@@ -2930,6 +2930,17 @@
     border-radius:10px; padding:9px 12px; font-size:13.5px; text-align:center;
     margin:14px 0 8px; color:var(--wine-deep);
   }
+  /* 136: "היא לוחצת ולא קורה כלום" (21.10.2026) — הכפתור "אני מגיעה" יצא
+   * ככפתור אפור קטן של הדפדפן בפינה (ל-btn-primary לא היה שום עיצוב). עכשיו
+   * כפתור מלא ברוחב החלון, כמו כל כפתור ראשי באתר. */
+  #claimOfferActions .btn-primary{
+    display:block; width:100%; margin-top:14px;
+    background:var(--wine); color:var(--ivory, #fff);
+    border:none; border-radius:12px; padding:15px 14px;
+    font-family:'Heebo', sans-serif; font-size:16px; font-weight:700;
+    cursor:pointer; box-shadow:0 3px 10px rgba(0,0,0,0.15);
+  }
+  #claimOfferActions .btn-primary:disabled{opacity:0.6; cursor:wait;}
   .claim-note{font-size:12px; color:#8A8178; text-align:center; line-height:1.6;}
   .claim-error{color:var(--wine); font-size:12.5px; margin-top:8px;}
   .claim-done{font-size:18px; font-weight:700; text-align:center; color:var(--wine); line-height:1.8;}
@@ -22714,6 +22725,9 @@
         // 134: עבר הזמן השמור שלה, אבל השעה עדיין פנויה — אפשר לאשר, ראשונה מקבלת.
         (o.late || result.late
           ? '<div class="claim-timer">⏳ הזמן השמור לך עבר — אבל השעה עדיין פנויה. הראשונה שתאשר מקבלת.</div>'
+          // 136: הודעה לכמה לקוחות (וגם הסבב האחרון) — לא "שמורה לך", כי היא לא שמורה לה
+          : (o.broadcast || o.shared)
+          ? '<div class="claim-timer">⏳ השעה עדיין פנויה — ההודעה נשלחה לכמה לקוחות, הראשונה שתאשר מקבלת.</div>'
           : '<div class="claim-timer">⏳ שמורה לך עד ' + (o.until || offerUntilLabel(o)) + ' (נותרו ' + left + ' דקות)</div>') +
         '<div class="claim-note">האישור יינתן ללקוחה שההצעה נשלחה אליה. אם ההודעה נשלחה לכמה לקוחות, הראשונה שתאשר תקבל את התור.</div>' +
         '<label class="label" style="margin:16px 0 6px; display:block;">תעודת זהות או טלפון</label>' +
