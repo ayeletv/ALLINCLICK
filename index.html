@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-21 · 137">
+<meta name="app-build" content="2026-10-21 · 138">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4482,7 +4482,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-21 · 137';
+        window.__APP_BUILD = '2026-10-21 · 138';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -14630,7 +14630,7 @@
         '. הראשונה שתאשר מקבלת: ' + link;
     }
     return 'התפנה תור ' + when + ' ב-' + offer.time + (offer.serviceName ? ' (' + offer.serviceName + ')' : '') +
-      '. לאישור עד ' + offerUntilLabel(offer) + ': ' + link + race;
+      '. שמורה לך עד ' + offerUntilLabel(offer) + (offer.broadcast ? '' : ' (ואחר כך — אם עדיין פנויה)') + ': ' + link + race;
   }
   // 122: עד מתי ההצעה שמורה לה — בהודעה ובמסך שהקישור פותח.
   function offerUntilLabel(offer){
@@ -14649,7 +14649,8 @@
         ? 'ההודעה נשלחה לכמה לקוחות — הראשונה שתאשר מקבלת. ההצעה בתוקף עד ' + offerUntilLabel(offer) + '.\n\n'
         : offer.shared
         ? 'השעה הוצעה קודם גם ללקוחות אחרות והיא עדיין פנויה — הראשונה שתאשר מקבלת, אז כדאי לאשר מהר.\n\n'
-        : 'השעה שמורה לך עד ' + offerUntilLabel(offer) + '. אחרי זה היא עוברת ללקוחה הבאה בתור.\n\n') +
+        // 137: הקישור ממשיך לעבוד כל עוד השעה פנויה — לא להרתיע אותה (זהה לשרת)
+        : 'השעה שמורה רק לך עד ' + offerUntilLabel(offer) + '. גם אחרי זה, כל עוד היא עדיין פנויה, אפשר לאשר מהקישור הזה — אבל אז היא מוצעת גם ללקוחות נוספות, והראשונה שמאשרת מקבלת.\n\n') +
       'לאישור התור לחצי כאן: ' + link + '\n\n' +
       'התור יישמר ביומן רק לאחר שתפתחי את הקישור ותאשרי אותו.';
   }
