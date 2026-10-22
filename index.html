@@ -3412,6 +3412,10 @@
   #clientProfileOverlay .client-name-input{font-size:25px; padding:4px 6px;}
   #clientProfileOverlay .mini-field{min-width:150px;}
   #clientProfileOverlay .client-mini-input{font-size:14px;}
+  /* מייל נכתב משמאל לימין. באתר מימין לשמאל "4164192@gmail.com" הוצג
+     "gmail.com@4164192" והסמן קפץ בזמן ההקלדה. (147) */
+  input[type="email"]{direction:ltr; text-align:right;}
+  input[type="email"]:placeholder-shown{direction:rtl;}
   #clientProfileOverlay .mini-field-label{font-size:11px;}
   #clientProfileOverlay .client-note{font-size:14px; min-height:64px; margin-top:14px;}
   .cp-contact-icons{display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;}
@@ -23280,7 +23284,21 @@
         if (typeof renderClientProfileOverlay === 'function'
             && document.getElementById('clientProfileOverlay')
             && document.getElementById('clientProfileOverlay').classList.contains('show')){
+          // עדכון מהענן בזמן שרותי מקלידה בכרטיס: עד 147 השדה נבנה מחדש, הסמן
+          // קפץ לסוף ומה שהוקלד מאז השמירה האחרונה אבד. עכשיו מה שהוקלד, מיקום
+          // הסמן והערך שלפני העריכה (כדי שהשמירה ביציאה מהשדה תקרה) נשמרים.
+          const act = document.activeElement;
+          const typing = act && act.id && /^cp\w*(Input)$/.test(act.id) && act.closest('#clientProfileOverlay')
+            ? { id: act.id, value: act.value, prev: act.dataset.cpPrevVal, s: null, e: null } : null;
+          if (typing){ try { typing.s = act.selectionStart; typing.e = act.selectionEnd; } catch (e) {} }
           renderClientProfileOverlay();
+          const el = typing && document.getElementById(typing.id);
+          if (el){
+            if (el.value !== typing.value){ el.value = typing.value; el.dispatchEvent(new Event('input')); }
+            el.focus();
+            if (typing.prev !== undefined) el.dataset.cpPrevVal = typing.prev;
+            if (typing.s !== null){ try { el.setSelectionRange(typing.s, typing.e); } catch (e) {} }
+          }
         }
       }
     }
