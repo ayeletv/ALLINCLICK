@@ -14124,13 +14124,13 @@
         const mins = timeToMinutes(b.time);
         const hourIdx = Math.floor(mins / 60) - calStartHour;
         if (hourIdx < 0 || hourIdx >= (calEndHour - calStartHour)) return;
-        const minuteOffsetInHour = mins % 60;
-        const quarterOffset = Math.round(minuteOffsetInHour / 15);
-        const durationQuarters = Math.max(1, Math.round((b.duration || 30) / 15));
+        /* 143: "למה יש רווח לבן אחרי הריבוע החסום?" (איילת, 22.10). החסימה עוגלה
+         * לרבע שעה: 20:20 צוירה ב-20:15–20:45, ונראה רווח עד התור של 20:50. עכשיו
+         * לפי הדקה המדויקת — כמו התורים וההצעות. */
         const block = document.createElement('div');
         block.className = 'cal-appt cal-block';
-        block.style.top = (hourIdx * hourBandHeight + quarterOffset * quarterHeight + 2) + 'px';
-        block.style.height = (durationQuarters * quarterHeight - 3) + 'px';
+        block.style.top = (((mins - calStartHour * 60) / 60) * hourBandHeight) + 'px';
+        block.style.height = Math.max(MIN_APPT_BLOCK_PX, ((b.duration || 30) / 60) * hourBandHeight) + 'px';
         if (b.staff !== 'all' && staff[b.staff]){
           block.style.borderInlineStart = `5px solid ${staffStripeColor(b.staff)}`;
         }
