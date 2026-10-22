@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-21 · 140">
+<meta name="app-build" content="2026-10-22 · 142">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -2874,6 +2874,8 @@
     overflow:hidden;
   }
   .cal-offer.cal-offer-final{ background:repeating-linear-gradient(135deg, #FFD9A0 0 7px, #FFEBCC 7px 14px) !important; border-style:solid !important; }
+  /* 142: הסבב נגמר בלי אישור — עדיין מקווקו (השעה פנויה ומוצעת), אפור-חם: מחכה להחלטה של רותי */
+  .cal-offer.cal-offer-ended{ background:repeating-linear-gradient(135deg, #E9E2DA 0 7px, #F6F1EC 7px 14px) !important; border-style:dashed !important; }
   .cal-offer .cal-appt-name{font-weight:700;}
   .cal-offer .cal-appt-meta{opacity:0.85;}
   .cal-offer-pulse{
@@ -2930,6 +2932,12 @@
   }
   .offer-rec-main{flex:1; min-width:0;}
   .offer-rec-name{font-size:14px; font-weight:600; color:var(--panel-text);}
+  /* 141: שם שנפתח לכרטיס הלקוחה */
+  button.offer-rec-name-link{
+    background:none; border:0; padding:0; margin:0; font-family:inherit; text-align:right; cursor:pointer;
+    text-decoration:underline; text-decoration-color:rgba(28,138,75,0.55); text-underline-offset:3px;
+  }
+  button.offer-rec-name-link:hover, button.offer-rec-name-link:focus-visible{color:#1c8a4b;}
   .offer-rec-phone{
     font-family:'JetBrains Mono', monospace; font-size:12.5px;
     color:var(--panel-gold); text-decoration:none; direction:ltr; display:inline-block;
@@ -2997,20 +3005,39 @@
   .booked-banner-sub{font-size:14px; margin-top:6px; opacity:0.92;}
   @keyframes bookedPop{ 0%{transform:scale(0.92); opacity:0;} 100%{transform:scale(1); opacity:1;} }
   @media (prefers-reduced-motion: reduce){ .booked-banner{animation:none;} }
-  /* 140: אותו גודל ובולטות כמו "התור נקבע בהצלחה" — בצבע אחר, כדי שלא יתבלבלו */
+  /* 140: אותו גודל ובולטות כמו "התור נקבע בהצלחה" — בצבע אחר, כדי שלא יתבלבלו.
+   * 141: "מבוטל זה אדום" (איילת, 22.10) — היה חום-סגול. */
   .cancelled-banner{
-    background:#5d4a52; color:#fff; border-radius:16px;
+    background:#c0392b; color:#fff; border-radius:16px;
     padding:18px 14px 16px; margin:0 0 16px; text-align:center;
-    box-shadow:0 4px 14px rgba(60,40,48,0.28);
+    box-shadow:0 4px 14px rgba(192,57,43,0.28);
     animation:bookedPop 0.45s ease-out;
   }
   .cancelled-banner-icon{
     width:46px; height:46px; margin:0 auto 8px; border-radius:50%;
-    background:#fff; color:#5d4a52; font-size:26px; font-weight:800; line-height:46px;
+    background:#fff; color:#c0392b; font-size:26px; font-weight:800; line-height:46px;
   }
   .cancelled-banner-title{font-size:24px; font-weight:800; line-height:1.25;}
   .cancelled-banner-sub{font-size:14px; margin-top:6px; opacity:0.92;}
   @media (prefers-reduced-motion: reduce){ .cancelled-banner{animation:none;} }
+  /* 141: בקשה שנרשמה ומחכה (בקשה מיוחדת, רשימת המתנה) — כחול, כדי שלא ייראה
+   * כמו "התור נקבע" */
+  .waiting-banner{
+    background:#2f6688; color:#fff; border-radius:16px;
+    padding:18px 14px 16px; margin:0 0 16px; text-align:center;
+    box-shadow:0 4px 14px rgba(47,102,136,0.28);
+    animation:bookedPop 0.45s ease-out;
+  }
+  .waiting-banner-icon{
+    width:46px; height:46px; margin:0 auto 8px; border-radius:50%;
+    background:#fff; color:#2f6688; font-size:24px; font-weight:800; line-height:46px;
+  }
+  .waiting-banner-title{font-size:24px; font-weight:800; line-height:1.25;}
+  .waiting-banner-sub{font-size:14px; margin-top:6px; opacity:0.92;}
+  @media (prefers-reduced-motion: reduce){ .waiting-banner{animation:none;} }
+  /* 141: "שולחת את האישור…" — בלי הפעימה, ולחיצה נוספת מקבלת הסבר */
+  .my-appt-actions button.confirm-arrival-btn.is-busy{animation:none; opacity:0.85; cursor:progress;}
+  .confirm-arrival-note{font-size:13px; font-weight:600; color:#1c8a4b; margin-top:6px;}
   .claim-error{color:var(--wine); font-size:12.5px; margin-top:8px;}
   .claim-done{font-size:18px; font-weight:700; text-align:center; color:var(--wine); line-height:1.8;}
   .claim-done span{font-size:14px; font-weight:400; color:#8A8178;}
@@ -4529,7 +4556,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-21 · 140';
+        window.__APP_BUILD = '2026-10-22 · 142';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -6205,7 +6232,8 @@
       preferredStaffIdx: frPreferredStaffIdx,
       reminderChannels,
       status: 'pending',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      createdBy: bookingGoesThroughServer() ? 'client' : 'salon',   // 141: "נוסף על ידי"
     };
     if (bookingGoesThroughServer()){
       let res = null;
@@ -6273,9 +6301,9 @@
           <p style="font-size:12.5px; color:#8A8178; margin-top:8px;">אישור נשלח גם למייל שלך.</p>
           <button class="template-btn" style="width:100%; margin-top:10px;" onclick="closeFlexibleRequestOverlay()">סגירה</button>`;
       } else {
-        resultEl.innerHTML = `
-          <div class="status-dot">✓ הבקשה התקבלה</div>
-          <p style="font-size:13px; margin-top:6px;">לא נמצא כרגע תור פנוי שמתאים בדיוק לבקשה שלך — נמשיך לבדוק אוטומטית, ונעדכן אותך במייל ברגע שיתפנה מקום מתאים.</p>
+        resultEl.innerHTML = actionBannerHtml('wait', '✉', 'הבקשה התקבלה!', [
+            'עדיין אין שעה פנויה שמתאימה בדיוק — נמשיך לבדוק אוטומטית.',
+            'ברגע שתתפנה שעה מתאימה נעדכן אותך במייל.']) + `
           <button class="template-btn" style="width:100%; margin-top:10px;" onclick="closeFlexibleRequestOverlay()">סגירה</button>`;
       }
       if (typeof renderWeekCal === 'function') renderWeekCal();
@@ -14013,8 +14041,23 @@
           && (offerIsLive(x) || ['claimed', 'taken', 'takenByOwner'].includes(x.status) || (Date.parse(x.createdAt) || 0) > (Date.parse(o.createdAt) || 0)))) return false;
         return !slotHasAppointmentConflict(o);
       };
+      /* 142: "להשאיר ביומן את השעה המקווקוות, לא לשלוח שוב, אלא לרשום שנשלחו 2
+       * מיילים לכל אחת ועדיין לא אושר — לחכות שיאשרו או לקחת את התור לעצמך"
+       * (איילת, 22.10). שני מצבים שבהם הריבוע נשאר אחרי שההצעה פגה:
+       *   • הסבב נגמר (הודעה אחרונה לכולן נשלחה ופגה) — לא יישלח עוד כלום.
+       *   • לילה — ההצעה פגה, והבאה בתור תקבל ב-08:00. */
+      const isLatestOfSlot = o => {
+        const k = offerSlotKey(o);
+        return !allOffersNow.some(x => x && x.id !== o.id && offerSlotKey(x) === k
+          && (offerIsLive(x) || ['claimed', 'taken', 'takenByOwner'].includes(x.status) || (Date.parse(x.createdAt) || 0) > (Date.parse(o.createdAt) || 0)));
+      };
+      const slotStillAhead = o => (offerMinutesUntil(o.date, o.time, new Date()) || 0) > 0;
+      const chainEnded = o => !!(o && o.final && !offerIsLive(o) && (o.status === 'offered' || o.status === 'expired')
+        && slotStillAhead(o) && isLatestOfSlot(o) && !slotHasAppointmentConflict(o));
+      const nightWait = o => !!(o && !o.final && !offerIsLive(o) && (o.status === 'offered' || o.status === 'expired')
+        && !o.nextOfferAttempted && offersQuietNow() && slotStillAhead(o) && isLatestOfSlot(o) && !slotHasAppointmentConflict(o));
       const dayOffers = allOffersNow
-        .filter(o => o && (offerIsLive(o) || handingOver(o)) && o.date === formatDateKey(day.fullDate)
+        .filter(o => o && (offerIsLive(o) || handingOver(o) || chainEnded(o) || nightWait(o)) && o.date === formatDateKey(day.fullDate)
           && (selectedStaffFilter === 'all' || o.staff === selectedStaffFilter));
       dayOffers.forEach(o => {
         const mins = timeToMinutes(o.time);
@@ -14044,8 +14087,16 @@
         const before = o.final ? 0 : chain.filter(x => x.id !== o.id).reduce((n, x) => n + (x.recipients || []).length, 0);
         const hhmmB = v => { const t = Date.parse(v || ''); return t ? new Date(t).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : ''; };
         const passing = !offerIsLive(o);
-        block.innerHTML =
-          '<span class="cal-offer-pulse" aria-hidden="true"></span>' +
+        const ended = chainEnded(o), night = !ended && nightWait(o);
+        if (ended) block.classList.add('cal-offer-ended');
+        block.innerHTML = ended
+          // 142: הסבב נגמר — לא נשלח עוד כלום; רותי מחליטה
+          ? '<span class="cal-appt-name">✉ נשלח לכולן — לא אושר</span>' +
+            '<span class="cal-appt-meta">' + o.time.slice(0, 5) + ' · לחכות או לקחת לעצמך</span>'
+          : night
+          ? '<span class="cal-appt-name">🌙 ממשיך ב-08:00</span>' +
+            '<span class="cal-appt-meta">' + o.time.slice(0, 5) + ' · בלילה לא שולחים</span>'
+          : '<span class="cal-offer-pulse" aria-hidden="true"></span>' +
           '<span class="cal-appt-name">⏳ ' + (passing ? 'מעבירה לבאה בתור…' : escB(who)) + '</span>' +
           '<span class="cal-appt-meta">' + o.time.slice(0, 5) +
             (left > 0 ? ' · עוד ' + left + ' דק׳' : ' · פג') +
@@ -14056,6 +14107,8 @@
             (x.final ? 'הודעה אחרונה לכולן — הראשונה שתאשר מקבלת' : '') +
             (x.final ? '' : x.id === o.id ? (left > 0 ? 'ממתינה לתשובה עד ' + hhmmB(x.expiresAt) : 'פג הזמן')
               : x.status === 'claimed' ? 'אישרה' : x.status === 'withdrawn' ? 'ביטלה' : 'לא ענתה עד ' + hhmmB(x.expiresAt))).join('\n') +
+          (ended ? '\n\nהסבב הסתיים: כל אחת מהרשימה קיבלה עד 2 הודעות על השעה הזו, ואף אחת עוד לא אישרה. לא יישלחו עוד הודעות. אפשר לחכות — הן עדיין יכולות לאשר מהקישור — או לקחת את השעה לעצמך.' : '') +
+          (night ? '\n\nבלילה (23:00–08:00) לא שולחים הודעות. ב-08:00 ההצעה תעבור לבאה בתור.' : '') +
           '\nלחיצה לפרטים.';
         block.onclick = (e) => {
           e.stopPropagation();
@@ -14359,11 +14412,44 @@
     broadcastHours: 3,   // מתחת לזה מציעים לכולן יחד; מעליו אחת בכל פעם
     windowMin: 20,       // כמה זמן השעה שמורה עד שחוזרת להיות פנויה
     maxDaysAhead: 3,     // מעבר לזה ממשיכים לשבץ אוטומטית כמו קודם
+    quietFrom: 23,       // 142: מ-23:00 ועד quietTo לא שולחים הצעות (שעון ישראל)
+    quietTo: 8,
   };
   function offerSetting(key){
     const raw = branding && branding.offerSettings && branding.offerSettings[key];
     const n = Number(raw);
     return (!isNaN(n) && n >= 0) ? n : OFFER_DEFAULTS[key];
+  }
+  /* 142: "עכשיו השעה 12 בלילה ואני רואה שנשלחים מיילים — זה לא הגיוני"
+   * (איילת, 22.10). זהה ל-offersQuietNow בשרת: בין 23:00 ל-08:00 היומן לא
+   * שולח אף הצעה ולא מעביר לבאה בתור. שעה שהתפנתה בלילה נרשמת ב-freedSlots,
+   * והשרת מציע אותה ב-08:00. */
+  function offersQuietNow(){
+    const from = offerSetting('quietFrom'), to = offerSetting('quietTo');
+    if (from === to) return false;
+    let h = 12;
+    try { h = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', hour: 'numeric', hourCycle: 'h23' }).format(new Date())) % 24; } catch (e) {}
+    return from > to ? (h >= from || h < to) : (h >= from && h < to);
+  }
+  function deferFreedSlotToMorning(slot){
+    try {
+      if (!isOwnerSession() || runningOnPublicData || typeof CLOUD_DOC === 'undefined' || !CLOUD_DOC) return;
+      // arrayUnion: אותה שעה שנבדקת שוב ושוב בלילה נרשמת פעם אחת
+      CLOUD_DOC.update({ freedSlots: firebase.firestore.FieldValue.arrayUnion({
+        date: String(slot.date), time: String(slot.time), dur: Number(slot.dur || 30), staff: Number(slot.staff),
+        serviceName: String(slot.serviceName || ''), freedFrom: String(slot.freedFrom || ''),
+      }) }).catch(function(e){ console.warn('[offers] could not keep the freed slot for the morning:', e && e.code); });
+    } catch (e) {}
+  }
+  /* 142: "לא לקבל יותר מ-2 מיילים על התור שהתפנה" — זהה ל-messagesForSlotTo
+   * בשרת. כל הצעה שהיא נמענת בה, בכל הסבבים של השעה, היא הודעה אחת. */
+  const MAX_MESSAGES_PER_SLOT = 2;
+  function offerMessagesForSlotTo(key, requestId){
+    const id = String(requestId);
+    return (pendingOffers || []).filter(function(o){
+      return o && String(o.date || '') + '|' + String(o.time || '') + '|' + String(o.staff) === key && o.status !== 'takenByOwner'
+        && (o.recipients || []).some(function(rec){ return rec && String(rec.requestId) === id; });
+    }).length;
   }
   function requestLeadMinutes(req){
     const raw = req && req.preference && req.preference.leadMinutes;
@@ -14419,6 +14505,7 @@
       // offerExpired — סטטוס מגרסאות קודמות (לקוחה שלא ענתה פעם אחת). היא חוזרת לרשימה.
       if (!r || r.mode !== 'flexible' || (r.status !== 'pending' && r.status !== 'offerExpired')) return false;
       if (previouslyOffered.has(String(r.id))) return false;
+      if (offerMessagesForSlotTo(slotKey, r.id) >= MAX_MESSAGES_PER_SLOT) return false;   // 142
       if (typeof specialRequestIsExpired === 'function' && specialRequestIsExpired(r, now)) return false;
       if (minutesAway < requestLeadMinutes(r)) return false;
       const pref = r.preference || {};
@@ -14462,6 +14549,7 @@
     return (waitlist || []).filter(function(w){
       if (!w || w.status === 'matched' || !w.date || w.date !== slot.date || w.date < todayKey) return false;
       if (previouslyOffered && previouslyOffered.has(String(w.id))) return false;
+      if (offerMessagesForSlotTo(String(slot.date || '') + '|' + String(slot.time || '') + '|' + String(slot.staff), w.id) >= MAX_MESSAGES_PER_SLOT) return false;   // 142
       const req = timeToMinutes(w.requestedTime || '');
       if (!(req >= startMin && req < startMin + slotDur)) return false;
       const svc = (services || []).find(function(s){ return s && s.name === w.service; }) || null;
@@ -14547,6 +14635,11 @@
   }
   function createOfferForFreedSlot(slot){
     if (slotHasAppointmentConflict(slot)) return null;
+    // 142: הסבב של השעה הזו כבר נגמר בהודעה לכולן (final, בשרת) — לא שוב.
+    // סבב חדש רק אחרי שנקבע בה תור ובוטל (currentOfferChain מתחיל מחדש).
+    if (currentOfferChain(String(slot.date) + '|' + String(slot.time) + '|' + String(slot.staff)).some(function(o){ return o && o.final; })) return null;
+    // 142: בלילה — לא שולחים; השרת יציע את השעה ב-08:00
+    if (offersQuietNow()){ deferFreedSlotToMorning(slot); return null; }
     const now = new Date();
     const minutesAway = offerMinutesUntil(slot.date, slot.time, now);
     if (minutesAway === null) return null;
@@ -14614,6 +14707,8 @@
   async function rotateExpiredOffers(){
     if (offerRotationBusy) return;
     try { if (!isOwnerSession() || !cloudLoadComplete || runningOnPublicData) return; } catch (e) { return; }
+    // 142: בלילה היומן לא מעביר לבאה בתור — השרת עושה את זה ב-08:00
+    if (offersQuietNow()) return;
     const nowCheck = new Date();
     const due = (pendingOffers || []).some(function(o){
       return o && ((o.status === 'offered' && !offerIsLive(o, nowCheck)) || (o.status === 'expired' && !o.nextOfferAttempted));
@@ -14729,6 +14824,21 @@
   function offerMinutesLeft(o){
     return Math.max(0, Math.round((new Date(o.expiresAt).getTime() - Date.now()) / 60000));
   }
+  /* 141: "ברשימה שנפתחת שתור השתחרר — ללחוץ על הלקוחה ולעבור לכרטסת שלה"
+   * (איילת, 22.10). השם הוא כפתור; הכרטיס נפתח מעל חלון ההצעה, ו"חזרה"
+   * מחזירה אליו. הלקוחה נמצאת לפי ת"ז, אחר כך טלפון, אחר כך שם. */
+  function offerClientNameHtml(rec){
+    const esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+    const name = (rec && rec.name) || 'ללא שם';
+    if (!rec || !findClientForSpecialRecord(rec)) return '<div class="offer-rec-name">' + esc(name) + '</div>';
+    return '<button type="button" class="offer-rec-name offer-rec-name-link" title="פתיחת כרטיס הלקוחה"' +
+      ' data-name="' + esc(rec.name || '') + '" data-tz="' + esc(rec.teudatZehut || '') + '" data-phone="' + esc(rec.phone || '') + '"' +
+      ' onclick="openClientFromOfferList(this)">' + esc(name) + ' <span aria-hidden="true">›</span></button>';
+  }
+  function openClientFromOfferList(el){
+    const c = findClientForSpecialRecord({ name: el.getAttribute('data-name'), teudatZehut: el.getAttribute('data-tz'), phone: el.getAttribute('data-phone') });
+    showClientProfile(c);
+  }
   function offerRecipientRow(rec, idx){
     const phone = rec.phone || '';
     const tel = phone.replace(/[^0-9+]/g, '');
@@ -14737,7 +14847,7 @@
     return '<div class="offer-rec-row">' +
       '<div class="offer-rec-num">' + (idx + 1) + '</div>' +
       '<div class="offer-rec-main">' +
-        '<div class="offer-rec-name">' + (rec.name || 'ללא שם') + '</div>' +
+        offerClientNameHtml(rec) +
         (phone ? '<a class="offer-rec-phone" href="tel:' + tel + '">' + phone + '</a>'
                : '<div class="offer-rec-phone offer-rec-nophone">אין טלפון בכרטיס</div>') +
       '</div>' +
@@ -14788,7 +14898,7 @@
           : 'לא ענתה עד ' + hhmm(x.expiresAt);
         rows.push('<div class="offer-rec-row">' +
           '<div class="offer-rec-num">' + (++i) + '</div>' +
-          '<div class="offer-rec-main"><div class="offer-rec-name">' + esc(rec.name || 'ללא שם') + '</div>' +
+          '<div class="offer-rec-main">' + offerClientNameHtml(rec) +
             '<div class="offer-rec-phone offer-rec-nophone">נשלחה ב-' + esc(hhmm(x.createdAt)) + '</div></div>' +
           '<div class="offer-rec-status">' + esc(what) + '</div>' +
         '</div>');
@@ -14823,7 +14933,7 @@
       return '<div class="offer-rec-row">' +
         '<div class="offer-rec-num">' + (i + 1) + '</div>' +
         '<div class="offer-rec-main">' +
-          '<div class="offer-rec-name">' + esc(r.name || 'ללא שם') + '</div>' +
+          offerClientNameHtml(r) +
           (phone ? '<a class="offer-rec-phone" href="tel:' + esc(tel) + '">' + esc(phone) + '</a>'
                  : '<div class="offer-rec-phone offer-rec-nophone">אין טלפון בכרטיס</div>') +
         '</div>' +
@@ -14892,6 +15002,10 @@
           ? '⏳ השעה שמורה עוד <b>' + left + ' דקות</b> — עד ' + until
           : (o.status === 'claimed' ? '✓ ' + (o.claimedBy || 'לקוחה') + ' אישרה — התור נקבע.'
             : o.status === 'taken' ? 'השעה נתפסה.'
+            // 142: הסבב נגמר — לא יישלח עוד כלום; ההחלטה אצל רותי
+            : o.final ? '✉ <b>הסבב הסתיים.</b> כל אחת מהרשימה קיבלה עד 2 הודעות על השעה הזו, ואף אחת עוד לא אישרה. ' +
+                'לא יישלחו עוד הודעות. אפשר לחכות — הן עדיין יכולות לאשר מהקישור, הראשונה מקבלת — או לקחת את השעה לעצמך (הכפתור למטה).'
+            : (!o.nextOfferAttempted && offersQuietNow()) ? '🌙 פג הזמן. בלילה (23:00–08:00) לא שולחים הודעות — ב-08:00 ההצעה תעבור לבאה בתור. בינתיים מי שקיבלה עדיין יכולה לאשר מהקישור.'
             : 'פג הזמן ואף אחת לא אישרה. השעה פנויה — מי שקיבלו את ההצעה עדיין יכולות לאשר מהקישור, הראשונה מקבלת.')) +
       '</div>' +
       '<div class="offer-why">' + why + '</div>' +
@@ -15357,6 +15471,16 @@
       : d.toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'numeric' })
         + ' בשעה ' + d.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
   }
+  /* 141: "בקשה גמישה — שיהיה פרטים של מי הוסיפה את הבקשה" (איילת, 22.10).
+   * רשומות חדשות שומרות createdBy. בישנות: מה שנוצר בשרת (מהאתר) מזוהה לפי
+   * השדות שרק השרת כותב — בבקשה kind, ברשימת המתנה status 'waiting'; מה
+   * שנוצר בדפדפן של הסלון — בלעדיהם. */
+  function recordAddedByLabel(rec, type){
+    if (!rec) return '';
+    let by = rec.createdBy;
+    if (!by) by = (type === 'waitlist' ? rec.status === 'waiting' : !!rec.kind) ? 'client' : 'salon';
+    return { client: 'הלקוחה, באתר', salon: 'הסלון (ביומן)' }[by] || '';
+  }
   function findClientForSpecialRecord(record){
     if (!record) return null;
     const tz = String(record.teudatZehut || '').trim();
@@ -15403,6 +15527,7 @@
         srDetailRow('שעה מבוקשת', w.requestedTime || '—') +
         srDetailRow('משך התור', `${Number(w.duration || (services.find(s => s && s.name === w.service) || {}).duration) || 0} דקות`) +
         srDetailRow('מועד הוספה', formatRecordCreatedAt(w.createdAt)) +
+        srDetailRow('נוסף על ידי', recordAddedByLabel(w, 'waitlist') || '—') +
         srDetailRow('סטטוס', isMatchedW ? '✓ נמצא תור' : '⏳ ממתין') +
         (isMatchedW ? srDetailRow('נקבע ל', `${formatDateDMY(w.matchedDate)}, ${w.matchedTime}${(staff[w.matchedStaff] && staff[w.matchedStaff].name) ? ' · ' + staff[w.matchedStaff].name : ''}`) : '');
       if (!isMatchedW){
@@ -15490,6 +15615,7 @@
     }
     if (r.note) html += srDetailRow('הערה', r.note);
     html += srDetailRow('מועד הוספה', formatRecordCreatedAt(r.createdAt));
+    html += srDetailRow('נוסף על ידי', recordAddedByLabel(r, 'request') || '—');
     cardEl.innerHTML = html;
     if (isFlexible && r.status !== 'matched'){
       const recheckBtn = document.createElement('button');
@@ -18166,6 +18292,7 @@
       requestedTime: time,
       duration: Number((svc && (svc.duration || svc.dur || svc.minutes)) || 0),
       createdAt: new Date().toISOString(),
+      createdBy: bookingGoesThroughServer() ? 'client' : 'salon',   // 141: "נוסף על ידי"
       status: 'pending'
     };
     if (bookingGoesThroughServer()){
@@ -18194,8 +18321,9 @@
     }
     if (typeof renderClients === 'function') renderClients();
     if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
-    document.getElementById('waitlistBox').innerHTML = `
-      <div class="waitlist-confirmed">✓ &nbsp;נרשמת לרשימת ההמתנה ל-${time}. נעדכן אותך אם יתפנה מקום.</div>`;
+    document.getElementById('waitlistBox').innerHTML = actionBannerHtml('wait', '⏳', 'נרשמת לרשימת ההמתנה', [
+      apptWhatLine({ service: svc ? svc.name : '', date: dateStr, time }),
+      'אם השעה תתפנה — נשלח לך הודעה עם קישור לאישור.']);
   }
   renderMiniCal();
   renderAvailableSlots();
@@ -19453,6 +19581,7 @@
     currentBookedAppointment = null;
     selectedSlot = null;
     bkSelectedServices = [];
+    pendingActionBanner = null;   // עברה לקבוע תור — ההודעה הקודמת כבר לא רלוונטית
     document.getElementById('myAppointment').style.display = 'none';
     document.getElementById('bookingFormWrap').style.display = 'block';
     if (previousClient){
@@ -19738,7 +19867,9 @@
     if (!res || !res.ok){ alert((res && res.error) || 'לא הצלחנו לבטל. נא לנסות שוב.'); return; }
     lookedUpWaitlist.splice(idx, 1);
     renderLookedUpAppointment(lookedUpAppointmentsList);
-    alert('✓ יצאת מרשימת ההמתנה.');
+    showActionBanner('done', '✕', 'יצאת מרשימת ההמתנה', [
+      apptWhatLine({ service: w.service, date: w.date, time: w.requestedTime }),
+      'לא נשלח לך יותר הודעות על השעה הזו.']);
   }
   function myRequestsHtml(){
     if (!lookedUpRequests.length) return myWaitlistHtml();
@@ -19791,7 +19922,8 @@
       return;
     }
     window.__offerFromLink = '';
-    alert('✓ התור שלך נקבע: ' + res.appointment.time + ' · ' + res.appointment.service + '. נתראה!');
+    // הרשימה נטענת מחדש מיד — הריבוע נשמר ומוצג שוב מעליה (reapplyActionBanner)
+    showActionBanner('ok', '✓', 'התור נקבע בהצלחה!', [apptWhatLine(res.appointment), 'נתראה!']);
     if (typeof searchMyAppointment === 'function') searchMyAppointment();
   }
   /* הגיעה מקישור של הצעה: מדגישים את ההצעה, ואם היא כבר לא פתוחה — אומרים למה. */
@@ -19827,7 +19959,9 @@
     }
     lookedUpRequests.splice(idx, 1);
     renderLookedUpAppointment(lookedUpAppointmentsList);
-    alert('✓ הבקשה בוטלה.');
+    showActionBanner('done', '✕', 'הבקשה בוטלה', [
+      (r.services || []).join(' + '),
+      'לא נציע לך יותר שעות לפי הבקשה הזו.']);
   }
   function renderLookedUpAppointment(apptOrList){
     const list = Array.isArray(apptOrList) ? apptOrList : [apptOrList];
@@ -19841,6 +19975,7 @@
         <div class="waitlist-confirmed">אין לך יותר תורים עתידיים.</div>
         ${myRequestsHtml()}
         <button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור חדש</button>`;
+      reapplyActionBanner(apptEl);
       return;
     }
     apptEl.innerHTML = list.map((appt, idx) => {
@@ -19860,21 +19995,60 @@
           <a href="${icsUrl}" download="תור-${appt.service}.ics" class="gcal-link">📥 הוספה ליומן (iPhone/Outlook)</a>
         </div>
         ${appt.confirmedByClient
-          ? `<div style="color:#1c8a4b; font-weight:700; font-size:13px; margin-top:8px;">✓ אישרת שאת מגיעה</div>`
-          : `<div class="my-appt-actions" style="margin-top:8px;"><button class="confirm-arrival-btn" onclick="confirmListedAppointment(${idx})">✓ אשרי שאת מגיעה</button></div>`}
+          ? `<div style="color:#1c8a4b; font-weight:700; font-size:13px; margin-top:8px;">✓ האישור התקבל — אין צורך לאשר שוב</div>`
+          : `<div class="my-appt-actions" style="margin-top:8px;"><button class="confirm-arrival-btn" onclick="confirmListedAppointment(${idx}, this)">✓ אשרי שאת מגיעה</button></div>`}
         
         <div class="my-appt-actions">
           <button class="danger" onclick="cancelListedAppointment(${idx})">ביטול תור</button>
         </div>
       </div>`;
     }).join('') + myRequestsHtml() + `<button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
+    reapplyActionBanner(apptEl);
   }
   function resolveCurrentAppt(listAppt){
     if (!listAppt) return null;
     if (!listAppt.id) return listAppt; // רשומה ישנה בלי id — אין לפי מה למצוא מחדש, ממשיכים עם מה שיש
     return weekAppointments.find(a => a.id === listAppt.id) || listAppt;
   }
-  async function confirmListedAppointment(idx){
+  /* 141: לקוחה לחצה 5 פעמים תוך 5 שניות על "אשרי שאת מגיעה" (21.10) — דרך
+   * הגיבוי האישור לוקח 2–3 שניות, והכפתור לא הראה שמשהו קורה. עכשיו: מיד
+   * "שולחת את האישור…", ולחיצה נוספת בזמן הזה מקבלת הסבר במקום בקשה נוספת.
+   * הכפתור לא נעול (disabled) — אחרת הלחיצה הנוספת לא הייתה מגיעה להסבר. */
+  let __confirmArrivalBusy = false;
+  function showConfirmArrivalNote(btn, text){
+    const host = btn && btn.parentElement;
+    if (!host) return;
+    let note = host.querySelector('.confirm-arrival-note');
+    if (!note){
+      note = document.createElement('div');
+      note.className = 'confirm-arrival-note';
+      note.setAttribute('role', 'status');
+      host.appendChild(note);
+    }
+    note.textContent = text;
+  }
+  async function confirmListedAppointment(idx, btn){
+    if (__confirmArrivalBusy){
+      showConfirmArrivalNote(btn, 'האישור כבר נשלח — אין צורך ללחוץ שוב. עוד רגע זה מסתיים.');
+      return;
+    }
+    __confirmArrivalBusy = true;
+    const label = btn ? btn.textContent : '';
+    if (btn){ btn.classList.add('is-busy'); btn.textContent = 'שולחת את האישור…'; }
+    try {
+      await confirmListedAppointmentNow(idx);
+    } finally {
+      __confirmArrivalBusy = false;
+      // הצליח — הרשימה צוירה מחדש והכפתור כבר לא בדף. נכשל — מחזירים אותו.
+      if (btn && btn.isConnected){
+        btn.classList.remove('is-busy');
+        btn.textContent = label;
+        const note = btn.parentElement && btn.parentElement.querySelector('.confirm-arrival-note');
+        if (note) note.remove();
+      }
+    }
+  }
+  async function confirmListedAppointmentNow(idx){
     const listAppt = lookedUpAppointmentsList[idx];
     if (!listAppt) return;
     const appt = resolveCurrentAppt(listAppt);
@@ -19903,6 +20077,7 @@
     lookedUpAppointmentsList[idx] = appt;
     if (!serverDidIt && typeof saveState === 'function') saveState();
     renderLookedUpAppointment(lookedUpAppointmentsList);
+    showActionBanner('ok', '✓', 'האישור התקבל!', [apptWhatLine(appt), 'תודה שאישרת — נתראה! אין צורך לאשר שוב.']);
   }
   function rescheduleListedAppointment(idx){
     currentBookedAppointment = resolveCurrentAppt(lookedUpAppointmentsList[idx]);
@@ -19977,7 +20152,7 @@
       if (p.length === 3 && p[0]) when = p[2] + ' ב' + hebrewMonths[p[1] - 1] + (appt.time ? ', ' + appt.time : '');
     } catch (e) {}
     const what = [appt && appt.service, when].filter(Boolean).map(esc).join(' · ');
-    return `<div class="cancelled-banner" role="status">
+    return `<div class="cancelled-banner action-banner" role="status">
         <div class="cancelled-banner-icon" aria-hidden="true">✕</div>
         <div class="cancelled-banner-title">התור בוטל</div>
         ${what ? `<div class="cancelled-banner-sub">${what}</div>` : ''}
@@ -19988,8 +20163,52 @@
     const apptEl = document.getElementById('myAppointment');
     if (!apptEl) return;
     apptEl.style.display = 'block';
-    apptEl.insertAdjacentHTML('afterbegin', cancelledBannerHtml(appt));
+    const html = cancelledBannerHtml(appt);
+    pendingActionBanner = { html, until: Date.now() + 15000 };
+    placeActionBanner(apptEl, html);
+  }
+  /* 141: "תתן יותר הודעות ללקוחות אחרי כל פעולה שתהיה מובנת" (איילת, 22.10).
+   * כל פעולה של לקוחה נגמרת בריבוע גדול שאומר מה קרה — באותו סגנון כמו "התור
+   * נקבע בהצלחה" (139) ו"התור בוטל" (140), במקום חלון alert קטן או שורה
+   * שנבלעת. ירוק — נקבע/אושר; כחול — נרשמה בקשה שמחכה; אדום — בוטל/יצאה. */
+  const ACTION_BANNER_CLASS = { ok: 'booked-banner', wait: 'waiting-banner', done: 'cancelled-banner' };
+  function actionBannerHtml(tone, icon, title, lines){
+    const cls = ACTION_BANNER_CLASS[tone] || ACTION_BANNER_CLASS.ok;
+    return `<div class="${cls} action-banner" role="status">
+        <div class="${cls}-icon" aria-hidden="true">${icon}</div>
+        <div class="${cls}-title">${escHtml(title)}</div>
+        ${(lines || []).filter(Boolean).map(l => `<div class="${cls}-sub">${escHtml(l)}</div>`).join('')}
+      </div>`;
+  }
+  // "שירות · 22 באוקטובר, 10:15" — לשורת הפרטים בריבוע
+  function apptWhatLine(a){
+    if (!a) return '';
+    let when = '';
+    const p = String(a.date || '').split('-').map(Number);
+    if (p.length === 3 && p[0]) when = p[2] + ' ב' + hebrewMonths[p[1] - 1] + (a.time ? ', ' + a.time : '');
+    else if (a.time) when = a.time;
+    return [a.service, when].filter(Boolean).join(' · ');
+  }
+  // הריבוע נשמר לרגע: אם "התורים שלי" נטענים מחדש מיד אחרי הפעולה (למשל אחרי
+  // אישור הצעה), הוא מוצג שוב מעל הרשימה החדשה ולא נמחק איתה.
+  let pendingActionBanner = null;
+  function placeActionBanner(apptEl, html){
+    apptEl.querySelectorAll('.action-banner').forEach(el => el.remove());
+    apptEl.insertAdjacentHTML('afterbegin', html);
     try { setTimeout(function(){ const r = apptEl.getBoundingClientRect(); if (r.top < 0 || r.top > window.innerHeight * 0.6) apptEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); } catch (e) {}
+  }
+  function showActionBanner(tone, icon, title, lines){
+    const html = actionBannerHtml(tone, icon, title, lines);
+    pendingActionBanner = { html, until: Date.now() + 15000 };
+    const apptEl = document.getElementById('myAppointment');
+    if (!apptEl) return;
+    apptEl.style.display = 'block';
+    placeActionBanner(apptEl, html);
+  }
+  function reapplyActionBanner(apptEl){
+    if (!pendingActionBanner || !apptEl) return;
+    if (Date.now() > pendingActionBanner.until){ pendingActionBanner = null; return; }
+    placeActionBanner(apptEl, pendingActionBanner.html);
   }
   const shownArrivalPopups = new Set();
   let arrivalQueue = [];
@@ -22182,10 +22401,11 @@
   // ער. ואם בכל זאת ויתרנו על שרת איטי — הגיבוי עונה אותה תשובה, רק לאט קצת.
   const API_READ_TIMEOUT_MS = 4000;
   /* 139: המכשיר זוכר. מכשיר שהגיבוי כבר הציל בו בקשה (סינון) הולך בכניסות
-   * הבאות ישר לגיבוי — בלי לחכות שוב 4 שניות בכל ביקור. ל-3 ימים; אחר כך
-   * מנסים שוב את הדרך הרגילה (אולי הסינון שוחרר). */
+   * הבאות ישר לגיבוי — בלי לחכות שוב 4 שניות בכל ביקור. ל-30 יום (141; היה
+   * 3 — סינון לא משתחרר בדרך כלל); אחר כך מנסים שוב את הדרך הרגילה, ואם
+   * היא עדיין חסומה — נכשלת תוך פחות משנייה, והמכשיר זוכר ל-30 יום נוספים. */
   const API_VIA_QUEUE_KEY = 'hk_api_via_queue_until';
-  const API_VIA_QUEUE_REMEMBER_MS = 3 * 24 * 3600 * 1000;
+  const API_VIA_QUEUE_REMEMBER_MS = 30 * 24 * 3600 * 1000;
   function rememberApiViaQueue(){
     try { localStorage.setItem(API_VIA_QUEUE_KEY, String(Date.now() + API_VIA_QUEUE_REMEMBER_MS)); } catch (e) {}
   }
@@ -22214,21 +22434,36 @@
       expireAt: new Date(Date.now() + 24 * 3600 * 1000),
       build: String(window.__APP_BUILD || '').slice(0, 30),
     });
-    const started = Date.now();
-    let wait = 700;
-    while (Date.now() - started < API_QUEUE_TIMEOUT_MS) {
-      await new Promise(r => setTimeout(r, wait));
-      wait = Math.min(Math.round(wait * 1.4), 2000);
-      let snap = null;
-      try { snap = await ref.get({ source: 'server' }); } catch (e) { continue; }
-      const d = (snap && snap.exists) ? snap.data() : null;
-      if (!d || d.status !== 'done') continue;
-      let body = null;
-      try { body = JSON.parse(d.responseJson || 'null'); } catch (e) { body = null; }
-      if (!body) throw new Error('queue: empty response');
-      return body;
-    }
-    throw new Error('queue: timeout');
+    /* 141: התשובה "מגיעה לבד". עד היום הדפדפן בדק שוב ושוב אם יש תשובה, וחיכה
+     * לכל בדיקה לפני הבאה — ובדיקה אחת שנתקעה עיכבה הכל (לקוחה, 21.10: השרת
+     * ענה תוך חצי שנייה, והיא קיבלה את התשובה אחרי 25–30 שניות, ופעם אחת
+     * שגיאה). עכשיו: האזנה למסמך — התשובה מגיעה ברגע שנכתבה; ובמקביל בדיקה
+     * כל 1.5 שניות שלא מחכה לקודמת. מה שמגיע ראשון — מנצח. */
+    return await new Promise((resolve, reject) => {
+      let finished = false, unsub = null, pollTimer = null, giveUpTimer = null;
+      const finish = (err, body) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(pollTimer); clearTimeout(giveUpTimer);
+        try { if (unsub) unsub(); } catch (e) {}
+        if (err) reject(err); else resolve(body);
+      };
+      const take = snap => {
+        const d = (snap && snap.exists) ? snap.data() : null;
+        if (!d || d.status !== 'done') return;
+        let body = null;
+        try { body = JSON.parse(d.responseJson || 'null'); } catch (e) { body = null; }
+        if (!body) finish(new Error('queue: empty response')); else finish(null, body);
+      };
+      try { if (typeof ref.onSnapshot === 'function') unsub = ref.onSnapshot(take, () => {}); } catch (e) {}
+      const poll = () => {
+        if (finished) return;
+        ref.get({ source: 'server' }).then(take, () => {});
+        pollTimer = setTimeout(poll, 1500);
+      };
+      pollTimer = setTimeout(poll, 700);
+      giveUpTimer = setTimeout(() => finish(new Error('queue: timeout')), API_QUEUE_TIMEOUT_MS);
+    });
   }
   window.__callClientApiViaQueue = callClientApiViaQueue;
 
@@ -23012,7 +23247,7 @@
       return;
     }
     const btn = document.getElementById('claimOfferBtn');
-    if (btn){ btn.disabled = true; btn.textContent = 'רגע...'; }
+    if (btn){ btn.disabled = true; btn.textContent = 'שולחת את האישור…'; }
     let res = null;
     try {
       res = await callClientApi('claimOffer', { id: raw, offerId: offerId, siteUrl: getSiteUrl() });
@@ -23027,8 +23262,7 @@
     const body = document.getElementById('claimOfferBody');
     const actions = document.getElementById('claimOfferActions');
     if (body){
-      body.innerHTML = '<div class="claim-done">✓ התור שלך נקבע!<br><span>' +
-        res.appointment.time + ' · ' + res.appointment.service + '. נתראה!</span></div>';
+      body.innerHTML = actionBannerHtml('ok', '✓', 'התור נקבע בהצלחה!', [apptWhatLine(res.appointment), 'נתראה!']);
     }
     if (actions) actions.innerHTML = '';
   }
