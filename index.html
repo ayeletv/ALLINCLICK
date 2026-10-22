@@ -8873,6 +8873,9 @@
       reminderChannels: Array.from(document.querySelectorAll('input[name="mbReminderChannel"]:checked')).map(cb => cb.value)
     };
     weekAppointments.push(manualAppointment);
+    // 143: בקשה מיוחדת / המתנה של הלקוחה לאותו טיפול ותאריך — נסגרת, וההצעות ממנה עוברות הלאה
+    try { fulfillRequestsByBookingLocal(manualAppointment, mbFromSpecialRequestId); }
+    catch (e) { console.warn('[offers] closing the request after a manual booking failed:', e); }
     if (mbFromSpecialRequestId){
       removeSpecialRequestSilently(mbFromSpecialRequestId);
       mbFromSpecialRequestId = null;
@@ -14106,7 +14109,7 @@
             ' — נשלחה ' + hhmmB(x.createdAt) + ' — ' +
             (x.final ? 'הודעה אחרונה לכולן — הראשונה שתאשר מקבלת' : '') +
             (x.final ? '' : x.id === o.id ? (left > 0 ? 'ממתינה לתשובה עד ' + hhmmB(x.expiresAt) : 'פג הזמן')
-              : x.status === 'claimed' ? 'אישרה' : x.status === 'withdrawn' ? 'ביטלה' : 'לא ענתה עד ' + hhmmB(x.expiresAt))).join('\n') +
+              : x.status === 'claimed' ? 'אישרה' : x.closedReason === 'booked-other' ? 'קבעה תור בשעה אחרת' : x.status === 'withdrawn' ? 'ביטלה' : 'לא ענתה עד ' + hhmmB(x.expiresAt))).join('\n') +
           (ended ? '\n\nהסבב הסתיים: כל אחת מהרשימה קיבלה עד 2 הודעות על השעה הזו, ואף אחת עוד לא אישרה. לא יישלחו עוד הודעות. אפשר לחכות — הן עדיין יכולות לאשר מהקישור — או לקחת את השעה לעצמך.' : '') +
           (night ? '\n\nבלילה (23:00–08:00) לא שולחים הודעות. ב-08:00 ההצעה תעבור לבאה בתור.' : '') +
           '\nלחיצה לפרטים.';
@@ -14470,6 +14473,56 @@
   /* 142: "לא לקבל יותר מ-2 מיילים על התור שהתפנה" — זהה ל-messagesForSlotTo
    * בשרת. כל הצעה שהיא נמענת בה, בכל הסבבים של השעה, היא הודעה אחת. */
   const MAX_MESSAGES_PER_SLOT = 2;
+  /* 143: קביעה ידנית ביומן — אותו כלל כמו fulfillRequestsByBooking בשרת. לקוחה
+   * שנקבע לה תור לאותו טיפול שביקשה, בתאריך שבתוך הטווח: הבקשה "נמצא תור",
+   * וההצעות הפתוחות ממנה נסגרות ("קבעה תור בשעה אחרת"). הצעה שנשלחה רק אליה —
+   * לבאה בתור. בקשה לטיפול אחר — לא נוגעים. fromRequestId: התור נקבע מתוך
+   * הבקשה עצמה ("📅 קביעת תור") — היא נסגרת בכל מקרה. */
+  function fulfillRequestsByBookingLocal(appt, fromRequestId){
+    if (!appt) return 0;
+    const norm = s => String(s || '').trim();
+    const apptKey = ((Array.isArray(appt.services) && appt.services.length) ? appt.services.map(s => norm(s && s.name)) : norm(appt.service).split(' + '))
+      .filter(Boolean).sort().join('|');
+    const sameClient = r => (appt.teudatZehut && r.teudatZehut && String(r.teudatZehut) === String(appt.teudatZehut))
+      || (!!appt.client && norm(r.name) === norm(appt.client));
+    const matched = { matchedDate: appt.date, matchedTime: appt.time, matchedStaff: appt.staff, matchedBy: 'booking', matchedApptId: appt.id || null };
+    const ids = [];
+    (specialRequests || []).forEach(r => {
+      if (!r || r.mode !== 'flexible' || (r.status !== 'pending' && r.status !== 'offerExpired')) return;
+      const fromIt = fromRequestId && String(r.id) === String(fromRequestId);
+      if (!fromIt){
+        if (!sameClient(r)) return;
+        const p = r.preference || {};
+        if ((p.dateFrom && appt.date < p.dateFrom) || (p.dateTo && appt.date > p.dateTo)) return;
+        if ((r.services || []).map(s => norm(s && s.name)).filter(Boolean).sort().join('|') !== apptKey) return;
+      }
+      Object.assign(r, { status: 'matched' }, matched);
+      ids.push(String(r.id));
+    });
+    (waitlist || []).forEach(w => {
+      if (!w || w.status === 'matched' || w.date !== appt.date || !sameClient(w) || norm(w.service) !== apptKey) return;
+      Object.assign(w, { status: 'matched', matchedAt: new Date().toISOString() }, matched);
+      ids.push(String(w.id));
+    });
+    if (fromRequestId && ids.indexOf(String(fromRequestId)) === -1) ids.push(String(fromRequestId));
+    const freed = [];
+    (pendingOffers || []).forEach(o => {
+      if (!offerIsLive(o)) return;
+      const recs = o.recipients || [];
+      if (!recs.some(rec => rec && ids.indexOf(String(rec.requestId)) !== -1)) return;
+      o.recipients = recs.map(rec => (rec && ids.indexOf(String(rec.requestId)) !== -1)
+        ? Object.assign({}, rec, { status: 'withdrawn', withdrawnReason: 'booked-other' }) : rec);
+      if (o.recipients.some(rec => rec && rec.status !== 'withdrawn')) return;
+      o.status = 'withdrawn';
+      o.closedReason = 'booked-other';
+      o.closedAt = new Date().toISOString();
+      o.nextOfferAttempted = true;
+      freed.push({ date: o.date, time: o.time, dur: o.dur, staff: o.staff, serviceName: o.serviceName, freedFrom: o.freedFrom });
+    });
+    // השעה שהוצעה רק לה — לבאה בתור (בלילה נשמרת ל-08:00, ר' createOfferForFreedSlot)
+    freed.forEach(slot => { try { createOfferForFreedSlot(slot); } catch (e) {} });
+    return ids.length;
+  }
   function offerMessagesForSlotTo(key, requestId){
     const id = String(requestId);
     return (pendingOffers || []).filter(function(o){
@@ -14869,6 +14922,8 @@
     const phone = rec.phone || '';
     const tel = phone.replace(/[^0-9+]/g, '');
     const label = rec.status === 'claimed' ? '✓ אישרה' :
+                  rec.withdrawnReason === 'booked-other' ? 'קבעה תור בשעה אחרת' :   // 143
+                  rec.status === 'withdrawn' ? 'ביטלה את הבקשה' :
                   rec.status === 'declined' ? '✕ סירבה' : '⏳ ממתינה לתשובה';
     return '<div class="offer-rec-row">' +
       '<div class="offer-rec-num">' + (idx + 1) + '</div>' +
@@ -14918,7 +14973,8 @@
     earlier.forEach(function(x){
       (x.recipients || []).forEach(function(rec){
         if (!rec) return;
-        const what = rec.status === 'withdrawn' ? 'ביטלה את הבקשה'
+        const what = rec.withdrawnReason === 'booked-other' ? 'קבעה תור בשעה אחרת'
+          : rec.status === 'withdrawn' ? 'ביטלה את הבקשה'
           : rec.status === 'declined' ? 'סירבה'
           : rec.status === 'missed' ? 'לקוחה אחרת אישרה קודם'
           : 'לא ענתה עד ' + hhmm(x.expiresAt);
@@ -15534,6 +15590,7 @@
       perSlot[key] = (perSlot[key] || 0) + 1;
       const rec = (o.recipients || []).find(x => x && String(x.requestId) === id) || {};
       const what = rec.status === 'claimed' || (o.status === 'claimed' && o.claimedRequestId === id) ? '✓ אישרה'
+        : rec.withdrawnReason === 'booked-other' ? 'קבעה תור בשעה אחרת — ההצעה הזו נסגרה'
         : rec.status === 'withdrawn' ? 'ביטלה את הבקשה'
         : rec.status === 'declined' ? 'סירבה'
         : o.status === 'cancelledByOwner' ? 'ההצעה בוטלה ביומן'
