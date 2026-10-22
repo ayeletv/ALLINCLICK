@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-22 · 146">
+<meta name="app-build" content="2026-10-22 · 147">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4556,7 +4556,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-22 · 146';
+        window.__APP_BUILD = '2026-10-22 · 147';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -12891,6 +12891,9 @@
   }
   function mergeTwoClients(keep, drop){
     if (!keep || !drop || keep === drop) return;
+    // הכרטיס שמתאחד (ומספר הזיהוי הישן של הכרטיס שנשאר) יוצאים מהכרטסת
+    // בכוונה, כדי שהגנת "רשימה חלקית" לא תעצור איחוד של כמה זוגות. (147)
+    noteIntendedClientRemoval(drop); noteIntendedClientRemoval(keep);
     const dropTz = String(drop.teudatZehut || '');
     const keepTzOrig = String(keep.teudatZehut || '');
     // 146: הת"ז שתישאר בסוף — האמיתית מבין השתיים. כל התורים/הבקשות של שני
@@ -21946,6 +21949,18 @@
       return s;   // מה שהשרת החליט — גובר
     });
   }
+  /* כרטיסים שרותי הוציאה מהכרטסת בכוונה (איחוד כפולים). עד 147 ההגנה
+   * עצרה כל שמירה שבה חסרים בכרטסת יותר מכרטיס אחד, ולכן איחוד של שני
+   * זוגות נבלע ב"הדף הזה החזיק רשימה חלקית (1480 במקום 1478)". עכשיו מותר
+   * חוסר רק של כרטיסים שנרשמו כאן; חוסר של כל כרטיס אחר עדיין עוצר. */
+  const __intendedClientRemovals = new Set();
+  function noteIntendedClientRemoval(c){ const k = clientListKey(c); if (k) __intendedClientRemovals.add(k); }
+  window.noteIntendedClientRemoval = noteIntendedClientRemoval;
+  function onlyIntendedClientsMissing(serverList, payloadList){
+    if (!__intendedClientRemovals.size) return false;
+    const have = new Set((payloadList || []).map(clientListKey));
+    return (serverList || []).every(c => { const k = clientListKey(c); return !k || have.has(k) || __intendedClientRemovals.has(k); });
+  }
   const WIPE_PROTECTED_LISTS = ['clients', 'categories', 'staff'];
   const WIPE_FIELD_LABELS = { clients: 'כרטסת הלקוחות', categories: 'הקטגוריות', staff: 'הצוות' };
   function listLength(v){ return Array.isArray(v) ? v.length : 0; }
@@ -21988,6 +22003,7 @@
       const beforeLen = listLength(server && server[key]);
       const afterLen = listLength(payload[key]);
       if (beforeLen === 0 || afterLen >= beforeLen - 1) return;
+      if (key === 'clients' && onlyIntendedClientsMissing(server[key], payload[key])) return;
       delete payload[key];
       changedKeys.delete(key);
       const live = (key === 'clients') ? clients : (key === 'categories') ? categories : staff;
@@ -22285,6 +22301,7 @@
       else if (__wroteSomething && lastSavePayloadBytes > 150 * 1024) reportDiag('save-big', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024, keys: lastSaveWrittenKeys });
       if (!committedPayload || !committedPayload.__stale){
         clearLocalPendingBackupIfCurrent(saveRevision);
+        if (__wroteSomething) __intendedClientRemovals.clear();
         flushDeferredSuccessToast(saveRevision);
         __syncPendingShown = false;
       }
