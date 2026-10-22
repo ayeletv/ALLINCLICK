@@ -914,48 +914,6 @@
   }
   .hero.fonts-ready .scroll-hint{ animation:fadeUp 0.9s ease forwards 0.55s; }
   .scroll-hint .line{width:1px; height:38px; background:linear-gradient(var(--gold), transparent); animation:pulse 2s ease-in-out infinite;}
-  /* 145: מסך פתיחה ממותג (איילת, 22.10): "אחרי הרבה זמן שלא נכנסתי מהטלפון —
-   * נראה תקוע עד שהתמונה והכיתוב מגיעים". במקום דף שמופיע בחלקים: מסך נקי
-   * בצבעים ובלוגו של העסק (מהעותק שכבר שמור — בקובץ או בטלפון), והדף מופיע
-   * שלם כשהכותרת מוכנה. של כל עסק — הצבעים והלוגו שלו; עסק בלי עותק — מסך
-   * ניטרלי בלי לוגו. מופיע רק אם הטעינה לוקחת יותר מ-0.35 שנייה, ולא יותר מ-3
-   * שניות. גם אם הסקריפט נכשל — ה-CSS מעלים אותו לבד אחרי 4 שניות. */
-  #hkSplash{display:none;}
-  html.hk-splash-on #hkSplash{
-    display:flex; position:fixed; inset:0; z-index:2147483000;
-    align-items:center; justify-content:center; direction:rtl;
-    background:radial-gradient(120% 90% at 50% 42%, var(--th-card, #fbf8f5) 0%, var(--th-panel-bg, #f3ede8) 100%);
-    opacity:0;
-    animation:hkSplashIn 0.3s ease-out 0.35s forwards, hkSplashSafety 0.4s ease-in 4s forwards;
-  }
-  html.hk-splash-on #hkSplash.hk-splash-out{ animation:hkSplashOut 0.45s ease forwards; }
-  .hk-splash-inner{ display:flex; flex-direction:column; align-items:center; gap:18px; }
-  .hk-splash-logo{
-    width:118px; height:118px; border-radius:50%; overflow:hidden;
-    background:var(--th-card, #ffffff);
-    box-shadow:0 10px 30px rgba(var(--th-primary-rgb, 170, 150, 140), 0.30);
-    display:flex; align-items:center; justify-content:center;
-    animation:hkSplashBreath 1.8s ease-in-out infinite;
-  }
-  .hk-splash-logo:empty{ display:none; }
-  .hk-splash-logo img{ width:100%; height:100%; object-fit:contain; display:block; }
-  .hk-splash-logo img.fill{ object-fit:cover; }
-  .hk-splash-name{ font-family:system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; font-size:22px; font-weight:700; color:var(--th-ink-brand, #6a5a54); }
-  .hk-splash-name:empty{ display:none; }
-  .hk-splash-dots{ display:flex; gap:7px; }
-  .hk-splash-dots i{ width:8px; height:8px; border-radius:50%; background:var(--th-primary-deep, #b8aaa2); opacity:0.35; animation:hkSplashDot 1.2s ease-in-out infinite; }
-  .hk-splash-dots i:nth-child(2){ animation-delay:0.2s; }
-  .hk-splash-dots i:nth-child(3){ animation-delay:0.4s; }
-  @keyframes hkSplashIn{ from{opacity:0;} to{opacity:1;} }
-  @keyframes hkSplashOut{ from{opacity:1;} to{opacity:0; visibility:hidden;} }
-  @keyframes hkSplashSafety{ to{opacity:0; visibility:hidden;} }
-  @keyframes hkSplashBreath{ 0%,100%{transform:scale(1);} 50%{transform:scale(1.045);} }
-  @keyframes hkSplashDot{ 0%,100%{opacity:0.3; transform:translateY(0);} 50%{opacity:1; transform:translateY(-4px);} }
-  @media (prefers-reduced-motion: reduce){
-    .hk-splash-logo, .hk-splash-dots i{ animation:none; }
-    .hk-splash-dots i{ opacity:0.6; }
-  }
-  @media print{ #hkSplash{ display:none !important; } }
   @keyframes fadeUp{from{opacity:0; transform:translateY(18px);} to{opacity:1; transform:translateY(0);}}
   @keyframes pulse{0%,100%{opacity:0.3;} 50%{opacity:1;}}
   @media (prefers-reduced-motion: reduce){
@@ -3551,59 +3509,6 @@
     return;
   } catch (e) {}
   markUnknown();
-})();
-</script>
-<!-- 145: מסך פתיחה ממותג (ר' ה-CSS של #hkSplash) -->
-<div id="hkSplash" aria-hidden="true"><div class="hk-splash-inner"><div class="hk-splash-logo" id="hkSplashLogo"></div><div class="hk-splash-name" id="hkSplashName"></div><div class="hk-splash-dots"><i></i><i></i><i></i></div></div></div>
-<script>
-(function(){
-  var root = document.documentElement, el = document.getElementById('hkSplash');
-  if (!el) return;
-  var t0 = Date.now(), done = false, resolveGone;
-  window.__hkSplashGone = new Promise(function(r){ resolveGone = r; });
-  function finish(){
-    if (done) return;
-    done = true;
-    var remove = function(){
-      root.classList.remove('hk-splash-on');
-      if (el.parentNode) el.parentNode.removeChild(el);
-      resolveGone();
-    };
-    // מוכן לפני שהמסך בכלל הופיע (0.35 שנ') — מסירים בלי שום הבהוב
-    if (Date.now() - t0 < 330) { remove(); return; }
-    el.classList.add('hk-splash-out');
-    setTimeout(remove, 480);
-  }
-  root.classList.add('hk-splash-on');
-  setTimeout(finish, 3000);   // לעולם לא יותר מ-3 שניות
-  try {
-    // הלוגו והשם — מהעותק שכבר נטען בראש הדף (בקובץ או בטלפון). של העסק הזה בלבד.
-    var logo = window.__cachedLogo || '';
-    if (logo) {
-      var img = new Image();
-      img.alt = '';
-      img.decoding = 'async';
-      if (window.__cachedLogoFill) img.className = 'fill';
-      img.onerror = function(){ if (img.parentNode) img.parentNode.removeChild(img); };
-      img.src = logo;
-      document.getElementById('hkSplashLogo').appendChild(img);
-    } else if (window.__cachedBizName) {
-      document.getElementById('hkSplashName').textContent = String(window.__cachedBizName);
-    }
-    var domReady = new Promise(function(r){
-      if (document.readyState !== 'loading') r(); else document.addEventListener('DOMContentLoaded', r);
-    });
-    domReady.then(function(){
-      // אותו תנאי שהכותרת מחכה לו כדי להופיע (הגופן, עד 1.2 שנ'), וגם הלוגו המלא
-      var waits = [window.__suezFontPromise || Promise.resolve()];
-      var big = window.__earlyLogoImg;
-      if (big && !big.complete) waits.push(new Promise(function(r){ big.addEventListener('load', r); big.addEventListener('error', r); }));
-      return Promise.all(waits);
-    }).then(function(){
-      // שתי מסגרות — שהכותרת כבר צוירה מאחורי המסך לפני שהוא נעלם
-      requestAnimationFrame(function(){ requestAnimationFrame(finish); });
-    }, finish);
-  } catch (e) { finish(); }
 })();
 </script>
 
