@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-22 · 145">
+<meta name="app-build" content="2026-10-22 · 146">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4651,7 +4651,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-22 · 145';
+        window.__APP_BUILD = '2026-10-22 · 146';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -7461,8 +7461,8 @@
       date: appt.date,
       time: appt.time,
       dur: appt.dur || 30,
-      client: w.name,
-      teudatZehut: w.teudatZehut || null,
+      client: (bookingCardOf(w) && bookingCardOf(w).name) || w.name,   // 146: מהכרטיס
+      teudatZehut: (bookingCardOf(w) && bookingCardOf(w).teudatZehut) || w.teudatZehut || null,
       service: appt.service,
       staff: appt.staff,
       status: 'pending',
@@ -8519,6 +8519,7 @@
         <label><input type="checkbox" class="cpReminderChannel" value="call"${(cpShownChannels.indexOf('call') !== -1) ? ' checked' : ''}> שיחת טלפון</label>
       </div>
       ${cpIsImplied ? `<p style="font-size:11.5px; color:var(--panel-text-dim); margin:4px 0 0; line-height:1.5;">מוצג לפי התור האחרון שלה — עדיין לא נבחרה עבורה העדפה קבועה. סימון כאן יקבע אותה.</p>` : ''}
+      ${cpTwinCardsNoteHtml(c)}
       ${cpDupNow > 1 ? `<p id="cpDuplicateNote" style="font-size:12px; color:var(--wine); background:rgba(var(--wine-rgb),0.08); border:1px solid rgba(var(--wine-rgb),0.3); border-radius:9px; padding:8px 11px; margin:10px 0 0; line-height:1.6;">יש ${cpDupNow} כרטסות עם אותה תעודת זהות. מה שמסמנים כאן חל על כולן, אבל כדאי לאחד אותן — הגדרות ← איחוד כרטיסים כפולים.</p>` : ''}
       <textarea class="client-note" id="cpNoteInput" placeholder="הערה אישית (העדפות, רגישויות...)">${c.note || ''}</textarea>
     `;
@@ -12338,8 +12339,21 @@
           const confirmedAgain = confirm('לאישור סופי: פעולה זו תמחק את כל התורים של הלקוחה הזו (עתידיים והיסטוריים) ולא ניתן לבטל אותה. להמשיך?');
           if (!confirmedAgain) return;
         }
-        weekAppointments = weekAppointments.filter(a => a.client !== c.name);
-        waitlist = waitlist.filter(w => c.teudatZehut && w.teudatZehut ? w.teudatZehut !== c.teudatZehut : w.name !== c.name);
+        /* 146: "אני מוחקת את יפי וולס הראשונה — זה ימחק רק אותה, ולא בטעות את
+         * השנייה האמיתית?" (איילת, 22.10). עד היום נמחקו כל התורים לפי השם —
+         * גם של כרטיס אחר באותו שם (התורים של יפי האמיתית). עכשיו רק מה ששייך
+         * לכרטיס הזה: לפי ת"ז; לפי שם רק כשאין כרטיס נוסף באותו שם. */
+        const delNm = String(c.name || '').trim();
+        const delTz = String(c.teudatZehut || '').trim();
+        const delTwins = (clients || []).some(o => o && o !== c && String(o.name || '').trim() === delNm);
+        const ownedByThisCard = rec => {
+          if (!rec) return false;
+          const rTz = String(rec.teudatZehut || '').trim();
+          if (delTz && rTz) return rTz === delTz;
+          return !delTwins && String(rec.client || rec.name || '').trim() === delNm;
+        };
+        weekAppointments = weekAppointments.filter(a => !ownedByThisCard(a));
+        waitlist = waitlist.filter(w => !ownedByThisCard(w));
         clients.splice(i, 1);
         renderClients();
         if (typeof renderWeekCal === 'function') renderWeekCal();
@@ -12715,6 +12729,55 @@
     }
     return 1 - (prev[n] / Math.max(m, n));
   }
+  /* 146: "צריך פתרון למה שקרה ליפי — היא קיבלה מייל על 25 וזה לא בכרטיס שלה"
+   * (איילת, 22.10). ליפי וולס שני כרטיסים — הישן מההסבה (2648) והאמיתי
+   * (330977992) — עם טלפון ות"ז שונים, ולכן האיחוד האוטומטי (אותו שם + אותה
+   * ת"ז/טלפון) לא תופס אותם. בכרטיס הלקוחה: "יש עוד כרטיס באותו שם" עם כפתור
+   * איחוד — רותי מחליטה, ואחרי אישור הכל עובר לכרטיס אחד. */
+  function cpTwinCardsOf(c){
+    const nm = String((c && c.name) || '').trim().replace(/\s+/g, ' ');
+    if (!nm) return [];
+    return (clients || []).filter(o => o && o !== c && !o.deleted && String(o.name || '').trim().replace(/\s+/g, ' ') === nm);
+  }
+  function cpTwinCardsNoteHtml(c){
+    const twins = cpTwinCardsOf(c);
+    if (!twins.length) return '';
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    return '<div id="cpTwinNote" style="font-size:12.5px; background:rgba(var(--wine-rgb),0.07); border:1px solid rgba(var(--wine-rgb),0.3); border-radius:9px; padding:9px 11px; margin:10px 0 0; line-height:1.6;">' +
+      '<b>יש עוד ' + (twins.length === 1 ? 'כרטיס' : twins.length + ' כרטיסים') + ' בשם "' + esc(c.name) + '"</b> — אם זו אותה לקוחה, כדאי לאחד: ' +
+      'אחרת התורים, הבקשות וההודעות מתפצלים בין הכרטיסים.' +
+      twins.map(t => '<div style="display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; margin-top:6px;">' +
+        '<span>ת"ז ' + esc(t.teudatZehut || '—') + ' · ' + esc(t.phone || 'בלי טלפון') + (t.email ? ' · ' + esc(t.email) : '') + '</span>' +
+        '<button type="button" class="template-btn" style="padding:4px 10px; font-size:12px;" onclick="mergeTwinCardFromProfile(' + clients.indexOf(t) + ')">🔗 איחוד לכרטיס אחד</button></div>').join('') +
+      '</div>';
+  }
+  async function mergeTwinCardFromProfile(otherIdx){
+    const c = clientProfileCurrent, o = clients[otherIdx];
+    if (!c || !o || c === o) return;
+    const keep = clientCompleteness(c) >= clientCompleteness(o) ? c : o;
+    const drop = keep === c ? o : c;
+    if (!confirm('לאחד את שני הכרטיסים של ' + (keep.name || 'הלקוחה') + '?\n\n' +
+        'נשאר: ת"ז ' + (keep.teudatZehut || '—') + ', טלפון ' + (keep.phone || '—') + (keep.email ? ', ' + keep.email : '') + '\n' +
+        'מתאחד לתוכו: ת"ז ' + (drop.teudatZehut || '—') + ', טלפון ' + (drop.phone || '—') + (drop.email ? ', ' + drop.email : '') + '\n\n' +
+        'כל התורים, הבקשות וההיסטוריה עוברים לכרטיס שנשאר. הטלפון השני נשמר בהערה. אי אפשר לבטל.')) return;
+    const dig = s => String(s || '').replace(/\D/g, '');
+    const keepPh = dig(keep.phone), dropPh = dig(drop.phone);
+    if (dropPh && dropPh !== keepPh) keep.note = (String(keep.note || '').trim() ? String(keep.note).trim() + ' · ' : '') + 'טלפון נוסף: ' + drop.phone;
+    // תורים/בקשות שנשמרו עם אחד הטלפונים במקום ת"ז (שיבוץ אוטומטי) — גם הם שלה
+    const finalTz = (!isPlausibleTeudatZehut(keep.teudatZehut) && isPlausibleTeudatZehut(drop.teudatZehut)) ? drop.teudatZehut : keep.teudatZehut;
+    const nm = String(keep.name || '').trim();
+    [weekAppointments, waitlist, specialRequests].forEach(list => (list || []).forEach(rec => {
+      if (!rec || !finalTz) return;
+      const who = String(rec.client || rec.name || '').trim();
+      const t = dig(rec.teudatZehut);
+      if (who === nm && t && (t === keepPh || t === dropPh)) rec.teudatZehut = finalTz;
+    }));
+    mergeTwoClients(keep, drop);
+    try { if (typeof saveState === 'function') await saveState(); } catch (e) { console.error('merge save failed:', e); }
+    if (typeof renderClients === 'function') { try { renderClients(); } catch (e) {} }
+    showClientProfile(keep);
+    if (typeof showAdminToast === 'function') showAdminToast('✓ הכרטיסים של ' + (keep.name || 'הלקוחה') + ' אוחדו לכרטיס אחד');
+  }
   function clientCompleteness(c){
     if (!c) return -1;
     let score = 0;
@@ -12754,30 +12817,35 @@
       clientMergeShowError('לא הצלחנו להוריד את הגיבוי. לא לאחד לפני שיש גיבוי.');
     }
   }
+  /* 146: "אם יש אותו ת"ז או אותו טלפון, ועם אותו שם — לאחד" (איילת, 22.10).
+   * עד היום: אותו טלפון + אותו שם פרטי (גם עם שם משפחה אחר) או שם דומה, ולפי
+   * ת"ז בכלל לא. עכשיו בדיוק הכלל שלה: אותו שם מלא, ובנוסף אותה ת"ז אמיתית או
+   * אותו טלפון. שתי לקוחות עם אותו שם וטלפון/ת"ז שונים — לא מאחדים. */
   function duplicateClientPairs(){
-    const byPhone = {};
+    const norm = s => String(s || '').trim().replace(/\s+/g, ' ');
+    const dig = s => String(s || '').replace(/[^0-9]/g, '');
+    const byName = {};
     clients.forEach((c, i) => {
       if (!c || c.deleted) return;
-      const p = String(c.phone || '').replace(/[^0-9]/g, '');
-      if (p.length < 9) return;     // בלי טלפון אין על מה להשוות
-      (byPhone[p] = byPhone[p] || []).push(i);
+      const n = norm(c.name);
+      if (n) (byName[n] = byName[n] || []).push(i);
     });
     const pairs = [];
-    Object.keys(byPhone).forEach(p => {
-      const idxs = byPhone[p];
+    Object.keys(byName).forEach(n => {
+      const idxs = byName[n];
       if (idxs.length < 2) return;
       for (let a = 0; a < idxs.length; a++){
         for (let b = a + 1; b < idxs.length; b++){
           const ca = clients[idxs[a]], cb = clients[idxs[b]];
-          const f = nameSimilarity(clientFirstName(ca), clientFirstName(cb));
-          const l = nameSimilarity(clientLastName(ca), clientLastName(cb));
+          const tzA = String(ca.teudatZehut || '').trim(), tzB = String(cb.teudatZehut || '').trim();
+          const pA = dig(ca.phone), pB = dig(cb.phone);
           let why = null;
-          if (f === 1) why = 'אותו שם פרטי ואותו טלפון';
-          else if (f >= 0.7 && l >= 0.7 && clientLastName(ca) && clientLastName(cb)) why = 'שם דומה מאוד ואותו טלפון';
+          if (tzA && tzA === tzB && isPlausibleTeudatZehut(tzA)) why = 'אותו שם ואותה ת"ז';
+          else if (pA.length >= 9 && pA === pB) why = 'אותו שם ואותו טלפון';
           if (!why) continue;
           const keepFirst = clientCompleteness(ca) >= clientCompleteness(cb);
           pairs.push({
-            phone: p,
+            phone: keepFirst ? pA : pB,
             keep: keepFirst ? idxs[a] : idxs[b],
             drop: keepFirst ? idxs[b] : idxs[a],
             why,
@@ -12798,8 +12866,16 @@
     (clients || []).forEach((c, i) => {
       if (!c || !clientHasNoChannel(c)) return;
       const phone = String(c.phone || '').replace(/[^0-9]/g, '');
-      out.push({ index: i, name: c.name || '—', phone: c.phone || '', hasPhone: phone.length >= 9,
-                 hasEmail: !!String(c.email || '').trim() });
+      /* 146: "לחני פישר מסומן SMS" (איילת, 22.10) — נכון, בכרטיס השני שלה. לחני
+       * שני כרטיסים: הישן מההסבה (בלי אופן תקשורת) והאמיתי (SMS). כרטיס כזה
+       * מסומן ככפול, ולא מסמנים לו אוטומטית — את הכפולים מאחדים. */
+      const nm = String(c.name || '').trim();
+      const twin = nm ? (clients || []).find(o => o && o !== c && String(o.name || '').trim() === nm && !clientHasNoChannel(o)) : null;
+      const twinCh = twin ? lastChannelsForClient(twin) : [];
+      out.push({ index: i, name: c.name || '—', phone: c.phone || '', hasPhone: phone.length >= 9 && !twin,
+                 hasEmail: !!String(c.email || '').trim(),
+                 twinNote: twin ? ('כרטיס כפול — בכרטיס השני שלה (' + (twin.teudatZehut || twin.phone || '') + ') מסומן ' +
+                   twinCh.map(x => x === 'sms' ? 'SMS' : x === 'call' ? 'שיחה' : x).join(' + ') + '. כדאי לאחד את הכרטיסים.') : '' });
     });
     return out;
   }
@@ -12817,15 +12893,16 @@
       return;
     }
     const fixable = noChannelPlan.filter(r => r.hasPhone);
-    const unfixable = noChannelPlan.filter(r => !r.hasPhone);
+    const unfixable = noChannelPlan.filter(r => !r.hasPhone && !r.twinNote);
     listEl.innerHTML =
       '<div style="font-size:13.5px; font-weight:700; margin-bottom:10px;">נמצאו ' + noChannelPlan.length +
       ' לקוחות בלי אופן תקשורת.' + (unfixable.length ? ' מתוכן ' + unfixable.length + ' גם בלי מספר טלפון תקין — אותן אי אפשר לסמן אוטומטית.' : '') + '</div>' +
       noChannelPlan.slice(0, 60).map(r =>
-        '<div style="display:flex; gap:10px; align-items:center; padding:7px 10px; border:1px solid rgba(var(--panel-line-rgb),0.2); border-radius:9px; margin-bottom:6px; font-size:13px;">' +
+        '<div style="display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center; padding:7px 10px; border:1px solid rgba(var(--panel-line-rgb),0.2); border-radius:9px; margin-bottom:6px; font-size:13px;">' +
           '<span style="flex:1; min-width:0;">' + (r.name || '—') + '</span>' +
           '<span style="color:var(--panel-text-dim);">' + (r.phone || 'אין טלפון') + '</span>' +
-          (r.hasPhone ? '' : '<span style="color:var(--wine); font-size:12px;">צריך טלפון</span>') +
+          (r.twinNote ? '<span style="color:var(--panel-text-dim); font-size:12px; flex-basis:100%;">' + r.twinNote + '</span>'
+            : (r.hasPhone ? '' : '<span style="color:var(--wine); font-size:12px;">צריך טלפון</span>')) +
         '</div>').join('') +
       (noChannelPlan.length > 60 ? '<div style="font-size:12.5px; color:var(--panel-text-dim); padding:6px 2px;">(מוצגות 60 הראשונות מתוך ' + noChannelPlan.length + ')</div>' : '');
     if (actions) actions.style.display = fixable.length ? 'flex' : 'none';
@@ -12910,7 +12987,17 @@
   function mergeTwoClients(keep, drop){
     if (!keep || !drop || keep === drop) return;
     const dropTz = String(drop.teudatZehut || '');
-    const keepTz = String(keep.teudatZehut || '');
+    const keepTzOrig = String(keep.teudatZehut || '');
+    // 146: הת"ז שתישאר בסוף — האמיתית מבין השתיים. כל התורים/הבקשות של שני
+    // הכרטיסים עוברים אליה (עד היום תורי הכרטיס שנשאר נשארו עם המספר הישן).
+    const keepTz = (!isPlausibleTeudatZehut(keepTzOrig) && isPlausibleTeudatZehut(dropTz)) ? dropTz : keepTzOrig;
+    if (keepTzOrig && keepTz !== keepTzOrig){
+      [typeof weekAppointments !== 'undefined' ? weekAppointments : [], typeof waitlist !== 'undefined' ? waitlist : [],
+       typeof specialRequests !== 'undefined' ? specialRequests : [], typeof lateCancellations !== 'undefined' ? lateCancellations : [],
+       typeof cancellationLog !== 'undefined' ? cancellationLog : []].forEach(list => (list || []).forEach(rec => {
+        if (rec && String(rec.teudatZehut || '') === keepTzOrig) rec.teudatZehut = keepTz;
+      }));
+    }
     const dropName = String(drop.name || '');
     const keepName = String(keep.name || '');
     const belongsToDrop = (rec, nameField) => {
@@ -14462,8 +14549,10 @@
           date: match.date,
           time: match.time,
           dur: duration,
-          client: req.name || 'לקוחה',
-          teudatZehut: req.teudatZehut || null,
+          // 146: הזהות מהכרטיס, לא מהבקשה (בבקשה של יפי "ת"ז" = מספר הטלפון שלה,
+          // והתור לא הופיע לה ב"התורים שלי")
+          client: (bookingCardOf(req) && bookingCardOf(req).name) || req.name || 'לקוחה',
+          teudatZehut: (bookingCardOf(req) && bookingCardOf(req).teudatZehut) || req.teudatZehut || null,
           service: combinedServiceName,
           services: svcList,
           price: totalPrice,
@@ -14535,7 +14624,7 @@
     floorMin: 30,        // מתחת לזה לא מציעים כלל — אף אחת לא תספיק
     broadcastHours: 3,   // מתחת לזה מציעים לכולן יחד; מעליו אחת בכל פעם
     windowMin: 20,       // כמה זמן השעה שמורה עד שחוזרת להיות פנויה
-    maxDaysAhead: 3,     // מעבר לזה ממשיכים לשבץ אוטומטית כמו קודם
+    maxDaysAhead: 3,     // 146: לא בשימוש עוד — מציעים בכל מרחק, ולא קובעים בלי אישור הלקוחה
     quietFrom: 23,       // 142: מ-23:00 ועד quietTo לא שולחים הצעות (שעון ישראל)
     quietTo: 8,
   };
@@ -14578,8 +14667,13 @@
     const norm = s => String(s || '').trim();
     const apptKey = ((Array.isArray(appt.services) && appt.services.length) ? appt.services.map(s => norm(s && s.name)) : norm(appt.service).split(' + '))
       .filter(Boolean).sort().join('|');
+    // 146: יש שתי לקוחות בשם יפי וולס — שם לבד רק כשהוא ייחודי; אחרת לפי ת"ז או טלפון
+    const dig = s => String(s || '').replace(/\D/g, '');
+    const apptCard = appt.teudatZehut ? (clients || []).find(c => c && String(c.teudatZehut || '') === String(appt.teudatZehut)) : null;
+    const nameTwins = (clients || []).filter(c => c && norm(c.name) === norm(appt.client)).length > 1;
     const sameClient = r => (appt.teudatZehut && r.teudatZehut && String(r.teudatZehut) === String(appt.teudatZehut))
-      || (!!appt.client && norm(r.name) === norm(appt.client));
+      || (!!apptCard && !!dig(r.phone) && dig(r.phone) === dig(apptCard.phone))
+      || (!nameTwins && !!appt.client && norm(r.name) === norm(appt.client));
     const matched = { matchedDate: appt.date, matchedTime: appt.time, matchedStaff: appt.staff, matchedBy: 'booking', matchedApptId: appt.id || null };
     const ids = [];
     (specialRequests || []).forEach(r => {
@@ -14817,8 +14911,7 @@
     const now = new Date();
     const minutesAway = offerMinutesUntil(slot.date, slot.time, now);
     if (minutesAway === null) return null;
-    if (minutesAway > offerSetting('maxDaysAhead') * 24 * 60) return null;
-    if (minutesAway < offerSetting('floorMin')) return null;
+    if (minutesAway < offerSetting('floorMin')) return null;   // 146: בלי גבול עליון — בכל מרחק
     const eligible = eligibleRequestsForSlot(slot, now);
     if (!eligible.length) return null;
     const broadcast = minutesAway <= offerSetting('broadcastHours') * 60;
@@ -15262,15 +15355,16 @@
     const match = tryFindFlexibleSlot(req, function(m, fromMin, toMin){
       const nowA = new Date();
       const awayA = offerMinutesUntil(m.date, m.time, nowA);
-      if (awayA === null || awayA > offerSetting('maxDaysAhead') * 24 * 60) return true;   // רחוק — שיבוץ ישיר כמו קודם
-      if (awayA < offerSetting('floorMin')) return false;
+      if (awayA === null || awayA < offerSetting('floorMin')) return false;
       if (slotIsHeldByOffer(m.date, m.staffIdx, fromMin, fromMin + reqDur, nowA)) return false;
       return flexGapStillOfferable(req, m.date, m.staffIdx, fromMin, toMin);
     });
     if (!match) return false;
     const now = new Date();
     const away = offerMinutesUntil(match.date, match.time, now);
-    if (away !== null && away <= offerSetting('maxDaysAhead') * 24 * 60){
+    // 146: "ברגע שהמערכת מזהה תור שיכול להתאים לבקשה מיוחדת — היא מתחילה להציע
+    // אותו" (איילת, 22.10) — בכל מרחק, לא רק 3 ימים קדימה.
+    if (away !== null){
       if (away < offerSetting('floorMin')) return false;   // אף אחת לא תספיק
       const dur = (req.services || []).reduce(function(a, sv){ return a + (sv.duration || 0); }, 0) || 30;
       const startMin = timeToMinutes(match.time);
@@ -15280,8 +15374,11 @@
         serviceName: (req.services || []).map(function(sv){ return sv.name; }).filter(Boolean).join(' + '),
       });
     }
-    const appt = await bookFlexibleRequest(req, match);
-    return !!appt;
+    /* 146: "לבטל שיקבע אוטומטית — בקשה מיוחדת תמיד צריכה את אישור הלקוחה לפני"
+     * (איילת, 22.10). עד היום שעה רחוקה מ-3 ימים נקבעה לה ישירות, בלי לשאול —
+     * יפי קיבלה "נקבע לך תור" לשעה שלא ביקשה באותו רגע. עכשיו: תמיד הצעה (בכל
+     * מרחק, למעלה), והתור נקבע רק כשהלקוחה מאשרת. (קביעה ידנית של רותי — כמו קודם.) */
+    return false;
   }
   async function recheckAllPendingFlexibleRequests(){
     // רק על נתונים מלאים: בזמן טעינה היומן ריק לרגע, וזה לא אומר שהשעות
@@ -15376,8 +15473,8 @@
         const appt = {
           id: 'appt_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
           day: dayKey, date: match.date, time: match.time, dur: duration,
-          client: w.name || 'לקוחה',
-          teudatZehut: w.teudatZehut || null,
+          client: (bookingCardOf(w) && bookingCardOf(w).name) || w.name || 'לקוחה',   // 146: מהכרטיס
+          teudatZehut: (bookingCardOf(w) && bookingCardOf(w).teudatZehut) || w.teudatZehut || null,
           service: (svc && svc.name) || w.service || 'שירות',
           services: svc ? [{ name: svc.name, duration: svc.duration || 0, price: svc.price || 0 }] : [],
           price: svc ? (svc.price || 0) : 0, staff: match.staffIdx, status: 'pending', note: '',
@@ -15467,14 +15564,14 @@
     const dur = Number((services.find(s => s.name === w.service) || {}).duration) || 30;
     const now = new Date();
     const away = offerMinutesUntil(match.date, match.time, now);
-    if (away !== null && away <= offerSetting('maxDaysAhead') * 24 * 60){
+    if (away !== null){   // 146: בכל מרחק
       if (away < offerSetting('floorMin')) return false;
       const startMin = timeToMinutes(match.time);
       if (slotIsHeldByOffer(match.date, match.staffIdx, startMin, startMin + dur, now)) return false;
       return !!createOfferForFreedSlot({ date: match.date, time: match.time, dur: dur, staff: match.staffIdx, serviceName: w.service || '', freedFrom: 'waitlist' });
     }
-    const appt = await bookWaitlistAutoMatch(w, match);
-    return !!appt;
+    // 146: גם המתנה — לא נקבעת בלי אישור הלקוחה (ר' attemptMatchFlexibleRequest)
+    return false;
   }
   async function recheckAllPendingWaitlist(){
     // 121: אותם תנאים כמו לבקשות הגמישות — רק ביומן של בעלת העסק, על נתונים מלאים.
@@ -15699,6 +15796,23 @@
       '<div style="font-size:12.5px; line-height:1.6; margin-top:4px;">' + lines.join('') +
       (capped ? '<div style="opacity:.8; margin-top:4px;">על שעה שכבר קיבלה עליה 2 הודעות — לא נשלח לה יותר. על שעות אחרות — כן.</div>' : '') + '</div>');
   }
+  /* 146: כרטיס הלקוחה של בקשה/המתנה, לשיבוץ אוטומטי — רק אם יש לו ת"ז אמיתית
+   * (9 ספרות), אחרת נשארים עם מה שבבקשה. */
+  function bookingCardOf(record){
+    try {
+      if (!record) return null;
+      const tz = String(record.teudatZehut || '').trim();
+      const ph = String(record.phone || '').replace(/\D/g, '');
+      const nm = String(record.name || '').trim();
+      const all = (clients || []).filter(Boolean);
+      // לפי ת"ז, אחר כך טלפון; לפי שם — רק כשהשם ייחודי (יש שתי "יפי וולס")
+      const byName = all.filter(c => String(c.name || '').trim() === nm);
+      const c = (tz && all.find(c => String(c.teudatZehut || '').trim() === tz))
+        || (ph && all.find(c => String(c.phone || '').replace(/\D/g, '') === ph))
+        || (byName.length === 1 ? byName[0] : null);
+      return (c && /^\d{9}$/.test(String(c.teudatZehut || ''))) ? c : null;
+    } catch (e) { return null; }
+  }
   function findClientForSpecialRecord(record){
     if (!record) return null;
     const tz = String(record.teudatZehut || '').trim();
@@ -15862,7 +15976,8 @@
               if (held){
                 if (typeof showAdminToast === 'function') showAdminToast('נמצאה שעה (' + formatDateDMY(match.date) + ' ' + match.time + ') — אבל היא כרגע מוצעת ללקוחה אחרת. ננסה שוב כשההצעה תיסגר.');
               } else if (confirm('נמצאה שעה פנויה שמתאימה לבקשה: ' + formatDateDMY(match.date) + ' בשעה ' + match.time + who + '.\n\n'
-                  + 'אי אפשר לשלוח ל' + (r.name || 'לקוחה') + ' הצעה לשעה הזו (כבר נשלחה לה הצעה, או שאין לה מייל או SMS).\n\nלקבוע לה את התור ישירות?')){
+                  + 'עכשיו לא יוצאת ל' + (r.name || 'לקוחה') + ' הצעה לשעה הזו (כבר נשלחו לה הצעות עליה, בלילה, או שאין לה מייל או SMS).\n\n'
+                  + 'לקבוע לה את התור ישירות? רק אם דיברת איתה והיא מסכימה — היא תקבל הודעה שנקבע לה תור.')){
                 const appt = await bookFlexibleRequest(r, match);
                 if (typeof showAdminToast === 'function') showAdminToast(appt ? '✓ התור נקבע ל' + (r.name || 'לקוחה') + ' — ' + formatDateDMY(match.date) + ' ' + match.time : 'לא הצלחנו לקבוע — ייתכן שהשעה נתפסה בינתיים. נא לרענן ולנסות שוב.');
                 if (appt){ closeSpecialRequestDetailOverlay(); if (typeof renderWeekCal === 'function') renderWeekCal(); return; }
