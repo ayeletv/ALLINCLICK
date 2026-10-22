@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-22 · 142">
+<meta name="app-build" content="2026-10-22 · 143">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -21,10 +21,10 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://firebasestorage.googleapis.com">
 
-<link rel="preload" as="script" href="firebase/firebase-app-compat.js">
-<link rel="preload" as="script" href="firebase/firebase-firestore-compat.js">
-<link rel="preload" as="script" href="firebase/firebase-auth-compat.js">
-<link rel="preload" as="script" href="firebase/firebase-storage-compat.js">
+<link rel="preload" as="script" href="firebase-app-compat.js">
+<link rel="preload" as="script" href="firebase-firestore-compat.js">
+<link rel="preload" as="script" href="firebase-auth-compat.js">
+<link rel="preload" as="script" href="firebase-storage-compat.js">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&family=Assistant:wght@200;300;400;600;700&family=Secular+One&family=Frank+Ruhl+Libre:wght@300;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
 
 <style>
@@ -55,17 +55,17 @@
      נפילה אוטומטית: אם הקובץ המקומי חסר (לא הועלה, או אתר של עסק אחר) — הקובץ
      נטען מ-gstatic כמו עד היום. document.write עובד כאן כי זה עדיין שלב הניתוח
      של הדף, והסקריפט שנכתב רץ לפני הבא בתור — אותו סדר בדיוק. -->
-<script src="firebase/firebase-app-compat.js"></script>
+<script src="firebase-app-compat.js"></script>
 <script>window.__fbSdkFrom = {};
   window.__fbSdkFrom.app = window.firebase ? 'site' : 'cdn';
   if (!window.firebase) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"><\/script>');</script>
-<script src="firebase/firebase-firestore-compat.js"></script>
+<script src="firebase-firestore-compat.js"></script>
 <script>window.__fbSdkFrom.firestore = (window.firebase && window.firebase.firestore) ? 'site' : 'cdn';
   if (!(window.firebase && window.firebase.firestore)) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"><\/script>');</script>
-<script src="firebase/firebase-auth-compat.js"></script>
+<script src="firebase-auth-compat.js"></script>
 <script>window.__fbSdkFrom.auth = (window.firebase && window.firebase.auth) ? 'site' : 'cdn';
   if (!(window.firebase && window.firebase.auth)) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"><\/script>');</script>
-<script src="firebase/firebase-storage-compat.js"></script>
+<script src="firebase-storage-compat.js"></script>
 <script>window.__fbSdkFrom.storage = (window.firebase && window.firebase.storage) ? 'site' : 'cdn';
   if (!(window.firebase && window.firebase.storage)) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"><\/script>');</script>
 <script>
@@ -4556,7 +4556,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-22 · 142';
+        window.__APP_BUILD = '2026-10-22 · 143';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -14242,7 +14242,29 @@
     if (pref.leadMinutes) parts.push('צריכה ' + flexLeadLabel(req));
     return parts.join(', ');
   }
-  function tryFindFlexibleSlot(req){
+  /* 143: "למה השעה היום בערב לא מקבלת בקשות מיוחדות — יש פנוי ויש ממתינות"
+   * (איילת, 22.10). לטובה התאימו שני חורים: 20:07–20:20 ו-21:05–21:15. על
+   * הראשון היא כבר קיבלה 2 הודעות והסבב שלו נגמר — והחיפוש החזיר תמיד אותו,
+   * ההצעה נפסלה, ולשני לא הגענו אף פעם. מעכשיו: חור שאי אפשר להציע לה —
+   * מדלגים לחור הבא. "אותו חור" = הצעות שחופפות לו (לא רק אותה דקה בדיוק),
+   * כדי ש-20:08 לא תיחשב שעה חדשה אחרי 20:07. */
+  function flexGapStillOfferable(req, dateKey, staffIdx, fromMin, toMin){
+    const ov = (pendingOffers || []).filter(function(o){
+      if (!o || o.date !== dateKey || Number(o.staff) !== Number(staffIdx) || o.status === 'takenByOwner') return false;
+      const s = timeToMinutes(o.time);
+      return s < toMin && s + Number(o.dur || 30) > fromMin;
+    });
+    // סבב שנגמר בתור שנקבע (ובוטל) — לא נחשב; רק מה שאחריו
+    const boundary = ov.reduce(function(b, o){
+      return (o.status === 'claimed' || o.status === 'taken') ? Math.max(b, Date.parse(o.createdAt || '') || 0) : b;
+    }, 0);
+    if (ov.some(function(o){ return o.final && (Date.parse(o.createdAt || '') || 0) > boundary; })) return false;
+    const mine = ov.filter(function(o){
+      return (o.recipients || []).some(function(rec){ return rec && String(rec.requestId) === String(req.id); });
+    }).length;
+    return mine < MAX_MESSAGES_PER_SLOT;
+  }
+  function tryFindFlexibleSlot(req, accept){
     const duration = flexReqDuration(req);
     const cats = flexReqCategories(req);
     if (!cats.length) return null;
@@ -14287,7 +14309,11 @@
             const end = t + duration;
             if (new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, t).getTime() < minStartMs) continue;
             if (busy.every(([bs, be]) => end <= bs || t >= be)){
-              return { date: formatDateKey(d), time: minutesToTimeGlobal(t), staffIdx, dateObj: new Date(d) };
+              const found = { date: formatDateKey(d), time: minutesToTimeGlobal(t), staffIdx, dateObj: new Date(d) };
+              // 143: סוף החור הפנוי — התחלת התפוס הבא, או סוף שעות העבודה
+              const gapEnd = busy.reduce((m, [bs]) => (bs > t && bs < m) ? bs : m, closeMin);
+              if (!accept || accept(found, t, gapEnd)) return found;
+              t = gapEnd - fineStepMinutes;   // לא אפשר להציע את החור הזה — לחור הבא
             }
           }
         }
@@ -15079,7 +15105,17 @@
 
   async function attemptMatchFlexibleRequest(req){
     if (!req || req.mode !== 'flexible' || !requestIsOpen(req)) return false;
-    const match = tryFindFlexibleSlot(req);
+    // 143: חור שאי אפשר להציע לה עכשיו (קרוב מדי, מוחזק בהצעה לאחרת, הסבב שלו
+    // נגמר, או שכבר קיבלה עליו 2 הודעות) — ממשיכים לחור הבא במקום לוותר.
+    const reqDur = (req.services || []).reduce(function(a, sv){ return a + (sv.duration || 0); }, 0) || 30;
+    const match = tryFindFlexibleSlot(req, function(m, fromMin, toMin){
+      const nowA = new Date();
+      const awayA = offerMinutesUntil(m.date, m.time, nowA);
+      if (awayA === null || awayA > offerSetting('maxDaysAhead') * 24 * 60) return true;   // רחוק — שיבוץ ישיר כמו קודם
+      if (awayA < offerSetting('floorMin')) return false;
+      if (slotIsHeldByOffer(m.date, m.staffIdx, fromMin, fromMin + reqDur, nowA)) return false;
+      return flexGapStillOfferable(req, m.date, m.staffIdx, fromMin, toMin);
+    });
     if (!match) return false;
     const now = new Date();
     const away = offerMinutesUntil(match.date, match.time, now);
@@ -15481,6 +15517,36 @@
     if (!by) by = (type === 'waitlist' ? rec.status === 'waiting' : !!rec.kind) ? 'client' : 'salon';
     return { client: 'הלקוחה, באתר', salon: 'הסלון (ביומן)' }[by] || '';
   }
+  /* 143: "שיהיה רשום בבקשות מיוחדות אם נשלח מייל לאותה לקוחה כבר ובאיזו שעה,
+   * שיבינו מה קרה" (איילת, 22.10). כל הצעה לשעה שהתפנתה שהיא נמענת בה = הודעה
+   * (מייל, ו-SMS אם בחרה). לכל אחת: מתי נשלחה, על איזו שעה, ומה קרה איתה. */
+  function sentOffersHistoryHtml(requestId){
+    const id = String(requestId);
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const mine = (pendingOffers || []).filter(o => o && (o.recipients || []).some(rec => rec && String(rec.requestId) === id))
+      .sort((a, b) => (Date.parse(a.createdAt) || 0) - (Date.parse(b.createdAt) || 0));
+    if (!mine.length) return srDetailRow('הודעות שנשלחו', 'עדיין לא נשלחה לה אף הצעה');
+    const when = v => { const t = new Date(v || ''); return isNaN(t.getTime()) ? '' : t.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }) + ' ' + t.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }); };
+    const dm = k => { const p = String(k || '').split('-').map(Number); return p.length === 3 ? p[2] + '/' + p[1] : String(k || ''); };
+    const perSlot = {};
+    const lines = mine.map(o => {
+      const key = o.date + '|' + o.time + '|' + o.staff;
+      perSlot[key] = (perSlot[key] || 0) + 1;
+      const rec = (o.recipients || []).find(x => x && String(x.requestId) === id) || {};
+      const what = rec.status === 'claimed' || (o.status === 'claimed' && o.claimedRequestId === id) ? '✓ אישרה'
+        : rec.status === 'withdrawn' ? 'ביטלה את הבקשה'
+        : rec.status === 'declined' ? 'סירבה'
+        : o.status === 'cancelledByOwner' ? 'ההצעה בוטלה ביומן'
+        : (o.status === 'claimed' || o.status === 'taken' || rec.status === 'missed') ? 'השעה נתפסה'
+        : offerIsLive(o) ? 'ממתינה לתשובה' : 'לא ענתה';
+      return '<div>• ' + esc(when(o.createdAt)) + ' — על ' + esc(dm(o.date)) + ' ב-' + esc(o.time) +
+        (o.final ? ' (הודעה אחרונה לכולן)' : '') + ' — ' + esc(what) + '</div>';
+    });
+    const capped = Object.keys(perSlot).filter(k => perSlot[k] >= MAX_MESSAGES_PER_SLOT).length;
+    return srDetailRow('הודעות שנשלחו', mine.length + (mine.length === 1 ? ' הודעה' : ' הודעות') +
+      '<div style="font-size:12.5px; line-height:1.6; margin-top:4px;">' + lines.join('') +
+      (capped ? '<div style="opacity:.8; margin-top:4px;">על שעה שכבר קיבלה עליה 2 הודעות — לא נשלח לה יותר. על שעות אחרות — כן.</div>' : '') + '</div>');
+  }
   function findClientForSpecialRecord(record){
     if (!record) return null;
     const tz = String(record.teudatZehut || '').trim();
@@ -15529,7 +15595,8 @@
         srDetailRow('מועד הוספה', formatRecordCreatedAt(w.createdAt)) +
         srDetailRow('נוסף על ידי', recordAddedByLabel(w, 'waitlist') || '—') +
         srDetailRow('סטטוס', isMatchedW ? '✓ נמצא תור' : '⏳ ממתין') +
-        (isMatchedW ? srDetailRow('נקבע ל', `${formatDateDMY(w.matchedDate)}, ${w.matchedTime}${(staff[w.matchedStaff] && staff[w.matchedStaff].name) ? ' · ' + staff[w.matchedStaff].name : ''}`) : '');
+        (isMatchedW ? srDetailRow('נקבע ל', `${formatDateDMY(w.matchedDate)}, ${w.matchedTime}${(staff[w.matchedStaff] && staff[w.matchedStaff].name) ? ' · ' + staff[w.matchedStaff].name : ''}`) : '') +
+        sentOffersHistoryHtml(w.id);
       if (!isMatchedW){
         const recheckBtn = document.createElement('button');
         recheckBtn.type = 'button';
@@ -15616,6 +15683,7 @@
     if (r.note) html += srDetailRow('הערה', r.note);
     html += srDetailRow('מועד הוספה', formatRecordCreatedAt(r.createdAt));
     html += srDetailRow('נוסף על ידי', recordAddedByLabel(r, 'request') || '—');
+    html += sentOffersHistoryHtml(r.id);
     cardEl.innerHTML = html;
     if (isFlexible && r.status !== 'matched'){
       const recheckBtn = document.createElement('button');
