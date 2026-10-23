@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-22 · 147">
+<meta name="app-build" content="2026-10-23 · 148">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -55,19 +55,8 @@
      נפילה אוטומטית: אם הקובץ המקומי חסר (לא הועלה, או אתר של עסק אחר) — הקובץ
      נטען מ-gstatic כמו עד היום. document.write עובד כאן כי זה עדיין שלב הניתוח
      של הדף, והסקריפט שנכתב רץ לפני הבא בתור — אותו סדר בדיוק. -->
-<script src="firebase-app-compat.js"></script>
-<script>window.__fbSdkFrom = {};
-  window.__fbSdkFrom.app = window.firebase ? 'site' : 'cdn';
-  if (!window.firebase) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"><\/script>');</script>
-<script src="firebase-firestore-compat.js"></script>
-<script>window.__fbSdkFrom.firestore = (window.firebase && window.firebase.firestore) ? 'site' : 'cdn';
-  if (!(window.firebase && window.firebase.firestore)) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"><\/script>');</script>
-<script src="firebase-auth-compat.js"></script>
-<script>window.__fbSdkFrom.auth = (window.firebase && window.firebase.auth) ? 'site' : 'cdn';
-  if (!(window.firebase && window.firebase.auth)) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"><\/script>');</script>
-<script src="firebase-storage-compat.js"></script>
-<script>window.__fbSdkFrom.storage = (window.firebase && window.firebase.storage) ? 'site' : 'cdn';
-  if (!(window.firebase && window.firebase.storage)) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"><\/script>');</script>
+<!-- 147: הגדרות Firebase, הצבעים והלוגו — לפני קוד Firebase. הם צריכים רק את
+     ההגדרות ו-fetch, ועד היום חיכו ~3 שניות שקוד Firebase (160 ק"ב) יירד. -->
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyDdFyCz3er-cxE0uoa5bGGTxe37cBFA12w",
@@ -240,6 +229,21 @@
     return get('siteTheme/' + encodeURIComponent(biz)).then(paint);
   });
 })();
+</script>
+<script src="firebase-app-compat.js"></script>
+<script>window.__fbSdkFrom = {};
+  window.__fbSdkFrom.app = window.firebase ? 'site' : 'cdn';
+  if (!window.firebase) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"><\/script>');</script>
+<script src="firebase-firestore-compat.js"></script>
+<script>window.__fbSdkFrom.firestore = (window.firebase && window.firebase.firestore) ? 'site' : 'cdn';
+  if (!(window.firebase && window.firebase.firestore)) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"><\/script>');</script>
+<script src="firebase-auth-compat.js"></script>
+<script>window.__fbSdkFrom.auth = (window.firebase && window.firebase.auth) ? 'site' : 'cdn';
+  if (!(window.firebase && window.firebase.auth)) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"><\/script>');</script>
+<script src="firebase-storage-compat.js"></script>
+<script>window.__fbSdkFrom.storage = (window.firebase && window.firebase.storage) ? 'site' : 'cdn';
+  if (!(window.firebase && window.firebase.storage)) document.write('<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"><\/script>');</script>
+<script>
 
   let db, auth, storage;
   let panelRenderCallLog = null;
@@ -3472,9 +3476,23 @@
       }, 2000);
     } catch (e) {}
   };
+  // 147: הצבעים והלוגו כבר צוירו בראש הדף (העותק שבתוך הקובץ, או מהענן) — לא
+  // "לא ידוע". עד היום מבקרת בלי זיכרון במכשיר (גלישה בסתר, או אחרי זמן רב)
+  // קיבלה כאן הסתרה של הכותרת ל-2 שניות ורקע אפור עד סוף הטעינה, אף שהכול
+  // כבר היה מוכן: האתר הופיע בשלבים — מסגרת, אחר כך לוגו ושם, ואחר כך צבעים.
+  var paintedInHead = function(){
+    if (!window.__themeFromCache) return false;
+    try {
+      if (window.__pendingThemeClasses){
+        document.body.className = (document.body.className + ' ' + window.__pendingThemeClasses).trim();
+        window.__pendingThemeClasses = '';
+      }
+    } catch (e) {}
+    return true;
+  };
   try {
     var raw = localStorage.getItem('hbk.theme.v1');
-    if (!raw){ markUnknown(); return; }
+    if (!raw){ if (!paintedInHead()) markUnknown(); return; }
     var t = JSON.parse(raw);
     if (!t || !t.vars){ markUnknown(); return; }
     var root = document.documentElement;
@@ -3512,7 +3530,7 @@
     window.__themeFromCache = true;
     return;
   } catch (e) {}
-  markUnknown();
+  if (!paintedInHead()) markUnknown();
 })();
 </script>
 
@@ -4560,7 +4578,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-22 · 147';
+        window.__APP_BUILD = '2026-10-23 · 148';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -11136,6 +11154,9 @@
         });
       }
     } else {
+      // 147: נתוני העסק עוד לא הגיעו — הלוגו שכבר צויר (מהעותק שבקובץ / מהמכשיר)
+      // נשאר. עד היום הוא נעלם כאן לחצי שנייה, ואיתו השם, וחזר כשהנתונים הגיעו.
+      if (!window.__themeDataKnown && el.dataset.src && el.querySelector('img')) return;
       el.classList.remove('has-logo');
     }
   }
