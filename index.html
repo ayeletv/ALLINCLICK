@@ -8569,6 +8569,8 @@
         const prev = host.querySelector('.cp-archive-block');
         if (prev) prev.remove();
         if (!old.length) return;
+        // 147: "אין עדיין היסטוריית טיפולים" מעל טיפול מהארכיון — מבלבל. מסירים.
+        if (!history.length) host.innerHTML = '';
         const block = document.createElement('div');
         block.className = 'cp-archive-block';
         block.style.cssText = 'margin-top:12px; padding-top:10px; border-top:1px dashed rgba(var(--panel-line-rgb),0.25);';
@@ -11992,16 +11994,43 @@
           <textarea class="visit-note" placeholder="הערה על הטיפול הזה...">${escapeApptText(a.note)}</textarea>
         </div>`;
   }
+  /* 147: ביקורים והיסטוריה כוללים גם את הארכיון. עד היום חני יעקובוביץ הוצגה
+   * "0 ביקורים · אחרון —" ו"אין עדיין היסטוריית טיפולים", כשיש לה טיפול מ-8.10
+   * שכבר עבר לארכיון (הארכיון מעביר תורים שעברו לפני 14 יום). המונה השמור
+   * (c.visits, גם מההסבה) לא יורד — לוקחים את הגדול מבין השניים. */
+  function clientArchivedAppointments(c){
+    if (!c || !archiveCache.loaded) return [];
+    return getClientAppointments(c.name, archiveCache.appointments.filter(a => apptBelongsToClient(a, c)));
+  }
+  function clientVisitsLine(c, liveHistory){
+    const isVisit = a => a && a.date && a.status !== 'cancelled' && a.status !== 'no-show';
+    const past = (liveHistory || []).concat(clientArchivedAppointments(c)).filter(isVisit);
+    const visits = Math.max(Number(c.visits) || 0, past.length);
+    let last = past.reduce((m, a) => (a.date > m ? a.date : m), String(c.lastVisitDate || ''));
+    let days = (c.daysSinceVisit === null || c.daysSinceVisit === undefined) ? null : Number(c.daysSinceVisit);
+    if (last){
+      const p = last.split('-').map(Number);
+      const d = Math.max(0, Math.round((getTodayDateOnly() - new Date(p[0], p[1] - 1, p[2])) / 86400000));
+      if (days === null || d < days) days = d;
+    }
+    return `${visits} ביקורים · אחרון ${formatLastVisit(days)}`;
+  }
+  let __clientsArchiveRequested = false;
   function refreshClientRowBirthdayBadge(row, c){
     if (!row || !c) return;
     const el = row.querySelector('.visits');
     if (!el) return;
     const isBday = typeof isBirthdayToday === 'function' && isBirthdayToday(c.birthday);
-    el.innerHTML = `${c.visits || 0} ביקורים · אחרון ${formatLastVisit(c.daysSinceVisit)}`
+    el.innerHTML = (row.dataset.visitsLine || `${c.visits || 0} ביקורים · אחרון ${formatLastVisit(c.daysSinceVisit)}`)
       + (isBday ? ' <span class="badge" style="background:rgba(var(--gold-rgb),0.2); color:var(--panel-gold); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : '');
   }
   function renderClients(){
     const __rcDiagStart = Array.isArray(clientsRenderCallLog) ? (typeof performance !== 'undefined' ? performance.now() : Date.now()) : null;
+    // 147: הארכיון נטען פעם אחת ברקע, ואז הכרטסת מצוירת שוב עם הביקורים הישנים.
+    if (!archiveCache.loaded && !__clientsArchiveRequested){
+      __clientsArchiveRequested = true;
+      loadArchive().then(() => { if (archiveCache.loaded) renderClients(); });
+    }
     const listEl = document.getElementById('clientList');
     listEl.innerHTML = '';
     const birthdayClients = [];
@@ -12071,6 +12100,9 @@
       const todayAppts = allAppointments.filter(isAppointmentToday);
       const history = allAppointments.filter(isAppointmentHistory);
       const upcoming = allAppointments.filter(a => !isAppointmentHistory(a) && !isAppointmentToday(a));
+      const archived = clientArchivedAppointments(c);
+      const visitsLine = clientVisitsLine(c, history);
+      row.dataset.visitsLine = visitsLine;
       row.innerHTML = `
         <div class="cc-banner">
           <div class="client-avatar">${avatarHtml}</div>
@@ -12109,7 +12141,7 @@
               </div>
             </div>
           </div>
-          <div class="visits">${c.visits || 0} ביקורים · אחרון ${formatLastVisit(c.daysSinceVisit)}${isBday ? ' <span class="badge" style="background:rgba(var(--gold-rgb),0.2); color:var(--panel-gold); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : ''}</div>
+          <div class="visits">${visitsLine}${isBday ? ' <span class="badge" style="background:rgba(var(--gold-rgb),0.2); color:var(--panel-gold); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : ''}</div>
           <textarea class="client-note" disabled placeholder="הערה אישית (העדפות, רגישויות...)">${c.note || ''}</textarea>
           ${todayAppts.length ? `
           <div class="client-today-block" style="margin:10px 0; padding:10px; border:1px solid rgba(var(--gold-rgb),0.35); border-radius:10px; background:rgba(var(--gold-rgb),0.08);">
@@ -12129,13 +12161,18 @@
               </div>`).join('')}
           </div>` : ''}
           <div class="client-action-row">
-            <button class="template-btn small" data-action="history">📋 היסטוריית טיפולים (${history.length})</button>
+            <button class="template-btn small" data-action="history">📋 היסטוריית טיפולים (${history.length + archived.length})</button>
             <button class="template-btn small" data-action="upcoming">📅 תורות עתידיים (${upcoming.length})</button>
             <button class="template-btn small" data-action="book">➕ קביעת תור נוסף</button>
             <button class="template-btn small" data-action="profile">👁 כרטיס מלא</button>
           </div>
           <div class="client-history" data-panel="history" style="display:none;">
-            ${renderClientAppointmentRows(history, { emptyText: 'אין עדיין היסטוריית טיפולים.', paginateAt: 3 })}
+            ${(history.length || !archived.length) ? renderClientAppointmentRows(history, { emptyText: 'אין עדיין היסטוריית טיפולים.', paginateAt: 3 }) : ''}
+            ${archived.length ? `<div class="cp-archive-block" style="margin-top:${history.length ? '12px; padding-top:10px; border-top:1px dashed rgba(var(--panel-line-rgb),0.25)' : '0'};">
+              <div style="font-size:12.5px; color:var(--panel-text-dim); margin-bottom:6px;">טיפולים ישנים (מהארכיון) — ${archived.length}</div>
+              ${archived.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 10).map(a => `<div style="font-size:13px; padding:3px 0;">${formatDateDMY(a.date)} · ${a.time || ''} · ${escapeApptText(a.service || '')}${a.status === 'no-show' ? ' · לא הגיעה' : ''}</div>`).join('')}
+              ${archived.length > 10 ? `<div style="font-size:12px; color:var(--panel-text-dim);">ועוד ${archived.length - 10} — הכול ב"כרטיס מלא".</div>` : ''}
+            </div>` : ''}
           </div>
           <div class="client-history client-upcoming" data-panel="upcoming" style="display:none;">
             ${renderClientAppointmentRows(upcoming, { upcoming: true, emptyText: 'אין תורים עתידיים.' })}
@@ -21559,10 +21596,15 @@
     ['o', 'https://fonts.googleapis.com/css2?family=Heebo'],                     // גופנים
   ];
   let __netCheckRan = false;
+  // 147: בדיקה אחת בדרך בכל רגע. עד היום כל בדיקה הגיעה ליומן פעמיים — גם
+  // מהבדיקה עצמה וגם מ"שליחת מה שנכשל קודם" שרצה באותה שנייה.
+  let __netCheckSending = false;
   function sendNetCheckPending(){
+    if (__netCheckSending) return;
     let ev = null;
     try { ev = JSON.parse(localStorage.getItem(NET_CHECK_PENDING_KEY) || 'null'); } catch (e) { ev = null; }
     if (!ev || typeof callClientApi !== 'function') return;
+    __netCheckSending = true;
     let role = 'customer';
     try { if (isOwnerSession()) role = 'owner'; } catch (e) {}
     const event = Object.assign({ kind: 'net-check', role: role, build: window.__APP_BUILD || '',
@@ -21571,7 +21613,7 @@
       delayMin: Math.max(0, Math.round((Date.now() - (ev.at || Date.now())) / 60000)) }, { code: ev.code, key: ev.key });
     callClientApi('diag', { event: event }).then(function(r){
       if (r && r.ok) { try { localStorage.removeItem(NET_CHECK_PENDING_KEY); } catch (e) {} }
-    }).catch(function(){});
+    }).catch(function(){}).then(function(){ __netCheckSending = false; });
   }
   function silentNetCheck(reason){
     if (__netCheckRan) return;
@@ -22730,6 +22772,10 @@
 
   async function callClientApi(action, payload){
     if (!apiViaQueue && apiViaQueueRemembered() && apiQueueAvailable()) apiViaQueue = true;
+    // 147: שעון ההצעות במכשיר מסונן — מוותרים. הוא לא עובר בגיבוי, הדרך הישירה
+    // חסומה, והשרת מריץ אותו ממילא כל 2 דקות. עד היום כל כניסה כזו נרשמה
+    // בסיכום היומי כ"האתר לא הגיע לשרת · offersTick".
+    if (apiViaQueue && action === 'offersTick') return null;
     if (apiViaQueue && action !== 'offersTick') {
       const body = await callClientApiViaQueue(action, payload);
       if (action !== 'diag') flushApiFailures();
@@ -22752,6 +22798,11 @@
     let timedOut = false;
     const timer = controller ? setTimeout(function(){ timedOut = true; try { controller.abort(); } catch (e) {} }, API_READ_TIMEOUT_MS) : null;
     let body = null;
+    // 147: כישלון בדרך הישירה נרשם רק אם גם הגיבוי לא הציל — אחרת נרשם
+    // "queue-ok" בלבד. עד היום כל לקוחה עם סינון נרשמה פעמיים כתקלה (הכישלון
+    // + ההצלה), גם כשקיבלה תשובה תוך 3 שניות.
+    let directFail = null;
+    const noteDirectFail = () => { if (directFail && action !== 'offersTick') noteApiFailure(action, directFail.code, directFail.ms); };
     try {
       res = await fetch(CLIENT_API_URL, {
         method: 'POST',
@@ -22762,9 +22813,9 @@
       try { body = await res.json(); } catch (e) { body = null; if (timedOut) throw e; }
     } catch (err) {
       const offline = (typeof navigator !== 'undefined' && navigator.onLine === false);
-      noteApiFailure(action, (offline ? 'offline:' : timedOut ? 'timeout:' : 'network:') + (timedOut ? Math.round(API_READ_TIMEOUT_MS / 1000) + 's' : String((err && (err.message || err.name)) || err || '')), Date.now() - started);
+      directFail = { code: (offline ? 'offline:' : timedOut ? 'timeout:' : 'network:') + (timedOut ? Math.round(API_READ_TIMEOUT_MS / 1000) + 's' : String((err && (err.message || err.name)) || err || '')), ms: Date.now() - started };
       // בלי רשת בכלל — גם Firestore לא יעבור; אין טעם לנסות.
-      if (offline) { if (timer) clearTimeout(timer); throw err; }
+      if (offline) { if (timer) clearTimeout(timer); noteDirectFail(); throw err; }
       blockedErr = timedOut ? new Error('השרת לא ענה בזמן') : err;
     }
     if (timer) clearTimeout(timer);
@@ -22776,10 +22827,10 @@
       }
       let ct = '';
       try { ct = String((res.headers && res.headers.get('content-type')) || '').split(';')[0].trim(); } catch (e) {}
-      noteApiFailure(action, 'http-' + res.status + '-' + (ct.indexOf('html') !== -1 ? 'html' : (ct || 'none')), Date.now() - started);
+      directFail = { code: 'http-' + res.status + '-' + (ct.indexOf('html') !== -1 ? 'html' : (ct || 'none')), ms: Date.now() - started };
       blockedErr = new Error('שגיאת תקשורת מול השרת. נא לנסות שוב.');
       // שגיאת שרת — ייתכן שהבקשה בוצעה. לא שולחים אותה שוב.
-      if (res.status >= 500) throw blockedErr;
+      if (res.status >= 500) { noteDirectFail(); throw blockedErr; }
     }
     if (action === 'offersTick') throw blockedErr;
     let qBody;
@@ -22787,6 +22838,7 @@
       qBody = await callClientApiViaQueue(action, payload);
     } catch (qErr) {
       console.error('The Firestore fallback for client-api failed too:', qErr);
+      noteDirectFail();
       noteApiFailure(action, 'queue:' + String((qErr && (qErr.code || qErr.message)) || qErr || ''), Date.now() - started);
       throw blockedErr;
     }
