@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-23 · 148">
+<meta name="app-build" content="2026-10-24 · 149">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -3625,6 +3625,7 @@
       var showName = function(){
         if (nameShown || !window.__cachedBizName || !h || !t) return;
         nameShown = true;
+        window.__heroNameShownAt = Date.now();   // 148: הגלילה לקביעה נספרת מכאן
         t.textContent = window.__cachedBizName;
         h.classList.add('biz-name-visible', 'name-settled');
       };
@@ -4578,7 +4579,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-23 · 148';
+        window.__APP_BUILD = '2026-10-24 · 149';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -10534,6 +10535,12 @@
     const onUserScroll = function(){ userScrolled = true; };
     window.__autoScrollUserScrolledHandler = onUserScroll;
     window.addEventListener('scroll', onUserScroll, { passive: true });
+    // 148: 0.9 השניות נספרות מהרגע שהשם באמת הופיע על המסך. מ-148 השם והלוגו
+    // מופיעים מוקדם (מהעותק שבקובץ), אבל הגלילה נקבעה רק כשהטיפולים הגיעו
+    // ועוד 0.9 שנייה — כלומר שנייה של המתנה מיותרת ("הגלילה נהייתה יותר איטית").
+    // אם השם כבר על המסך 0.9 שנייה — גוללים מיד כשהטיפולים מוכנים.
+    const shownFor = window.__heroNameShownAt ? (Date.now() - window.__heroNameShownAt) : 0;
+    const delay = Math.max(0, 900 - shownFor);
     window.__autoScrollToBookingTimer = setTimeout(function(){
       window.__autoScrollToBookingTimer = null;
       window.removeEventListener('scroll', onUserScroll);
@@ -10542,7 +10549,7 @@
       if (document.body.classList.contains('admin-mode')) return;
       const target = document.querySelector('.switcher');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 900);   // 128: 0.9 שנייה אחרי שהשם מופיע (עד 127 — 2 שניות)
+    }, delay);   // 128: 0.9 שנייה אחרי שהשם מופיע (עד 127 — 2 שניות)
   }
   function revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, name, skipFontWait){
     const alreadyShown = heroBizNameEl.classList.contains('biz-name-visible');
@@ -10572,6 +10579,7 @@
         return;
       }
       heroBizNameEl.classList.add('biz-name-visible');
+      if (!window.__heroNameShownAt) window.__heroNameShownAt = Date.now();
       heroPlatformLineEl.classList.remove('primary');
       requestAnimationFrame(function(){
         requestAnimationFrame(function(){ heroBizNameEl.classList.add('name-settled'); });
@@ -23906,10 +23914,33 @@
     if (data && data.branding) window.__themeDataKnown = true;
     if (typeof applySiteTheme === 'function') applySiteTheme();
   }
+  /* 148: הדף הציבורי דרך השרת — ללקוחות שהרשת שלהן חוסמת את Firestore עצמו
+   * (סיכום יומי 23.10: "חסומות: Firestore", והשרת עונה). עד היום האתר נשאר
+   * אצלן בלי טיפולים ובלי שעות, כלומר בלי אפשרות לקבוע תור — גם ערוץ הגיבוי
+   * עובר דרך Firestore. הקביעה עצמה עוברת ממילא בשרת. */
+  const PUBLIC_VIA_API_KEY = 'hk_public_via_api_until';
+  const PUBLIC_VIA_API_AFTER_MS = 5000;
+  function publicViaApiRemembered(){
+    try { return Number(localStorage.getItem(PUBLIC_VIA_API_KEY) || 0) > Date.now(); } catch (e) { return false; }
+  }
+  function publicViewFromServer(){
+    if (!BIZ_ID) return Promise.resolve(null);
+    return fetch(CLIENT_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'publicView', bizId: BIZ_ID }),
+    }).then(r => r.ok ? r.json() : null)
+      .then(b => (b && b.publicView && typeof b.publicView === 'object') ? b.publicView : null)
+      .catch(() => null);
+  }
+  window.__publicViewFromServer = publicViewFromServer;
   function refreshPublicDataQuietly(){
     if (!runningOnPublicData) return Promise.resolve(false);
     const identified = (weekAppointments || []).filter(a => a && a.teudatZehut);
-    return PUBLIC_DOC.get().then(doc => {
+    const read = window.__publicViaApi
+      ? publicViewFromServer().then(d => ({ exists: !!d, data: () => d }))
+      : PUBLIC_DOC.get();
+    return read.then(doc => {
       const d = doc.exists ? doc.data() : null;
       if (!d || !Array.isArray(d.staff) || !d.staff.length) return false;
       applyPublicData(d);
@@ -23931,7 +23962,40 @@
       new Promise(function(r){ setTimeout(function(){ r(null); }, maxMs || 4000); }),
     ]);
   }
+  /* 148: Firestore והשרת במירוץ. הדרך הרגילה (Firestore) יוצאת מיד; אם היא לא
+   * הביאה נתונים תוך 5 שניות, או נכשלה — הדרך דרך השרת יוצאת במקביל, ומה שמגיע
+   * ראשון מוצג. מכשיר שנזקק לשרת פעם אחת — 30 יום שתי הדרכים יוצאות יחד. */
   function loadPublicData(){
+    return new Promise(resolve => {
+      let settled = false, fsResult = null, apiStarted = false, apiDone = false;
+      const finish = r => { if (!settled) { settled = true; clearTimeout(timer); resolve(r); } };
+      const startApi = () => {
+        if (apiStarted) return;
+        apiStarted = true;
+        publicViewFromServer().then(pv => {
+          apiDone = true;
+          if (settled) return;
+          if (pv && Array.isArray(pv.staff) && pv.staff.length && !window.__publicDataApplied){
+            window.__publicViaApi = true;
+            applyPublicData(pv);
+            try { localStorage.setItem(PUBLIC_VIA_API_KEY, String(Date.now() + 30 * 24 * 3600 * 1000)); } catch (e) {}
+            try { if (typeof reportDiag === 'function') reportDiag('public-via-api', { key: fsResult || 'slow' }); } catch (e) {}
+            finish('ok');
+          } else if (fsResult !== null) finish(fsResult);
+        });
+      };
+      const timer = setTimeout(startApi, publicViaApiRemembered() ? 0 : PUBLIC_VIA_API_AFTER_MS);
+      loadPublicDataFromFirestore().then(r => {
+        if (r === 'ok' || r === 'empty' || window.__publicViaApi) { finish(window.__publicViaApi ? 'ok' : r); return; }
+        fsResult = r;
+        if (!apiStarted) startApi(); else if (apiDone) finish(r);
+      });
+    });
+  }
+  function loadPublicDataFromFirestore(){
+    // השרת כבר הביא את הנתונים — לא לדרוס אותם בתשובה מאוחרת (ייתכן שהלקוחה
+    // כבר באמצע קביעה, והתורים שזוהו לה נוספו לרשימה).
+    const applyPublicDataIfFirst = d => { if (!window.__publicViaApi) applyPublicData(d); };
     const pre = (typeof window !== 'undefined') ? window.__publicViewPrefetch : null;
     const firstTry = pre ? Promise.resolve(pre).then(function(p){
       if (!p || !p.data) return null;
@@ -23950,10 +24014,10 @@
       const data = doc.exists ? doc.data() : null;
       if (!data) return 'empty';
       if (!Array.isArray(data.staff) || !data.staff.length){
-        applyPublicData(data);
+        applyPublicDataIfFirst(data);
         return 'empty';
       }
-      applyPublicData(data);
+      applyPublicDataIfFirst(data);
       return 'ok';
     }).catch(err => {
       const code = String((err && err.code) || '').toLowerCase();
@@ -23964,7 +24028,7 @@
           return getDocWithRetry(PUBLIC_DOC, 'publicView').then(doc2 => {
             const d2 = doc2.exists ? doc2.data() : null;
             if (!d2) return 'empty';
-            applyPublicData(d2);
+            applyPublicDataIfFirst(d2);
             return (!Array.isArray(d2.staff) || !d2.staff.length) ? 'empty' : 'ok';
           }).catch(function(err2){
             console.error('Reading the public document failed:', err2);
