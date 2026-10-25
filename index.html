@@ -21630,6 +21630,14 @@
       if (BIZ_ID_PATTERN.test(fromQuery)) return fromQuery;
       return 'default';
     }
+    /* 152: הכתובת הזמנית של Netlify (משהו.netlify.app) — לבדיקת אתר חדש לפני
+     * שמחברים לו דומיין: ?biz=<מזהה העסק>. בלי ?biz — כמו כל כתובת לא מוכרת
+     * (מיפוי הדומיין בענן), ולא "default": אחרת אתר חדש היה מציג את רותי. */
+    if (/\.netlify\.app$/.test(host)){
+      let fromQueryN = '';
+      try { fromQueryN = new URLSearchParams(search || '').get('biz') || ''; } catch (e) {}
+      if (BIZ_ID_PATTERN.test(fromQueryN)) return fromQueryN;
+    }
     return '';
   }
   function resolveBizId(){
@@ -22751,18 +22759,54 @@
     PUBLIC_DOC = db.collection('publicView').doc(BIZ_ID || '__unconfigured__');
     window.__BIZ_ID = BIZ_ID;
   }
+  /* 152: מיפוי הדומיין לעסק — מ-Firestore, ובמקביל (אחרי 4 שניות, או מיד כשהוא
+   * נכשל) גם מהשרת, שמחזיר יחד איתו את הדף הציבורי. עסק ב-Netlify (דומיין
+   * שאינו כתוב בקובץ), אצל לקוחה ש-Firestore חסום אצלה, נשאר עד היום עם "האתר
+   * הזה אינו מחובר לעסק". אצל רותי לא רץ בכלל — הדומיין שלה כתוב בקובץ. */
   function resolveBizIdFromCloud(){
     const host = bizUnknownHost;
     if (!host) return Promise.resolve(false);
-    return db.collection('domains').doc(host).get().then(doc => {
-      const mapped = (doc.exists && doc.data()) ? String(doc.data().bizId || '') : '';
-      if (!BIZ_ID_PATTERN.test(mapped)) return false;
-      BIZ_ID = mapped;
-      pointDocsAtBusiness();
-      return true;
-    }).catch(err => {
-      console.error('Reading the domain mapping failed:', err);
-      return false;
+    return new Promise(resolve => {
+      let settled = false, fsFailed = false, apiStarted = false, apiDone = false;
+      const done = ok => { if (!settled){ settled = true; clearTimeout(timer); resolve(ok); } };
+      const fromServer = () => {
+        if (apiStarted) return;
+        apiStarted = true;
+        fetch(CLIENT_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'publicView', host: host }) })
+          .then(r => r.ok ? r.json() : null).catch(() => null)
+          .then(b => {
+            apiDone = true;
+            if (settled) return;
+            if (b && BIZ_ID_PATTERN.test(String(b.bizId || '')) && b.publicView){
+              BIZ_ID = String(b.bizId);
+              pointDocsAtBusiness();
+              // הדף הציבורי כבר כאן — loadPublicData ישתמש בו מיד; רענונים — דרך השרת
+              window.__publicRefreshViaApi = true;
+              try { localStorage.setItem('hk_public_via_api_until', String(Date.now() + 30 * 24 * 3600 * 1000)); } catch (e) {}
+              window.__publicViewPrefetch = Promise.resolve({ bizId: BIZ_ID, data: b.publicView, at: Date.now() });
+              try { if (typeof reportDiag === 'function') reportDiag('public-via-api', { key: 'domain' }); } catch (e) {}
+              done(true);
+            } else if (fsFailed) done(false);
+          });
+      };
+      const timer = setTimeout(fromServer, 4000);
+      db.collection('domains').doc(host).get().then(doc => {
+        const mapped = (doc.exists && doc.data()) ? String(doc.data().bizId || '') : '';
+        if (!BIZ_ID_PATTERN.test(mapped)){
+          // הדומיין באמת לא ממופה (Firestore ענה). אם השרת כבר נשאל — מחכים לו.
+          if (apiStarted && !apiDone) fsFailed = true; else done(false);
+          return;
+        }
+        if (settled) return;
+        BIZ_ID = mapped;
+        pointDocsAtBusiness();
+        done(true);
+      }).catch(err => {
+        console.error('Reading the domain mapping failed:', err);
+        fsFailed = true;
+        if (!apiStarted) fromServer(); else if (apiDone) done(false);
+      });
     });
   }
   window.__resolveBizIdFromCloud = resolveBizIdFromCloud;
@@ -24094,7 +24138,7 @@
   function refreshPublicDataQuietly(){
     if (!runningOnPublicData) return Promise.resolve(false);
     const identified = (weekAppointments || []).filter(a => a && a.teudatZehut);
-    const read = window.__publicViaApi
+    const read = (window.__publicViaApi || window.__publicRefreshViaApi)
       ? publicViewFromServer().then(d => ({ exists: !!d, data: () => d }))
       : PUBLIC_DOC.get();
     return read.then(doc => {
