@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-25 · 152">
+<meta name="app-build" content="2026-10-25 · 153">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -68,6 +68,7 @@
   };
   window.__BIZ_BY_DOMAIN = {
     'rutizolberg.com': 'default',
+    'bdika.hakolbeklik.com': 'slon-bdika',
   };
   // 128: קישור ל"התורים שלי" / להצעה (מ-SMS או מייל) — בלי מסך הלוגו ובלי גלילה:
   // הדף נפתח ישר במקום של התורים. (בקשה של איילת, 19.10: "שיביא אותי כבר לאיפה
@@ -75,6 +76,9 @@
   // 129: בלי להסתיר את מסך הלוגו (ב-128 הוא הוסתר — ואיתו גם הרקע והצבעים של
   // האתר, והדף נראה לבן ו"לא חלק מהאתר"). עכשיו קופצים מיד — בלי אנימציה —
   // לאזור הקביעה, ואחר כך לתורים עצמם כשהם מגיעים.
+  // 152: הכתובת שבה נכנסה (לפני שהדף מנקה אותה) — כדי לדעת אם אישור תור הגיע
+  // מקישור בהודעה (src=m מייל, src=s SMS) או מכניסה רגילה לאתר.
+  try { window.__landingSearch = String(location.search || ''); } catch (e) {}
   try {
     if (/[?&](lookupPhone|lookupId|offer)=/.test(location.search)) {
       document.documentElement.classList.add('hk-deeplink');
@@ -92,7 +96,7 @@
   // ראשון, בלי לחכות לשרת. בביקור ראשון בטלפון: חיבור ראשון לשרת לקח 4 שניות,
   // והלוגו המלא עוד ~2 שניות. מתחלף בנתונים האמיתיים ברגע שהם מגיעים.
   window.__THEME_BY_DOMAIN = {
-    'rutizolberg.com': "{\"vars\":{\"--th-primary\":\"#f2a396\",\"--th-primary-deep\":\"#ea6b56\",\"--th-secondary\":\"#e8cc3b\",\"--th-secondary-soft\":\"#efdb76\",\"--th-c1\":\"#e79688\",\"--th-c1-lt\":\"#f2cbc5\",\"--th-c2\":\"#e6d88f\",\"--th-c2-lt\":\"#f0eac6\",\"--th-c3\":\"#e5b98f\",\"--th-c3-lt\":\"#f1dbc5\",\"--th-c1-pale\":\"#f6e9e7\",\"--th-c2-pale\":\"#f4f2e6\",\"--th-card\":\"#f8ecea\",\"--th-card-2\":\"#f5f4ed\",\"--th-panel-bg\":\"#f8e3e0\",\"--th-panel-card-bg\":\"#fbf1f0\",\"--th-panel-gold\":\"#77660e\",\"--th-panel-line-rgb\":\"242,163,150\",\"--th-font\":\"\u0027Assistant\u0027\",\"--th-primary-rgb\":\"242,163,150\",\"--th-primary-deep-rgb\":\"234,107,86\",\"--th-secondary-rgb\":\"232,204,59\",\"--th-secondary-soft-rgb\":\"239,219,118\",\"--th-on-primary\":\"#241B1E\",\"--th-on-secondary\":\"#241B1E\",\"--th-action\":\"#ea6b56\",\"--th-action-press\":\"#e5472d\",\"--th-action-rgb\":\"234,107,86\",\"--th-on-action\":\"#241B1E\",\"--th-ink-brand\":\"#d5351a\"},\"classes\":\"th-on th-arc\",\"name\":\"רותי זולברג\",\"phone\":\"0583244485\",\"wa\":\"0583244485\",\"mail\":\"rutcosmetic@gmail.com‏\",\"hasContact\":true,\"theme\":{\"palette\":[\"#d1aa29\",\"#d1b529\",\"#867b47\",\"#dfc12a\",\"#eacf48\",\"#e1c747\",\"#e6d47a\",\"#ea9c92\",\"#f4aea4\",\"#af9e4b\",\"#715f04\",\"#917903\",\"#f5d847\",\"#ffffff\",\"#e5eda6\",\"#efe4af\",\"#ede5c0\",\"#e8e2ca\",\"#f2efde\",\"#f8f8f7\",\"#af9c60\",\"#ee8273\"],\"logoFillV\":2,\"secondary\":\"#e8cc3b\",\"font\":\"assistant\",\"tone\":\"mid\",\"primary\":\"#f2a396\",\"logoColors\":[\"#f69284\"],\"logoFill\":true,\"logoZoom\":1,\"style\":\"arc\"},\"bizId\":\"default\",\"logo\":\"https://firebasestorage.googleapis.com/v0/b/allinklik.firebasestorage.app/o/public%2Fbranding%2F1792056494465-en5nbn8r.png?alt=media\u0026token=31945bf3-c300-43ad-9761-4ed467097a09\",\"logoFill\":true,\"logoZoom\":1,\"logoThumb\":\"data:image/webp;base64,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\"}",
+    'rutizolberg.com': "{\"vars\":{\"--th-primary\":\"#f2a396\",\"--th-primary-deep\":\"#ea6b56\",\"--th-secondary\":\"#e8cc3b\",\"--th-secondary-soft\":\"#efdb76\",\"--th-c1\":\"#e79688\",\"--th-c1-lt\":\"#f2cbc5\",\"--th-c2\":\"#e6d88f\",\"--th-c2-lt\":\"#f0eac6\",\"--th-c3\":\"#e5b98f\",\"--th-c3-lt\":\"#f1dbc5\",\"--th-c1-pale\":\"#f6e9e7\",\"--th-c2-pale\":\"#f4f2e6\",\"--th-card\":\"#f8ecea\",\"--th-card-2\":\"#f5f4ed\",\"--th-panel-bg\":\"#f8e3e0\",\"--th-panel-card-bg\":\"#fbf1f0\",\"--th-panel-gold\":\"#77660e\",\"--th-panel-line-rgb\":\"242,163,150\",\"--th-font\":\"'Assistant'\",\"--th-primary-rgb\":\"242,163,150\",\"--th-primary-deep-rgb\":\"234,107,86\",\"--th-secondary-rgb\":\"232,204,59\",\"--th-secondary-soft-rgb\":\"239,219,118\",\"--th-on-primary\":\"#241B1E\",\"--th-on-secondary\":\"#241B1E\",\"--th-action\":\"#ea6b56\",\"--th-action-press\":\"#e5472d\",\"--th-action-rgb\":\"234,107,86\",\"--th-on-action\":\"#241B1E\",\"--th-ink-brand\":\"#d5351a\"},\"classes\":\"th-on th-arc\",\"name\":\"רותי זולברג\",\"phone\":\"0583244485\",\"wa\":\"0583244485\",\"mail\":\"rutcosmetic@gmail.com‏\",\"hasContact\":true,\"theme\":{\"logoFillV\":2,\"logoZoom\":1,\"font\":\"assistant\",\"logoFill\":true,\"style\":\"arc\",\"palette\":[\"#d1aa29\",\"#d1b529\",\"#867b47\",\"#dfc12a\",\"#eacf48\",\"#e1c747\",\"#e6d47a\",\"#ea9c92\",\"#f4aea4\",\"#af9e4b\",\"#715f04\",\"#917903\",\"#f5d847\",\"#ffffff\",\"#e5eda6\",\"#efe4af\",\"#ede5c0\",\"#e8e2ca\",\"#f2efde\",\"#f8f8f7\",\"#af9c60\",\"#ee8273\"],\"tone\":\"mid\",\"secondary\":\"#e8cc3b\",\"primary\":\"#f2a396\",\"logoColors\":[\"#f69284\"]},\"bizId\":\"default\",\"logo\":\"https://firebasestorage.googleapis.com/v0/b/allinklik.firebasestorage.app/o/public%2Fbranding%2F1792056494465-en5nbn8r.png?alt=media&token=31945bf3-c300-43ad-9761-4ed467097a09\",\"logoFill\":true,\"logoZoom\":1,\"logoThumb\":\"data:image/webp;base64,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\"}",
   };
 (function(){
   try {
@@ -4601,7 +4605,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-25 · 152';
+        window.__APP_BUILD = '2026-10-25 · 153';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5421,8 +5425,8 @@
         <div style="font-size:11.5px; color:var(--panel-text-dim); margin-top:4px;">מזהה פנימי שלא ניתן לשנות אחר כך. מוצע אוטומטית מהשם.</div>
       </div>
       <div>
-        <div class="label" style="margin-bottom:5px;">דומיין (אפשר להשאיר ריק ולהוסיף אחר כך)</div>
-        <input type="text" id="nbDomain" class="field" placeholder="salonshira.co.il">
+        <div class="label" style="margin-bottom:5px;">כתובת האתר של העסק — הדומיין שלו, או הכתובת ב-Netlify<span class="help-hint" onclick="toggleHelpHint(this, event)">?<span class="help-tip">הכתובת שבה האתר של העסק יושב, בדיוק כמו שהלקוחות יקלידו אותה — למשל salonshira.co.il, או salon-shira.netlify.app. כך האתר יודע של איזה עסק הוא, והקישורים ב-SMS ובמיילים יפנו לשם. אפשר להשאיר ריק ולהוסיף אחר כך ב"🌐 חיבור דומיין לעסק קיים" — אבל עד אז האתר של העסק לא ייפתח ללקוחות.</span></span></div>
+        <input type="text" id="nbDomain" class="field" placeholder="salonshira.co.il / salon-shira.netlify.app">
       </div>
       <div>
         <div class="label" style="margin-bottom:5px;">מייל בעלת העסק</div>
@@ -7385,6 +7389,81 @@
     const match = clients.find(c => c.teudatZehut === teudatZehut);
     return match && match.email ? match.email : '';
   }
+  /* 153: "להעביר או להשאיר" גם לרותי. כשהיא קובעת ללקוחה מרשימת ההמתנה או
+   * מבקשה מיוחדת, ולקוחה כבר יש תור עתידי לאותו טיפול בדיוק — שואלים קודם.
+   * (המקרה מ-25.10: תור בבוקר, רשימת המתנה לערב, ונקבעו לה שני תורים.)
+   * אותו כלל כמו אצל הלקוחה (שרת, sameTreatmentApptNear): באותו שבוע / שבוע
+   * צמוד — קודם "להעביר"; רחוק יותר — "שימי לב", וברירת המחדל להשאיר. */
+  function apptTreatmentKey(names){
+    return (names || []).map(s => String(s || '').trim()).filter(Boolean).sort().join('|');
+  }
+  function salonSameTreatmentAppt(person, serviceNames, newDate, newTime){
+    if (!person) return null;
+    const want = apptTreatmentKey(serviceNames);
+    if (!want) return null;
+    const card = (typeof bookingCardOf === 'function' && bookingCardOf(person)) || null;
+    const tz = String((card && card.teudatZehut) || person.teudatZehut || '').trim();
+    const name = String((card && card.name) || person.name || person.client || '').trim();
+    const today = formatDateKey(new Date());
+    const nowMin = (typeof getNowMinutesReal === 'function') ? getNowMinutesReal() : 0;
+    const cands = (weekAppointments || []).filter(a => a && a.date && a.status !== 'cancelled'
+      && (a.date > today || (a.date === today && timeToMinutes(a.time) > nowMin))
+      && !(a.date === newDate && a.time === newTime)
+      && (tz ? String(a.teudatZehut || '') === tz : (name && String(a.client || '').trim() === name))
+      && apptTreatmentKey(Array.isArray(a.services) && a.services.length ? a.services.map(s => s && s.name) : String(a.service || '').split(' + ')) === want);
+    if (!cands.length) return null;
+    const ms = d => new Date(d + 'T12:00:00').getTime();
+    cands.sort((x, y) => Math.abs(ms(x.date) - ms(newDate)) - Math.abs(ms(y.date) - ms(newDate)));
+    return cands[0];
+  }
+  function weekIndexOfKey(dateKey){
+    const d = new Date(dateKey + 'T12:00:00');
+    return Math.round((d.getTime() - d.getDay() * 86400000) / (7 * 86400000));
+  }
+  /** מחזיר 'move' / 'keep', או null אם רותי ויתרה על הקביעה. */
+  function askSalonMoveOrKeep(ex, name, newDate, newTime){
+    const who = String(name || ex.client || 'ללקוחה');
+    const exLine = (ex.service ? 'ל' + ex.service + ' ' : '') + 'ב-' + formatDateDMY(ex.date) + ' בשעה ' + ex.time;
+    const newLine = formatDateDMY(newDate) + ' בשעה ' + newTime;
+    const near = Math.abs(weekIndexOfKey(ex.date) - weekIndexOfKey(newDate)) <= 1;
+    if (near){
+      if (confirm('ל' + who + ' כבר יש תור ' + exLine + '.\n\nלהעביר אותו לשעה החדשה (' + newLine + ')?\n'
+          + 'התור הקודם יימחק מהיומן (בלי הודעת ביטול ללקוחה), והשעה שלו תוצע לממתינות.\n\n'
+          + 'אישור = להעביר     ביטול = אפשרויות נוספות')) return 'move';
+      if (confirm('לקבוע את השעה החדשה בנוסף, ולהשאיר ל' + who + ' גם את התור ' + exLine + '?\n\n'
+          + 'אישור = שני תורים     ביטול = לא לקבוע עכשיו')) return 'keep';
+      return null;
+    }
+    if (confirm('שימי לב: ל' + who + ' כבר יש תור ' + exLine + '.\n\n'
+        + 'לקבוע את השעה החדשה (' + newLine + ') בנוסף, ולהשאיר גם את התור ההוא?\n\n'
+        + 'אישור = שני תורים     ביטול = אפשרויות נוספות')) return 'keep';
+    if (confirm('להעביר את התור ' + exLine + ' לשעה החדשה?\n'
+        + 'התור ההוא יימחק מהיומן (בלי הודעת ביטול ללקוחה), והשעה שלו תוצע לממתינות.\n\n'
+        + 'אישור = להעביר     ביטול = לא לקבוע עכשיו')) return 'move';
+    return null;
+  }
+  /** העברה: התור הקודם יוצא מהיומן, נרשם בביטולים ("הועבר"), והשעה שלו מוצעת.
+   *  השמירה עצמה — אצל מי שקרא (יחד עם התור החדש). */
+  function salonMoveOldAppointment(old, newAppt){
+    if (!old) return;
+    let matches = [];
+    try { matches = getWaitlistMatchesForAppointment(old); } catch (e) {}
+    try {
+      logCancellation(old, 'owner');
+      const last = cancellationLog[cancellationLog.length - 1];
+      if (last) last.movedTo = { date: newAppt.date, time: newAppt.time };
+    } catch (e) {}
+    const i = weekAppointments.findIndex(a => a && a.id === old.id);
+    if (i !== -1) weekAppointments.splice(i, 1);
+    if (!newAppt.note) newAppt.note = 'הועבר מ-' + formatDateDMY(old.date) + ' ' + old.time;
+    setTimeout(async function(){
+      try {
+        if (typeof recheckAllPendingFlexibleRequests === 'function') await recheckAllPendingFlexibleRequests();
+        const fresh = filterStillPendingWaitlistMatches(matches);
+        if (fresh.length) renderWaitlistMatchAlert(fresh, old);
+      } catch (e) {}
+    }, 1500);
+  }
   function bookWaitlistMatch(w, appt){
     const wlmBlockStatus = getLateCancelStatusForIdentity({ teudatZehut: w && w.teudatZehut, name: w && w.name });
     if (wlmBlockStatus.blocked){
@@ -7405,6 +7484,14 @@
       showAdminToast('השעה הזו כבר נתפסה בינתיים — אי אפשר לקבוע אליה תור נוסף.');
       return false;
     }
+    // 153: כבר יש לה תור לאותו טיפול — להעביר או להשאיר?
+    const wlmExisting = salonSameTreatmentAppt(w, [appt.service], appt.date, appt.time);
+    let wlmMoveFrom = null;
+    if (wlmExisting){
+      const pick = askSalonMoveOrKeep(wlmExisting, w && w.name, appt.date, appt.time);
+      if (!pick){ showAdminToast('התור לא נקבע.'); return false; }
+      if (pick === 'move') wlmMoveFrom = wlmExisting;
+    }
     const newAppt = {
       id: 'appt_' + Date.now() + '_' + Math.floor(Math.random()*10000),
       day: appt.day,
@@ -7422,6 +7509,7 @@
       reminderChannels: channelsForNewAppointment(w.reminderChannels, w)
     };
     weekAppointments.push(newAppt);
+    if (wlmMoveFrom) salonMoveOldAppointment(wlmMoveFrom, newAppt);   // 153
     const existingByIdOrPhone = w.teudatZehut
       ? clients.find(c => c.teudatZehut === w.teudatZehut) || (w.phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === (w.phone || '').replace(/[^0-9]/g, '')) : null)
       : (w.phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === (w.phone || '').replace(/[^0-9]/g, '')) : null);
@@ -8049,9 +8137,11 @@
     if (confirmed){
       appt.confirmedByClient = true;
       appt.confirmedAt = new Date().toISOString();
+      appt.confirmedVia = 'salon';   // 152: סומן ע"י הסלון ביומן
     } else {
       delete appt.confirmedByClient;
       delete appt.confirmedAt;
+      delete appt.confirmedVia;
     }
     if (typeof saveState === 'function') saveState();
     refreshApptDetailConfirmRow();
@@ -8060,6 +8150,14 @@
     if (typeof renderWeekCal === 'function') renderWeekCal();
     if (typeof renderClients === 'function') renderClients();
     if (typeof renderOverviewDayView === 'function') renderOverviewDayView();
+  }
+  /* 152: איך התור אושר — מוצג בפרטי התור. confirmedVia נרשם מ-26.10; אישור בלי
+   * סימון אחרי התאריך הזה הגיע מהשיחה הטלפונית (מערכת התזכורות). */
+  function confirmedViaLabel(appt){
+    if (!appt || !appt.confirmedByClient) return '';
+    const v = appt.confirmedVia || (String(appt.confirmedAt || '').slice(0, 10) >= '2026-10-26' ? 'call' : '');
+    return { call: 'בשיחת הטלפון', sms: 'ע"י הלקוחה, מהקישור ב-SMS', email: 'ע"י הלקוחה, מהקישור במייל',
+      link: 'ע"י הלקוחה, מקישור בהודעה', site: 'ע"י הלקוחה, באתר', salon: 'ע"י הסלון', offer: 'באישור הצעה לשעה שהתפנתה' }[v] || '';
   }
   function refreshApptDetailConfirmRow(){
     const row = document.getElementById('apptDetailConfirmRow');
@@ -8081,7 +8179,7 @@
     if (hint){
       hint.style.display = 'block';
       hint.textContent = confirmed
-        ? `התור מסומן כמאושר${appt.confirmedAt ? ' (' + formatCancelledAtLabel({ cancelledAtIso: appt.confirmedAt }) + ')' : ''}. לא תצא אליה שיחת אישור נוספת.`
+        ? `התור מסומן כמאושר${confirmedViaLabel(appt) ? ' ' + confirmedViaLabel(appt) : ''}${appt.confirmedAt ? ' (' + formatCancelledAtLabel({ cancelledAtIso: appt.confirmedAt }) + ')' : ''}. לא תצא אליה שיחת אישור נוספת.`
         : 'אישור כאן זהה לחלוטין לאישור של הלקוחה בשיחה הטלפונית — אחריו לא תצא אליה שיחת אישור.';
     }
   }
@@ -8922,7 +9020,23 @@
       createdBy: 'salon',   // נקבע ידנית ביומן (15.10.2026)
       reminderChannels: Array.from(document.querySelectorAll('input[name="mbReminderChannel"]:checked')).map(cb => cb.value)
     };
+    // 153: קביעה מתוך בקשה מיוחדת / רשימת המתנה — כבר יש לה תור לאותו טיפול?
+    let mbMoveFrom = null;
+    if (mbFromSpecialRequestId){
+      const mbExisting = salonSameTreatmentAppt({ name, teudatZehut: assignedTz, phone }, combinedServicesList.map(s => s && s.name), dateVal, timeVal);
+      if (mbExisting){
+        const pick = askSalonMoveOrKeep(mbExisting, name, dateVal, timeVal);
+        if (!pick){
+          errorEl.style.display = 'block';
+          errorEl.textContent = 'התור לא נקבע.';
+          mbLastSubmitSig = null;
+          return;
+        }
+        if (pick === 'move') mbMoveFrom = mbExisting;
+      }
+    }
     weekAppointments.push(manualAppointment);
+    if (mbMoveFrom) salonMoveOldAppointment(mbMoveFrom, manualAppointment);   // 153
     // 143: בקשה מיוחדת / המתנה של הלקוחה לאותו טיפול ותאריך — נסגרת, וההצעות ממנה עוברות הלאה
     try { fulfillRequestsByBookingLocal(manualAppointment, mbFromSpecialRequestId); }
     catch (e) { console.warn('[offers] closing the request after a manual booking failed:', e); }
@@ -16007,7 +16121,15 @@
               } else if (confirm('נמצאה שעה פנויה שמתאימה לבקשה: ' + formatDateDMY(match.date) + ' בשעה ' + match.time + who + '.\n\n'
                   + 'עכשיו לא יוצאת ל' + (r.name || 'לקוחה') + ' הצעה לשעה הזו (כבר נשלחו לה הצעות עליה, בלילה, או שאין לה מייל או SMS).\n\n'
                   + 'לקבוע לה את התור ישירות? רק אם דיברת איתה והיא מסכימה — היא תקבל הודעה שנקבע לה תור.')){
+                // 153: כבר יש לה תור לאותו טיפול — להעביר או להשאיר?
+                const frExisting = salonSameTreatmentAppt(r, (r.services || []).map(s => s && s.name), match.date, match.time);
+                const frPick = frExisting ? askSalonMoveOrKeep(frExisting, r.name, match.date, match.time) : 'keep';
+                if (!frPick){ if (typeof showAdminToast === 'function') showAdminToast('התור לא נקבע.'); renderSpecialRequestDetailOverlay(); return; }
                 const appt = await bookFlexibleRequest(r, match);
+                if (appt && frPick === 'move'){
+                  salonMoveOldAppointment(frExisting, appt);
+                  if (typeof saveState === 'function') saveState();
+                }
                 if (typeof showAdminToast === 'function') showAdminToast(appt ? '✓ התור נקבע ל' + (r.name || 'לקוחה') + ' — ' + formatDateDMY(match.date) + ' ' + match.time : 'לא הצלחנו לקבוע — ייתכן שהשעה נתפסה בינתיים. נא לרענן ולנסות שוב.');
                 if (appt){ closeSpecialRequestDetailOverlay(); if (typeof renderWeekCal === 'function') renderWeekCal(); return; }
               }
@@ -20472,15 +20594,26 @@
       }
     }
   }
+  /* 152: איך הלקוחה הגיעה לאשר — email / sms (קישור מתויג מהמערכת), link (קישור
+   * אחר עם הזיהוי שלה, למשל תזכורת), site (נכנסה לאתר בעצמה). */
+  function confirmSourceFromPage(){
+    const s = String(window.__landingSearch || '');
+    const src = (/[?&]src=([a-z])/.exec(s) || [])[1] || '';
+    if (src === 'm') return 'email';
+    if (src === 's') return 'sms';
+    if (/[?&](lookupPhone|lookupId)=/.test(s)) return 'link';
+    return 'site';
+  }
   async function confirmListedAppointmentNow(idx){
     const listAppt = lookedUpAppointmentsList[idx];
     if (!listAppt) return;
     const appt = resolveCurrentAppt(listAppt);
     let serverDidIt = false;
+    const via = confirmSourceFromPage();
     if (bookingGoesThroughServer()){
       let res = null;
       try {
-        res = await callClientApi('confirm', withCi({ id: appt.teudatZehut || lastIdentifiedLookupId || '', apptId: appt.id }, appt));
+        res = await callClientApi('confirm', withCi({ id: appt.teudatZehut || lastIdentifiedLookupId || '', apptId: appt.id, via: via }, appt));
       } catch (err) {
         console.error('Confirming through the server failed — falling back to a direct write:', err);
         res = null;
@@ -20498,6 +20631,7 @@
     }
     appt.confirmedByClient = true;
     if (!appt.confirmedAt) appt.confirmedAt = new Date().toISOString();
+    if (!appt.confirmedVia) appt.confirmedVia = via;   // 152
     lookedUpAppointmentsList[idx] = appt;
     if (!serverDidIt && typeof saveState === 'function') saveState();
     renderLookedUpAppointment(lookedUpAppointmentsList);
