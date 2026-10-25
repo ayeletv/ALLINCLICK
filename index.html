@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-24 · 150">
+<meta name="app-build" content="2026-10-25 · 152">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4601,7 +4601,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-24 · 150';
+        window.__APP_BUILD = '2026-10-25 · 152';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -8798,7 +8798,9 @@
     }
     (function warnOnEveningLength(){
       const max = typeof eveningMaxDuration === 'function' ? eveningMaxDuration() : 0;
-      if (!max || mbRescheduleApptId) return;
+      // 151: גם בקביעה מחדש — עד היום העברת תור ארוך לערב לא הזהירה בכלל
+      // (צפיה יונה, 28.10 22:15, 30 דק', "נקבע ע״י הסלון").
+      if (!max) return;
       const parts = dateVal.split('-').map(Number);
       const dObj = new Date(parts[0], parts[1] - 1, parts[2]);
       let wins = [];
@@ -8807,7 +8809,7 @@
         wins = mergeWindows(getEffectiveDayWindows(info, dObj));
       } catch (e) { return; }
       const totalDur = Math.max(0, endMin - startMin);
-      if (!breaksEveningLimit(wins, startMin, totalDur, staffIdx)) return;
+      if (!breaksEveningLimit(wins, startMin, totalDur, staffIdx, dObj)) return;
       const whichServices = (mbSelectedServices || [])
         .filter(sv => sv && sv.name)
         .map(sv => sv.name + ' (' + (sv.duration || 0) + ' דק\')').join(' + ');
@@ -9699,7 +9701,7 @@
       html = queue.items.map(item => `<h3 style="font-family:sans-serif; direction:rtl; text-align:right;">${item.subject}</h3>` + textToHtmlBlock(item.text, item.imageDataUrl, item.cid)).join('<hr style="margin:16px 0; border:none; border-top:1px solid #eee;">');
     }
     const payload = {
-      to: to,
+      to: cleanEmailAddress(to),   // 150: בלי סימני כיוון בלתי נראים
       from: `${fromName} <${fromAddress}>`,
       message: { subject: subject, text: text, html: html },
       createdAt: new Date().toISOString(),
@@ -9708,6 +9710,13 @@
     db.collection('mail').add(payload).catch(err => console.error('Email send failed:', err));
     delete pendingEmailQueue[to];
   }
+  /* 150: סימני כיוון וסימנים בלתי נראים נדבקים למייל שמוקלד או מועתק בטלפון
+   * בעברית. "מייל ליצירת קשר" של רותי נשמר כ-rutcosmetic@gmail.com + סימן
+   * כיוון, והסיכום השבועי חזר (gmail.xn--com-on0a). מנוקה בשמירה ובשליחה. */
+  function cleanEmailAddress(email){
+    return String(email || '').replace(/[​-‏‪-‮⁦-⁩﻿ \s]/g, '');
+  }
+  window.__cleanEmailAddress = cleanEmailAddress;
   function updateBranding(){
     branding.name = document.getElementById('bizNameInput').value.trim() || 'הסלון שלי';
     branding.phone = document.getElementById('bizPhoneInput').value.trim();
@@ -9716,7 +9725,7 @@
     const addressInputEl = document.getElementById('bizAddressInput');
     branding.address = addressInputEl ? addressInputEl.value.trim() : '';
     const emailInputEl = document.getElementById('bizEmailInput');
-    if (emailInputEl) branding.email = emailInputEl.value.trim();
+    if (emailInputEl) branding.email = cleanEmailAddress(emailInputEl.value);
     const smsSenderInputEl = document.getElementById('bizSmsSenderInput');
     if (smsSenderInputEl){
       const sanitizedSender = smsSenderInputEl.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 11);
@@ -9731,7 +9740,7 @@
     }
     const maintainerInputEl = document.getElementById('bizMaintainerEmailInput');
     if (maintainerInputEl){
-      branding.maintainerEmail = maintainerInputEl.value.trim();
+      branding.maintainerEmail = cleanEmailAddress(maintainerInputEl.value);
     }
     renderBranding();
     if (typeof renderServices === 'function') renderServices();
@@ -11090,7 +11099,8 @@
     const parts = [];
     if (m.mailSubject) parts.push('subject=' + encodeURIComponent(m.mailSubject));
     if (m.mailBody) parts.push('body=' + encodeURIComponent(m.mailBody));
-    return 'mailto:' + mail + (parts.length ? ('?' + parts.join('&')) : '');
+    const cleanMail = (typeof window.__cleanEmailAddress === 'function') ? window.__cleanEmailAddress(mail) : String(mail || '').trim();
+    return 'mailto:' + cleanMail + (parts.length ? ('?' + parts.join('&')) : '');
   }
   window.__heroWaUrl = heroWaUrl;
   window.__heroMailUrl = heroMailUrl;
@@ -14505,6 +14515,7 @@
           for (let t = openMin; t + duration <= closeMin && t <= winEnd; t += fineStepMinutes){
             const end = t + duration;
             if (new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, t).getTime() < minStartMs) continue;
+            if (breaksEveningLimit([], t, duration, staffIdx, d)) continue;   // 151: מגבלת משמרת ערב
             if (busy.every(([bs, be]) => end <= bs || t >= be)){
               const found = { date: formatDateKey(d), time: minutesToTimeGlobal(t), staffIdx, dateObj: new Date(d) };
               // 143: סוף החור הפנוי — התחלת התפוס הבא, או סוף שעות העבודה
@@ -14796,6 +14807,8 @@
       if (typeof r.preferredStaffIdx === 'number' && r.preferredStaffIdx !== slot.staff) return false;
       const dur = (r.services || []).reduce(function(a, sv){ return a + (sv.duration || 0); }, 0) || 30;
       if (dur > (slot.dur || 30)) return false;
+      // 151: מגבלת משמרת ערב חלה גם על הצעה — הלקוחה היא שקובעת (באישור)
+      if (breaksEveningLimit([], startMin, dur, Number(slot.staff), dateObj)) return false;
       const cats = (r.services || []).map(function(sv){ return sv.category; }).filter(Boolean);
       if (cats.some(function(c){ return !isStaffCapableOf(slot.staff, c); })) return false;
       const end = startMin + dur;
@@ -14835,6 +14848,10 @@
       const svc = (services || []).find(function(s){ return s && s.name === w.service; }) || null;
       const dur = Number(svc && svc.duration) || 30;
       if (dur > slotDur) return false;
+      { // 151: מגבלת משמרת ערב
+        const p = String(slot.date).split('-').map(Number);
+        if (breaksEveningLimit([], startMin, dur, Number(slot.staff), new Date(p[0], p[1] - 1, p[2]))) return false;
+      }
       const emp = staff[Number(slot.staff)];
       if (w.staffName){ if (!emp || emp.name !== w.staffName) return false; }
       else if (svc && svc.category && !isStaffCapableOf(Number(slot.staff), svc.category)) return false;
@@ -17826,12 +17843,28 @@
     if (!sv || !sv.name) return true;
     return list.indexOf(sv.name) !== -1;
   }
-  function breaksEveningLimit(windows, start, dur, staffIdx){
+  /* 151: תחילת משמרת הערב לפי שעות העבודה המלאות של העובדת באותו יום — לא
+   * לפי מה שנשאר ממנו. עד 151, היום אחרי שמשמרת הבוקר נגמרה נשאר חלון אחד
+   * בלבד, ולכן לא זוהה ערב וההגבלה לא חלה ("קבעה תור יותר מחצי שעה למשמרת
+   * ערב, אחרי שבהגדרות רשום שלא ניתן"). */
+  function eveningStartForDay(staffIdx, dateObj){
+    try {
+      if (typeof staffIdx !== 'number' || !dateObj) return undefined;
+      const info = dayInfoForDate(staffIdx, dateObj);
+      if (!info || !info.open) return null;
+      const raw = (Array.isArray(info.ranges) && info.ranges.length) ? info.ranges
+        : (info.from && info.to ? [{ from: info.from, to: info.to }] : []);
+      const wins = mergeWindows(raw.map(r => [timeToMinutes(r.from), timeToMinutes(r.to)]).filter(([s, e]) => s < e));
+      return eveningStartMinute(wins);
+    } catch (e) { return undefined; }
+  }
+  function breaksEveningLimit(windows, start, dur, staffIdx, dateObj){
     const max = eveningMaxDuration();
     if (!max) return false;
     if (staffIdx !== undefined && staffIdx !== null && staffIdx !== 'any'
         && !eveningLimitAppliesTo(staffIdx)) return false;
-    const evening = eveningStartMinute(windows);
+    const fromDay = eveningStartForDay(staffIdx, dateObj);
+    const evening = (fromDay !== undefined) ? fromDay : eveningStartMinute(windows);
     if (evening === null) return false;
     return start >= evening && dur > max;
   }
@@ -17893,7 +17926,7 @@
     const fits = (start, dur) => {
       const end = start + dur;
       if (!windows.some(([s, e]) => start >= s && end <= e)) return false;
-      if (breaksEveningLimit(windows, start, dur, selectedStaffIndex)) return false;
+      if (breaksEveningLimit(windows, start, dur, selectedStaffIndex, bookingSelectedDate)) return false;
       if (typeof slotIsHeldByOffer === 'function'
         && slotIsHeldByOffer(formatDateKey(bookingSelectedDate), selectedStaffIndex, start, end)) return false;
       return busy.every(([bStart, bEnd]) => end <= bStart || start >= bEnd);
@@ -17907,7 +17940,7 @@
     const eveningOnlyBlock = (start, dur) => {
       if (!eveningMaxNow) return false;
       if (!windows.some(([s2, e2]) => start >= s2 && start + dur <= e2)) return false;
-      if (!breaksEveningLimit(windows, start, dur, selectedStaffIndex)) return false;
+      if (!breaksEveningLimit(windows, start, dur, selectedStaffIndex, bookingSelectedDate)) return false;
       if (findConflict(start, dur)) return false;
       if (typeof slotIsHeldByOffer === 'function'
         && slotIsHeldByOffer(formatDateKey(bookingSelectedDate), selectedStaffIndex, start, start + dur)) return false;
@@ -18019,7 +18052,7 @@
         const wins = perStaffWindows[idx];
         if (!wins) continue;
         if (!wins.some(([s, e]) => start >= s && end <= e)) continue;
-        if (breaksEveningLimit(mergeWindows(wins), start, dur, idx)) continue;
+        if (breaksEveningLimit(mergeWindows(wins), start, dur, idx, bookingSelectedDate)) continue;
         if (typeof slotIsHeldByOffer === 'function'
           && slotIsHeldByOffer(formatDateKey(bookingSelectedDate), idx, start, end)) continue;
         if ((perStaffBusy[idx] || []).every(([bStart, bEnd]) => end <= bStart || start >= bEnd)) return idx;
@@ -18041,7 +18074,7 @@
         if (!(perStaffBusy[idx] || []).every(([bStart, bEnd]) => end <= bStart || start >= bEnd)) continue;
         if (typeof slotIsHeldByOffer === 'function'
           && slotIsHeldByOffer(formatDateKey(bookingSelectedDate), idx, start, end)) continue;
-        if (breaksEveningLimit(mergeWindows(wins), start, dur, idx)) { sawLimited = true; continue; }
+        if (breaksEveningLimit(mergeWindows(wins), start, dur, idx, bookingSelectedDate)) { sawLimited = true; continue; }
         return false;   // יש מישהי שכן יכולה — אז זו אינה חסימת ערב
       }
       return sawLimited;
@@ -20258,11 +20291,55 @@
     if (!r || !r.liveOffer) return;
     return claimOfferById(r.liveOffer.id, r);
   }
+  /* 151: יש לה כבר תור לאותו טיפול באותו שבוע — שואלים: להעביר אותו לשעה
+   * החדשה, או להשאיר את שניהם. מחזיר את השדות לשליחה חוזרת, או null (ויתרה). */
+  function askExistingApptChoice(res){
+    if (!res || !res.needsChoice || !res.existing) return null;
+    const dmy = k => String(k || '').split('-').reverse().join('/');
+    const ex = res.existing, of = res.offered || {};
+    const what = ex.service ? ' ל' + ex.service : '';
+    // 152: תור רחוק (לא באותו שבוע / שבוע צמוד) — כנראה תור קבוע שהיא רוצה.
+    // "שימי לב", וברירת המחדל: להשאיר את שניהם. להעביר — רק בשאלה השנייה.
+    if (ex.near === false){
+      if (confirm('שימי לב: יש לך כבר תור' + what + ' ב-' + dmy(ex.date) + ' בשעה ' + ex.time + '.\n\n'
+          + 'לקבוע את השעה החדשה (' + dmy(of.date) + ' בשעה ' + of.time + ') בנוסף, ולהשאיר גם את התור ההוא?\n\n'
+          + 'אישור = שני התורים     ביטול = אפשרויות נוספות')) {
+        return { existingChoice: 'keep' };
+      }
+      if (confirm('להעביר את התור מ-' + dmy(ex.date) + ' בשעה ' + ex.time + ' לשעה החדשה?\n'
+          + 'התור ההוא יבוטל (אין צורך לבטל אותו בנפרד), והשעה שלו תוצע ללקוחות אחרות.\n\n'
+          + 'אישור = להעביר     ביטול = לא לקבוע עכשיו')) {
+        return { existingChoice: 'move', existingApptId: ex.id };
+      }
+      return null;
+    }
+    if (confirm('יש לך כבר תור' + what + ' ב-' + dmy(ex.date) + ' בשעה ' + ex.time + '.\n\n'
+        + 'להעביר אותו לשעה החדשה (' + dmy(of.date) + ' בשעה ' + of.time + ')?\n'
+        + 'התור הקודם יבוטל, והשעה שלו תוצע ללקוחות אחרות.\n\n'
+        + 'אישור = להעביר     ביטול = אפשרויות נוספות')) {
+      return { existingChoice: 'move', existingApptId: ex.id };
+    }
+    if (confirm('לקבוע את השעה החדשה בנוסף, ולהשאיר גם את התור ב-' + dmy(ex.date) + ' בשעה ' + ex.time + '?\n\n'
+        + 'אישור = שני תורים     ביטול = לא לקבוע עכשיו')) {
+      return { existingChoice: 'keep' };
+    }
+    return null;
+  }
+  function movedLine(res){
+    if (!res || !res.moved) return null;
+    return 'התור הקודם (' + String(res.moved.date).split('-').reverse().join('/') + ' בשעה ' + res.moved.time + ') בוטל והועבר לכאן.';
+  }
   async function claimOfferById(offerId, item){
     const r = Object.assign({}, item || {}, { liveOffer: { id: offerId } });
     let res = null;
     try { res = await callClientApi('claimOffer', withCi({ id: lastIdentifiedLookupId, offerId: r.liveOffer.id, siteUrl: getSiteUrl() }, r)); }
     catch (e) { res = { ok: false, error: 'לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.' }; }
+    if (res && res.needsChoice){
+      const pick = askExistingApptChoice(res);
+      if (!pick) return;
+      try { res = await callClientApi('claimOffer', withCi(Object.assign({ id: lastIdentifiedLookupId, offerId: r.liveOffer.id, siteUrl: getSiteUrl() }, pick), r)); }
+      catch (e) { res = { ok: false, error: 'לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.' }; }
+    }
     if (!res || !res.ok){
       alert((res && res.error) || 'לא הצלחנו לאשר את התור.');
       if (typeof searchMyAppointment === 'function') searchMyAppointment();   // מצב עדכני
@@ -20270,7 +20347,7 @@
     }
     window.__offerFromLink = '';
     // הרשימה נטענת מחדש מיד — הריבוע נשמר ומוצג שוב מעליה (reapplyActionBanner)
-    showActionBanner('ok', '✓', 'התור נקבע בהצלחה!', [apptWhatLine(res.appointment), 'נתראה!']);
+    showActionBanner('ok', '✓', 'התור נקבע בהצלחה!', [apptWhatLine(res.appointment), movedLine(res), 'נתראה!'].filter(Boolean));
     if (typeof searchMyAppointment === 'function') searchMyAppointment();
   }
   /* הגיעה מקישור של הצעה: מדגישים את ההצעה, ואם היא כבר לא פתוחה — אומרים למה. */
@@ -21388,7 +21465,7 @@
   renderHoursStaffPicker();
   renderHoursEditor();
   function updateInvAlertEmail(){
-    invAlertEmail = document.getElementById('invAlertEmail').value.trim();
+    invAlertEmail = (typeof window.__cleanEmailAddress === 'function') ? window.__cleanEmailAddress(document.getElementById('invAlertEmail').value) : document.getElementById('invAlertEmail').value.trim();
     renderInventory();
   }
   function renderHolidayOverrides(){
@@ -21657,6 +21734,9 @@
     ['a', 'https://client-api-737599524118.me-west1.run.app/'],                  // השרת
     ['m', 'https://firebasestorage.googleapis.com/'],                            // תמונות
     ['o', 'https://fonts.googleapis.com/css2?family=Heebo'],                     // גופנים
+    // 151: כתובת חלופית אפשרית לשרת. בודקים לפני שבונים: האם היא פתוחה אצל
+    // לקוחות שגם השרת וגם Firestore חסומים אצלן (איילת, 25.10: "כדאי לבדוק קודם").
+    ['w', 'https://allinklik.web.app/'],                                         // web.app
   ];
   let __netCheckRan = false;
   // 147: בדיקה אחת בדרך בכל רגע. עד היום כל בדיקה הגיעה ליומן פעמיים — גם
@@ -22833,6 +22913,42 @@
   }
   window.__callClientApiViaQueue = callClientApiViaQueue;
 
+  /* 151: לקוחה שגם השרת וגם Firestore חסומים אצלה (סינון) — עד היום חיכתה 30
+   * שניות, שוב ושוב, ולא קיבלה כלום (24.10 20:34: שש פעמים). עכשיו: הודעה
+   * ברורה עם כפתורי טלפון ווואטסאפ לסלון, כדי שאף לקוחה לא תישאר תקועה.
+   * רק אצל לקוחה (לא ביומן העסק), ולא כשאין אינטרנט בכלל. */
+  function showBlockedHelp(){
+    try {
+      if (typeof isOwnerSession === 'function' && isOwnerSession()) return;
+      if (navigator.onLine === false) return;
+      if (document.getElementById('hkBlockedHelp')) return;
+      const b = (typeof branding !== 'undefined' && branding) || {};
+      const cc = window.__cachedContact || {};
+      const phone = String(b.phone || cc.phone || '').replace(/[^0-9]/g, '');
+      const wa = String(b.whatsapp || cc.whatsapp || '').replace(/[^0-9]/g, '') || phone;
+      const name = String(b.name || window.__cachedBizName || 'הסלון').trim();
+      const waIntl = wa ? (wa.charAt(0) === '0' ? '972' + wa.slice(1) : wa) : '';
+      const waHref = waIntl ? ((typeof window.__heroWaUrl === 'function') ? window.__heroWaUrl(waIntl) : 'https://wa.me/' + waIntl) : '';
+      const box = document.createElement('div');
+      box.id = 'hkBlockedHelp';
+      box.setAttribute('role', 'dialog');
+      box.style.cssText = 'box-sizing:border-box; position:fixed; left:12px; right:12px; bottom:14px; max-width:460px; margin:0 auto; z-index:999999; background:#fff; color:#2E2522; border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,.25); padding:16px 16px 14px; direction:rtl; text-align:right; font-size:15px; line-height:1.55;';
+      const btn = 'display:inline-flex; align-items:center; justify-content:center; gap:6px; flex:1; min-width:120px; padding:11px 12px; border-radius:12px; font-weight:700; text-decoration:none; font-size:15px;';
+      box.innerHTML =
+        '<button type="button" aria-label="סגירה" style="position:absolute; top:8px; left:10px; background:none; border:none; font-size:20px; color:#888; cursor:pointer;">✕</button>'
+        + '<div style="font-weight:700; margin-bottom:4px;">החיבור במכשיר שלך חוסם את מערכת התורים</div>'
+        + '<div style="margin-bottom:12px;">כנראה סינון אינטרנט. אפשר לקבוע או לבדוק תור ישירות מול ' + name.replace(/[<>&"]/g, '') + ':</div>'
+        + '<div style="display:flex; gap:8px; flex-wrap:wrap;">'
+        + (phone ? '<a href="tel:' + phone + '" style="' + btn + ' background:#f2f2f2; color:#2E2522;">📞 התקשרות</a>' : '')
+        + (waHref ? '<a href="' + waHref + '" target="_blank" rel="noopener" style="' + btn + ' background:#25D366; color:#fff;">וואטסאפ</a>' : '')
+        + '</div>';
+      box.querySelector('button').onclick = () => box.remove();
+      (document.body || document.documentElement).appendChild(box);
+      try { if (typeof reportDiag === 'function') reportDiag('blocked-help', { key: 'shown' }); } catch (e) {}
+    } catch (e) {}
+  }
+  function hideBlockedHelp(){ const el = document.getElementById('hkBlockedHelp'); if (el) el.remove(); }
+  window.__showBlockedHelp = showBlockedHelp;
   async function callClientApi(action, payload){
     if (!apiViaQueue && apiViaQueueRemembered() && apiQueueAvailable()) apiViaQueue = true;
     // 147: שעון ההצעות במכשיר מסונן — מוותרים. הוא לא עובר בגיבוי, הדרך הישירה
@@ -22903,8 +23019,10 @@
       console.error('The Firestore fallback for client-api failed too:', qErr);
       noteDirectFail();
       noteApiFailure(action, 'queue:' + String((qErr && (qErr.code || qErr.message)) || qErr || ''), Date.now() - started);
+      if (action !== 'diag') showBlockedHelp();   // 151: שתי הדרכים חסומות — הלקוחה מקבלת דרך אחרת
       throw blockedErr;
     }
+    hideBlockedHelp();
     apiViaQueue = true;
     rememberApiViaQueue();
     noteApiFailure(action, 'queue-ok', Date.now() - started);
@@ -23641,6 +23759,11 @@
     let res = null;
     try {
       res = await callClientApi('claimOffer', { id: raw, offerId: offerId, siteUrl: getSiteUrl() });
+      if (res && res.needsChoice){   // 151: יש לה כבר תור לאותו טיפול באותו שבוע
+        const pick = askExistingApptChoice(res);
+        if (!pick){ if (btn){ btn.disabled = false; btn.textContent = '✓ אני מגיעה — לאשר את התור'; } return; }
+        res = await callClientApi('claimOffer', Object.assign({ id: raw, offerId: offerId, siteUrl: getSiteUrl() }, pick));
+      }
     } catch (e){
       res = { ok: false, error: 'לא הצלחנו להתחבר כרגע. נא לנסות שוב בעוד רגע.' };
     }
@@ -23652,7 +23775,7 @@
     const body = document.getElementById('claimOfferBody');
     const actions = document.getElementById('claimOfferActions');
     if (body){
-      body.innerHTML = actionBannerHtml('ok', '✓', 'התור נקבע בהצלחה!', [apptWhatLine(res.appointment), 'נתראה!']);
+      body.innerHTML = actionBannerHtml('ok', '✓', 'התור נקבע בהצלחה!', [apptWhatLine(res.appointment), movedLine(res), 'נתראה!'].filter(Boolean));
     }
     if (actions) actions.innerHTML = '';
   }
@@ -24015,14 +24138,22 @@
             try { localStorage.setItem(PUBLIC_VIA_API_KEY, String(Date.now() + 30 * 24 * 3600 * 1000)); } catch (e) {}
             try { if (typeof reportDiag === 'function') reportDiag('public-via-api', { key: fsResult || 'slow' }); } catch (e) {}
             finish('ok');
-          } else if (fsResult !== null) finish(fsResult);
+          } else if (fsResult !== null) {
+            // 151: גם Firestore וגם השרת לא הביאו את הנתונים — דרך אחרת ללקוחה
+            if (!pv && fsResult === 'fail' && typeof window.__showBlockedHelp === 'function') window.__showBlockedHelp();
+            finish(fsResult);
+          }
         });
       };
       const timer = setTimeout(startApi, publicViaApiRemembered() ? 0 : PUBLIC_VIA_API_AFTER_MS);
       loadPublicDataFromFirestore().then(r => {
         if (r === 'ok' || r === 'empty' || window.__publicViaApi) { finish(window.__publicViaApi ? 'ok' : r); return; }
         fsResult = r;
-        if (!apiStarted) startApi(); else if (apiDone) finish(r);
+        if (!apiStarted) startApi();
+        else if (apiDone) {
+          if (r === 'fail' && typeof window.__showBlockedHelp === 'function') window.__showBlockedHelp();
+          finish(r);
+        }
       });
     });
   }
