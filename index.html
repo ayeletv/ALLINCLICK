@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-25 · 153">
+<meta name="app-build" content="2026-10-25 · 154">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4605,7 +4605,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-25 · 153';
+        window.__APP_BUILD = '2026-10-25 · 154';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5161,6 +5161,7 @@
       <div class="appt-detail-row"><span class="appt-detail-label">משך הטיפול</span><span class="appt-detail-value" id="apptDetailDuration"></span></div>
       <div class="appt-detail-row" id="apptDetailCreatedRow" style="display:none"><span class="appt-detail-label">נוסף בתאריך ובשעה</span><span class="appt-detail-value" id="apptDetailCreated"></span></div>
       <div class="appt-detail-row" id="apptDetailCreatedByRow" style="display:none"><span class="appt-detail-label">נקבע ע״י</span><span class="appt-detail-value" id="apptDetailCreatedBy"></span></div>
+      <div class="appt-detail-row" id="apptDetailChangesRow" style="display:none"><span class="appt-detail-label">שינויים</span><span class="appt-detail-value" id="apptDetailChanges" style="white-space:pre-wrap;"></span></div>
       <div class="appt-detail-row"><span class="appt-detail-label">עובדת</span><span class="appt-detail-value" id="apptDetailStaff"></span></div>
        <div class="appt-detail-row" id="apptDetailNoteRow" style="display:none;"><span class="appt-detail-label">הערות לפגישה</span><span class="appt-detail-value" id="apptDetailNote" style="white-space:pre-wrap;"></span></div>
     </div>
@@ -7442,6 +7443,26 @@
         + 'אישור = להעביר     ביטול = לא לקבוע עכשיו')) return 'move';
     return null;
   }
+  /* 154: "מי העבירה תור ומתי" (איילת, 25.10). עד היום לא נרשם מי מהמחוברות
+   * לניהול קבעה, העבירה או אישרה תור — ואי אפשר היה לדעת. עכשיו נרשם המייל של
+   * מי שמחוברת: createdByEmail / confirmedByEmail, ובכל העברה רשומה ב-
+   * appt.changes ({ at, by, kind: 'moved', from, to }). מוצג בפרטי התור. */
+  function actorEmailNow(){
+    try { const u = auth && auth.currentUser; return (u && u.email) ? String(u.email).trim().toLowerCase() : ''; } catch (e) { return ''; }
+  }
+  function apptPlace(a){ return a ? { date: a.date || '', time: a.time || '', staff: a.staff == null ? null : a.staff } : null; }
+  function noteApptChange(appt, kind, from, to){
+    if (!appt) return;
+    const list = Array.isArray(appt.changes) ? appt.changes.slice(-19) : [];
+    list.push({ at: new Date().toISOString(), by: actorEmailNow() || null, kind: kind, from: from || null, to: to || null });
+    appt.changes = list;
+  }
+  function apptChangesLines(appt){
+    const when = v => { const t = new Date(v || ''); return isNaN(t.getTime()) ? '' : t.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }) + ' ' + t.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }); };
+    const place = p => p ? formatDateDMY(p.date) + ' ' + (p.time || '') + ((p.staff != null && staff[p.staff] && staff[p.staff].name) ? ' (' + staff[p.staff].name + ')' : '') : '';
+    return (Array.isArray(appt && appt.changes) ? appt.changes : []).filter(c => c && c.kind === 'moved').map(c =>
+      'הועבר מ-' + place(c.from) + ' ל-' + place(c.to) + ' · ' + when(c.at) + (c.by ? ' · ' + c.by : ''));
+  }
   /** העברה: התור הקודם יוצא מהיומן, נרשם בביטולים ("הועבר"), והשעה שלו מוצעת.
    *  השמירה עצמה — אצל מי שקרא (יחד עם התור החדש). */
   function salonMoveOldAppointment(old, newAppt){
@@ -7451,11 +7472,12 @@
     try {
       logCancellation(old, 'owner');
       const last = cancellationLog[cancellationLog.length - 1];
-      if (last) last.movedTo = { date: newAppt.date, time: newAppt.time };
+      if (last){ last.movedTo = { date: newAppt.date, time: newAppt.time }; last.byEmail = actorEmailNow() || null; }   // 154
     } catch (e) {}
     const i = weekAppointments.findIndex(a => a && a.id === old.id);
     if (i !== -1) weekAppointments.splice(i, 1);
     if (!newAppt.note) newAppt.note = 'הועבר מ-' + formatDateDMY(old.date) + ' ' + old.time;
+    noteApptChange(newAppt, 'moved', apptPlace(old), apptPlace(newAppt));   // 154
     setTimeout(async function(){
       try {
         if (typeof recheckAllPendingFlexibleRequests === 'function') await recheckAllPendingFlexibleRequests();
@@ -7506,6 +7528,7 @@
       note: '',
       createdAt: new Date().toISOString(),
       createdBy: 'salon-waitlist',   // ע"י הסלון, מתוך רשימת המתנה (15.10.2026)
+      createdByEmail: actorEmailNow() || null,   // 154
       reminderChannels: channelsForNewAppointment(w.reminderChannels, w)
     };
     weekAppointments.push(newAppt);
@@ -7683,11 +7706,19 @@
         offer: 'הלקוחה — אישרה הצעה לשעה שהתפנתה',
         salon: 'הסלון (ביומן)',
         'salon-waitlist': 'הסלון — מרשימת המתנה',
+        'salon-request': 'הסלון — מבקשה מיוחדת',
         'auto-request': 'אוטומטית — מבקשה מיוחדת',
         'auto-waitlist': 'אוטומטית — מרשימת המתנה',
       }[by] || '';
-      createdByEl.textContent = label;
+      createdByEl.textContent = label + (label && appt.createdByEmail ? ' · ' + appt.createdByEmail : '');   // 154
       createdByRow.style.display = label ? '' : 'none';
+    }
+    const changesRow = document.getElementById('apptDetailChangesRow');   // 154
+    const changesEl = document.getElementById('apptDetailChanges');
+    if (changesRow && changesEl){
+      const lines = apptChangesLines(appt);
+      changesEl.textContent = lines.join('\n');
+      changesRow.style.display = lines.length ? '' : 'none';
     }
     document.getElementById('apptDetailStaff').textContent = (staff[appt.staff] && staff[appt.staff].name) || '—';
     const apptDetailNoteRow = document.getElementById('apptDetailNoteRow');
@@ -8002,6 +8033,7 @@
     appt.service = apptEditDraft.services.map(s => s.name).join(' + ');
     appt.price = apptEditDraft.services.reduce((sum, s) => sum + (s.price || 0), 0);
     if (timeChanged){
+      noteApptChange(appt, 'moved', { date: appt.date, time: previousTime, staff: appt.staff }, apptPlace(appt));   // 154
       ['reminderSent', 'callReminderSent', 'secondSmsReminderSent', 'callRetryDispatched'].forEach(f => { delete appt[f]; });
       delete appt.callRetryScheduledFor;
       delete appt.confirmedByClient;
@@ -8138,10 +8170,12 @@
       appt.confirmedByClient = true;
       appt.confirmedAt = new Date().toISOString();
       appt.confirmedVia = 'salon';   // 152: סומן ע"י הסלון ביומן
+      appt.confirmedByEmail = actorEmailNow() || null;   // 154
     } else {
       delete appt.confirmedByClient;
       delete appt.confirmedAt;
       delete appt.confirmedVia;
+      delete appt.confirmedByEmail;
     }
     if (typeof saveState === 'function') saveState();
     refreshApptDetailConfirmRow();
@@ -8935,6 +8969,7 @@
         return;
       }
       const prevDate = target.date, prevTime = target.time;
+      const prevPlace = apptPlace(target);   // 154
       const movedInTime = (prevDate !== dateVal) || (prevTime !== timeVal);
       target.day = dayKey;
       target.date = dateVal;
@@ -8945,6 +8980,7 @@
       target.services = combinedServicesList;
       target.price = totalPrice;
       target.note = (document.getElementById('mbApptNote')?.value || '').trim();
+      if (movedInTime || prevPlace.staff !== staffIdx) noteApptChange(target, 'moved', prevPlace, apptPlace(target));   // 154
       if (movedInTime){
         ['reminderSent', 'callReminderSent', 'secondSmsReminderSent', 'callRetryDispatched'].forEach(f => { delete target[f]; });
         delete target.callRetryScheduledFor;
@@ -9018,6 +9054,7 @@
       note: (document.getElementById('mbApptNote')?.value || '').trim(),
       createdAt: new Date().toISOString(),
       createdBy: 'salon',   // נקבע ידנית ביומן (15.10.2026)
+      createdByEmail: actorEmailNow() || null,   // 154
       reminderChannels: Array.from(document.querySelectorAll('input[name="mbReminderChannel"]:checked')).map(cb => cb.value)
     };
     // 153: קביעה מתוך בקשה מיוחדת / רשימת המתנה — כבר יש לה תור לאותו טיפול?
@@ -14643,7 +14680,10 @@
     }
     return null;
   }
-  async function bookFlexibleRequest(req, match){
+  async function bookFlexibleRequest(req, match, opts){
+    // 154: היום רק רותי קוראת לזה ("בדוק שוב" ← "לקבוע לה ישירות"), אז זה
+    // "הסלון — מבקשה מיוחדת". עד 154 נרשם "אוטומטית" גם כשהיא לחצה.
+    const bySalon = !!(opts && opts.bySalon);
     if (getLateCancelStatusForIdentity({ teudatZehut: req && req.teudatZehut, name: req && req.name }).blocked){
       console.warn('bookFlexibleRequest: skipped — client is blocked for late cancellations; request stays pending until the owner resets her counter.');
       return null;
@@ -14697,7 +14737,8 @@
           status: 'pending',
           note: req.note || '',
           createdAt: new Date().toISOString(),
-          createdBy: 'auto-request',   // שובץ אוטומטית מבקשה מיוחדת (15.10.2026)
+          createdBy: bySalon ? 'salon-request' : 'auto-request',
+          createdByEmail: bySalon ? (actorEmailNow() || null) : null,
           reminderChannels: channelsForNewAppointment(req.reminderChannels, req)
         };
         const mergedAppts = mergeListField(server.weekAppointments, lastLoadedSnapshot.weekAppointments, weekAppointments.concat([appt]), a => a && a.id);
@@ -16125,7 +16166,7 @@
                 const frExisting = salonSameTreatmentAppt(r, (r.services || []).map(s => s && s.name), match.date, match.time);
                 const frPick = frExisting ? askSalonMoveOrKeep(frExisting, r.name, match.date, match.time) : 'keep';
                 if (!frPick){ if (typeof showAdminToast === 'function') showAdminToast('התור לא נקבע.'); renderSpecialRequestDetailOverlay(); return; }
-                const appt = await bookFlexibleRequest(r, match);
+                const appt = await bookFlexibleRequest(r, match, { bySalon: true });
                 if (appt && frPick === 'move'){
                   salonMoveOldAppointment(frExisting, appt);
                   if (typeof saveState === 'function') saveState();
@@ -19877,6 +19918,7 @@
       createdAt: new Date().toISOString(),
       // מי קבעה: הסלון (דרך מסך הקביעה) או הלקוחה עצמה (15.10.2026)
       createdBy: bookedByTheSalon ? 'salon' : 'client',
+      createdByEmail: bookedByTheSalon ? (actorEmailNow() || null) : null,   // 154
       reminderChannels: reminderChannels
     };
     let serverSentNotifications = false;
