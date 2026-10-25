@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-24 · 149">
+<meta name="app-build" content="2026-10-24 · 150">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -3618,6 +3618,28 @@
   <script>
   // רץ פעם אחת כאן, ושוב אם מסמך הצבעים (siteTheme) מגיע מהענן אחרי
   // שהכותרת כבר צוירה — כך גם מבקרת חדשה רואה את הלוגו והשם מוקדם.
+  // 150: מתי השם באמת צויר על המסך — שתי מסגרות ציור אחרי שנכנס לדף. ב-149
+  // נספר הרגע שבו נכנס לקוד הדף, ובטלפון מהיר זה קרה לפני שהמסך הראה משהו:
+  // "רק נכנסים לאתר וזה ממש גולל מטה". הגלילה לקביעה מחכה שנייה מכאן.
+  // וגם אחרי שגופן הכותרת נטען: הגופן מוגדר font-display:block, כלומר עד שהוא
+  // מוכן השם על המסך אבל שקוף — אי אפשר לקרוא אותו. (עד 1.5 שנייה המתנה לגופן.)
+  window.__markHeroNamePainted = function(){
+    if (window.__heroNamePaintPending || window.__heroNameShownAt) return;
+    window.__heroNamePaintPending = true;
+    var stamped = false;
+    var afterPaint = function(){
+      if (stamped) return; stamped = true;
+      try {
+        requestAnimationFrame(function(){ requestAnimationFrame(function(){ window.__heroNameShownAt = Date.now(); }); });
+      } catch (e) { window.__heroNameShownAt = Date.now(); }
+    };
+    var fp = null;
+    try {
+      fp = (window.__suezFontPromise && typeof window.__suezFontPromise.then === 'function') ? window.__suezFontPromise
+        : (document.fonts && document.fonts.load ? document.fonts.load('1em "Suez One"', 'א') : null);
+    } catch (e) { fp = null; }
+    if (fp) { fp.then(afterPaint, afterPaint); setTimeout(afterPaint, 1500); } else afterPaint();
+  };
   window.__paintHeroEarly = function(){
     try {
       var h = document.getElementById('heroBizName'), t = document.getElementById('heroBizNameText');
@@ -3625,7 +3647,7 @@
       var showName = function(){
         if (nameShown || !window.__cachedBizName || !h || !t) return;
         nameShown = true;
-        window.__heroNameShownAt = Date.now();   // 148: הגלילה לקביעה נספרת מכאן
+        if (typeof window.__markHeroNamePainted === 'function') window.__markHeroNamePainted();
         t.textContent = window.__cachedBizName;
         h.classList.add('biz-name-visible', 'name-settled');
       };
@@ -4579,7 +4601,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-24 · 149';
+        window.__APP_BUILD = '2026-10-24 · 150';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -10535,13 +10557,24 @@
     const onUserScroll = function(){ userScrolled = true; };
     window.__autoScrollUserScrolledHandler = onUserScroll;
     window.addEventListener('scroll', onUserScroll, { passive: true });
-    // 148: 0.9 השניות נספרות מהרגע שהשם באמת הופיע על המסך. מ-148 השם והלוגו
-    // מופיעים מוקדם (מהעותק שבקובץ), אבל הגלילה נקבעה רק כשהטיפולים הגיעו
-    // ועוד 0.9 שנייה — כלומר שנייה של המתנה מיותרת ("הגלילה נהייתה יותר איטית").
-    // אם השם כבר על המסך 0.9 שנייה — גוללים מיד כשהטיפולים מוכנים.
-    const shownFor = window.__heroNameShownAt ? (Date.now() - window.__heroNameShownAt) : 0;
-    const delay = Math.max(0, 900 - shownFor);
-    window.__autoScrollToBookingTimer = setTimeout(function(){
+    // 149–150: הלקוחה רואה את השם והלוגו שנייה שלמה לפני הגלילה ("צריך כן
+    // שנייה שיראו מה רשום"), נספר מהרגע שהשם באמת צויר על המסך. אם השם כבר
+    // על המסך שנייה (טלפון איטי — הטיפולים הגיעו מאוחר), גוללים מיד כשהם מוכנים.
+    // עד 148: 0.9 שנייה אחרי שהטיפולים הגיעו, גם אם השם כבר היה שם שניות.
+    const HERO_MIN_VISIBLE_MS = 1000;
+    // השם עוד לא נקרא (הגופן בדרך) — מחכים לו, עד 2.5 שניות, ואז שנייה שלמה.
+    const scheduledAt = Date.now();
+    const delayNow = function(){
+      if (!window.__heroNameShownAt && window.__heroNamePaintPending && Date.now() - scheduledAt < 2500) return -1;
+      const shownFor = window.__heroNameShownAt ? (Date.now() - window.__heroNameShownAt) : 0;
+      return Math.max(0, HERO_MIN_VISIBLE_MS - shownFor);
+    };
+    const armWhenReadable = function(){
+      const d = delayNow();
+      if (d < 0) { window.__autoScrollToBookingTimer = setTimeout(armWhenReadable, 100); return; }
+      window.__autoScrollToBookingTimer = setTimeout(doAutoScroll, d);
+    };
+    const doAutoScroll = function(){
       window.__autoScrollToBookingTimer = null;
       window.removeEventListener('scroll', onUserScroll);
       window.__autoScrollUserScrolledHandler = null;
@@ -10549,7 +10582,8 @@
       if (document.body.classList.contains('admin-mode')) return;
       const target = document.querySelector('.switcher');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, delay);   // 128: 0.9 שנייה אחרי שהשם מופיע (עד 127 — 2 שניות)
+    };
+    armWhenReadable();   // 128: 0.9 שנייה אחרי שהשם מופיע (עד 127 — 2 שניות); 150: שנייה מהרגע שאפשר לקרוא אותו
   }
   function revealBizNameAsHero(heroBizNameEl, heroPlatformLineEl, name, skipFontWait){
     const alreadyShown = heroBizNameEl.classList.contains('biz-name-visible');
@@ -10579,7 +10613,7 @@
         return;
       }
       heroBizNameEl.classList.add('biz-name-visible');
-      if (!window.__heroNameShownAt) window.__heroNameShownAt = Date.now();
+      if (typeof window.__markHeroNamePainted === 'function') window.__markHeroNamePainted();
       heroPlatformLineEl.classList.remove('primary');
       requestAnimationFrame(function(){
         requestAnimationFrame(function(){ heroBizNameEl.classList.add('name-settled'); });
