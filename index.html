@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-26 · 155">
+<meta name="app-build" content="2026-10-26 · 156">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4605,7 +4605,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-26 · 155';
+        window.__APP_BUILD = '2026-10-26 · 156';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -21928,7 +21928,11 @@
       try { if (isOwnerSession()) role = 'owner'; } catch (e) {}
       const net = (navigator.connection && navigator.connection.effectiveType) || '';
       const device = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '') ? 'mobile' : 'desktop';
-      const event = Object.assign({ kind: kind, role: role, build: window.__APP_BUILD || '', net: net, device: device }, info || {});
+      // 155: מזהה לאירוע. אצל לקוחה מסוננת הבקשה הישירה מגיעה לשרת אבל התשובה
+      // נחסמת, והגיבוי שולח שוב — וכל אירוע הופיע בסיכום פעמיים. השרת שומר לפי
+      // המזהה, כך שהעותק השני דורס את הראשון.
+      const eid = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      const event = Object.assign({ kind: kind, role: role, build: window.__APP_BUILD || '', net: net, device: device, eid: eid }, info || {});
       if (typeof callClientApi === 'function') callClientApi('diag', { event: event }).catch(function(){});
     } catch (e) {}
   }
@@ -22044,6 +22048,35 @@
       if (document.querySelector('.overlay.show, .modal.show, [class*="overlay"].show')) return false;
       return true;
     }
+    /* 155: "FIRESTORE INTERNAL ASSERTION FAILED: Unexpected state" (הטלפון של
+     * רותי, 25.10 23:54). תקלה ידועה בספריית Firestore בטלפון, אחרי ניתוק או
+     * חזרה מרקע: מכאן החיבור לענן מת עד רענון — היומן לא מתעדכן ושמירות
+     * נתקעות. מרעננים לבד כשבטוח (כמו בגרסה חדשה). אם יש שינוי שלא נשמר ולא
+     * מתפנה תוך 2 דקות — פס שמבקש לרענן. */
+    let fsBroken = false;
+    window.__onFirestoreBroken = function(){
+      if (fsBroken) return;
+      fsBroken = true;
+      const since = Date.now();
+      const tryReload = function(){
+        let lastAt = 0;
+        try { lastAt = Number(sessionStorage.getItem('hk_auto_reload_at') || 0); } catch (e) {}
+        if (Date.now() - lastAt < 10 * 60 * 1000) return true;   // כבר רועננו — לא בלולאה
+        if (!safeToReload()){
+          if (Date.now() - since > 2 * 60 * 1000 && typeof showSaveErrorBanner === 'function'){
+            showSaveErrorBanner('⚠ החיבור לענן נתקע. כדי שהשינויים יישמרו — נא לרענן את הדף.');
+            return true;
+          }
+          return false;
+        }
+        try { sessionStorage.setItem('hk_auto_reload_at', String(Date.now())); } catch (e) {}
+        reportDiag('auto-reload', { key: 'firestore-assert' });
+        location.reload();
+        return true;
+      };
+      if (tryReload()) return;
+      const iv = setInterval(function(){ if (tryReload()) clearInterval(iv); }, 15000);
+    };
     async function check(){
       if (busy || rangeUnsupported || document.hidden) return;
       busy = true;
@@ -22076,7 +22109,9 @@
     return String(message || '').split(/[—\-:]/)[0].replace(/[0-9]/g, '').trim().slice(0, 40);
   }
   try {
+    const fsAssert = m => /FIRESTORE[\s\S]*INTERNAL ASSERTION FAILED/i.test(String(m || ''));   // 155
     window.addEventListener('error', function(ev){
+      if (fsAssert(ev && ev.message) && typeof window.__onFirestoreBroken === 'function') window.__onFirestoreBroken();
       // שגיאות מתוספי דפדפן ומקבצים זרים ("Script error.") — לא שלנו.
       const src = String((ev && ev.filename) || '');
       if (!src || src.indexOf(location.origin) !== 0) return;
@@ -22084,6 +22119,7 @@
     });
     window.addEventListener('unhandledrejection', function(ev){
       const r = ev && ev.reason;
+      if (fsAssert(r && (r.message || r)) && typeof window.__onFirestoreBroken === 'function') window.__onFirestoreBroken();
       reportDiag('js-promise', { key: String((r && (r.message || r.code)) || r || '').slice(0, 60), code: String((r && r.code) || '') });
     });
   } catch (e) {}
@@ -22988,9 +23024,7 @@
       const fromServer = () => {
         if (apiStarted) return;
         apiStarted = true;
-        fetch(CLIENT_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'publicView', host: host }) })
-          .then(r => r.ok ? r.json() : null).catch(() => null)
+        serverJsonAnyRoute({ action: 'publicView', host: host })   // 156: גם דרך /api באתר
           .then(b => {
             apiDone = true;
             if (settled) return;
@@ -23173,6 +23207,69 @@
   }
   window.__callClientApiViaQueue = callClientApiViaQueue;
 
+  /* 156: "חייבים לפתור את זה שלקוחה לא יכולה להתחבר" (איילת, 26.10). אצל חלק
+   * מהלקוחות הסינון חוסם גם את השרת (run.app) וגם את Firestore — אבל את האתר
+   * עצמו הן פותחות. לכן דרך שלישית: השרת דרך הכתובת של האתר — /api באותו
+   * דומיין. באתר שמאוחסן ב-Netlify, הקובץ _redirects מעביר /api לשרת (Netlify
+   * הוא שמדבר עם run.app, לא הדפדפן). ב-GitHub Pages אין /api: הניסיון נכשל מיד
+   * (404), ולא מנסים שוב באותו ביקור. מכשיר שהדרך הזו הצליחה בו — זוכר 30 יום,
+   * ומתחיל בה. */
+  // (פונקציות בלבד, ומצב על window — נקראות גם מקוד שמופיע קודם בקובץ)
+  function apiProxyPossible(){
+    return !window.__apiProxyMissing && /^https?:$/.test(location.protocol) && !/(^|\.)github\.io$/i.test(location.hostname);
+  }
+  function rememberApiViaProxy(){
+    try { localStorage.setItem('hk_api_via_proxy_until', String(Date.now() + 30 * 24 * 3600 * 1000)); } catch (e) {}
+  }
+  function forgetApiViaProxy(){ try { localStorage.removeItem('hk_api_via_proxy_until'); } catch (e) {} }
+  function apiViaProxyRemembered(){
+    try { return Number(localStorage.getItem('hk_api_via_proxy_until') || 0) > Date.now(); } catch (e) { return false; }
+  }
+  /** שליחה ל-/api באתר עצמו. מחזיר את תשובת השרת (JSON), או זורק. timeoutMs — רק לקריאות. */
+  async function postViaSiteProxy(bodyObj, timeoutMs){
+    const controller = (timeoutMs && typeof AbortController === 'function') ? new AbortController() : null;
+    const timer = controller ? setTimeout(function(){ try { controller.abort(); } catch (e) {} }, timeoutMs) : null;
+    try {
+      const res = await fetch(location.origin + '/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyObj),
+        signal: controller ? controller.signal : undefined,
+        cache: 'no-store',
+      });
+      let ct = '';
+      try { ct = String((res.headers && res.headers.get('content-type')) || ''); } catch (e) {}
+      if (ct.indexOf('json') === -1){
+        // אין כאן /api (האתר לא ב-Netlify, או שהקובץ _redirects חסר)
+        if (res.status === 404 || res.status === 405 || ct.indexOf('html') !== -1) window.__apiProxyMissing = true;
+        throw new Error('proxy: no api here (' + res.status + ')');
+      }
+      return await res.json();
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+  function callClientApiViaProxy(action, payload, isRead){
+    return postViaSiteProxy(Object.assign({ action }, payload || {}, { bizId: BIZ_ID }), isRead ? API_READ_TIMEOUT_MS : 0);
+  }
+  /** קריאה לשרת בלי מפתח עסק (הדף הציבורי, מיפוי דומיין): ישירות, ואם לא — דרך האתר.
+   *  מחזיר JSON או null; לעולם לא זורק. */
+  function serverJsonAnyRoute(bodyObj){
+    const viaProxy = () => apiProxyPossible()
+      ? postViaSiteProxy(bodyObj, 8000).then(b => { if (b) rememberApiViaProxy(); return b; }, () => null)
+      : Promise.resolve(null);
+    const direct = () => {
+      const ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+      const t = ctl ? setTimeout(() => { try { ctl.abort(); } catch (e) {} }, 8000) : null;
+      return fetch('https://client-api-737599524118.me-west1.run.app', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyObj), signal: ctl ? ctl.signal : undefined })
+        .then(r => r.ok ? r.json() : null).catch(() => null)
+        .then(b => { if (t) clearTimeout(t); return b; });
+    };
+    if (apiViaProxyRemembered() && apiProxyPossible()) return viaProxy().then(b => b || direct());
+    return direct().then(b => b || viaProxy());
+  }
+
   /* 151: לקוחה שגם השרת וגם Firestore חסומים אצלה (סינון) — עד היום חיכתה 30
    * שניות, שוב ושוב, ולא קיבלה כלום (24.10 20:34: שש פעמים). עכשיו: הודעה
    * ברורה עם כפתורי טלפון ווואטסאפ לסלון, כדי שאף לקוחה לא תישאר תקועה.
@@ -23215,6 +23312,22 @@
     // חסומה, והשרת מריץ אותו ממילא כל 2 דקות. עד היום כל כניסה כזו נרשמה
     // בסיכום היומי כ"האתר לא הגיע לשרת · offersTick".
     if (apiViaQueue && action === 'offersTick') return null;
+    // 156: מכשיר שהדרך דרך כתובת האתר הצליחה בו — מתחיל בה. מכשיר מסונן (שזוכר
+    // את הגיבוי) מנסה אותה לפני הגיבוי: היא מהירה בהרבה.
+    if (action !== 'offersTick' && apiProxyPossible() && (apiViaProxyRemembered() || apiViaQueue)) {
+      const isReadP = Object.prototype.hasOwnProperty.call(API_READ_ACTIONS, action);
+      try {
+        const pBody = await callClientApiViaProxy(action, payload, isReadP);
+        rememberApiViaProxy();
+        hideBlockedHelp();
+        if (action !== 'diag') flushApiFailures();
+        return pBody;
+      } catch (pErr) {
+        forgetApiViaProxy();
+        // כתיבה (קביעה, ביטול) שנכשלה באמצע — ייתכן שבוצעה. לא שולחים שוב בדרך אחרת.
+        if (!isReadP && !apiProxyMissing && action !== 'diag') throw new Error('שגיאת תקשורת מול השרת. נא לנסות שוב.');
+      }
+    }
     if (apiViaQueue && action !== 'offersTick') {
       const body = await callClientApiViaQueue(action, payload);
       if (action !== 'diag') flushApiFailures();
@@ -23272,6 +23385,18 @@
       if (res.status >= 500) { noteDirectFail(); throw blockedErr; }
     }
     if (action === 'offersTick') throw blockedErr;
+    // 156: לפני הגיבוי — דרך הכתובת של האתר. אצל מי שחסום לה גם Firestore זו
+    // הדרך היחידה; ואצל השאר היא מהירה מהגיבוי.
+    if (apiProxyPossible()) {
+      try {
+        const pBody = await callClientApiViaProxy(action, payload, isRead);
+        hideBlockedHelp();
+        rememberApiViaProxy();
+        noteApiFailure(action, 'proxy-ok', Date.now() - started);
+        if (action !== 'diag') flushApiFailures();
+        return pBody;
+      } catch (pErr) { /* אין כאן /api, או שגם היא חסומה — לגיבוי */ }
+    }
     let qBody;
     try {
       qBody = await callClientApiViaQueue(action, payload);
@@ -24342,13 +24467,9 @@
   }
   function publicViewFromServer(){
     if (!BIZ_ID) return Promise.resolve(null);
-    return fetch(CLIENT_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'publicView', bizId: BIZ_ID }),
-    }).then(r => r.ok ? r.json() : null)
-      .then(b => (b && b.publicView && typeof b.publicView === 'object') ? b.publicView : null)
-      .catch(() => null);
+    // 156: ישירות, ואם חסום — דרך /api באתר עצמו
+    return serverJsonAnyRoute({ action: 'publicView', bizId: BIZ_ID })
+      .then(b => (b && b.publicView && typeof b.publicView === 'object') ? b.publicView : null);
   }
   window.__publicViewFromServer = publicViewFromServer;
   function refreshPublicDataQuietly(){
