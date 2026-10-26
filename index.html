@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-25 · 154">
+<meta name="app-build" content="2026-10-26 · 155">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4605,7 +4605,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-25 · 154';
+        window.__APP_BUILD = '2026-10-26 · 155';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -7533,10 +7533,9 @@
     };
     weekAppointments.push(newAppt);
     if (wlmMoveFrom) salonMoveOldAppointment(wlmMoveFrom, newAppt);   // 153
-    const existingByIdOrPhone = w.teudatZehut
-      ? clients.find(c => c.teudatZehut === w.teudatZehut) || (w.phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === (w.phone || '').replace(/[^0-9]/g, '')) : null)
-      : (w.phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === (w.phone || '').replace(/[^0-9]/g, '')) : null);
+    const existingByIdOrPhone = cardForBooking(w.teudatZehut, w.phone, w.name);   // 155: טלפון — רק באותו שם
     if (existingByIdOrPhone){
+      linkCardToBooking(existingByIdOrPhone, newAppt.teudatZehut, w.phone);
       if (w.teudatZehut && !existingByIdOrPhone.teudatZehut) existingByIdOrPhone.teudatZehut = w.teudatZehut;
       if (w.email && !existingByIdOrPhone.email) existingByIdOrPhone.email = w.email;
     } else if (w.phone || w.teudatZehut){
@@ -8246,6 +8245,32 @@
     document.getElementById('clientProfileOverlay').classList.add('show');
   }
   function openClientProfileByRef(c){ showClientProfile(c); }
+  /* 155: לאיזה כרטיס שייך תור שהסלון קובע. ת"ז — תמיד אותה לקוחה. טלפון —
+   * רק באותו שם (טלפון משותף לאם ובת), ורק אם אין סתירה בת"ז. אותו כלל כמו
+   * באיחוד כרטיסים (duplicateClientPairs). */
+  function sameClientName(a, b){
+    const n = s => String(s || '').replace(/\s+/g, ' ').trim();
+    return !!n(a) && n(a) === n(b);
+  }
+  function cardForBooking(idDigits, phone, name){
+    const id = String(idDigits || '').replace(/[^0-9]/g, '');
+    const ph = String(phone || '').replace(/[^0-9]/g, '');
+    const byId = id ? clients.find(c => c && String(c.teudatZehut || '') === id) : null;
+    if (byId) return byId;
+    if (!ph) return null;
+    return clients.find(c => c && String(c.phone || '').replace(/[^0-9]/g, '') === ph && sameClientName(c.name, name)
+      && !(id && isPlausibleTeudatZehut(id) && isPlausibleTeudatZehut(String(c.teudatZehut || '')) && String(c.teudatZehut) !== id)) || null;
+  }
+  /** כרטיס קיים שנבחר לתור: בלי ת"ז — מקבל את המספר של התור; בלי טלפון — את הטלפון שהוקלד. */
+  function linkCardToBooking(card, tz, phone){
+    if (!card) return;
+    if (!card.teudatZehut && tz) card.teudatZehut = String(tz);
+    if (!card.phone && phone && isValidIsraeliPhone(phone)) card.phone = String(phone).trim();
+  }
+  /** יש כרטיס, ואפשר להגיע אליה: טלפון או ת"ז אמיתית. */
+  function cardIsReachable(card){
+    return !!card && (!!String(card.phone || '').replace(/[^0-9]/g, '') || isPlausibleTeudatZehut(String(card.teudatZehut || '')));
+  }
   function findClientForAppt(appt){
     if (!appt) return null;
     if (appt.teudatZehut){
@@ -8836,6 +8861,13 @@
       errorEl.textContent = 'מספר הטלפון שהוזן לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567) או להשאיר את השדה ריק.';
       return;
     }
+    // 155: ת"ז שאינה 9 ספרות לא נשמרת (יהודית הרשקוביץ, 25.10: 28941086 — לא
+    // תאמה לשום כרטיס). "אמורה לומר לא תקין, הכנס מספר תקין" (איילת, 26.10)
+    if (idDigits && !/^\d{9}$/.test(idDigits)){
+      errorEl.style.display = 'block';
+      errorEl.textContent = 'תעודת הזהות לא תקינה — יש להזין מספר תקין של 9 ספרות, או להשאיר את השדה ריק.';
+      return;
+    }
     if (!/^\d{9}$/.test(idDigits) && !isValidIsraeliPhone(phone)){
       errorEl.style.display = 'block';
       errorEl.textContent = 'צריך לפחות אחד משניים: תעודת זהות בת 9 ספרות, או מספר טלפון תקין.';
@@ -9024,11 +9056,14 @@
     }
     const emailVal = (document.getElementById('mbClientEmail')?.value || '').trim();
     const noteVal = (document.getElementById('mbClientNote')?.value || '').trim();
+    /* 155: יהודית הרשקוביץ (25.10) — תור בלי כרטיס, בלי טלפון ובלי ת"ז. הטלפון
+     * שהוקלד התאים לכרטיס קיים בלי ת"ז: התור קיבל מספר הסבה חדש, הכרטיס נשאר
+     * בלי — ושום דבר לא חיבר ביניהם. עכשיו: כרטיס לפי טלפון רק באותו שם
+     * (cardForBooking), הכרטיס מקבל את המספר של התור, ותור לא נשמר בלי כרטיס
+     * עם טלפון או ת"ז (בדיקה לפני השמירה, למטה). */
     const byLoaded = mbLoadedClientKey
-      ? clients.find(c => c && String(c.teudatZehut || '') === mbLoadedClientKey) : null;
-    const existingByIdOrPhone = byLoaded
-      || (idDigits ? clients.find(c => c && String(c.teudatZehut || '') === idDigits) : null)
-      || (phone ? clients.find(c => c && (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, '')) : null);
+      ? clients.find(c => c && String(c.teudatZehut || '') === mbLoadedClientKey && sameClientName(c.name, name)) : null;
+    const existingByIdOrPhone = byLoaded || cardForBooking(idDigits, phone, name);
     const assignedTz = idDigits
       || (existingByIdOrPhone && String(existingByIdOrPhone.teudatZehut || ''))
       || nextMigrationNumber();
@@ -9072,16 +9107,9 @@
         if (pick === 'move') mbMoveFrom = mbExisting;
       }
     }
-    weekAppointments.push(manualAppointment);
-    if (mbMoveFrom) salonMoveOldAppointment(mbMoveFrom, manualAppointment);   // 153
-    // 143: בקשה מיוחדת / המתנה של הלקוחה לאותו טיפול ותאריך — נסגרת, וההצעות ממנה עוברות הלאה
-    try { fulfillRequestsByBookingLocal(manualAppointment, mbFromSpecialRequestId); }
-    catch (e) { console.warn('[offers] closing the request after a manual booking failed:', e); }
-    if (mbFromSpecialRequestId){
-      removeSpecialRequestSilently(mbFromSpecialRequestId);
-      mbFromSpecialRequestId = null;
-    }
+    // 155: קודם הכרטיס (חדש או קיים), ורק אחר כך התור — ורק אם הם מחוברים.
     if (existingByIdOrPhone){
+      linkCardToBooking(existingByIdOrPhone, assignedTz, phone);
       const hadPlaceholder = existingByIdOrPhone.teudatZehut
         && !isPlausibleTeudatZehut(existingByIdOrPhone.teudatZehut);
       if (idDigits && isPlausibleTeudatZehut(idDigits) && (hadPlaceholder || !existingByIdOrPhone.teudatZehut)){
@@ -9097,21 +9125,37 @@
       if (manualAppointment.reminderChannels.length){
         existingByIdOrPhone.reminderChannelPref = manualAppointment.reminderChannels.slice();
       }
+      if (existingByIdOrPhone.teudatZehut) manualAppointment.teudatZehut = String(existingByIdOrPhone.teudatZehut);   // 155: התור = הכרטיס
     } else if (phone || idDigits){
       clients.push({ name, phone, teudatZehut: assignedTz || null, email: emailVal, photo: null, visits: 0, daysSinceVisit: null, // ההערה האוטומטית נשארת, לבקשתה.
       note: noteVal || 'לקוחה חדשה — נוספה דרך קביעת תור ידנית', birthday: mbReadBirthday() || null, reminderChannelPref: manualAppointment.reminderChannels.slice() });
     }
+    // 155: "אין מצב לקבוע תור ללקוחה ואין לה כרטיס או ת"ז או טלפון" (איילת, 26.10)
+    const mbLinked = findClientForAppt(manualAppointment);
+    if (!cardIsReachable(mbLinked)){
+      console.error('manual booking: refused — no linked card with phone/ID', {
+        name, phone, idDigits, assignedTz, hadExisting: !!existingByIdOrPhone, loadedKey: mbLoadedClientKey,
+      });
+      if (typeof reportDiag === 'function') reportDiag('booking-no-card', { where: 'manual' });
+      errorEl.style.display = 'block';
+      errorEl.textContent = 'התור לא נשמר: לא הצלחנו לחבר אותו לכרטיס של ' + name + ' עם טלפון או ת"ז. '
+        + 'נא לבדוק את הטלפון ואת הת"ז, או לפתוח לה כרטיס בכרטסת ולנסות שוב.';
+      mbLastSubmitSig = null;
+      return;
+    }
+    weekAppointments.push(manualAppointment);
+    if (mbMoveFrom) salonMoveOldAppointment(mbMoveFrom, manualAppointment);   // 153
+    // 143: בקשה מיוחדת / המתנה של הלקוחה לאותו טיפול ותאריך — נסגרת, וההצעות ממנה עוברות הלאה
+    try { fulfillRequestsByBookingLocal(manualAppointment, mbFromSpecialRequestId); }
+    catch (e) { console.warn('[offers] closing the request after a manual booking failed:', e); }
+    if (mbFromSpecialRequestId){
+      removeSpecialRequestSilently(mbFromSpecialRequestId);
+      mbFromSpecialRequestId = null;
+    }
     if (typeof saveState === 'function') saveState();
     closeManualBookingModal();
-    const mbLinked = (typeof findClientForAppt === 'function') ? findClientForAppt(manualAppointment) : null;
-    if (!mbLinked || !mbLinked.phone){
-      if (typeof showSaveErrorBanner === 'function'){
-        showSaveErrorBanner(`⚠ התור של ${name} נקבע, אבל ${!mbLinked ? 'לא נוצר לה כרטיס לקוחה' : 'לא נשמר לה מספר טלפון בכרטיס'}. בלי זה לא תצא אליה תזכורת. נא לצלם את ההודעה הזו ולפתוח לה כרטיס ידנית בכרטסת.`);
-      }
-      console.error('manual booking: client record missing after save', {
-        name, phone, idDigits, assignedTz, hadExisting: !!existingByIdOrPhone,
-        loadedKey: mbLoadedClientKey, clientsCount: clients.length,
-      });
+    if (!mbLinked.phone && typeof showAdminToast === 'function'){
+      setTimeout(() => showAdminToast('שימי לב: בכרטיס של ' + name + ' אין טלפון — תזכורות יוצאות רק במייל, אם יש.'), 2600);
     }
     showAdminToast('✓ התור נוסף ואושר בהצלחה');
     try {
@@ -14763,9 +14807,7 @@
     specialRequests = specialRequests.map(r => r.id === req.id ? req : r);
     const idDigits = (req.teudatZehut || '').replace(/[^0-9]/g, '');
     const phone = req.phone || '';
-    const existing = idDigits
-      ? clients.find(c => c.teudatZehut === idDigits) || (phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, '')) : null)
-      : (phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, '')) : null);
+    const existing = cardForBooking(idDigits, phone, req.name);   // 155: טלפון — רק באותו שם
     let customerEmail = req.email || '';
     if (existing){
       if (idDigits && !existing.teudatZehut) existing.teudatZehut = idDigits;
@@ -15688,9 +15730,7 @@
     waitlist = waitlist.map(x => x.id === w.id ? w : x);
     const idDigits = (w.teudatZehut || '').replace(/[^0-9]/g, '');
     const phone = w.phone || '';
-    const existing = idDigits
-      ? clients.find(c => c.teudatZehut === idDigits) || (phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, '')) : null)
-      : (phone ? clients.find(c => (c.phone || '').replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, '')) : null);
+    const existing = cardForBooking(idDigits, phone, w.name);   // 155: טלפון — רק באותו שם
     let customerEmail = w.email || '';
     if (existing){
       if (idDigits && !existing.teudatZehut) existing.teudatZehut = idDigits;
