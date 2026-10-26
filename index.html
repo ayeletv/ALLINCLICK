@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-26 · 156">
+<meta name="app-build" content="2026-10-26 · 157">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4605,7 +4605,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-26 · 156';
+        window.__APP_BUILD = '2026-10-26 · 157';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -14970,6 +14970,47 @@
       return o && String(o.date || '') + '|' + String(o.time || '') + '|' + String(o.staff) === key && (Date.parse(o.createdAt || '') || 0) > b;
     });
   }
+  /* 157: הניה ברודבקר (26.10) — 35 הצעות ביום אחד, על 19 שעות שונות, לבקשה
+   * לטיפול שכבר היה לה תור אליו (8.11). מ-146 כל פעולה ביומן
+   * (recheckAllPendingFlexibleRequests) מצאה את השעה הפנויה הבאה — זו שלפניה
+   * כבר "מוחזקת" בהצעה — ושלחה עליה עוד הצעה. עכשיו, לכל בקשה / ממתינה:
+   * הצעה פתוחה אחת בכל רגע; לכל היותר 3 הצעות ב-24 שעות; ובקשה גמישה — לא
+   * אם כבר יש לה תור עתידי לאותו טיפול בתוך הטווח שביקשה. זהה ל-
+   * requestOfferBlockedSrv בשרת. מחזיר את הסיבה ('live' / 'daily' / 'booked'), או ''. */
+  const MAX_OFFERS_PER_REQUEST_PER_DAY = 3;
+  function requestOfferBlocked(r, now, flexible){
+    const id = String(r && r.id);
+    const nowMs = (now || new Date()).getTime();
+    const mine = (pendingOffers || []).filter(function(o){
+      return o && o.status !== 'takenByOwner' && (o.recipients || []).some(function(rec){
+        return rec && String(rec.requestId) === id && rec.status !== 'withdrawn';
+      });
+    });
+    if (mine.some(function(o){ return offerIsLive(o, now); })) return 'live';
+    if (mine.filter(function(o){ return (Date.parse(o.createdAt || '') || 0) > nowMs - 24 * 3600000; }).length >= MAX_OFFERS_PER_REQUEST_PER_DAY) return 'daily';
+    if (flexible && requestAlreadyBooked(r, now)) return 'booked';
+    return '';
+  }
+  /** לבקשה הזו כבר יש תור עתידי לאותו טיפול בדיוק, בתוך הטווח שביקשה. */
+  function requestAlreadyBooked(r, now){
+    if (!r) return false;
+    const want = apptTreatmentKey((r.services || []).map(function(s){ return s && s.name; }));
+    if (!want) return false;
+    const pref = r.preference || {};
+    const card = (typeof bookingCardOf === 'function' && bookingCardOf(r)) || null;
+    const tz = String((card && card.teudatZehut) || r.teudatZehut || '').trim();
+    const name = String((card && card.name) || r.name || '').trim();
+    const today = formatDateKey(now || new Date());
+    return (weekAppointments || []).some(function(a){
+      if (!a || !a.date || a.status === 'cancelled' || a.date < today) return false;
+      if (pref.dateFrom && a.date < pref.dateFrom) return false;
+      if (pref.dateTo && a.date > pref.dateTo) return false;
+      const mineAppt = tz ? (String(a.teudatZehut || '') === tz || (!a.teudatZehut && String(a.client || '').trim() === name))
+        : (!!name && String(a.client || '').trim() === name);
+      if (!mineAppt) return false;
+      return apptTreatmentKey(Array.isArray(a.services) && a.services.length ? a.services.map(function(s){ return s && s.name; }) : String(a.service || '').split(' + ')) === want;
+    });
+  }
   function eligibleRequestsForSlot(slot, now){
     const minutesAway = offerMinutesUntil(slot.date, slot.time, now);
     if (minutesAway === null) return [];
@@ -14994,6 +15035,7 @@
       if (!r || r.mode !== 'flexible' || (r.status !== 'pending' && r.status !== 'offerExpired')) return false;
       if (previouslyOffered.has(String(r.id))) return false;
       if (offerMessagesForSlotTo(slotKey, r.id) >= MAX_MESSAGES_PER_SLOT) return false;   // 142
+      if (requestOfferBlocked(r, now, true)) return false;   // 157
       if (typeof specialRequestIsExpired === 'function' && specialRequestIsExpired(r, now)) return false;
       if (minutesAway < requestLeadMinutes(r)) return false;
       const pref = r.preference || {};
@@ -15040,6 +15082,7 @@
       if (!w || w.status === 'matched' || !w.date || w.date !== slot.date || w.date < todayKey) return false;
       if (previouslyOffered && previouslyOffered.has(String(w.id))) return false;
       if (offerMessagesForSlotTo(String(slot.date || '') + '|' + String(slot.time || '') + '|' + String(slot.staff), w.id) >= MAX_MESSAGES_PER_SLOT) return false;   // 142
+      if (requestOfferBlocked(w, now, false)) return false;   // 157
       const req = timeToMinutes(w.requestedTime || '');
       if (!(req >= startMin && req < startMin + slotDur)) return false;
       const svc = (services || []).find(function(s){ return s && s.name === w.service; }) || null;
