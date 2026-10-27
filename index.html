@@ -4605,7 +4605,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-27 · 158';
+        window.__APP_BUILD = '2026-10-27 · 159';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -14668,7 +14668,7 @@
     const boundary = ov.reduce(function(b, o){
       return (o.status === 'claimed' || o.status === 'taken') ? Math.max(b, Date.parse(o.createdAt || '') || 0) : b;
     }, 0);
-    if (ov.some(function(o){ return o.final && (Date.parse(o.createdAt || '') || 0) > boundary; })) return false;
+    if (ov.some(function(o){ return (o.final || o.status === 'cancelledByOwner') && (Date.parse(o.createdAt || '') || 0) > boundary; })) return false;
     const mine = ov.filter(function(o){
       return (o.recipients || []).some(function(rec){ return rec && String(rec.requestId) === String(req.id); });
     }).length;
@@ -15182,7 +15182,8 @@
     if (slotHasAppointmentConflict(slot)) return null;
     // 142: הסבב של השעה הזו כבר נגמר בהודעה לכולן (final, בשרת) — לא שוב.
     // סבב חדש רק אחרי שנקבע בה תור ובוטל (currentOfferChain מתחיל מחדש).
-    if (currentOfferChain(String(slot.date) + '|' + String(slot.time) + '|' + String(slot.staff)).some(function(o){ return o && o.final; })) return null;
+    // 158: גם הצעה שרותי ביטלה ביומן מסיימת את הסבב (כמו בשרת)
+    if (currentOfferChain(String(slot.date) + '|' + String(slot.time) + '|' + String(slot.staff)).some(function(o){ return o && (o.final || o.status === 'cancelledByOwner'); })) return null;
     // 142: בלילה — לא שולחים; השרת יציע את השעה ב-08:00
     if (offersQuietNow()){ deferFreedSlotToMorning(slot); return null; }
     const now = new Date();
@@ -15607,8 +15608,11 @@
     const closedAt = new Date().toISOString();
     // Cancel every still-live offer for this exact slot so no old acceptance
     // link can keep the slot reserved or race with a newer offer.
+    // 158: גם הצעה שפגה. "נשלח לכולן — לא אושר" היא הודעה אחרונה שפגה
+    // (expired), והביטול דילג עליה — רותי קיבלה "השעה שוחררה" והריבוע נשאר
+    // ביומן (איילת, 27.10). כך גם לא תצא עליה הצעה לבאה בתור.
     (pendingOffers || []).forEach(function(other){
-      if (!other || other.status !== 'offered') return;
+      if (!other || (other.status !== 'offered' && other.status !== 'expired')) return;
       if (String(other.date) === String(o.date) &&
           String(other.time) === String(o.time) &&
           String(other.staff) === String(o.staff)) {
