@@ -4605,7 +4605,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-26 · 157';
+        window.__APP_BUILD = '2026-10-27 · 158';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -6137,9 +6137,17 @@
     }
     if (!frKnown && !/^\d{9}$/.test(idDigits)){
       // 127: טלפון שרשום על כמה כרטיסים (אמא ובת) — לא "לא תקין", אלא לא ברור מי.
+      // 158: רותי קיבלה 7 פעמים ב-26.10 "ת"ז תקנית או טלפון שכבר רשום" — כנראה
+      // לקוחה חדשה שהוקלד לה טלפון. ההודעה אומרת עכשיו מה לעשות לפי מה שהוקלד.
+      // הכלל לא השתנה: בלי ת"ז או טלפון רשום — הבקשה לא נכנסת (איילת, 27.10).
+      const frPhoneLike = /^0\d{9}$/.test(idDigits);
       errorEl.textContent = (frResolvedLocal && frResolvedLocal.ambiguousPhone)
         ? 'המספר הזה רשום על כמה כרטיסים (למשל אמא ובת) — יש להקליד תעודת זהות כדי שנדע למי הבקשה.'
-        : 'יש להזין תעודת זהות תקנית (9 ספרות), או מספר טלפון שכבר רשום אצלנו.';
+        : frPhoneLike
+          ? 'המספר הזה עדיין לא רשום אצלנו. לקוחה חדשה? יש להקליד במקומו תעודת זהות (9 ספרות).'
+          : idDigits
+            ? 'תעודת הזהות לא תקינה — יש להקליד 9 ספרות.'
+            : 'יש להקליד תעודת זהות (9 ספרות), או מספר טלפון שכבר רשום אצלנו.';
       errorEl.style.display = 'block';
       return;
     }
@@ -21976,10 +21984,47 @@
       // המזהה, כך שהעותק השני דורס את הראשון.
       const eid = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
       const event = Object.assign({ kind: kind, role: role, build: window.__APP_BUILD || '', net: net, device: device, eid: eid }, info || {});
+      if (!event.contact){
+        const who = diagContactNow(kind, role, info);
+        if (who){ event.contact = who.digits; if (who.name) event.contactName = who.name; }
+      }
       if (typeof callClientApi === 'function') callClientApi('diag', { event: event }).catch(function(){});
     } catch (e) {}
   }
   window.__reportDiag = reportDiag;
+
+  /* 158: "אני רוצה לדעת מי הלקוחות שנתקעו... פעם הבאה להתקשר אליהם" (איילת,
+   * 27.10). ליד תקלה נשלחים גם הטלפון או הת"ז שהוקלדו בטופס הפתוח, והשם אם
+   * הוקלד. השרת שומר אותם בשדה נפרד, והסיכום היומי מציג שם וטלפון מהכרטיס.
+   * ביומן העסק — רק בשגיאת טופס הבקשה המיוחדת ובתור שלא נשמר, ורק מהטופס
+   * ההוא (שאר התקלות שם הן של רותי, לא של לקוחה). */
+  const DIAG_CONTACT_FORMS = {
+    lk: { ids: ['lookupId'], names: [] },
+    bk: { ids: ['bookingPhoneInput', 'bookingIdInput', 'bookingNewTzInput', 'bookingTzUpdateInput'], names: ['bookingFirstNameInput', 'bookingLastNameInput'] },
+    fr: { ids: ['frPhone', 'frId'], names: ['frFirstName', 'frLastName'] },
+    wl: { ids: ['wlPhone', 'wlId'], names: ['wlFirstName', 'wlLastName'] },
+    mb: { ids: ['mbClientPhone', 'mbClientId'], names: ['mbClientFirstName', 'mbClientLastName'] }
+  };
+  function diagContactNow(kind, role, info){
+    try {
+      let forms;
+      if (role === 'owner'){
+        if (kind === 'form-error' && /^flex:/.test(String((info && info.key) || ''))) forms = ['fr'];
+        else if (kind === 'booking-no-card') forms = ['mb'];
+        else return null;
+      } else forms = ['lk', 'bk', 'fr', 'wl'];
+      const valuesOf = id => Array.prototype.map.call(document.querySelectorAll('[id="' + id + '"]'), el => String(el.value || '').trim()).filter(Boolean);
+      for (const f of forms){
+        const form = DIAG_CONTACT_FORMS[f];
+        const all = [].concat.apply([], form.ids.map(valuesOf)).map(v => v.replace(/[^0-9]/g, '')).filter(d => d.length >= 7 && d.length <= 10);
+        const digits = all.find(d => /^0\d{9}$/.test(d)) || all.find(d => d.length === 9) || all[0];
+        if (!digits) continue;
+        const name = form.names.map(id => (valuesOf(id)[0] || '')).join(' ').trim().slice(0, 40);
+        return { digits: digits, name: name };
+      }
+    } catch (e) {}
+    return null;
+  }
 
   /* בדיקת חיבור שקטה (21.10.2026, גרסה 140).
    *
