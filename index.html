@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-26 · 157">
+<meta name="app-build" content="2026-10-27 · 160">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4605,7 +4605,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-27 · 159';
+        window.__APP_BUILD = '2026-10-27 · 160';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -15002,7 +15002,10 @@
     if (flexible && requestAlreadyBooked(r, now)) return 'booked';
     return '';
   }
-  /** לבקשה הזו כבר יש תור עתידי לאותו טיפול בדיוק, בתוך הטווח שביקשה. */
+  /** לבקשה הזו כבר היה תור לאותו טיפול בדיוק, בתוך הטווח שביקשה, והוא כבר
+   *  התחיל — היא עשתה את הטיפול. 160: תור עתידי לא חוסם; ההצעה יוצאת עם
+   *  "יש לך כבר תור... באישור תבחרי אם להעביר" (offerExistingNote). "למה לא
+   *  היה רשום לה שהיא תצטרך להחליף" (איילת, 27.10 — פייגי). זהה לשרת. */
   function requestAlreadyBooked(r, now){
     if (!r) return false;
     const want = apptTreatmentKey((r.services || []).map(function(s){ return s && s.name; }));
@@ -15012,8 +15015,17 @@
     const tz = String((card && card.teudatZehut) || r.teudatZehut || '').trim();
     const name = String((card && card.name) || r.name || '').trim();
     const today = formatDateKey(now || new Date());
+    // 159: פייגי שפיצר (27.10) — תור "15 דקות" ב-08:30, ובקשה לאותו טיפול
+    // לערב של אותו יום. אחרי 08:30 התור כבר "עבר", לא נספר, והיא הייתה שוב
+    // מקבלת הצעות. נספר כל תור מהיום שבו הבקשה נוצרה — גם אם כבר עבר.
+    const createdMs = Date.parse(r.createdAt || '');
+    const fromDay = Number.isFinite(createdMs) ? formatDateKey(new Date(Math.min(createdMs, (now || new Date()).getTime()))) : today;
+    const nowD = now || new Date();
+    const nowMin = nowD.getHours() * 60 + nowD.getMinutes();
     return (weekAppointments || []).some(function(a){
-      if (!a || !a.date || a.status === 'cancelled' || a.date < today) return false;
+      if (!a || !a.date || a.status === 'cancelled' || a.date < fromDay) return false;
+      if (a.date > today || (a.date === today && timeToMinutes(a.time) > nowMin)) return false;   // 160: עוד לא עבר
+
       if (pref.dateFrom && a.date < pref.dateFrom) return false;
       if (pref.dateTo && a.date > pref.dateTo) return false;
       const mineAppt = tz ? (String(a.teudatZehut || '') === tz || (!a.teudatZehut && String(a.client || '').trim() === name))
@@ -15310,7 +15322,18 @@
     return (typeof siteBaseUrl === 'function' ? siteBaseUrl() : location.origin + location.pathname) +
       '?offer=' + encodeURIComponent(offer.id) + (digits ? '&lookupPhone=' + encodeURIComponent(digits) : '');
   }
-  function offerSmsText(offer, phone){
+  /* 160: ללקוחה כבר יש תור עתידי לאותו טיפול — שורה בהצעה (זהה ל-
+   * existingApptNoteSrv בשרת). השאלה "להעביר או להשאיר" נשאלת באישור. */
+  function offerExistingNote(ex, forSms){
+    if (!ex || !ex.date) return '';
+    const p = String(ex.date).split('-').map(Number);
+    const d = p[2] + '/' + p[1];
+    return forSms
+      ? ' יש לך כבר תור ב-' + d + ' ב-' + ex.time + ' — באישור תבחרי אם להעביר אותו.'
+      : 'שימי לב: יש לך כבר תור' + (ex.service ? ' ל' + ex.service : '') + ' ב-' + d + ' בשעה ' + ex.time +
+        '. כשתאשרי את ההצעה תוכלי לבחור אם להעביר אותו לשעה הזו או להשאיר את שניהם.\n\n';
+  }
+  function offerSmsText(offer, phone, existing){
     const [y, mo, d] = offer.date.split('-').map(Number);
     const when = (offerMinutesUntil(offer.date, offer.time, new Date()) < 24 * 60)
       ? 'היום' : (d + '/' + mo);
@@ -15318,19 +15341,20 @@
     const race = offer.broadcast
       ? ' ההודעה נשלחה לכמה לקוחות — הראשונה שתאשר מקבלת.'
       : '';
+    const note = offerExistingNote(existing, true);   // 160
     if (offer.shared && !offer.broadcast){
       return 'התפנה תור ' + when + ' ב-' + offer.time + (offer.serviceName ? ' (' + offer.serviceName + ')' : '') +
-        '. הראשונה שתאשר מקבלת: ' + link;
+        '. הראשונה שתאשר מקבלת: ' + link + note;
     }
     return 'התפנה תור ' + when + ' ב-' + offer.time + (offer.serviceName ? ' (' + offer.serviceName + ')' : '') +
-      '. שמורה לך עד ' + offerUntilLabel(offer) + (offer.broadcast ? '' : ' (ואחר כך — אם עדיין פנויה)') + ': ' + link + race;
+      '. שמורה לך עד ' + offerUntilLabel(offer) + (offer.broadcast ? '' : ' (ואחר כך — אם עדיין פנויה)') + ': ' + link + race + note;
   }
   // 122: עד מתי ההצעה שמורה לה — בהודעה ובמסך שהקישור פותח.
   function offerUntilLabel(offer){
     const t = new Date(offer && offer.expiresAt);
     return isNaN(t.getTime()) ? '' : t.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Jerusalem' });
   }
-  function offerEmailText(offer, recipient){
+  function offerEmailText(offer, recipient, existing){
     const parts = String(offer.date || '').split('-').map(Number);
     const dateLabel = parts.length === 3 && parts[0]
       ? parts[2] + '/' + parts[1] + '/' + parts[0] : String(offer.date || '');
@@ -15338,6 +15362,7 @@
     return 'היי ' + (recipient.name || '') + ',\n\nהתפנה תור' +
       (offer.serviceName ? ' ל' + offer.serviceName : '') +
       ' בתאריך ' + dateLabel + ' בשעה ' + offer.time + '.\n\n' +
+      offerExistingNote(existing, false) +
       (offer.broadcast
         ? 'ההודעה נשלחה לכמה לקוחות — הראשונה שתאשר מקבלת. ההצעה בתוקף עד ' + offerUntilLabel(offer) + '.\n\n'
         : offer.shared
@@ -15351,15 +15376,18 @@
     requests.forEach(function(r){
       // 121: בהודעה — הטיפול שהיא ביקשה, לא זה שבוטל.
       const mineOffer = Object.assign({}, offer, { serviceName: recipientBookingOf(r).service || offer.serviceName });
+      // 160: כבר יש לה תור עתידי לאותו טיפול — נכתב בהצעה
+      let existing = null;
+      try { existing = salonSameTreatmentAppt(r, (recipientBookingOf(r).services || []).map(function(s){ return s.name; }), offer.date, offer.time); } catch (e) {}
       try {
         const fake = { id: offer.id, client: r.name, teudatZehut: r.teudatZehut,
                        reminderChannels: r.reminderChannels || ['sms'] };
-        if (typeof queueApptSms === 'function') queueApptSms(fake, offerSmsText(mineOffer, r.phone));
+        if (typeof queueApptSms === 'function') queueApptSms(fake, offerSmsText(mineOffer, r.phone, existing));
       } catch (e){ console.error('Offer SMS failed for', r.name, e); }
       try {
         const email = (r.email || (typeof findClientEmailByPhone === 'function' ? findClientEmailByPhone(r.phone) : '') || '').trim();
         if (email && typeof sendEmail === 'function') {
-          sendEmail(email, 'התפנה תור — לאישור לחצי כאן', offerEmailText(mineOffer, r));
+          sendEmail(email, 'התפנה תור — לאישור לחצי כאן', offerEmailText(mineOffer, r, existing));
         }
       } catch (e){ console.error('Offer email failed for', r.name, e); }
     });
