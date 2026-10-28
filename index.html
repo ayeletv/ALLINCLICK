@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-28 · 162">
+<meta name="app-build" content="2026-10-28 · 163">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4611,7 +4611,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-28 · 162';
+        window.__APP_BUILD = '2026-10-28 · 163';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -15010,14 +15010,15 @@
   function requestOfferBlocked(r, now, flexible){
     const id = String(r && r.id);
     const nowMs = (now || new Date()).getTime();
-    // 162: ההודעה לכולן ("השעה עדיין פנויה") לא נספרת — זהה לשרת (יעל כהן, 28.10)
     const mine = (pendingOffers || []).filter(function(o){
-      return o && o.status !== 'takenByOwner' && !o.final && (o.recipients || []).some(function(rec){
+      return o && o.status !== 'takenByOwner' && (o.recipients || []).some(function(rec){
         return rec && String(rec.requestId) === id && rec.status !== 'withdrawn';
       });
     });
+    // 163: גם "השעה עדיין פנויה" שפתוחה אצלה — הצעה פתוחה (איטי, 28.10). זהה לשרת.
     if (mine.some(function(o){ return offerIsLive(o, now); })) return 'live';
-    if (mine.filter(function(o){ return (Date.parse(o.createdAt || '') || 0) > nowMs - 24 * 3600000; }).length >= MAX_OFFERS_PER_REQUEST_PER_DAY) return 'daily';
+    // 162: ההודעה לכולן לא נספרת ב-3 ביום (יעל כהן, 28.10)
+    if (mine.filter(function(o){ return !o.final && (Date.parse(o.createdAt || '') || 0) > nowMs - 24 * 3600000; }).length >= MAX_OFFERS_PER_REQUEST_PER_DAY) return 'daily';
     if (flexible && requestAlreadyBooked(r, now)) return 'booked';
     return '';
   }
