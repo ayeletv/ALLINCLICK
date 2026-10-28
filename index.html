@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-27 · 160">
+<meta name="app-build" content="2026-10-27 · 161">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -69,6 +69,12 @@
   window.__BIZ_BY_DOMAIN = {
     'rutizolberg.com': 'default',
     'bdika.hakolbeklik.com': 'slon-bdika',
+  };
+  // 161: כתובת־משנה של העסק שמעבירה לשרת (Netlify, בלי להעביר את האתר). לקוחה
+  // שהסינון חוסם אצלה את run.app ואת Firestore — מגיעה לשרת דרכה. דומיין שאין
+  // לו כאן כתובת — /api באתר עצמו (רק כשהאתר ב-Netlify).
+  window.__API_PROXY_BY_DOMAIN = {
+    'rutizolberg.com': 'https://api.rutizolberg.com/api',
   };
   // 128: קישור ל"התורים שלי" / להצעה (מ-SMS או מייל) — בלי מסך הלוגו ובלי גלילה:
   // הדף נפתח ישר במקום של התורים. (בקשה של איילת, 19.10: "שיביא אותי כבר לאיפה
@@ -4605,7 +4611,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-27 · 160';
+        window.__APP_BUILD = '2026-10-27 · 161';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -22092,6 +22098,14 @@
     // לקוחות שגם השרת וגם Firestore חסומים אצלן (איילת, 25.10: "כדאי לבדוק קודם").
     ['w', 'https://allinklik.web.app/'],                                         // web.app
   ];
+  // 161: כתובת־המשנה של העסק לשרת (api.rutizolberg.com) — רק בדומיין שיש לו אחת
+  (function(){
+    try {
+      const host = String(location.hostname || '').toLowerCase().replace(/^www\./, '');
+      const px = (window.__API_PROXY_BY_DOMAIN || {})[host];
+      if (px) NET_CHECK_TARGETS.push(['p', px.replace(/\/api\/?$/, '/') + '?ping=1']);
+    } catch (e) {}
+  })();
   let __netCheckRan = false;
   // 147: בדיקה אחת בדרך בכל רגע. עד היום כל בדיקה הגיעה ליומן פעמיים — גם
   // מהבדיקה עצמה וגם מ"שליחת מה שנכשל קודם" שרצה באותה שנייה.
@@ -23341,8 +23355,18 @@
    * (404), ולא מנסים שוב באותו ביקור. מכשיר שהדרך הזו הצליחה בו — זוכר 30 יום,
    * ומתחיל בה. */
   // (פונקציות בלבד, ומצב על window — נקראות גם מקוד שמופיע קודם בקובץ)
+  /* 161: לדומיין שיש לו כתובת־משנה (__API_PROXY_BY_DOMAIN) — דרכה. האתר עצמו
+   * נשאר ב-GitHub; רק api.<הדומיין> מצביע ל-Netlify, שמעביר לשרת. */
+  function apiProxyUrl(){
+    let host = '';
+    try { host = String(location.hostname || '').toLowerCase().replace(/^www\./, ''); } catch (e) {}
+    const mapped = (window.__API_PROXY_BY_DOMAIN || {})[host];
+    if (mapped) return mapped;
+    if (/(^|\.)github\.io$/i.test(host)) return '';
+    return location.origin + '/api';
+  }
   function apiProxyPossible(){
-    return !window.__apiProxyMissing && /^https?:$/.test(location.protocol) && !/(^|\.)github\.io$/i.test(location.hostname);
+    return !window.__apiProxyMissing && /^https?:$/.test(location.protocol) && !!apiProxyUrl();
   }
   function rememberApiViaProxy(){
     try { localStorage.setItem('hk_api_via_proxy_until', String(Date.now() + 30 * 24 * 3600 * 1000)); } catch (e) {}
@@ -23351,18 +23375,34 @@
   function apiViaProxyRemembered(){
     try { return Number(localStorage.getItem('hk_api_via_proxy_until') || 0) > Date.now(); } catch (e) { return false; }
   }
-  /** שליחה ל-/api באתר עצמו. מחזיר את תשובת השרת (JSON), או זורק. timeoutMs — רק לקריאות. */
+  /** שליחה דרך האתר (apiProxyUrl). מחזיר את תשובת השרת (JSON), או זורק. timeoutMs — בקריאות.
+   *  161: כתיבה בדרך שעוד לא הצליחה בביקור הזה — עד 20 שניות (סינון שתוקע לא
+   *  ישאיר את הקביעה תלויה לנצח). אם נגמר הזמן — ייתכן שהבקשה בוצעה:
+   *  err.maybeSent, ולא שולחים אותה שוב בדרך אחרת. */
   async function postViaSiteProxy(bodyObj, timeoutMs){
-    const controller = (timeoutMs && typeof AbortController === 'function') ? new AbortController() : null;
-    const timer = controller ? setTimeout(function(){ try { controller.abort(); } catch (e) {} }, timeoutMs) : null;
+    const url = apiProxyUrl();
+    if (!url) throw new Error('proxy: none');
+    const limit = timeoutMs || (window.__apiProxyOk ? 0 : 20000);
+    const controller = (limit && typeof AbortController === 'function') ? new AbortController() : null;
+    let timedOut = false;
+    const timer = controller ? setTimeout(function(){ timedOut = true; try { controller.abort(); } catch (e) {} }, limit) : null;
     try {
-      const res = await fetch(location.origin + '/api', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyObj),
-        signal: controller ? controller.signal : undefined,
-        cache: 'no-store',
-      });
+      let res;
+      try {
+        res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyObj),
+          signal: controller ? controller.signal : undefined,
+          cache: 'no-store',
+        });
+      } catch (netErr) {
+        // 161: חסומה או נתקעת — לא מנסים שוב בביקור הזה (אחרת כל בקשה מחכה לה)
+        window.__apiProxyMissing = true;
+        const e2 = new Error('proxy: ' + (timedOut ? 'timeout' : 'network'));
+        if (timedOut && !timeoutMs) e2.maybeSent = true;
+        throw e2;
+      }
       let ct = '';
       try { ct = String((res.headers && res.headers.get('content-type')) || ''); } catch (e) {}
       if (ct.indexOf('json') === -1){
@@ -23370,7 +23410,9 @@
         if (res.status === 404 || res.status === 405 || ct.indexOf('html') !== -1) window.__apiProxyMissing = true;
         throw new Error('proxy: no api here (' + res.status + ')');
       }
-      return await res.json();
+      const out = await res.json();
+      window.__apiProxyOk = true;
+      return out;
     } finally {
       if (timer) clearTimeout(timer);
     }
@@ -23451,7 +23493,8 @@
       } catch (pErr) {
         forgetApiViaProxy();
         // כתיבה (קביעה, ביטול) שנכשלה באמצע — ייתכן שבוצעה. לא שולחים שוב בדרך אחרת.
-        if (!isReadP && !apiProxyMissing && action !== 'diag') throw new Error('שגיאת תקשורת מול השרת. נא לנסות שוב.');
+        // (161: עד היום היה כאן apiProxyMissing בלי window. — שגיאת קוד בכל כתיבה שנכשלה)
+        if (!isReadP && action !== 'diag' && ((pErr && pErr.maybeSent) || !window.__apiProxyMissing)) throw new Error('שגיאת תקשורת מול השרת. נא לנסות שוב.');
       }
     }
     if (apiViaQueue && action !== 'offersTick') {
@@ -23521,7 +23564,10 @@
         noteApiFailure(action, 'proxy-ok', Date.now() - started);
         if (action !== 'diag') flushApiFailures();
         return pBody;
-      } catch (pErr) { /* אין כאן /api, או שגם היא חסומה — לגיבוי */ }
+      } catch (pErr) {
+        // אין כאן /api, או שגם היא חסומה — לגיבוי. אבל כתיבה שנתקעה (ייתכן שבוצעה) — לא שולחים שוב.
+        if (pErr && pErr.maybeSent) { noteDirectFail(); throw blockedErr; }
+      }
     }
     let qBody;
     try {
