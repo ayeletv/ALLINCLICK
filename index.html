@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-27 · 161">
+<meta name="app-build" content="2026-10-28 · 162">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4611,7 +4611,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-27 · 161';
+        window.__APP_BUILD = '2026-10-28 · 162';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -4997,6 +4997,7 @@
       <div class="label" style="margin-top:6px;">פרטי קשר</div>
       <input type="tel" inputmode="numeric" maxlength="10" id="frId" class="field" placeholder="תעודת זהות או מספר טלפון">
       <div id="frWelcomeBack" style="display:none; color:var(--sage); font-size:12px; margin:-4px 0 0;"></div>
+      <div id="frIdentityChoice" style="display:none;"></div>
       <div id="frContactDetails" style="display:none; flex-direction:column; gap:10px;">
         <div class="field-row">
           <input type="text" id="frFirstName" class="field" placeholder="שם פרטי">
@@ -5530,15 +5531,18 @@
   </div>
 </div>
 <script>
+  // 162: שעון קיר (Date.now) ולא performance.now — בטלפון נעול performance.now
+  // עוצר, ולכן "שמירה איטית" של 1784 שנ׳ (27.10 19:47) נספרה ברקע רק 257 שנ׳:
+  // שאר הזמן הטלפון ישן, והסיכום הציג את זה כהמתנה אמיתית.
   let pageHiddenMsAccumulated = 0;
-  let pageHiddenSince = (typeof document !== 'undefined' && document.hidden) ? (typeof performance !== 'undefined' ? performance.now() : Date.now()) : null;
+  let pageHiddenSince = (typeof document !== 'undefined' && document.hidden) ? Date.now() : null;
   function getPageHiddenMsSoFar(){
-    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    const now = Date.now();
     return pageHiddenMsAccumulated + (pageHiddenSince !== null ? (now - pageHiddenSince) : 0);
   }
   if (typeof document !== 'undefined'){
     document.addEventListener('visibilitychange', function(){
-      const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+      const now = Date.now();
       if (document.hidden){
         pageHiddenSince = now;
       } else if (pageHiddenSince !== null){
@@ -6147,8 +6151,14 @@
       // לקוחה חדשה שהוקלד לה טלפון. ההודעה אומרת עכשיו מה לעשות לפי מה שהוקלד.
       // הכלל לא השתנה: בלי ת"ז או טלפון רשום — הבקשה לא נכנסת (איילת, 27.10).
       const frPhoneLike = /^0\d{9}$/.test(idDigits);
-      errorEl.textContent = (frResolvedLocal && frResolvedLocal.ambiguousPhone)
+      // 162: באתר הציבורי התשובה מגיעה מהשרת (ללקוחה אין את רשימת הכרטיסים).
+      const frSrv = (runningOnPublicData && frServerIdentity && frServerIdentity.id === idDigits) ? frServerIdentity : null;
+      errorEl.textContent = (frSrv && frSrv.ambiguousPhone)
+        ? 'המספר הזה רשום אצלנו על יותר מלקוחה אחת — יש לבחור למעלה מי את, או להקליד תעודת זהות.'
+        : (frResolvedLocal && frResolvedLocal.ambiguousPhone)
         ? 'המספר הזה רשום על כמה כרטיסים (למשל אמא ובת) — יש להקליד תעודת זהות כדי שנדע למי הבקשה.'
+        : (frPhoneLike && runningOnPublicData && (!frSrv || frSrv.__failed))
+        ? 'לא הצלחנו לבדוק כרגע אם המספר רשום אצלנו. נא לנסות שוב בעוד רגע.'
         : frPhoneLike
           ? 'המספר הזה עדיין לא רשום אצלנו. לקוחה חדשה? יש להקליד במקומו תעודת זהות (9 ספרות).'
           : idDigits
@@ -6304,6 +6314,8 @@
       try {
         res = await callClientApi('specialRequest', {
           id: idDigits || phone, name, phone, email, teudatZehut: idDigits,
+          // 162: מי מבין הכרטיסים עם אותו טלפון (בחרה לפי שם פרטי)
+          clientIndex: (frKnown && frKnown.pick !== undefined) ? frKnown.pick : undefined,
           request: {
             kind: 'flexible', mode: req.mode,
             services: req.services, preference: req.preference,
@@ -14998,8 +15010,9 @@
   function requestOfferBlocked(r, now, flexible){
     const id = String(r && r.id);
     const nowMs = (now || new Date()).getTime();
+    // 162: ההודעה לכולן ("השעה עדיין פנויה") לא נספרת — זהה לשרת (יעל כהן, 28.10)
     const mine = (pendingOffers || []).filter(function(o){
-      return o && o.status !== 'takenByOwner' && (o.recipients || []).some(function(rec){
+      return o && o.status !== 'takenByOwner' && !o.final && (o.recipients || []).some(function(rec){
         return rec && String(rec.requestId) === id && rec.status !== 'withdrawn';
       });
     });
@@ -19307,8 +19320,8 @@
     anchor.parentNode.insertBefore(box, anchor);
   }
   function clearServerIdentity(){ serverIdentity = null; serverIdentityPick = null; }
-  function renderIdentityChoice(candidates, onPick){
-    const box = document.getElementById('bookingIdentityChoice');
+  function renderIdentityChoice(candidates, onPick, boxId){
+    const box = document.getElementById(boxId || 'bookingIdentityChoice');
     if (!box) return;
     if (!candidates || candidates.length < 2){
       box.style.display = 'none';
@@ -19442,6 +19455,18 @@
     if (!welcomeEl || !detailsEl || !emailWrap) return;
     const digits = ((document.getElementById('frId') || {}).value || '').replace(/[^0-9]/g, '');
     const known = frKnownClient();
+    // 162: טלפון שרשום על כמה כרטיסים (אמא ובת) — בוחרים לפי שם פרטי, כמו בקביעת
+    // תור. עד היום הטופס הזה התעלם מזה, ואמר "המספר הזה עדיין לא רשום אצלנו"
+    // (ריקי רוזנבוים, 27.10 14:16 — המספר רשום על 2 כרטיסים).
+    const frAmbiguous = !known && runningOnPublicData && !!(frServerIdentity && frServerIdentity.ambiguousPhone && frServerIdentity.id === digits);
+    renderIdentityChoice(frAmbiguous ? frServerIdentity.candidates : null, pickFrSharedPhoneIdentity, 'frIdentityChoice');
+    if (frAmbiguous){
+      welcomeEl.style.display = 'none';
+      detailsEl.style.display = 'none';
+      emailWrap.style.display = 'none';
+      setIdentityUnavailableNotice('frContactDetails', false);
+      return;
+    }
     if (known){
       welcomeEl.style.display = 'block';
       welcomeEl.style.color = 'var(--sage)';
@@ -19458,6 +19483,16 @@
     setIdentityUnavailableNotice('frContactDetails',
       complete && !!(frServerIdentity && frServerIdentity.__failed),
       function(){ if (typeof frLookupIdentity === 'function') frLookupIdentity(); });
+  }
+  async function pickFrSharedPhoneIdentity(index){
+    const digits = ((document.getElementById('frId') || {}).value || '').replace(/[^0-9]/g, '');
+    if (!digits || isNaN(index)) return;
+    const mySeq = ++frIdentitySeq;
+    const res = await callClientApi('lookup', { id: digits, clientIndex: index })
+      .catch(err => { console.error('Choosing among shared-phone clients failed:', err); return null; });
+    if (mySeq !== frIdentitySeq || !res || !res.found) return;
+    frServerIdentity = Object.assign({ id: digits, pick: index }, res);
+    applyFrIdentity();
   }
   function frLookupIdentity(){
     clearTimeout(frIdentityTimer);
@@ -23554,37 +23589,73 @@
       if (res.status >= 500) { noteDirectFail(); throw blockedErr; }
     }
     if (action === 'offersTick') throw blockedErr;
-    // 156: לפני הגיבוי — דרך הכתובת של האתר. אצל מי שחסום לה גם Firestore זו
-    // הדרך היחידה; ואצל השאר היא מהירה מהגיבוי.
-    if (apiProxyPossible()) {
-      try {
-        const pBody = await callClientApiViaProxy(action, payload, isRead);
-        hideBlockedHelp();
-        rememberApiViaProxy();
-        noteApiFailure(action, 'proxy-ok', Date.now() - started);
-        if (action !== 'diag') flushApiFailures();
-        return pBody;
-      } catch (pErr) {
-        // אין כאן /api, או שגם היא חסומה — לגיבוי. אבל כתיבה שנתקעה (ייתכן שבוצעה) — לא שולחים שוב.
-        if (pErr && pErr.maybeSent) { noteDirectFail(); throw blockedErr; }
+    const viaFallbacks = async () => {
+      // 156: לפני הגיבוי — דרך הכתובת של האתר. אצל מי שחסום לה גם Firestore זו
+      // הדרך היחידה; ואצל השאר היא מהירה מהגיבוי.
+      if (apiProxyPossible()) {
+        try {
+          return { via: 'proxy', body: await callClientApiViaProxy(action, payload, isRead) };
+        } catch (pErr) {
+          // אין כאן /api, או שגם היא חסומה — לגיבוי. אבל כתיבה שנתקעה (ייתכן שבוצעה) — לא שולחים שוב.
+          if (pErr && pErr.maybeSent) { const e = new Error('proxy: maybe sent'); e.noResend = true; throw e; }
+        }
       }
-    }
-    let qBody;
+      return { via: 'queue', body: await callClientApiViaQueue(action, payload) };
+    };
+    /* 162: קריאה שנתקעה בדרך הישירה — במקביל לדרכים האחרות, עוד ניסיון ישיר עם
+     * זמן ארוך. רחלי דונט (27.10 21:22): בבדיקת החיבור השרת ענה לה, ורק כל השאר
+     * נתקע — הקו היה איטי, לא חסום. אחרי 4 שניות האתר ויתר על השרת, הגיבוי
+     * (Firestore) נתקע, והיא קיבלה "החיבור חוסם". קריאה בטוח לשלוח פעמיים. */
+    const slowDirect = (isRead && timedOut && action !== 'diag') ? slowDirectRead(action, payload) : null;
+    let won;
     try {
-      qBody = await callClientApiViaQueue(action, payload);
+      won = slowDirect ? await firstFulfilled([viaFallbacks(), slowDirect]) : await viaFallbacks();
     } catch (qErr) {
-      console.error('The Firestore fallback for client-api failed too:', qErr);
       noteDirectFail();
+      if (qErr && qErr.noResend) throw blockedErr;
+      console.error('The Firestore fallback for client-api failed too:', qErr);
       noteApiFailure(action, 'queue:' + String((qErr && (qErr.code || qErr.message)) || qErr || ''), Date.now() - started);
       if (action !== 'diag') showBlockedHelp();   // 151: שתי הדרכים חסומות — הלקוחה מקבלת דרך אחרת
       throw blockedErr;
     }
     hideBlockedHelp();
-    apiViaQueue = true;
-    rememberApiViaQueue();
-    noteApiFailure(action, 'queue-ok', Date.now() - started);
+    if (won.via === 'proxy') {
+      rememberApiViaProxy();
+      noteApiFailure(action, 'proxy-ok', Date.now() - started);
+    } else if (won.via === 'queue') {
+      apiViaQueue = true;
+      rememberApiViaQueue();
+      noteApiFailure(action, 'queue-ok', Date.now() - started);
+    } else {
+      // השרת ענה ישירות, רק לאט — לא עוברים לגיבוי בפעם הבאה
+      noteApiFailure(action, 'slow-ok', Date.now() - started);
+    }
     if (action !== 'diag') flushApiFailures();
-    return qBody;
+    return won.body;
+  }
+  /** 162: ניסיון ישיר שני לקריאה, עד 25 שניות. */
+  function slowDirectRead(action, payload){
+    const ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+    const t = ctl ? setTimeout(() => { try { ctl.abort(); } catch (e) {} }, 25000) : null;
+    return fetch(CLIENT_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ action }, payload || {}, { bizId: BIZ_ID })),
+      signal: ctl ? ctl.signal : undefined,
+    }).then(res => {
+      if (res.status >= 500) throw new Error('slow direct: http ' + res.status);
+      return res.json();
+    }).then(body => {
+      if (!body) throw new Error('slow direct: empty');
+      return { via: 'slow', body: body };
+    }).finally(() => { if (t) clearTimeout(t); });
+  }
+  /** הראשון שהצליח; אם כולם נכשלו — השגיאה של הראשון ברשימה. */
+  function firstFulfilled(list){
+    return new Promise((resolve, reject) => {
+      let left = list.length; const errs = [];
+      list.forEach((p, i) => p.then(resolve, err => { errs[i] = err; if (--left === 0) reject(errs[0]); }));
+    });
   }
   function bookingGoesThroughServer(){ return !isOwnerSession(); }
   async function cancelApptViaServer(appt){
