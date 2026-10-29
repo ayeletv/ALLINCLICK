@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-28 · 163">
+<meta name="app-build" content="2026-10-29 · 164">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -268,7 +268,18 @@
         // עבודה) קיבל [unavailable] והיומן נשאר אפור. אחרי פעם אחת כזו המכשיר
         // זוכר ועובר לחיבור בבקשות רגילות, שמסננים מעבירים. (15.10.2026)
         let forceLongPolling = false;
-        try { forceLongPolling = localStorage.getItem('hk_force_long_polling') === '1'; } catch (e) {}
+        // 164: עד היום — לתמיד, גם אחרי תקלה חד-פעמית (ואצל רותי השמירות לוקחות
+        // 10–13 שנ'). עכשיו לשבוע מהפעם האחרונה; "1" ישן = פג, ננסה שוב רגיל.
+        const HK_BYPASS_MS = 7 * 24 * 3600 * 1000;
+        window.__hkBypassFresh = function(key){
+          try {
+            const at = Number(localStorage.getItem(key));
+            if (at > 1 && Date.now() - at < HK_BYPASS_MS) return true;
+            localStorage.removeItem(key);
+          } catch (e) {}
+          return false;
+        };
+        forceLongPolling = window.__hkBypassFresh('hk_force_long_polling');
         db.settings(forceLongPolling
           ? { experimentalForceLongPolling: true, merge: true }
           : { experimentalAutoDetectLongPolling: true, merge: true });
@@ -4611,7 +4622,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-28 · 163';
+        window.__APP_BUILD = '2026-10-29 · 164';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5985,6 +5996,40 @@
     else if (from) echo.textContent = 'מחפשות לך תור מ-' + show(from) + ' והלאה.';
     else echo.textContent = 'מחפשות לך תור עד ' + show(to) + '.';
   }
+  /* 164: "לא ניתן לבחור תאריך התחלה שכבר עבר" — אילה גרינשטיין, וגם רותי ביומן
+   * (28.10). התאריך נבחר ביום / חודש / שנה בנפרד: מי שבוחרת קודם יום 3 כשהחודש
+   * עוד אוקטובר מקבלת 3.10 שכבר עבר, ונתקעת. עכשיו תאריך התחלה שעבר מתקדם לבד:
+   * יום שעבר — לחודש הבא; חודש שעבר — לשנה הבאה; אחרת — להיום. */
+  function frRollPastDateFrom(changedId){
+    const v = frDateFromValue();
+    const today = new Date();
+    const todayKey = formatDateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
+    if (!v || v >= todayKey) return;
+    const [y, m, d] = v.split('-').map(Number);
+    let next = null;
+    if (changedId === 'frDateFromDay') next = new Date(y, m, Math.min(d, new Date(y, m + 1, 0).getDate()));
+    else if (changedId === 'frDateFromMonth') next = new Date(y + 1, m - 1, Math.min(d, new Date(y + 1, m, 0).getDate()));
+    if (!next || formatDateKey(next) < todayKey) next = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const yearEl = document.getElementById('frDateFromYear');
+    if (yearEl && !Array.from(yearEl.options).some(o => o.value === String(next.getFullYear()))) return;
+    document.getElementById('frDateFromDay').value = String(next.getDate());
+    document.getElementById('frDateFromMonth').value = String(next.getMonth());
+    yearEl.value = String(next.getFullYear());
+    // סוף הטווח לפני ההתחלה החדשה — שבוע אחריה, כמו בברירת המחדל
+    const to = frDateToValue(), fromKey = formatDateKey(next);
+    if (to && to < fromKey){
+      const wk = new Date(next.getFullYear(), next.getMonth(), next.getDate() + 7);
+      const toYearEl = document.getElementById('frDateToYear');
+      if (toYearEl && Array.from(toYearEl.options).some(o => o.value === String(wk.getFullYear()))){
+        document.getElementById('frDateToDay').value = String(wk.getDate());
+        document.getElementById('frDateToMonth').value = String(wk.getMonth());
+        toYearEl.value = String(wk.getFullYear());
+      }
+    }
+  }
+  ['frDateFromDay', 'frDateFromMonth', 'frDateFromYear'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => frRollPastDateFrom(id));
+  });
   ['frDateFromDay', 'frDateFromMonth', 'frDateFromYear', 'frDateToDay', 'frDateToMonth', 'frDateToYear'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', updateFrDateRangeEcho);
   });
@@ -22291,6 +22336,13 @@
       // שגיאות מתוספי דפדפן ומקבצים זרים ("Script error.") — לא שלנו.
       const src = String((ev && ev.filename) || '');
       if (!src || src.indexOf(location.origin) !== 0) return;
+      // 164: סינון שמחזיר דף חסימה ("<html><bod...") במקום תשובה של Firestore
+      // (28.10, 03:27, יחד עם "חיבור מסונן · publicView"). זו לא שגיאה בקוד שלנו —
+      // הקריאה עוברת לבד לדרך העוקפת ולערוץ הגיבוי.
+      if (/Unexpected token '<'/.test(String((ev && ev.message) || '')) && /\.js(\?|$)/.test(src)){
+        reportDiag('stream-blocked', { key: src.split('?')[0].split('/').pop().slice(0, 40), code: 'הסינון החזיר דף חסימה' });
+        return;
+      }
       reportDiag('js-error', { key: String((ev && ev.message) || '').slice(0, 60), code: 'line ' + ((ev && ev.lineno) || '') });
     });
     window.addEventListener('unhandledrejection', function(ev){
@@ -22920,7 +22972,8 @@
     return runWithRetries(0).then(committedPayload => {
       saveDiag('committed', { ms: Date.now() - saveStartedAt, wrote: !!(committedPayload && !committedPayload.__stale && !committedPayload.__repairedOnly) });
       const __wroteSomething = !!(committedPayload && !committedPayload.__stale && !committedPayload.__repairedOnly);
-      if (Date.now() - saveStartedAt > 8000) reportDiag('save-slow', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024, hiddenMs: saveHiddenMs(), keys: lastSaveWrittenKeys });
+      // 164: "מצב עוקף" — המכשיר עובד בבקשות רגילות אחרי חסימה; כדי לדעת אם זו הסיבה לאיטיות.
+      if (Date.now() - saveStartedAt > 8000) reportDiag('save-slow', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024, hiddenMs: saveHiddenMs(), keys: lastSaveWrittenKeys, code: window.__forceLongPolling ? 'מצב עוקף' : '' });
       // שמירה גדולה (מעל 150 ק"ב), גם אם הייתה מהירה — כדי לראות בסיכום היומי
       // מה עדיין נשלח בשלמותו. (17.10.2026)
       else if (__wroteSomething && lastSavePayloadBytes > 150 * 1024) reportDiag('save-big', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024, keys: lastSaveWrittenKeys });
@@ -24518,7 +24571,7 @@
     // כמה מזמן הטעינה הלשונית הייתה ברקע (16.10.2026) — ר' saveHiddenMs.
     const loadHiddenMs = (typeof getPageHiddenMsSoFar === 'function')
       ? Math.max(0, Math.round(getPageHiddenMsSoFar() - (window.__loadHiddenAtStart || 0))) : 0;
-    if (elapsedSec > 5) reportDiag('load-slow', { ms: elapsedSec * 1000, kb: approxKb, hiddenMs: loadHiddenMs });
+    if (elapsedSec > 5) reportDiag('load-slow', { ms: elapsedSec * 1000, kb: approxKb, hiddenMs: loadHiddenMs, code: window.__forceLongPolling ? 'מצב עוקף' : '' });
     // מסמך שמתקרב שוב לגבול (אחרי הארכיון הוא אמור להישאר סביב 400–450 ק"ב).
     if (approxKb && approxKb > 800) reportDiag('doc-size', { kb: approxKb });
     console.log(`Cloud data load took ${elapsedSec.toFixed(1)}s` + (approxKb !== null ? ` (~${approxKb}KB document)` : ' (no document)') + '.');
@@ -25035,7 +25088,7 @@
         new Promise((_, rej) => setTimeout(() => rej(err), 15000)),
       ]).then(doc => {
         // הערוץ הרציף נכשל והבקשה הרגילה עברה — זה מכשיר מסונן, לא מכשיר בלי רשת.
-        try { localStorage.setItem('hk_force_long_polling', '1'); } catch (e) {}
+        try { localStorage.setItem('hk_force_long_polling', String(Date.now())); } catch (e) {}
         __streamReadBlocked = true;
         return doc;
       });
@@ -25068,7 +25121,7 @@
     // הראשונה. ביומן 19.10: הטלפון של רותי נטען כל פעם 8–9 שניות (7 שניות המתנה
     // לקריאה הרגילה התקועה + הדרך העוקפת).
     let hedgeNow = false;
-    try { hedgeNow = localStorage.getItem('hk_hedge_now') === '1'; } catch (e) {}
+    hedgeNow = typeof window.__hkBypassFresh === 'function' ? window.__hkBypassFresh('hk_hedge_now') : false;
     const hedgeMs = hedgeNow ? 0 : label === 'business' ? 7000 : label === 'refresh' ? 5000 : (label === 'publicView' || label === 'owners') ? 6000 : 12000;
     const plainGet = () => { try { return ref.get({ source: 'server' }); } catch (e) { return ref.get(); } };
     const getOnce = () => new Promise((resolve, reject) => {
@@ -25092,7 +25145,7 @@
         db.runTransaction(tx => tx.get(ref)).then(v => {
           if (!done) {
             __streamReadBlocked = true;   // מעכשיו בדף הזה — ישר בדרך העוקפת
-            try { localStorage.setItem('hk_force_long_polling', '1'); localStorage.setItem('hk_hedge_now', '1'); } catch (e) {}
+            try { localStorage.setItem('hk_force_long_polling', String(Date.now())); localStorage.setItem('hk_hedge_now', String(Date.now())); } catch (e) {}
           }
           win(v);
         }, e => { hedgeErr = e; lose(); });
