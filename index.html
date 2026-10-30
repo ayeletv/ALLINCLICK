@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-10-29 · 165">
+<meta name="app-build" content="2026-10-30 · 166">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4622,7 +4622,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-10-29 · 165';
+        window.__APP_BUILD = '2026-10-30 · 166';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -8057,6 +8057,12 @@
     const newDur = parseInt(durEl && durEl.value, 10);
     if (isNaN(newDur) || newDur < 5){
       apptEditShowError('משך הטיפול חייב להיות לפחות 5 דקות.');
+      return;
+    }
+    // 166: תור נשמר בלי טיפול ובלי קטגוריה (פנינה שטרית, 1.11) — בעריכה אפשר
+    // היה להסיר את הטיפול (✕) ולשמור בלי לבחור אחר. בקביעת תור חדש זה תמיד נבדק.
+    if (!apptEditDraft.services || !apptEditDraft.services.length){
+      apptEditShowError('יש לבחור לפחות טיפול אחד — אי אפשר לשמור תור בלי טיפול.');
       return;
     }
     const newTime = /^\d{2}:\d{2}$/.test(String(apptEditDraft.time || '')) ? apptEditDraft.time : appt.time;
