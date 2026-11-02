@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-11-02 · 179">
+<meta name="app-build" content="2026-11-02 · 180">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -3178,11 +3178,28 @@
   .booked-actions button:active{transform:scale(0.98);}
   .booked-actions .ba-row{display:flex; gap:10px;}
   .booked-actions .ba-row button{flex:1;}
-  .booked-actions .ba-another{background:#1c8a4b; font-size:18px; font-weight:800; padding:16px 12px;
-    box-shadow:0 5px 16px rgba(28,138,75,0.38);}
-  .booked-actions .ba-change{background:#2f6688;}
-  .booked-actions .ba-cancel{background:#c0392b;}
-  .booked-actions .ba-home{background:#5a4f47;}
+  /* 180: "לא אהבתי את הצבעים — לקחת את הצבעים שבהגדרות האתר של כל לקוחה"
+   * (איילת, 2.11). במקום ירוק/כחול/אדום/חום: צבעי העיצוב של העסק (כמו כפתור
+   * "קביעת תור" באתר). ביטול = מסגרת בלבד, שלא יתחרה בקביעת תור נוסף. */
+  .booked-actions .ba-another{background:var(--th-action, var(--wine)); color:var(--th-on-action, #fff);
+    font-size:18px; font-weight:800; padding:16px 12px; box-shadow:0 5px 16px rgba(0,0,0,0.2);}
+  .booked-actions .ba-change{background:var(--th-ink-brand, var(--wine-deep)); color:#fff;}
+  .booked-actions .ba-cancel{background:#fff; color:var(--th-ink-brand, var(--wine-deep));
+    box-shadow:inset 0 0 0 2px var(--th-ink-brand, var(--wine-deep));}
+  .booked-actions .ba-home{background:var(--th-secondary, var(--gold)); color:var(--th-on-secondary, #241B1E);}
+  /* 180: "בהתורים שלי הכפתורים חיוורים מאוד" (איילת, 2.11) — אותם צבעים כמו
+   * במסך ההצלחה. "אשרי שאת מגיעה" נשאר ירוק. */
+  #myAppointment button.ma-another{
+    width:100%; margin-top:10px; text-align:center; border:none; border-radius:12px; cursor:pointer;
+    background:var(--th-action, var(--wine)); color:var(--th-on-action, #fff);
+    font-family:'Heebo'; font-size:17px; font-weight:800; padding:15px 12px;
+    box-shadow:0 5px 16px rgba(0,0,0,0.2);
+  }
+  #myAppointment .my-appt-actions button.ma-cancel{
+    background:#fff; color:var(--th-ink-brand, var(--wine-deep)); font-size:14.5px; font-weight:700;
+    border:2px solid var(--th-ink-brand, var(--wine-deep)); border-radius:12px; padding:11px;
+  }
+  #myAppointment button.ma-another:hover, #myAppointment .my-appt-actions button.ma-cancel:hover{filter:brightness(1.06);}
   /* 140: אותו גודל ובולטות כמו "התור נקבע בהצלחה" — בצבע אחר, כדי שלא יתבלבלו.
    * 141: "מבוטל זה אדום" (איילת, 22.10) — היה חום-סגול. */
   .cancelled-banner{
@@ -4788,7 +4805,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-02 · 179';
+        window.__APP_BUILD = '2026-11-02 · 180';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -20627,6 +20644,18 @@
         return;
       }
       currentBookedAppointment = apiResult.appointment;
+      // 180: זוהתה לפי טלפון — השרת מחזיר את התור עם teudatZehut:null, ו"ביטול תור"
+      // ממסך ההצלחה נשלח בלי זיהוי ("לא נמצאה לקוחה"). זוכרים בזיכרון הדף בלבד
+      // במה היא הזדהתה (לא ב-weekAppointments ולא בענן).
+      try {
+        if (currentBookedAppointment && currentBookedAppointment.id && !currentBookedAppointment.teudatZehut){
+          const typedForLookup = String(idInput.value || '').trim() || String(phoneVal || '').trim();
+          if (typedForLookup) bookedApptLookup[currentBookedAppointment.id] = {
+            id: typedForLookup,
+            ci: (serverIdentityPick === null || serverIdentityPick === undefined) ? null : serverIdentityPick,
+          };
+        }
+      } catch (e) {}
       weekAppointments.push(currentBookedAppointment);
       if (apiResult.__fallback && typeof saveState === 'function') saveState();
       serverSentNotifications = !apiResult.__fallback;
@@ -20859,7 +20888,7 @@
     const p = String(appt.date || '').split('-');
     const what = (appt.service || 'התור') + (p.length === 3 ? ' ב-' + Number(p[2]) + '/' + Number(p[1]) : '') + (appt.time ? ' בשעה ' + appt.time : '');
     let preview = null;
-    try { preview = await callClientApi('cancelPreview', withCi({ id: appt.teudatZehut || lastIdentifiedLookupId || '', apptId: appt.id }, appt)); } catch (e) { preview = null; }
+    try { preview = await callClientApi('cancelPreview', withCi({ id: apptLookupId(appt), apptId: appt.id }, appt)); } catch (e) { preview = null; }
     const w = preview && preview.ok ? preview.warning : null;
     const texts = Object.assign({}, CANCEL_WARN_DEFAULTS, ((branding && branding.cancelFee) || {}).warnings || {});
     if (w === 'fee' || w === 'first' || w === 'second'){
@@ -20936,7 +20965,16 @@
   // 124: טלפון משותף (אמא ובת) — כל פריט מהשרת נושא ci (הכרטיס שלו). כל פעולה
   // עליו נשלחת עם הכרטיס הזה, אחרת השרת לא יודע של מי התור.
   function withCi(payload, item){
-    return (item && item.__ci !== undefined && item.__ci !== null) ? Object.assign({}, payload, { clientIndex: item.__ci }) : payload;
+    if (item && item.__ci !== undefined && item.__ci !== null) return Object.assign({}, payload, { clientIndex: item.__ci });
+    const mem = item && item.id && bookedApptLookup[item.id];
+    return (mem && mem.ci !== null && mem.ci !== undefined) ? Object.assign({}, payload, { clientIndex: mem.ci }) : payload;
+  }
+  // 180: תור שנקבע עכשיו בדף, אחרי זיהוי בטלפון — במה היא הזדהתה (ראו confirmBooking)
+  const bookedApptLookup = {};
+  function apptLookupId(appt){
+    if (!appt) return lastIdentifiedLookupId || '';
+    const mem = appt.id && bookedApptLookup[appt.id];
+    return appt.teudatZehut || (mem && mem.id) || lastIdentifiedLookupId || '';
   }
   async function searchMyAppointment(){
     const raw = document.getElementById('lookupId').value.trim();
@@ -21237,7 +21275,7 @@
       apptEl.innerHTML = `
         <div class="waitlist-confirmed">אין לך יותר תורים עתידיים.</div>
         ${myRequestsHtml()}
-        <button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור חדש</button>`;
+        <button class="ma-another" onclick="bookAdditionalAppointment()">➕ קביעת תור חדש</button>`;
       reapplyActionBanner(apptEl);
       return;
     }
@@ -21262,10 +21300,10 @@
           : `<div class="my-appt-actions" style="margin-top:8px;"><button class="confirm-arrival-btn" onclick="confirmListedAppointment(${idx}, this)">✓ אשרי שאת מגיעה</button></div>`}
         
         <div class="my-appt-actions">
-          <button class="danger" onclick="cancelListedAppointment(${idx})">ביטול תור</button>
+          <button class="danger ma-cancel" onclick="cancelListedAppointment(${idx})">✕ ביטול תור</button>
         </div>
       </div>`;
-    }).join('') + myRequestsHtml() + `<button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
+    }).join('') + myRequestsHtml() + `<button class="ma-another" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
     reapplyActionBanner(apptEl);
   }
   function resolveCurrentAppt(listAppt){
@@ -21330,7 +21368,7 @@
     if (bookingGoesThroughServer()){
       let res = null;
       try {
-        res = await callClientApi('confirm', withCi({ id: appt.teudatZehut || lastIdentifiedLookupId || '', apptId: appt.id, via: via }, appt));
+        res = await callClientApi('confirm', withCi({ id: apptLookupId(appt), apptId: appt.id, via: via }, appt));
       } catch (err) {
         console.error('Confirming through the server failed — falling back to a direct write:', err);
         res = null;
@@ -24275,7 +24313,7 @@
     if (!bookingGoesThroughServer() || !appt) return { ok: true, direct: true };
     try {
       const res = await callClientApi('cancel', withCi({
-        id: appt.teudatZehut || lastIdentifiedLookupId || '',
+        id: apptLookupId(appt),
         apptId: appt.id,
       }, appt));
       if (!res || !res.ok) return { ok: false, error: (res && res.error) || 'לא הצלחנו לבטל את התור. נא לנסות שוב או ליצור איתנו קשר.' };
