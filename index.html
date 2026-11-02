@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-11-02 · 182">
+<meta name="app-build" content="2026-11-02 · 183">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -3626,6 +3626,13 @@
   .cp-followup-date{font-size:11.5px; color:var(--panel-gold); font-weight:600;}
   .cp-followup-header{font-size:12.5px; color:var(--panel-gold); font-weight:700;}
   .cp-followup-text{font-size:13.5px; margin-top:3px; color:var(--panel-text); line-height:1.5; white-space:pre-wrap;}
+  /* 183: "אין כפתור עריכה ואני לא יכולה לשנות מה שכבר רשמתי" (איילת, 2.11) */
+  .cp-followup-top{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .cp-followup-edit{background:none; border:1px solid rgba(var(--panel-line-rgb),0.25); color:var(--panel-gold);
+    border-radius:8px; font-size:12px; padding:3px 10px; cursor:pointer; font-family:inherit; flex-shrink:0;}
+  .cp-followup-edit:hover{background:rgba(var(--gold-rgb),0.12);}
+  .cp-followup-btns{display:inline-flex; gap:5px; flex-shrink:0;}
+  .cp-followup-del{padding:3px 7px;}
   .cp-photo-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(92px,1fr)); gap:10px; margin-bottom:14px;}
   .cp-photo-thumb{position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden; border:1px solid rgba(var(--panel-line-rgb),0.18);}
   .cp-photo-thumb img{width:100%; height:100%; object-fit:cover; display:block; cursor:zoom-in;}
@@ -4805,7 +4812,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-02 · 182';
+        window.__APP_BUILD = '2026-11-02 · 183';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -8735,17 +8742,24 @@
       el.innerHTML = '<p style="color:var(--panel-text-dim); font-size:13px;">אין עדיין מעקבים רשומים.</p>';
       return;
     }
+    // 183: כל מעקב עם "✏️ עריכה" ו-"🗑" — לפי המיקום שלו ב-c.followUps המקורי
+    // (הרשימה כאן היא עותק ממוין, וחלק מהשורות מתחת ל"הצג עוד").
+    const editBtn = f => { const i = c.followUps.indexOf(f); return `<span class="cp-followup-btns"><button type="button" class="cp-followup-edit" data-fu-idx="${i}">✏️ עריכה</button><button type="button" class="cp-followup-edit cp-followup-del" data-fu-idx="${i}" title="מחיקת המעקב" aria-label="מחיקת המעקב">🗑</button></span>`; };
     const rowHtml = f => f.service
       ? `
       <div class="cp-followup-row">
-        <div class="cp-followup-header">${escHtml(f.service)}${f.duration ? ` · ${f.duration} דק'` : ''} · ${formatDateDMY(f.date)}</div>
+        <div class="cp-followup-top"><div class="cp-followup-header">${escHtml(f.service)}${f.duration ? ` · ${f.duration} דק'` : ''} · ${formatDateDMY(f.date)}</div>${editBtn(f)}</div>
         <div class="cp-followup-text">${escHtml(f.text || '')}</div>
       </div>`
       : `
       <div class="cp-followup-row">
-        <div class="cp-followup-date">${formatDateDMY(f.date)}</div>
+        <div class="cp-followup-top"><div class="cp-followup-date">${formatDateDMY(f.date)}</div>${editBtn(f)}</div>
         <div class="cp-followup-text">${escHtml(f.text || '')}</div>
       </div>`;
+    const wireEdits = () => el.querySelectorAll('.cp-followup-edit').forEach(btn => {
+      const i = parseInt(btn.dataset.fuIdx, 10);
+      btn.onclick = btn.classList.contains('cp-followup-del') ? () => deleteClientFollowUp(i) : () => editClientFollowUp(i);
+    });
     if (list.length > CP_FOLLOWUP_PAGE_SIZE){
       const visibleHtml = list.slice(0, CP_FOLLOWUP_PAGE_SIZE).map(rowHtml).join('');
       const restHtml = list.slice(CP_FOLLOWUP_PAGE_SIZE).map(rowHtml).join('');
@@ -8760,9 +8774,45 @@
           ? showMoreBtn.textContent.replace('הצג פחות', 'הצג עוד')
           : showMoreBtn.textContent.replace('הצג עוד', 'הצג פחות');
       };
+      wireEdits();
       return;
     }
     el.innerHTML = list.map(rowHtml).join('');
+    wireEdits();
+  }
+  function deleteClientFollowUp(idx){
+    const c = clientProfileCurrent;
+    if (!c || !Array.isArray(c.followUps) || !c.followUps[idx]) return;
+    if (!confirm('למחוק את המעקב?')) return;
+    c.followUps.splice(idx, 1);
+    renderCpFollowUps();
+    if (typeof saveState === 'function') saveState();
+    showAdminToast('✓ המעקב נמחק');
+  }
+  // 183: עריכת מעקב קיים — רק הטקסט; תאריך, טיפול ומשך נשארים. ריק = מחיקה
+  // (אחרי אישור). מעקב שנוצר מהערה לתור (יש service): משנה רק את המעקב, לא את appt.note.
+  async function editClientFollowUp(idx){
+    const c = clientProfileCurrent;
+    if (!c || !Array.isArray(c.followUps)) return;
+    const f = c.followUps[idx];
+    if (!f) return;
+    const text = await openMultilineNote('עריכת מעקב', f.text || '');
+    if (text === null) return;
+    if (clientProfileCurrent !== c || c.followUps[idx] !== f) return;   // הכרטיס התחלף בינתיים
+    const trimmed = text.trim();
+    if (!trimmed){
+      if (!confirm('המעקב ריק — למחוק אותו?')) return;
+      c.followUps.splice(idx, 1);
+      renderCpFollowUps();
+      if (typeof saveState === 'function') saveState();
+      showAdminToast('✓ המעקב נמחק');
+      return;
+    }
+    if (trimmed === (f.text || '').trim()) return;
+    f.text = trimmed;
+    renderCpFollowUps();
+    if (typeof saveState === 'function') saveState();
+    showAdminToast('✓ המעקב עודכן');
   }
   /* 182: "במעקבים אין ירידת שורה — אני רוצה לרשום הערות על לקוחה בפסקאות"
    * (איילת, 2.11). prompt() של הדפדפן הוא שורה אחת. עכשיו חלון עם תיבת טקסט
