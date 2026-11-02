@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-11-02 · 183">
+<meta name="app-build" content="2026-11-02 · 184">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4812,7 +4812,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-02 · 183';
+        window.__APP_BUILD = '2026-11-02 · 184';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -8304,7 +8304,11 @@
     const previousTime = appt.time;
     appt.dur = newDur;
     appt.time = newTime;
+    const apptEditPrevNote = appt.note;
     appt.note = (document.getElementById('apptEditNote')?.value || '').trim();
+    // 184: אם לתור כבר יש מעקב בכרטיס — מעדכנים אותו (לא מוסיפים חדש). לפני שינוי הטיפול,
+    // כי במעקבים ישנים (בלי apptId) ההתאמה היא לפי אותו טיפול + תאריך.
+    if (typeof logApptNoteFollowUp === 'function') logApptNoteFollowUp(appt, apptEditPrevNote, { updateOnly: true });
     const apptEditOldChannels = Array.isArray(appt.reminderChannels) ? appt.reminderChannels.slice() : [];
     const apptEditNewChannels = Array.from(document.querySelectorAll('input[name="apptEditReminderChannel"]:checked')).map(cb => cb.value);
     appt.reminderChannels = apptEditNewChannels;
@@ -8742,9 +8746,10 @@
       el.innerHTML = '<p style="color:var(--panel-text-dim); font-size:13px;">אין עדיין מעקבים רשומים.</p>';
       return;
     }
-    // 183: כל מעקב עם "✏️ עריכה" ו-"🗑" — לפי המיקום שלו ב-c.followUps המקורי
+    // 183: כל מעקב עם "✏️ עריכה" ו-"✕" (מחיקה) — לפי המיקום שלו ב-c.followUps המקורי
     // (הרשימה כאן היא עותק ממוין, וחלק מהשורות מתחת ל"הצג עוד").
-    const editBtn = f => { const i = c.followUps.indexOf(f); return `<span class="cp-followup-btns"><button type="button" class="cp-followup-edit" data-fu-idx="${i}">✏️ עריכה</button><button type="button" class="cp-followup-edit cp-followup-del" data-fu-idx="${i}" title="מחיקת המעקב" aria-label="מחיקת המעקב">🗑</button></span>`; };
+    // 184: ✕ ולא 🗑 ("פח לא ברור" — איילת), עם title כדי שבריחוף יופיע "מחיקה"/"עריכה".
+    const editBtn = f => { const i = c.followUps.indexOf(f); return `<span class="cp-followup-btns"><button type="button" class="cp-followup-edit" data-fu-idx="${i}" title="עריכה" aria-label="עריכה">✏️ עריכה</button><button type="button" class="cp-followup-edit cp-followup-del" data-fu-idx="${i}" title="מחיקה" aria-label="מחיקה">✕</button></span>`; };
     const rowHtml = f => f.service
       ? `
       <div class="cp-followup-row">
@@ -8790,7 +8795,16 @@
     showAdminToast('✓ המעקב נמחק');
   }
   // 183: עריכת מעקב קיים — רק הטקסט; תאריך, טיפול ומשך נשארים. ריק = מחיקה
-  // (אחרי אישור). מעקב שנוצר מהערה לתור (יש service): משנה רק את המעקב, לא את appt.note.
+  // (אחרי אישור). מעקב שנוצר מהערה לתור: אם התור עוד קיים, גם appt.note מתעדכן
+  // (apptId, ובמעקבים ישנים: אותו טיפול + תאריך + לקוחה + אותו טקסט).
+  function apptForFollowUp(c, f){
+    if (!f || !f.service || !Array.isArray(weekAppointments)) return null;
+    if (f.apptId) return weekAppointments.find(a => a && a.id === f.apptId) || null;
+    const old = String(f.text || '').trim();
+    return weekAppointments.find(a => a && a.service === f.service && a.date === f.date
+      && String(a.note || '').trim() === old
+      && (c.teudatZehut && a.teudatZehut ? a.teudatZehut === c.teudatZehut : a.client === c.name)) || null;
+  }
   async function editClientFollowUp(idx){
     const c = clientProfileCurrent;
     if (!c || !Array.isArray(c.followUps)) return;
@@ -8809,6 +8823,8 @@
       return;
     }
     if (trimmed === (f.text || '').trim()) return;
+    const linkedAppt = apptForFollowUp(c, f);
+    if (linkedAppt){ linkedAppt.note = trimmed; if (linkedAppt.id) f.apptId = linkedAppt.id; }
     f.text = trimmed;
     renderCpFollowUps();
     if (typeof saveState === 'function') saveState();
@@ -8990,7 +9006,7 @@
       ${cpIsImplied ? `<p style="font-size:11.5px; color:var(--panel-text-dim); margin:4px 0 0; line-height:1.5;">מוצג לפי התור האחרון שלה — עדיין לא נבחרה עבורה העדפה קבועה. סימון כאן יקבע אותה.</p>` : ''}
       ${cpTwinCardsNoteHtml(c)}
       ${cpDupNow > 1 ? `<p id="cpDuplicateNote" style="font-size:12px; color:var(--wine); background:rgba(var(--wine-rgb),0.08); border:1px solid rgba(var(--wine-rgb),0.3); border-radius:9px; padding:8px 11px; margin:10px 0 0; line-height:1.6;">יש ${cpDupNow} כרטסות עם אותה תעודת זהות. מה שמסמנים כאן חל על כולן, אבל כדאי לאחד אותן — הגדרות ← איחוד כרטיסים כפולים.</p>` : ''}
-      <textarea class="client-note" id="cpNoteInput" placeholder="הערה אישית (העדפות, רגישויות...)">${c.note || ''}</textarea>
+      <textarea class="client-note" id="cpNoteInput" placeholder="הערה אישית (העדפות, רגישויות...)">${escHtml(c.note || '')}</textarea>
     `;
     const nameInput = fieldsEl.querySelector('#cpNameInput');
     nameInput.addEventListener('focus', e => { e.target.dataset.prevName = c.name; });
@@ -12823,7 +12839,7 @@
             </div>
           </div>
           <div class="visits">${visitsLine}${isBday ? ' <span class="badge" style="background:rgba(var(--gold-rgb),0.2); color:var(--panel-gold); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : ''}</div>
-          <textarea class="client-note" disabled placeholder="הערה אישית (העדפות, רגישויות...)">${c.note || ''}</textarea>
+          <textarea class="client-note" disabled placeholder="הערה אישית (העדפות, רגישויות...)">${escHtml(c.note || '')}</textarea>
           ${todayAppts.length ? `
           <div class="client-today-block" style="margin:10px 0; padding:10px; border:1px solid rgba(var(--gold-rgb),0.35); border-radius:10px; background:rgba(var(--gold-rgb),0.08);">
             <div style="font-weight:600; font-size:13px; margin-bottom:6px;">📌 טיפול של היום</div>
@@ -12838,7 +12854,7 @@
                   <button class="visit-status-btn${a.status === 'completed' ? ' active-yes' : ''}" data-status="completed">✓ הגיעה</button>
                   <button class="visit-status-btn${a.status === 'no-show' ? ' active-no' : ''}" data-status="no-show">✗ לא הגיעה</button>
                 </div>
-                <textarea class="visit-note today-visit-note" placeholder="הערה על הטיפול של היום...">${a.note || ''}</textarea>
+                <textarea class="visit-note today-visit-note" placeholder="הערה על הטיפול של היום...">${escHtml(a.note || '')}</textarea>
               </div>`).join('')}
           </div>` : ''}
           <div class="client-action-row">
@@ -14343,19 +14359,35 @@
     if (typeof renderClients === 'function') renderClients();
     if (typeof saveState === 'function') saveState();
   }
-  function logApptNoteFollowUp(appt, previousNote){
+  function logApptNoteFollowUp(appt, previousNote, opts){
     const note = (appt.note || '').trim();
     const isNewOrChanged = note && note !== (previousNote || '').trim();
     if (!isNewOrChanged) return false;
+    const updateOnly = !!(opts && opts.updateOnly);   // 184: עריכת תור — רק לעדכן מעקב קיים
     const relatedClient = findClientForAppt(appt);
     if (relatedClient){
       if (!Array.isArray(relatedClient.followUps)) relatedClient.followUps = [];
-      relatedClient.followUps.push({
-        date: appt.date || formatDateKey(new Date()),
-        text: note,
-        service: appt.service || '',
-        duration: appt.dur || 30
-      });
+      /* 183: עד היום כל שינוי בהערה לתור הוסיף מעקב חדש — עריכה = כפילות.
+       * הכלל: לכל תור מעקב אחד. אם כבר יש מעקב של התור הזה (apptId, ובמעקבים
+       * ישנים בלי apptId: אותו טיפול + תאריך + הטקסט הקודם) — מעדכנים אותו.
+       * הכיוון ההפוך: עריכת המעקב בכרטיס (editClientFollowUp) מעדכנת גם את
+       * appt.note אם התור עוד קיים — כך ההערה והמעקב נשארים אותו טקסט. */
+      const prevTrim = (previousNote || '').trim();
+      const existing = relatedClient.followUps.find(f => f && appt.id && f.apptId === appt.id)
+        || (prevTrim ? relatedClient.followUps.find(f => f && !f.apptId && f.service === (appt.service || '')
+          && f.date === (appt.date || '') && String(f.text || '').trim() === prevTrim) : null);
+      if (existing){
+        existing.text = note;
+        if (appt.id) existing.apptId = appt.id;
+      } else if (!updateOnly){
+        relatedClient.followUps.push({
+          date: appt.date || formatDateKey(new Date()),
+          text: note,
+          service: appt.service || '',
+          duration: appt.dur || 30,
+          apptId: appt.id || null
+        });
+      }
     }
     const isProfileForThisAppt = clientProfileCurrent && (appt.teudatZehut
       ? clientProfileCurrent.teudatZehut === appt.teudatZehut
@@ -16892,7 +16924,7 @@
         html += srDetailRow('נקבע ל', `${formatDateDMY(r.matchedDate)}, ${r.matchedTime}${(staff[r.matchedStaff] && staff[r.matchedStaff].name) ? ' · ' + staff[r.matchedStaff].name : ''}`);
       }
     }
-    if (r.note) html += srDetailRow('הערה', r.note);
+    if (r.note) html += srDetailRow('הערה', '<span style="white-space:pre-wrap;">' + escHtml(r.note) + '</span>');
     html += srDetailRow('מועד הוספה', formatRecordCreatedAt(r.createdAt));
     html += srDetailRow('נוסף על ידי', recordAddedByLabel(r, 'request') || '—');
     html += sentOffersHistoryHtml(r.id);
@@ -21660,9 +21692,9 @@
     contentEl.innerHTML = `
       <div class="arrival-name">${appt.client}</div>
       <div class="arrival-meta">${appt.service} · ${appt.time}${emp ? ' · אצל ' + emp.name : ''}</div>
-      ${client && client.note ? `<div class="arrival-section-label">הערה כללית</div><div class="arrival-note-box">${client.note}</div>` : ''}
+      ${client && client.note ? `<div class="arrival-section-label">הערה כללית</div><div class="arrival-note-box" style="white-space:pre-wrap;">${escHtml(client.note)}</div>` : ''}
       <div class="arrival-section-label">היסטוריית טיפולים (${history.length})</div>
-      ${history.length ? history.map(h => `<div class="arrival-history-row"><span>${h.service} · ${formatHistoryDate(h)}</span><span style="color:#8A8178;">${h.note || ''}</span></div>`).join('') : '<p style="color:#8A8178; font-size:13px;">אין עדיין היסטוריה.</p>'}
+      ${history.length ? history.map(h => `<div class="arrival-history-row"><span>${escHtml(h.service)} · ${formatHistoryDate(h)}</span><span style="color:#8A8178; white-space:pre-wrap;">${escHtml(h.note || '')}</span></div>`).join('') : '<p style="color:#8A8178; font-size:13px;">אין עדיין היסטוריה.</p>'}
       <div class="my-appt-actions" style="margin-top:16px;">
         <button onclick="markArrivalStatus('${appt.id || ''}', 'completed')">✓ הגיעה</button>
         <button class="danger" onclick="markArrivalStatus('${appt.id || ''}', 'no-show')">✗ לא הגיעה</button>
