@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-11-02 · 178">
+<meta name="app-build" content="2026-11-02 · 179">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -3165,6 +3165,24 @@
   .booked-banner-sub{font-size:14px; margin-top:6px; opacity:0.92;}
   @keyframes bookedPop{ 0%{transform:scale(0.92); opacity:0;} 100%{transform:scale(1); opacity:1;} }
   @media (prefers-reduced-motion: reduce){ .booked-banner{animation:none;} }
+  /* 179: "הכפתורים לא מודגשים, הרבה רוצות לחזור לדף הבית ולא יודעות איך"
+   * (איילת, 2.11.2026). אחרי קביעת תור — כל כפתור בצבע מלא משלו, "קביעת תור
+   * נוסף" הכי גדול, ו"חזרה לדף הבית" (כמו לחיצה על הלוגו העגול). */
+  .booked-actions{display:flex; flex-direction:column; gap:10px; margin-top:16px;}
+  .booked-actions button{
+    width:100%; border:none; border-radius:12px; color:#fff; cursor:pointer;
+    font-family:'Heebo'; font-size:15.5px; font-weight:700; padding:13px 12px;
+    box-shadow:0 3px 10px rgba(0,0,0,0.14); transition:filter 0.15s ease, transform 0.1s ease;
+  }
+  .booked-actions button:hover{filter:brightness(1.08);}
+  .booked-actions button:active{transform:scale(0.98);}
+  .booked-actions .ba-row{display:flex; gap:10px;}
+  .booked-actions .ba-row button{flex:1;}
+  .booked-actions .ba-another{background:#1c8a4b; font-size:18px; font-weight:800; padding:16px 12px;
+    box-shadow:0 5px 16px rgba(28,138,75,0.38);}
+  .booked-actions .ba-change{background:#2f6688;}
+  .booked-actions .ba-cancel{background:#c0392b;}
+  .booked-actions .ba-home{background:#5a4f47;}
   /* 140: אותו גודל ובולטות כמו "התור נקבע בהצלחה" — בצבע אחר, כדי שלא יתבלבלו.
    * 141: "מבוטל זה אדום" (איילת, 22.10) — היה חום-סגול. */
   .cancelled-banner{
@@ -4770,7 +4788,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-02 · 178';
+        window.__APP_BUILD = '2026-11-02 · 179';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -11610,7 +11628,9 @@
       }
       if (!el.dataset.wired){
         el.dataset.wired = '1';
-        el.addEventListener('click', function(){ if (siteEntryModeAvailable()) setSiteEntryMode(true); });
+        // 179: הלוגו העגול = חזרה לדף הבית, נקי לגמרי (עד 178 הלחיצה לא עשתה כלום,
+        // כי מסך הכניסה בוטל ו-setSiteEntryMode ריקה).
+        el.addEventListener('click', function(){ if (siteEntryModeAvailable()) goSiteHomeFresh(); });
       }
       if (el.querySelector('img')) el.classList.add('has-logo');
       applyLook();
@@ -12041,6 +12061,42 @@
   function setSiteEntryMode(on){
     void on;
   }
+  /* 179: "חזרה לדף הבית" — כפתור במסך "התור נקבע בהצלחה" ולחיצה על הלוגו העגול.
+   * הדף נטען מחדש בכתובת הנקייה, כאילו לא נקבע כלום (התור עצמו כבר שמור).
+   * נשארים רק biz/owner בכתובת; קישורי תור/הצעה לא נפתחים שוב.
+   * אם יש שמירה שעוד לא הסתיימה — מחכים לה (עד 20 שנ'), ואם לא הסתיימה —
+   * לא טוענים מחדש, רק חוזרים לראש הדף, כדי ששום דבר לא ילך לאיבוד. */
+  function goSiteHomeFresh(){
+    if (document.body && document.body.classList.contains('admin-mode')) return;
+    if (window.__goingHome) return;
+    window.__goingHome = true;
+    let url = location.pathname;
+    try {
+      const q = new URLSearchParams(location.search);
+      const keep = new URLSearchParams();
+      ['biz', 'owner'].forEach(function(k){ if (q.has(k)) keep.set(k, q.get(k)); });
+      const qs = keep.toString();
+      if (qs) url += '?' + qs;
+    } catch (e) {}
+    let waited = 0;
+    (function tryGo(){
+      let busy = false;
+      try { busy = (pendingSaveCount > 0) || !!unsavedChangePending; } catch (e) { busy = false; }
+      if (!busy){
+        try { window.scrollTo(0, 0); } catch (e) {}
+        location.href = url;
+        return;
+      }
+      if (waited >= 20000){
+        window.__goingHome = false;
+        try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
+        return;
+      }
+      waited += 400;
+      setTimeout(tryGo, 400);
+    })();
+  }
+  window.goSiteHomeFresh = goSiteHomeFresh;
   window.__setSiteEntryMode = setSiteEntryMode;
   function enterSiteTab(name){
     const byName = {
@@ -20605,11 +20661,14 @@
         <a href="${gcalUrl}" target="_blank" rel="noopener" class="gcal-link">📅 הוספה ל-Google Calendar</a>
         <a href="${icsUrl}" download="תור-${svc ? svc.name : ''}.ics" class="gcal-link">📥 הוספה ליומן (iPhone/Outlook)</a>
       </div>
-      <div class="my-appt-actions">
-        <button onclick="rescheduleAppointment()">שינוי מועד</button>
-        <button class="danger" onclick="cancelAppointment()">ביטול תור</button>
-      </div>
-      <button class="template-btn" style="width:100%; margin-top:8px; text-align:center;" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
+      <div class="booked-actions">
+        <button type="button" class="ba-another" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>
+        <div class="ba-row">
+          <button type="button" class="ba-change" onclick="rescheduleAppointment()">✏️ שינוי מועד</button>
+          <button type="button" class="ba-cancel" onclick="cancelAppointment()">✕ ביטול תור</button>
+        </div>
+        <button type="button" class="ba-home" onclick="goSiteHomeFresh()">🏠 חזרה לדף הבית</button>
+      </div>`;
     // 139: שהיא תראה את "התור נקבע בהצלחה" — בטלפון הוא יכול להיפתח מתחת למסך
     try { setTimeout(function(){ const r = apptEl.getBoundingClientRect(); if (r.top < 0 || r.top > window.innerHeight * 0.6) apptEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); } catch (e) {}
     try {
