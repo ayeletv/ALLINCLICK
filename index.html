@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-11-02 · 180">
+<meta name="app-build" content="2026-11-02 · 181">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4805,7 +4805,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-02 · 180';
+        window.__APP_BUILD = '2026-11-02 · 181';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -6597,19 +6597,19 @@
         resultEl.innerHTML = `
           <div class="status-dot">✓ הבקשה התקבלה — ונמצאה שעה מתאימה</div>
           <p style="font-size:13px; margin-top:6px;">נשלחה ל${req.name ? req.name.split(/\s+/)[0] : 'לקוחה'} הצעה במייל/SMS. התור ייקבע כשתאשר בקישור.</p>
-          <button class="template-btn" style="width:100%; margin-top:10px;" onclick="closeFlexibleRequestOverlay()">סגירה</button>`;
+          <button class="template-btn" style="width:100%; margin-top:10px;" onclick="closeFlexibleRequestOverlay()">סגירה</button>` + homeBtnHtml();
       } else if (reallyMatched){
         const emp = staff[currentReq.matchedStaff];
         resultEl.innerHTML = `
           <div class="status-dot">✓ נמצא ונקבע תור מתאים!</div>
           <div class="appt-meta">${formatDateDMY(currentReq.matchedDate)}, ${currentReq.matchedTime}${emp ? ' · אצל ' + emp.name : ''}</div>
           <p style="font-size:12.5px; color:#8A8178; margin-top:8px;">אישור נשלח גם למייל שלך.</p>
-          <button class="template-btn" style="width:100%; margin-top:10px;" onclick="closeFlexibleRequestOverlay()">סגירה</button>`;
+          <button class="template-btn" style="width:100%; margin-top:10px;" onclick="closeFlexibleRequestOverlay()">סגירה</button>` + homeBtnHtml();
       } else {
         resultEl.innerHTML = actionBannerHtml('wait', '✉', 'הבקשה התקבלה!', [
             'עדיין אין שעה פנויה שמתאימה בדיוק — נמשיך לבדוק אוטומטית.',
             'ברגע שתתפנה שעה מתאימה נעדכן אותך במייל.']) + `
-          <button class="template-btn" style="width:100%; margin-top:10px;" onclick="closeFlexibleRequestOverlay()">סגירה</button>`;
+          <button class="template-btn" style="width:100%; margin-top:10px;" onclick="closeFlexibleRequestOverlay()">סגירה</button>` + homeBtnHtml();
       }
       if (typeof renderWeekCal === 'function') renderWeekCal();
     });
@@ -12114,6 +12114,18 @@
     })();
   }
   window.goSiteHomeFresh = goSiteHomeFresh;
+  /* 181: "צריך שיהיה מכל מקום שלקוחה רואה בסוף" (איילת, 2.11) — אותו כפתור
+   * "חזרה לדף הבית" בסוף כל מסך שהלקוחה מגיעה אליו: התורים שלי, ביטול, אישור,
+   * הצעה מקישור, בקשה כללית, רשימת המתנה. ביומן של בעלת העסק — כלום. */
+  function homeBtnHtml(){
+    if (document.body && document.body.classList.contains('admin-mode')) return '';
+    return '<div class="booked-actions ba-home-only"><button type="button" class="ba-home" onclick="goSiteHomeFresh()">🏠 חזרה לדף הבית</button></div>';
+  }
+  function ensureHomeButton(el){
+    if (!el || el.querySelector('.ba-home')) return;
+    el.insertAdjacentHTML('beforeend', homeBtnHtml());
+  }
+  window.homeBtnHtml = homeBtnHtml;
   window.__setSiteEntryMode = setSiteEntryMode;
   function enterSiteTab(name){
     const byName = {
@@ -19533,7 +19545,7 @@
     if (typeof renderWaitlistAdmin === 'function') renderWaitlistAdmin();
     document.getElementById('waitlistBox').innerHTML = actionBannerHtml('wait', '⏳', 'נרשמת לרשימת ההמתנה', [
       apptWhatLine({ service: svc ? svc.name : '', date: dateStr, time }),
-      'אם השעה תתפנה — נשלח לך הודעה עם קישור לאישור.']);
+      'אם השעה תתפנה — נשלח לך הודעה עם קישור לאישור.']) + homeBtnHtml();   // 181
   }
   renderMiniCal();
   renderAvailableSlots();
@@ -20945,9 +20957,8 @@
     const apptEl = document.getElementById('myAppointment');
     apptEl.innerHTML = `
       ${cancelledBannerHtml(apptBeingCancelled)}
-      <div class="my-appt-actions" style="margin-top:14px;">
-        <button onclick="rescheduleAppointment()">קביעת תור חדש</button>
-      </div>`;
+      <button class="ma-another" onclick="rescheduleAppointment()">➕ קביעת תור חדש</button>
+      ${homeBtnHtml()}`;
   }
   function openApptLookup(){
     document.getElementById('lookupId').value = '';
@@ -21275,7 +21286,8 @@
       apptEl.innerHTML = `
         <div class="waitlist-confirmed">אין לך יותר תורים עתידיים.</div>
         ${myRequestsHtml()}
-        <button class="ma-another" onclick="bookAdditionalAppointment()">➕ קביעת תור חדש</button>`;
+        <button class="ma-another" onclick="bookAdditionalAppointment()">➕ קביעת תור חדש</button>
+        ${homeBtnHtml()}`;
       reapplyActionBanner(apptEl);
       return;
     }
@@ -21303,7 +21315,7 @@
           <button class="danger ma-cancel" onclick="cancelListedAppointment(${idx})">✕ ביטול תור</button>
         </div>
       </div>`;
-    }).join('') + myRequestsHtml() + `<button class="ma-another" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>`;
+    }).join('') + myRequestsHtml() + `<button class="ma-another" onclick="bookAdditionalAppointment()">➕ קביעת תור נוסף</button>` + homeBtnHtml();
     reapplyActionBanner(apptEl);
   }
   function resolveCurrentAppt(listAppt){
@@ -21508,6 +21520,7 @@
   function placeActionBanner(apptEl, html){
     apptEl.querySelectorAll('.action-banner').forEach(el => el.remove());
     apptEl.insertAdjacentHTML('afterbegin', html);
+    ensureHomeButton(apptEl);   // 181
     try { setTimeout(function(){ const r = apptEl.getBoundingClientRect(); if (r.top < 0 || r.top > window.innerHeight * 0.6) apptEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); } catch (e) {}
   }
   function showActionBanner(tone, icon, title, lines){
@@ -25056,7 +25069,7 @@
     if (body){
       body.innerHTML = actionBannerHtml('ok', '✓', 'התור נקבע בהצלחה!', [apptWhatLine(res.appointment), movedLine(res), 'נתראה!'].filter(Boolean));
     }
-    if (actions) actions.innerHTML = '';
+    if (actions) actions.innerHTML = homeBtnHtml();   // 181
   }
 
   let autoLookupFromUrlDone = false;
