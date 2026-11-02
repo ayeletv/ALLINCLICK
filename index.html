@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-11-02 · 181">
+<meta name="app-build" content="2026-11-02 · 182">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4805,7 +4805,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-02 · 181';
+        window.__APP_BUILD = '2026-11-02 · 182';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -8738,13 +8738,13 @@
     const rowHtml = f => f.service
       ? `
       <div class="cp-followup-row">
-        <div class="cp-followup-header">${f.service}${f.duration ? ` · ${f.duration} דק'` : ''} · ${formatDateDMY(f.date)}</div>
-        <div class="cp-followup-text">${f.text || ''}</div>
+        <div class="cp-followup-header">${escHtml(f.service)}${f.duration ? ` · ${f.duration} דק'` : ''} · ${formatDateDMY(f.date)}</div>
+        <div class="cp-followup-text">${escHtml(f.text || '')}</div>
       </div>`
       : `
       <div class="cp-followup-row">
         <div class="cp-followup-date">${formatDateDMY(f.date)}</div>
-        <div class="cp-followup-text">${f.text || ''}</div>
+        <div class="cp-followup-text">${escHtml(f.text || '')}</div>
       </div>`;
     if (list.length > CP_FOLLOWUP_PAGE_SIZE){
       const visibleHtml = list.slice(0, CP_FOLLOWUP_PAGE_SIZE).map(rowHtml).join('');
@@ -8764,10 +8764,42 @@
     }
     el.innerHTML = list.map(rowHtml).join('');
   }
-  function addClientFollowUp(){
+  /* 182: "במעקבים אין ירידת שורה — אני רוצה לרשום הערות על לקוחה בפסקאות"
+   * (איילת, 2.11). prompt() של הדפדפן הוא שורה אחת. עכשיו חלון עם תיבת טקסט
+   * גדולה: Enter = שורה חדשה, Ctrl+Enter = שמירה, Esc = ביטול.
+   * מחזיר את הטקסט, או null בביטול. */
+  function openMultilineNote(title, initial){
+    return new Promise(resolve => {
+      const ov = document.createElement('div');
+      ov.className = 'multiline-note-overlay';
+      ov.style.cssText = 'position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; direction:rtl; padding:16px;';
+      ov.innerHTML = '<div style="background:#fff; color:#2b2420; border-radius:16px; padding:20px; width:min(520px, 100%); box-shadow:0 10px 30px rgba(0,0,0,0.25);">'
+        + '<div class="mn-title" style="font-size:17px; font-weight:700; margin-bottom:10px;"></div>'
+        + '<textarea class="mn-text" dir="rtl" rows="7" style="width:100%; box-sizing:border-box; resize:vertical; min-height:140px; font-family:inherit; font-size:15px; line-height:1.6; padding:10px 12px; border:1.5px solid #d8cdbf; border-radius:10px; color:#2b2420; background:#fffdf9;"></textarea>'
+        + '<div style="font-size:12px; color:#8A8178; margin-top:6px;">Enter — שורה חדשה · Ctrl+Enter — שמירה</div>'
+        + '<div style="display:flex; gap:8px; margin-top:14px;">'
+        + '<button type="button" class="mn-save" style="flex:2; padding:11px; border-radius:11px; border:none; background:#2b2420; color:#fff; font-size:15px; font-weight:700; cursor:pointer;">שמירה</button>'
+        + '<button type="button" class="mn-cancel" style="flex:1; padding:11px; border-radius:11px; border:1px solid #d8cdbf; background:#fff; color:#5a4f47; font-size:15px; cursor:pointer;">ביטול</button>'
+        + '</div></div>';
+      ov.querySelector('.mn-title').textContent = title;
+      const ta = ov.querySelector('.mn-text');
+      ta.value = initial || '';
+      const done = v => { document.removeEventListener('keydown', onKey, true); ov.remove(); resolve(v); };
+      const onKey = e => {
+        if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); done(null); }
+        else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); e.stopPropagation(); done(ta.value); }
+      };
+      document.addEventListener('keydown', onKey, true);
+      ov.querySelector('.mn-save').onclick = () => done(ta.value);
+      ov.querySelector('.mn-cancel').onclick = () => done(null);
+      document.body.appendChild(ov);
+      setTimeout(() => { try { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) {} }, 30);
+    });
+  }
+  async function addClientFollowUp(){
     const c = clientProfileCurrent;
     if (!c) return;
-    const text = prompt('מה לרשום כמעקב?');
+    const text = await openMultilineNote('מה לרשום כמעקב?', '');
     if (text === null || !text.trim()) return;
     if (!Array.isArray(c.followUps)) c.followUps = [];
     c.followUps.push({ date: formatDateKey(new Date()), text: text.trim() });
@@ -14283,8 +14315,9 @@
     }
     return true;
   }
-  function promptApptNote(appt, refreshFn){
-    const note = prompt('הערה לטיפול זה (תישמר בהיסטוריית הלקוחה):', appt.note || '');
+  async function promptApptNote(appt, refreshFn){
+    const raw = await openMultilineNote('הערה לטיפול זה (תישמר בהיסטוריית הלקוחה):', appt.note || '');
+    const note = raw === null ? null : raw.trim();   // 182: רק הקצוות — ירידות השורה בפנים נשארות
     if (note !== null){
       const previousNote = appt.note;
       appt.note = note;
@@ -14317,7 +14350,7 @@
           <button class="appt-status-btn" data-action="note">📝 הערה${a.note ? ' ✓' : ''}</button>
           <button class="appt-status-btn" data-action="cancel" style="border-color:rgba(190,80,80,.35);">ביטול</button>
         </div>
-        ${a.note ? `<div class="appt-note-preview">${a.note}</div>` : ''}`;
+        ${a.note ? `<div class="appt-note-preview" style="white-space:pre-wrap;">${escHtml(a.note)}</div>` : ''}`;
       row.querySelector('[data-action="completed"]').onclick = () => setApptStatus(a, 'completed', () => renderApptListInto(containerEl, appts, refreshFn));
       row.querySelector('[data-action="no-show"]').onclick = () => setApptStatus(a, 'no-show', () => renderApptListInto(containerEl, appts, refreshFn));
       row.querySelector('[data-action="note"]').onclick = () => promptApptNote(a, () => renderApptListInto(containerEl, appts, refreshFn));
