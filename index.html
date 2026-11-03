@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-11-02 · 184">
+<meta name="app-build" content="2026-11-03 · 185">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4319,6 +4319,8 @@
       <div class="inner-switcher">
         <button class="active" onclick="showInnerTab('sub-clients', 'inner-clients', this)">לקוחות</button>
         <button onclick="showInnerTab('sub-clients', 'inner-broadcast', this)">הודעות ללקוחות</button>
+        <button onclick="showInnerTab('sub-clients', 'inner-clientmerge', this)">🔗 איחוד כרטיסים</button>
+        <button onclick="showInnerTab('sub-clients', 'inner-nochannel', this)">📣 בלי אופן תקשורת</button>
       </div>
       <div id="inner-clients" class="inner-subpanel active">
         
@@ -4330,6 +4332,47 @@
         </div>
         <div class="client-list" id="clientList"></div>
         
+      </div>
+      <!-- 185: שני הכלים מההגדרות עברו לכרטסת, כדי שרותי תשתמש בהם בעצמה (איילת, 3.11) -->
+      <div id="inner-clientmerge" class="inner-subpanel">
+          <div style="font-size:15px; font-weight:700; margin-bottom:8px;">🔗 איחוד כרטיסים כפולים</div>
+          <div style="font-size:13px; color:var(--panel-text-dim); line-height:1.7; margin-bottom:10px; max-width:600px;">
+            לפעמים אותה לקוחה נרשמה פעמיים (למשל פעם עם ת״ז ופעם רק עם טלפון). כאן מאחדים את שני הכרטיסים לכרטיס אחד.
+          </div>
+          <div style="font-size:13px; line-height:1.8; background:rgba(var(--panel-line-rgb),0.06); border:1px solid rgba(var(--panel-line-rgb),0.18); border-radius:10px; padding:10px 14px; margin-bottom:10px; max-width:600px;">
+            <b>מה קורה באיחוד:</b><br>
+            ✓ <b>שום היסטוריה לא נמחקת.</b> כל התורים (שהיו ושעוד יהיו), הבקשות, רשימת ההמתנה והביטולים של שני הכרטיסים עוברים לכרטיס אחד.<br>
+            ✓ המעקבים, התמונות, ההערות ומספר הביקורים של שניהם מתחברים יחד.<br>
+            ✓ טלפון, מייל או שם שהיו רק בכרטיס השני נשמרים בהערה בכרטיס, ואפשר לחפש לפיהם.<br>
+            ✓ אם בכרטיס שנשאר חסרים טלפון, מייל, ת״ז או יום הולדת, הם נלקחים מהשני.<br>
+            • הכרטיס שנשאר הוא זה שיש בו יותר פרטים. אפשר להחליף אותו, ולהוריד סימון מכל זוג שלא בטוחים לגביו.<br>
+            • אי אפשר לבטל איחוד, ולכן כדאי ללחוץ קודם על "הורדת גיבוי". זה לוקח שנייה ושומר עותק של הכרטסת במחשב.
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="template-btn" onclick="downloadClientsBackup()">💾 הורדת גיבוי של הכרטסת</button>
+            <button type="button" class="template-btn" onclick="findDuplicateClientPairs()">🔍 חיפוש כפילויות</button>
+          </div>
+          <div id="clientMergeList" style="margin-top:14px; max-width:720px;"></div>
+          <div id="clientMergeError" style="display:none; color:var(--wine); font-size:13px; margin-top:10px; max-width:560px;"></div>
+          <button type="button" class="cta" id="clientMergeRunBtn" style="display:none; margin-top:12px;" onclick="runClientMerge()">איחוד הכרטיסים המסומנים</button>
+          <div id="clientMergeResult" style="display:none; font-size:13.5px; margin-top:12px; max-width:560px;"></div>
+      </div>
+      <div id="inner-nochannel" class="inner-subpanel">
+          <div style="font-size:15px; font-weight:700; margin-bottom:8px;">📣 לקוחות בלי אופן תקשורת</div>
+          <div style="font-size:13px; color:var(--panel-text-dim); line-height:1.7; margin-bottom:12px; max-width:600px;">
+            לקוחה שאין עליה אף אופן תקשורת לא מקבלת תזכורת ולא שיחת אישור — גם אם נקבע לה תור.
+            כאן אפשר לראות בדיוק מי הן, ולסמן לכולן בבת אחת.
+            <b>מי שבחרה במפורש לא לקבל SMS לא תיגע כאן</b> — הכלי מטפל רק במי שאין לה כלום.
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="template-btn" onclick="scanClientsWithoutChannel()">🔍 בדיקה מי בלי אופן תקשורת</button>
+          </div>
+          <div id="noChannelList" style="margin-top:14px; max-width:720px;"></div>
+          <div id="noChannelActions" style="display:none; margin-top:12px; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="cta" onclick="fillMissingChannel('call')">📞 לסמן לכולן שיחת טלפון</button>
+            <button type="button" class="template-btn" onclick="fillMissingChannel('sms')">✉️ לסמן לכולן SMS</button>
+          </div>
+          <div id="noChannelResult" style="display:none; font-size:13.5px; margin-top:12px; max-width:600px;"></div>
       </div>
       <div id="inner-broadcast" class="inner-subpanel">
         <div class="broadcast-box">
@@ -4598,29 +4641,6 @@
         </div>
       </div>
       
-      <div class="settings-section" data-settings-section="nochannel" id="noChannelSection">
-        <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
-          <span class="settings-section-title">📣 לקוחות בלי אופן תקשורת</span>
-          <span class="settings-section-sub">מי שלא תקבל תזכורת בכלל</span>
-          <span class="settings-section-chevron">▾</span>
-        </button>
-        <div class="settings-section-body">
-          <div style="font-size:13px; color:var(--panel-text-dim); line-height:1.7; margin-bottom:12px; max-width:600px;">
-            לקוחה שאין עליה אף אופן תקשורת לא מקבלת תזכורת ולא שיחת אישור — גם אם נקבע לה תור.
-            כאן אפשר לראות בדיוק מי הן, ולסמן לכולן בבת אחת.
-            <b>מי שבחרה במפורש לא לקבל SMS לא תיגע כאן</b> — הכלי מטפל רק במי שאין לה כלום.
-          </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="template-btn" onclick="scanClientsWithoutChannel()">🔍 בדיקה מי בלי אופן תקשורת</button>
-          </div>
-          <div id="noChannelList" style="margin-top:14px; max-width:720px;"></div>
-          <div id="noChannelActions" style="display:none; margin-top:12px; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="cta" onclick="fillMissingChannel('call')">📞 לסמן לכולן שיחת טלפון</button>
-            <button type="button" class="template-btn" onclick="fillMissingChannel('sms')">✉️ לסמן לכולן SMS</button>
-          </div>
-          <div id="noChannelResult" style="display:none; font-size:13.5px; margin-top:12px; max-width:600px;"></div>
-        </div>
-      </div>
       <div class="settings-section" data-settings-section="platform" id="platformSection" style="display:none;">
         <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
           <span class="settings-section-title">🏢 ניהול עסקים</span>
@@ -4746,31 +4766,6 @@
         </div>
       </div>
       
-      <div class="settings-section" data-settings-section="clientmerge" id="clientMergeSection" style="display:none;">
-        <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
-          <span class="settings-section-title">🔗 איחוד כרטיסים כפולים</span>
-          <span class="settings-section-sub">אותה לקוחה שנכנסה פעמיים</span>
-          <span class="settings-section-chevron">▾</span>
-        </button>
-        <div class="settings-section-body">
-          <div style="font-size:13.5px; font-weight:700; color:var(--wine); background:rgba(var(--wine-rgb),0.1); border:1px solid rgba(var(--wine-rgb),0.35); border-radius:10px; padding:10px 14px; margin:10px 0; max-width:560px;">
-            ⚠️ איחוד אינו ניתן לביטול. לפני שמאחדים — להוריד גיבוי של הכרטסת בכפתור שלמטה.
-          </div>
-          <div style="font-size:13px; color:var(--panel-text-dim); line-height:1.7; margin-bottom:12px; max-width:560px;">
-            הכרטיס שנשאר הוא זה שיש עליו יותר מידע. התורים, ההיסטוריה, ההערות והביקורים
-            של הכרטיס השני עוברים אליו, והשם השני נשמר בהערה כדי שאפשר יהיה לחפש לפיו.
-            אפשר להחליף איזה כרטיס נשאר, ואפשר להוריד סימון מכל שורה שלא בטוחים לגביה.
-          </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="template-btn" onclick="downloadClientsBackup()">💾 הורדת גיבוי של הכרטסת</button>
-            <button type="button" class="template-btn" onclick="findDuplicateClientPairs()">🔍 חיפוש כפילויות</button>
-          </div>
-          <div id="clientMergeList" style="margin-top:14px; max-width:720px;"></div>
-          <div id="clientMergeError" style="display:none; color:var(--wine); font-size:13px; margin-top:10px; max-width:560px;"></div>
-          <button type="button" class="cta" id="clientMergeRunBtn" style="display:none; margin-top:12px;" onclick="runClientMerge()">איחוד הכרטיסים המסומנים</button>
-          <div id="clientMergeResult" style="display:none; font-size:13.5px; margin-top:12px; max-width:560px;"></div>
-        </div>
-      </div>
       <div class="settings-section" data-settings-section="backups" id="backupsSection" style="display:none;">
         <button type="button" class="settings-section-head" onclick="toggleSettingsSection(this)">
           <span class="settings-section-title">💾 גיבויים ושחזור</span>
@@ -4812,7 +4807,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-02 · 184';
+        window.__APP_BUILD = '2026-11-03 · 185';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -13405,7 +13400,7 @@
         'כל התורים, הבקשות וההיסטוריה עוברים לכרטיס שנשאר. הטלפון השני נשמר בהערה. אי אפשר לבטל.')) return;
     const dig = s => String(s || '').replace(/\D/g, '');
     const keepPh = dig(keep.phone), dropPh = dig(drop.phone);
-    if (dropPh && dropPh !== keepPh) keep.note = (String(keep.note || '').trim() ? String(keep.note).trim() + ' · ' : '') + 'טלפון נוסף: ' + drop.phone;
+    // 185: "טלפון נוסף" נרשם עכשיו בתוך mergeTwoClients — גם באיחוד מהכרטסת.
     // תורים/בקשות שנשמרו עם אחד הטלפונים במקום ת"ז (שיבוץ אוטומטי) — גם הם שלה
     const finalTz = (!isPlausibleTeudatZehut(keep.teudatZehut) && isPlausibleTeudatZehut(drop.teudatZehut)) ? drop.teudatZehut : keep.teudatZehut;
     const nm = String(keep.name || '').trim();
@@ -13669,6 +13664,12 @@
     if (!isPlausibleTeudatZehut(keep.teudatZehut) && isPlausibleTeudatZehut(drop.teudatZehut)){
       keep.teudatZehut = drop.teudatZehut;
     }
+    // 185: טלפון ומייל שונים בכרטיס שמתאחד — נשמרים בהערה ולא הולכים לאיבוד
+    // (עד היום רק באיחוד מתוך כרטיס הלקוחה, ורק הטלפון).
+    const digitsOf = v => String(v || '').replace(/\D/g, '');
+    const extraPhone = (String(keep.phone || '').trim() && digitsOf(drop.phone) && digitsOf(drop.phone) !== digitsOf(keep.phone)) ? String(drop.phone).trim() : '';
+    const extraEmail = (String(keep.email || '').trim() && String(drop.email || '').trim()
+      && String(drop.email).trim().toLowerCase() !== String(keep.email).trim().toLowerCase()) ? String(drop.email).trim() : '';
     if (!String(keep.phone || '').trim()) keep.phone = drop.phone || '';
     if (!String(keep.email || '').trim()) keep.email = drop.email || '';
     if (!String(keep.birthday || '').trim()) keep.birthday = drop.birthday || null;
@@ -13695,6 +13696,9 @@
       notes.push(String(drop.note).trim());
     }
     if (dropName && dropName !== keepName) notes.push('ידועה גם כ: ' + dropName);
+    const notesSoFar = notes.join(' · ');
+    if (extraPhone && notesSoFar.indexOf(extraPhone) === -1) notes.push('טלפון נוסף: ' + extraPhone);
+    if (extraEmail && notesSoFar.indexOf(extraEmail) === -1) notes.push('מייל נוסף: ' + extraEmail);
     keep.note = notes.join(' · ');
 
     const i = clients.indexOf(drop);
@@ -13705,7 +13709,9 @@
     if (!clientMergePlan) return;
     const chosen = clientMergePlan.filter(p => p.chosen);
     if (!chosen.length){ clientMergeShowError('לא סומן אף זוג.'); return; }
-    if (!confirm('לאחד ' + chosen.length + ' זוגות כרטיסים?\n\nהפעולה אינה ניתנת לביטול. יש גיבוי?')) return;
+    if (!confirm('לאחד ' + chosen.length + (chosen.length === 1 ? ' זוג כרטיסים?' : ' זוגות כרטיסים?') + '\n\n' +
+        'כל התורים, הבקשות וההיסטוריה של שני הכרטיסים עוברים לכרטיס שנשאר. טלפון, מייל או שם נוסף נשמרים בהערה.\n' +
+        'אי אפשר לבטל איחוד. אם עוד לא הורדת גיבוי של הכרטסת, כדאי ללחוץ "ביטול" ולהוריד קודם.')) return;
     const jobs = chosen.map(p => ({ keep: clients[p.keep], drop: clients[p.drop] }));
     const btn = document.getElementById('clientMergeRunBtn');
     if (btn){ btn.disabled = true; btn.textContent = 'מאחד...'; }
@@ -23036,7 +23042,10 @@
         reportDiag('stream-blocked', { key: src.split('?')[0].split('/').pop().slice(0, 40), code: 'הסינון החזיר דף חסימה' });
         return;
       }
-      reportDiag('js-error', { key: String((ev && ev.message) || '').slice(0, 60), code: 'line ' + ((ev && ev.lineno) || '') });
+      // 185: גם שם הקובץ — "Unexpected end of JSON input" (2.11) הגיע בלי לדעת אם
+      // מהקוד שלנו או מקובץ Firebase שנטען מהאתר (מספר השורה נמחק בשרת).
+      const srcFile = src.split('?')[0].split('#')[0].split('/').pop().slice(0, 30) || 'index.html';
+      reportDiag('js-error', { key: String((ev && ev.message) || '').slice(0, 60), code: 'line ' + ((ev && ev.lineno) || '') + ' · ' + srcFile });
     });
     window.addEventListener('unhandledrejection', function(ev){
       const r = ev && ev.reason;
@@ -23526,7 +23535,10 @@
     unsavedChangePending = true;
     pendingSaveCount++;
     let __useDeltaThisSave = deltaSaveAllowed();
-    const runSaveTransaction = () => db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
+    // 185: מדידה — כמה פעמים המסמך נקרא בשמירה הזו (Firebase מתחיל מחדש כשמישהו
+    // כתב באמצע), כמה זמן לקחה ההורדה, ומתי התחילה (מה שלפני = המתנה בתור).
+    const runSaveTransaction = () => db.runTransaction(tx => { __saveReads++; if (!__saveFirstReadAt) __saveFirstReadAt = Date.now(); const __readStartedAt = Date.now(); return tx.get(CLOUD_DOC).then(doc => {
+      __saveReadMs += Date.now() - __readStartedAt;
       const server = doc.exists ? doc.data() : {};
       // עותק "גולמי" נפרד, בדיוק כמו בענן — רק ממנו אפשר להסיר פריט.
       const rawServer = doc.exists ? doc.data() : {};
@@ -23629,8 +23641,9 @@
       // "כולל" אותה, והיא לא נשמרה לעולם.
       Object.defineProperty(payload, '__committedCopy', { value: cloneJSON(payload), enumerable: false });
       return payload;
-    }));
+    }); });
     let __saveTxAttempts = 0;
+    let __saveReads = 0, __saveFirstReadAt = 0, __saveReadMs = 0;
     const saveStartedAt = Date.now();
     // כמה מזמן השמירה הלשונית הייתה ברקע — דפדפן מאט לשוניות ברקע, ולכן
     // "שמירה איטית" ברקע אינה בהכרח המתנה אמיתית. (16.10.2026)
@@ -23666,7 +23679,16 @@
       saveDiag('committed', { ms: Date.now() - saveStartedAt, wrote: !!(committedPayload && !committedPayload.__stale && !committedPayload.__repairedOnly) });
       const __wroteSomething = !!(committedPayload && !committedPayload.__stale && !committedPayload.__repairedOnly);
       // 164: "מצב עוקף" — המכשיר עובד בבקשות רגילות אחרי חסימה; כדי לדעת אם זו הסיבה לאיטיות.
-      if (Date.now() - saveStartedAt > 8000) reportDiag('save-slow', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024, hiddenMs: saveHiddenMs(), keys: lastSaveWrittenKeys, code: window.__forceLongPolling ? 'מצב עוקף' : '' });
+      if (Date.now() - saveStartedAt > 8000){
+        // 185: למה היא איטית — במילים (השרת מחליף ספרות ב-#), ובמספרים בשדות נפרדים.
+        const waitMs = __saveFirstReadAt ? Math.max(0, __saveFirstReadAt - saveStartedAt) : 0;
+        const why = [];
+        if (waitMs > 2000) why.push('חיכתה בתור לשמירה קודמת');
+        if (__saveReads > 1) why.push('המסמך נקרא כמה פעמים');
+        if (__saveReadMs > 4000) why.push('הורדת המסמך איטית');
+        reportDiag('save-slow', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024, hiddenMs: saveHiddenMs(), keys: lastSaveWrittenKeys, code: window.__forceLongPolling ? 'מצב עוקף' : '',
+          key: why.join(' · '), waitMs: waitMs, tries: __saveReads, readMs: __saveReadMs });
+      }
       // שמירה גדולה (מעל 150 ק"ב), גם אם הייתה מהירה — כדי לראות בסיכום היומי
       // מה עדיין נשלח בשלמותו. (17.10.2026)
       else if (__wroteSomething && lastSavePayloadBytes > 150 * 1024) reportDiag('save-big', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024, keys: lastSaveWrittenKeys });
@@ -25799,6 +25821,8 @@
     return TRANSIENT_CLOUD_CODES.indexOf(code) !== -1;
   }
   let __streamReadBlocked = false;
+  // 185: בבדיקה השקטה ברקע — איזו דרך ענתה קודם בפעם הקודמת בדף הזה ('tx' = העוקפת).
+  let __quietReadFirst = 'tx';
   function getDocWithRetry(ref, label){
     let attempt = 0;
     // קריאה רגילה עוברת בערוץ הרציף של Firestore. כשהוא חסום, קריאה בתוך
@@ -25847,22 +25871,40 @@
     // לקריאה הרגילה התקועה + הדרך העוקפת).
     let hedgeNow = false;
     hedgeNow = typeof window.__hkBypassFresh === 'function' ? window.__hkBypassFresh('hk_hedge_now') : false;
-    const hedgeMs = hedgeNow ? 0 : label === 'business' ? 7000 : label === 'refresh' ? 5000 : (label === 'publicView' || label === 'owners') ? 6000 : 12000;
+    const hedgeMs = (hedgeNow && (label === 'poll' || label === 'offers-refresh') && __quietReadFirst === 'plain') ? 8000
+      : hedgeNow ? 0 : label === 'business' ? 7000 : label === 'refresh' ? 5000 : (label === 'publicView' || label === 'owners') ? 6000 : 12000;
     const plainGet = () => { try { return ref.get({ source: 'server' }); } catch (e) { return ref.get(); } };
+    // 185: הבדיקה הקבועה ברקע (poll כל כמה שניות, רענון ההצעות) במכשיר שזוכר
+    // "הקריאה הרגילה איטית": רק הדרך העוקפת, והרגילה רק אם העוקפת לא ענתה תוך
+    // 8 שניות או נכשלה (ואם בדף הזה דווקא הרגילה ענתה מהר יותר — הפוך: הרגילה
+    // קודם, והעוקפת אחרי 8 שניות). מאז 178 יצאו שתיהן יחד בכל בדיקה — שתי הורדות מלאות של
+    // מסמך העסק כל 6 שניות, על אותו קו של השמירה. (סיכום 2.11: שמירות של 1 ק"ב
+    // שלקחו 11–26 שניות.) טעינה, רענון ידני וחזרה ללשונית — כמו ב-178.
+    const quietBackground = hedgeNow && (label === 'poll' || label === 'offers-refresh');
+    const quietTxFirst = quietBackground && __quietReadFirst === 'tx';
     const getOnce = () => new Promise((resolve, reject) => {
       let done = false, primaryErr = null, hedgeErr = null, hedgeStarted = false;
-      const win = v => { if (!done) { done = true; clearTimeout(timer); resolve(v); } };
+      let plainStarted = false, plainTimer = null;
+      const win = v => { if (!done) { done = true; clearTimeout(timer); clearTimeout(plainTimer); resolve(v); } };
+      const startPlain = () => {
+        if (done || plainStarted) return;
+        plainStarted = true;
+        plainGet().then(v => { if (quietBackground && !done) __quietReadFirst = 'plain'; win(v); }, e => { primaryErr = e; lose(); });
+      };
       const lose = () => {
         if (done) return;
+        // 185: העוקפת נכשלה לפני שהרגילה יצאה — הרגילה יוצאת עכשיו.
+        if (hedgeErr && !plainStarted) { clearTimeout(plainTimer); startPlain(); return; }
         if (primaryErr && (!hedgeStarted || hedgeErr)) { done = true; clearTimeout(timer); reject(primaryErr); }
         else if (hedgeErr && !primaryErr) {
           // הדרך העוקפת נכשלה והרגילה עוד תקועה — עד 15 שניות נוספות, לא לנצח.
           setTimeout(() => { if (!done) { done = true; reject(hedgeErr); } }, 15000);
         }
       };
-      plainGet().then(win, e => { primaryErr = e; lose(); });
+      if (quietTxFirst && db && typeof db.runTransaction === 'function') plainTimer = setTimeout(startPlain, 8000);
+      else startPlain();
       const timer = setTimeout(() => {
-        if (done || !db || typeof db.runTransaction !== 'function') return;
+        if (done || !db || typeof db.runTransaction !== 'function') { startPlain(); return; }
         hedgeStarted = true;
         // 178: הקריאה הרגילה איטית במכשיר הזה — זוכרים מיד (שבוע), גם אם בסוף
         // היא תנצח. עד היום נזכר רק כשהדרך העוקפת ניצחה, ולכן במחשב של רותי
@@ -25873,7 +25915,10 @@
         // יצא "slow-##s" — בלי לדעת כמה זמן חיכו. (21.10.2026)
         if (!hedgeNow) { try { reportDiag('stream-blocked', { key: label || '', code: 'slow:' + (label || ''), ms: hedgeMs }); } catch (e) {} }
         db.runTransaction(tx => tx.get(ref)).then(v => {
-          if (!done) {
+          // 185: רק כשהעוקפת באמת עקפה קריאה רגילה שיצאה. בבדיקה השקטה ברקע
+          // הרגילה עוד לא יצאה, ואין כאן שום עדות שהערוץ חסום.
+          if (quietBackground && !done) __quietReadFirst = 'tx';
+          if (!done && plainStarted) {
             __streamReadBlocked = true;   // מעכשיו בדף הזה — ישר בדרך העוקפת
             try { localStorage.setItem('hk_force_long_polling', String(Date.now())); localStorage.setItem('hk_hedge_now', String(Date.now())); } catch (e) {}
           }
@@ -26092,9 +26137,11 @@
     const isAdminActive = (typeof isLoggedIn !== 'undefined' && isLoggedIn) ||
       (typeof document !== 'undefined' && document.body && document.body.classList.contains('admin-mode'));
     if (!isAdminActive) return 60000;
-    if (__idlePolls >= 40) return 60000;   // אחרי כארבע דקות של שקט
-    if (__idlePolls >= 10) return 20000;   // אחרי כדקה
-    return 6000;
+    // 185: כל 10 שניות (היה 6) — כל בדיקה מורידה את כל מסמך העסק, ובקו איטי
+    // היא מתחרה בשמירה. שינוי ממכשיר אחר מופיע עד 4 שניות מאוחר יותר.
+    if (__idlePolls >= 15) return 60000;   // אחרי כארבע דקות של שקט
+    if (__idlePolls >= 6) return 20000;    // אחרי כדקה
+    return 10000;
   }
   ['click', 'keydown', 'touchstart'].forEach(function(ev){
     document.addEventListener(ev, function(){ __idlePolls = 0; }, { passive: true, capture: true });
