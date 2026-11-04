@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-11-03 · 185">
+<meta name="app-build" content="2026-11-04 · 187">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4807,7 +4807,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-03 · 185';
+        window.__APP_BUILD = '2026-11-04 · 187';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -6350,6 +6350,13 @@
   async function submitFlexibleRequestNow(){
     const errorEl = document.getElementById('frError');
     const svcObjs = frSelectedServiceObjs();
+    // 186: ביומן — ת"ז של 8 ספרות (ה-0 נשמט, 3.11: "22953442") מושלמת לבד
+    if (!runningOnPublicData){
+      const frIdEl = document.getElementById('frId');
+      const rawD = (frIdEl.value || '').replace(/[^0-9]/g, '');
+      const padded = padShortTz(rawD);
+      if (padded !== rawD) frIdEl.value = padded;
+    }
     const idDigits = (document.getElementById('frId').value || '').replace(/[^0-9]/g, '');
     const firstNameOk = document.getElementById('frFirstName').value.trim();
     const lastNameOk = document.getElementById('frLastName').value.trim();
@@ -6391,9 +6398,11 @@
         : (frPhoneLike && runningOnPublicData && (!frSrv || frSrv.__failed))
         ? 'לא הצלחנו לבדוק כרגע אם המספר רשום אצלנו. נא לנסות שוב בעוד רגע.'
         : frPhoneLike
-          ? 'המספר הזה עדיין לא רשום אצלנו. לקוחה חדשה? יש להקליד במקומו תעודת זהות (9 ספרות).'
+          ? 'לא מצאנו אצלנו את המספר הזה. אפשר להקליד במקומו תעודת זהות (9 ספרות), גם אם כבר היית אצלנו.'
           : idDigits
-            ? 'תעודת הזהות לא תקינה — יש להקליד 9 ספרות.'
+            ? (idDigits.length === 8
+                ? 'בתעודת הזהות יש 8 ספרות. אם היא מתחילה ב-0, יש להקליד גם אותו (9 ספרות).'
+                : 'בתעודת הזהות צריכות להיות 9 ספרות (הוקלדו ' + idDigits.length + ').')
             : 'יש להקליד תעודת זהות (9 ספרות), או מספר טלפון שכבר רשום אצלנו.';
       errorEl.style.display = 'block';
       return;
@@ -15480,6 +15489,7 @@
     pendingSaveCount--;
     if (!committed) return null; // lost the race, or a save error — no appt, no SMS, nothing duplicated
     const { appt, payload } = committed;
+    if (payload && payload.savedAt && typeof bumpCloudStamp === 'function') bumpCloudStamp(payload.savedAt);   // 187
     weekAppointments = payload.weekAppointments;
     specialRequests = payload.specialRequests;
     lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(payload));
@@ -15938,6 +15948,7 @@
     return true;
   }
   let offerRotationBusy = false;
+  let __offerDueRounds = 0, __offerLoopReported = false;   // 186
   async function rotateExpiredOffers(){
     if (offerRotationBusy) return;
     try { if (!isOwnerSession() || !cloudLoadComplete || runningOnPublicData) return; } catch (e) { return; }
@@ -15947,13 +15958,25 @@
     const due = (pendingOffers || []).some(function(o){
       return o && ((o.status === 'offered' && !offerIsLive(o, nowCheck)) || (o.status === 'expired' && !o.nextOfferAttempted));
     });
-    if (!due) return;
+    // 186: הצעה ש"פגה" ונשארת כך סבב אחרי סבב — כל סבב מוריד את כל המסמך ושומר.
+    // אחרי 4 סבבים ברצף (כדקה) — נרשם ביומן האבחון, פעם אחת בביקור.
+    if (!due){ __offerDueRounds = 0; return; }
+    __offerDueRounds++;
+    if (__offerDueRounds >= 4 && !__offerLoopReported){
+      __offerLoopReported = true;
+      try {
+        const kinds = (pendingOffers || []).filter(o => o && ((o.status === 'offered' && !offerIsLive(o, nowCheck)) || (o.status === 'expired' && !o.nextOfferAttempted)))
+          .map(o => o.status === 'offered' ? 'offeredPast' : 'expiredNotAttempted');
+        reportDiag('offers-loop', { code: 'הצעה שפגה חוזרת בכל סבב', key: Array.from(new Set(kinds)).join(','), count: kinds.length });
+      } catch (e) {}
+    }
     offerRotationBusy = true;
     try {
       // בלי מצב עדכני מהענן — לא מחליטים כלום בסבב הזה (עדיף לחכות 15 שניות
       // מאשר לפעול על תמונה ישנה). השרת ממילא מקדם את התור בעצמו.
       try { if (!(await pullOfferStateFromCloud())) return; }
       catch (e) { console.warn('[offers] refresh before rotation failed — skipping this round:', e && e.code); return; }
+      (window.__hkBusyRun || ((l, d, f) => f()))('העברת הצעה שפגה', null, () => {
       if (typeof renderWeekCal === 'function') renderWeekCal();
       const changed = expireStaleOffers();
       const expired = (pendingOffers || []).filter(function(o){
@@ -15977,6 +16000,7 @@
         createOfferForFreedSlot(slot);
       });
       if ((changed || expired.length) && typeof saveState === 'function') saveState({silent:true});
+      });
     } catch (e) {
       console.error('Offer rotation failed', e);
     } finally {
@@ -16483,6 +16507,7 @@
     pendingSaveCount--;
     if (!committed) return null;
     const { appt, payload } = committed;
+    if (payload && payload.savedAt && typeof bumpCloudStamp === 'function') bumpCloudStamp(payload.savedAt);   // 187
     weekAppointments = payload.weekAppointments;
     waitlist = payload.waitlist;
     lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(payload));
@@ -19693,13 +19718,38 @@
       if (phoneEl && !phoneEl.value.trim()) phoneEl.value = digits;
     }
   }
+  /* 186: טלפון בכל כתיב — 972..., או בלי ה-0 (כך נשמרו חלק מהכרטיסים מההסבה
+   * מאקסל) — מושווה כ-05.... עד היום ההשוואה הייתה ספרה-ספרה, והסיכום היומי
+   * (שכן מנרמל) מצא כרטיס ללקוחה שהאתר אמר לה "המספר עדיין לא רשום". */
+  function phoneKey(p){
+    let x = String(p == null ? '' : p).replace(/[^0-9]/g, '');
+    if (/^972\d{8,9}$/.test(x)) x = '0' + x.slice(3);
+    if (x.length === 9 && x.charAt(0) !== '0') x = '0' + x;
+    return x;
+  }
+  window.__phoneKey = phoneKey;
+  /** 186: ת"ז של 8 ספרות שה-0 שבתחילתה נשמט — רק אם ספרת הביקורת מתאימה. */
+  function israeliIdChecksumOk(d){
+    if (!/^\d{9}$/.test(d)) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i++){ let n = Number(d.charAt(i)) * (i % 2 ? 2 : 1); sum += n > 9 ? n - 9 : n; }
+    return sum % 10 === 0;
+  }
+  function padShortTz(d){
+    d = String(d || '').replace(/[^0-9]/g, '');
+    return (d.length === 8 && israeliIdChecksumOk('0' + d)) ? '0' + d : d;
+  }
+  window.__padShortTz = padShortTz;
   function resolveClientByIdOrPhone(raw){
     const digits = String(raw || '').replace(/[^0-9]/g, '');
     const out = { digits, typedAsTz: isPlausibleTeudatZehut(digits), typedAsPhone: isValidIsraeliPhone(raw), client: null, matchedBy: null };
     if (!digits) return out;
-    const byTz = clients.find(c => c && c.teudatZehut === digits);
+    const byTz = clients.find(c => c && c.teudatZehut === digits)
+      // 186: אותה ת"ז, כשבאחד הצדדים ה-0 שבהתחלה חסר
+      || (digits.length >= 8 && digits.length <= 9 ? clients.find(c => c && c.teudatZehut && padShortTz(c.teudatZehut) === padShortTz(digits) && padShortTz(digits).length === 9) : null);
     if (byTz){ out.client = byTz; out.matchedBy = 'tz'; return out; }
-    const phoneMatches = clients.filter(c => c && (c.phone || '').replace(/[^0-9]/g, '') === digits);
+    const typedPhoneKey = phoneKey(digits);
+    const phoneMatches = typedPhoneKey.length >= 9 ? clients.filter(c => c && c.phone && phoneKey(c.phone) === typedPhoneKey) : [];
     if (phoneMatches.length === 1){ out.client = phoneMatches[0]; out.matchedBy = 'phone'; return out; }
     if (phoneMatches.length > 1) out.ambiguousPhone = true;
     return out;
@@ -19712,9 +19762,9 @@
   function attachRealTzToMigrated(idDigits, phone){
     if (!isPlausibleTeudatZehut(idDigits)) return null;
     if (clients.some(c => c && String(c.teudatZehut || '') === idDigits)) return null;
-    const digits = String(phone || '').replace(/[^0-9]/g, '');
+    const digits = phoneKey(phone);
     if (digits.length < 9) return null;
-    const matches = clients.filter(c => c && String(c.phone || '').replace(/[^0-9]/g, '') === digits);
+    const matches = clients.filter(c => c && c.phone && phoneKey(c.phone) === digits);
     if (matches.length !== 1) return null;
     const c = matches[0];
     if (isPlausibleTeudatZehut(c.teudatZehut)) return null;
@@ -22692,6 +22742,7 @@
   let unsavedChangePending = false;
   // Serialize full-document cloud saves and track edits made while a save is in flight.
   let __cloudSaveQueue = Promise.resolve();
+  const __noopSaveTimes = []; let __noopLoopReported = false;   // 186
   let __saveRequestRevision = 0;
   function enqueueCloudSave(run){
     const result = __cloudSaveQueue.then(run, run);
@@ -22720,6 +22771,45 @@
    * העסק. כך אפשר לראות תקלות אמיתיות מהטלפון של רותי ושל הלקוחות בלי
    * לחכות לצילום מסך. נשלחים רק קוד, מפתח קצר, גרסה, זמנים וסוג מכשיר —
    * השרת מוחק ממילא כל ספרה. עד 20 אירועים לביקור, ובלי כפילויות בתוך דקה. */
+  /* 186: "הדף נתקע" — מה רץ באותו רגע. עבודה ארוכה בדפדפן (ציור מחדש של כל
+   * המסכים, הבדיקה של כל 4 שניות אם יש מה לשמור, החישוב בתוך השמירה) נמדדת;
+   * מעל שנייה אחת ביומן העסק — נרשמת ביומן האבחון עם השם שלה. עבודה ארוכה
+   * שלא מתויגת נתפסת דרך PerformanceObserver (כרום/אדג'). */
+  const HK_BUSY_REPORT_MS = 1000;
+  const __hkBusyLog = [];   // [{label, start, end}] — 20 אחרונים, כדי ש-longtask לא ידווח פעמיים
+  function hkBusyRun(label, detailFn, fn){
+    const t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    try { return fn(); }
+    finally {
+      try {
+        const t1 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+        if (t1 - t0 >= 300){
+          __hkBusyLog.push({ label: label, start: t0, end: t1 });
+          if (__hkBusyLog.length > 20) __hkBusyLog.shift();
+        }
+        if (t1 - t0 >= HK_BUSY_REPORT_MS && typeof isOwnerSession === 'function' && isOwnerSession()){
+          let detail = '';
+          try { detail = detailFn ? String(detailFn() || '') : ''; } catch (e) {}
+          reportDiag('page-stuck', { ms: t1 - t0, code: label, key: detail.slice(0, 60), hiddenMs: document.hidden ? Math.round(t1 - t0) : 0 });
+        }
+      } catch (e) {}
+    }
+  }
+  window.__hkBusyRun = hkBusyRun;
+  try {
+    if (typeof PerformanceObserver === 'function' && (PerformanceObserver.supportedEntryTypes || []).indexOf('longtask') !== -1){
+      new PerformanceObserver(list => {
+        list.getEntries().forEach(en => {
+          if (en.duration < HK_BUSY_REPORT_MS) return;
+          if (!(typeof isOwnerSession === 'function' && isOwnerSession())) return;
+          // כבר דווח עם שם (חופף לעבודה מתויגת)
+          if (__hkBusyLog.some(b => b.end - b.start >= HK_BUSY_REPORT_MS && b.start < en.startTime + en.duration && b.end > en.startTime)) return;
+          const near = __hkBusyLog.filter(b => b.start < en.startTime + en.duration && b.end > en.startTime).map(b => b.label);
+          reportDiag('page-stuck', { ms: en.duration, code: near.length ? near.join(' + ') : 'עבודה לא מזוהה', key: near.length ? 'חלקית' : '', hiddenMs: document.hidden ? Math.round(en.duration) : 0 });
+        });
+      }).observe({ type: 'longtask', buffered: false });
+    }
+  } catch (e) {}
   const __diagState = { n: 0, last: {} };
   function reportDiag(kind, info){
     try {
@@ -23537,7 +23627,7 @@
     let __useDeltaThisSave = deltaSaveAllowed();
     // 185: מדידה — כמה פעמים המסמך נקרא בשמירה הזו (Firebase מתחיל מחדש כשמישהו
     // כתב באמצע), כמה זמן לקחה ההורדה, ומתי התחילה (מה שלפני = המתנה בתור).
-    const runSaveTransaction = () => db.runTransaction(tx => { __saveReads++; if (!__saveFirstReadAt) __saveFirstReadAt = Date.now(); const __readStartedAt = Date.now(); return tx.get(CLOUD_DOC).then(doc => {
+    const runSaveTransaction = () => db.runTransaction(tx => { __saveReads++; if (!__saveFirstReadAt) __saveFirstReadAt = Date.now(); const __readStartedAt = Date.now(); return tx.get(CLOUD_DOC).then(doc => (window.__hkBusyRun || ((l, d, f) => f()))('החישוב בתוך השמירה', null, () => { const __computeStartedAt = Date.now(); try {
       __saveReadMs += Date.now() - __readStartedAt;
       const server = doc.exists ? doc.data() : {};
       // עותק "גולמי" נפרד, בדיוק כמו בענן — רק ממנו אפשר להסיר פריט.
@@ -23641,9 +23731,10 @@
       // "כולל" אותה, והיא לא נשמרה לעולם.
       Object.defineProperty(payload, '__committedCopy', { value: cloneJSON(payload), enumerable: false });
       return payload;
-    }); });
+    } finally { __saveComputeMs += Date.now() - __computeStartedAt; __saveComputeEndAt = Date.now(); } })); });
     let __saveTxAttempts = 0;
     let __saveReads = 0, __saveFirstReadAt = 0, __saveReadMs = 0;
+    let __saveComputeMs = 0, __saveComputeEndAt = 0;   // 186
     const saveStartedAt = Date.now();
     // כמה מזמן השמירה הלשונית הייתה ברקע — דפדפן מאט לשוניות ברקע, ולכן
     // "שמירה איטית" ברקע אינה בהכרח המתנה אמיתית. (16.10.2026)
@@ -23686,8 +23777,12 @@
         if (waitMs > 2000) why.push('חיכתה בתור לשמירה קודמת');
         if (__saveReads > 1) why.push('המסמך נקרא כמה פעמים');
         if (__saveReadMs > 4000) why.push('הורדת המסמך איטית');
+        // 186: מה שאחרי ההורדה — החישוב בדף, והכתיבה לענן (מסוף החישוב עד האישור)
+        const commitMs = __saveComputeEndAt ? Math.max(0, Date.now() - __saveComputeEndAt) : 0;
+        if (__saveComputeMs > 1500) why.push('החישוב בדף איטי');
+        if (commitMs > 3000) why.push('הכתיבה לענן איטית');
         reportDiag('save-slow', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024, hiddenMs: saveHiddenMs(), keys: lastSaveWrittenKeys, code: window.__forceLongPolling ? 'מצב עוקף' : '',
-          key: why.join(' · '), waitMs: waitMs, tries: __saveReads, readMs: __saveReadMs });
+          key: why.join(' · ').slice(0, 60), waitMs: waitMs, tries: __saveReads, readMs: __saveReadMs, computeMs: __saveComputeMs, commitMs: commitMs });
       }
       // שמירה גדולה (מעל 150 ק"ב), גם אם הייתה מהירה — כדי לראות בסיכום היומי
       // מה עדיין נשלח בשלמותו. (17.10.2026)
@@ -23695,6 +23790,8 @@
       if (!committedPayload || !committedPayload.__stale){
         clearLocalPendingBackupIfCurrent(saveRevision);
         if (__wroteSomething) __intendedClientRemovals.clear();
+        // 187: לעדכן את החותמת, כדי שמכשירים אחרים יידעו שיש מה להוריד
+        if (__wroteSomething && committedPayload.savedAt && typeof bumpCloudStamp === 'function') bumpCloudStamp(committedPayload.savedAt);
         flushDeferredSuccessToast(saveRevision);
         __syncPendingShown = false;
       }
@@ -23721,6 +23818,17 @@
         showSaveErrorBanner('✓ הנתונים בענן שלמים. הדף הזה החזיק רשימה חלקית (' + committedPayload.fixed.join(', ') + ') והמערכת מנעה את המחיקה — הרשימה המלאה חזרה למסך.', { tone: 'info' });
         hideSaveStatus();
         return;
+      }
+      // 186: שמירה שקטה שלא היה בה מה לכתוב, שחוזרת שוב ושוב — כל אחת מורידה את
+      // כל מסמך העסק. נרשמת ביומן האבחון (פעם בביקור) עם השדה שנראה "שונה".
+      if (!committedPayload && silent){
+        const nowNoop = Date.now();
+        __noopSaveTimes.push(nowNoop);
+        while (__noopSaveTimes.length && nowNoop - __noopSaveTimes[0] > 120000) __noopSaveTimes.shift();
+        if (__noopSaveTimes.length >= 5 && !__noopLoopReported){
+          __noopLoopReported = true;
+          try { reportDiag('save-loop', { code: 'שמירה ריקה חוזרת', key: String(window.__lastDirtyField || '').replace(/[^A-Za-z]/g, '').slice(0, 40), count: __noopSaveTimes.length }); } catch (e) {}
+        }
       }
       if (!committedPayload) { unsavedChangePending = (__saveRequestRevision !== saveRevision); if (__unsavedAlarmTimer){ clearTimeout(__unsavedAlarmTimer); __unsavedAlarmTimer = null; } hideSaveErrorBanner(); if (!silent) showSaveStatus('נשמר ✓', 1800); else hideSaveStatus(); return; }
       unsavedChangePending = (__saveRequestRevision !== saveRevision);
@@ -24299,13 +24407,59 @@
         const done = () => { copyBtn.textContent = '✓ הועתק'; };
         try { navigator.clipboard.writeText(allowHost).then(done, () => {}); } catch (e) {}
       };
+      hideSlowHelp();
       (document.body || document.documentElement).appendChild(box);
       try { if (typeof reportDiag === 'function') reportDiag('blocked-help', { key: 'shown' }); } catch (e) {}
     } catch (e) {}
   }
-  function hideBlockedHelp(){ const el = document.getElementById('hkBlockedHelp'); if (el) el.remove(); }
+  function hideBlockedHelp(){ const el = document.getElementById('hkBlockedHelp'); if (el) el.remove(); hideSlowHelp(); }
   window.__showBlockedHelp = showBlockedHelp;
+  /* 186: קו איטי (לא חסום). שולמית הירש 3.11, רותי ששון 2.11: חיכו כ-40 שניות של
+   * "מחפשת…" עד שקפצה החלונית של הסינון — ואחר כך הדיווח שלהן כן הגיע. עכשיו:
+   * אחרי 12 שניות בלי תשובה — הודעה רכה עם טלפון ווואטסאפ, בלי להפסיק לנסות.
+   * תשובה שמגיעה — ההודעה נעלמת לבד. רק אצל לקוחה. */
+  const SLOW_HELP_AFTER_MS = 12000;
+  let __slowHelpPending = 0;
+  function showSlowHelp(){
+    try {
+      if (typeof isOwnerSession === 'function' && isOwnerSession()) return;
+      if (document.getElementById('hkBlockedHelp') || document.getElementById('hkSlowHelp')) return;
+      const b = (typeof branding !== 'undefined' && branding) || {};
+      const cc = window.__cachedContact || {};
+      const phone = String(b.phone || cc.phone || '').replace(/[^0-9]/g, '');
+      const wa = String(b.whatsapp || cc.whatsapp || '').replace(/[^0-9]/g, '') || phone;
+      const waIntl = wa ? (wa.charAt(0) === '0' ? '972' + wa.slice(1) : wa) : '';
+      const waHref = waIntl ? ((typeof window.__heroWaUrl === 'function') ? window.__heroWaUrl(waIntl) : 'https://wa.me/' + waIntl) : '';
+      const box = document.createElement('div');
+      box.id = 'hkSlowHelp';
+      box.setAttribute('role', 'status');
+      box.style.cssText = 'box-sizing:border-box; position:fixed; left:12px; right:12px; bottom:14px; max-width:460px; margin:0 auto; z-index:999998; background:#fff; color:#2E2522; border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,.22); padding:14px 16px 12px; direction:rtl; text-align:right; font-size:15px; line-height:1.55;';
+      const btn = 'display:inline-flex; align-items:center; justify-content:center; gap:6px; flex:1; min-width:110px; padding:9px 12px; border-radius:12px; font-weight:700; text-decoration:none; font-size:14px;';
+      box.innerHTML =
+        '<button type="button" aria-label="סגירה" style="position:absolute; top:6px; left:10px; background:none; border:none; font-size:20px; color:#888; cursor:pointer;">✕</button>'
+        + '<div style="font-weight:700; margin-bottom:4px;">⏳ רגע, החיבור איטי…</div>'
+        + '<div style="margin-bottom:' + ((phone || waHref) ? '10px' : '0') + ';">אנחנו ממשיכים לנסות, ואין צורך לרענן.' + ((phone || waHref) ? ' אם נוח יותר, אפשר גם:' : '') + '</div>'
+        + '<div style="display:flex; gap:8px; flex-wrap:wrap;">'
+        + (phone ? '<a href="tel:' + phone + '" style="' + btn + ' background:#f2f2f2; color:#2E2522;">📞 התקשרות</a>' : '')
+        + (waHref ? '<a href="' + waHref + '" target="_blank" rel="noopener" style="' + btn + ' background:#25D366; color:#fff;">וואטסאפ</a>' : '')
+        + '</div>';
+      box.querySelector('button').onclick = () => box.remove();
+      (document.body || document.documentElement).appendChild(box);
+    } catch (e) {}
+  }
+  function hideSlowHelp(){ const el = document.getElementById('hkSlowHelp'); if (el) el.remove(); }
   async function callClientApi(action, payload){
+    if (action === 'diag' || action === 'offersTick') return callClientApiInner(action, payload);
+    __slowHelpPending++;
+    const slowTimer = setTimeout(showSlowHelp, SLOW_HELP_AFTER_MS);
+    try { return await callClientApiInner(action, payload); }
+    finally {
+      clearTimeout(slowTimer);
+      __slowHelpPending = Math.max(0, __slowHelpPending - 1);
+      if (!__slowHelpPending) hideSlowHelp();
+    }
+  }
+  async function callClientApiInner(action, payload){
     if (!apiViaQueue && apiViaQueueRemembered() && apiQueueAvailable()) apiViaQueue = true;
     // 147: שעון ההצעות במכשיר מסונן — מוותרים. הוא לא עובר בגיבוי, הדרך הישירה
     // חסומה, והשרת מריץ אותו ממילא כל 2 דקות. עד היום כל כניסה כזו נרשמה
@@ -24878,6 +25032,7 @@
       if (!doc.exists){ alert('הגיבוי הזה לא נמצא.'); return; }
       const backupData = doc.data();
       return CLOUD_DOC.set(backupData, { merge: false }).then(() => {
+        if (backupData.savedAt && typeof bumpCloudStamp === 'function') bumpCloudStamp(backupData.savedAt, true);   // 187
         lastLoadedSnapshot = cloneJSON(backupData);
         applyCloudData(backupData);
         pruneExpiredWaitlistEntries();
@@ -25005,7 +25160,8 @@
     const __reStart = __reNow();
     const __reBreakdown = [];
     window.__renderErrors = [];
-    __reCalls.forEach(([name, fn]) => {
+    // 186: נמדד כ"ציור מחדש של כל המסכים", עם שלושת המסכים הכבדים
+    const __runAll = () => __reCalls.forEach(([name, fn]) => {
       if (!fn) return;
       const t0 = __reNow();
       try {
@@ -25016,6 +25172,9 @@
       }
       __reBreakdown.push({ name, ms: Math.round((__reNow() - t0) * 10) / 10 });
     });
+    if (typeof window.__hkBusyRun === 'function') window.__hkBusyRun('ציור מחדש של כל המסכים',
+      () => __reBreakdown.slice().sort((a, b) => b.ms - a.ms).slice(0, 3).map(x => x.name.replace(/^render/, '')).join(','), __runAll);
+    else __runAll();
     __reBreakdown.sort((a, b) => b.ms - a.ms);
     window.__lastRerenderEverythingDiag = {
       elapsedSec: Math.round(__reNow() - __reStart) / 1000,
@@ -26083,7 +26242,9 @@
     };
     return Object.keys(fields).some(function(k){
       try {
-        return stable(lastLoadedSnapshot[k]) !== stable(fields[k]);
+        const differs = stable(lastLoadedSnapshot[k]) !== stable(fields[k]);
+        if (differs) window.__lastDirtyField = k;   // 186: לאבחון "שמירה ריקה שחוזרת"
+        return differs;
       } catch (e) {
         // A comparison failure is not proof of an unsaved edit; the save loop and
         // explicit save actions remain responsible for persistence.
@@ -26095,7 +26256,7 @@
   setInterval(() => {
     if (!isOwnerSession() || !cloudLoadComplete || !lastLoadedSnapshot) return;
     if (document.hidden || pendingSaveCount > 0) return;
-    if (!unsavedChangePending && !hasUnsavedLocalChanges()) return;
+    if (!unsavedChangePending && !(window.__hkBusyRun || ((l, d, f) => f()))('בדיקה אם יש מה לשמור', null, hasUnsavedLocalChanges)) return;
     saveState({ silent: true });
   }, 4000);
   window.addEventListener('beforeunload', (e) => {
@@ -26146,6 +26307,43 @@
   ['click', 'keydown', 'touchstart'].forEach(function(ev){
     document.addEventListener(ev, function(){ __idlePolls = 0; }, { passive: true, capture: true });
   });
+  /* 187: "חותמת" — מסמך קטן business/{bizId}/meta/stamp עם savedAt של הכתיבה
+   * האחרונה. עד 186 כל בדיקת עדכון (כל 10–20 שנ') הורידה את כל מסמך העסק
+   * (כ-740 ק"ב) גם כשלא השתנה בו כלום. עכשיו הבדיקה קוראת קודם את החותמת
+   * (פחות מק"ב), ומורידה את המסמך המלא רק כשהחותמת השתנתה. השרת כותב את
+   * החותמת באותה כתיבה של המסמך; היומן כותב אותה אחרי שמירה שהצליחה.
+   * רשת ביטחון: דילוג רק אחרי שנראתה חותמת שהשרת כתב (srv), הורדה מלאה לפחות
+   * פעם בשתי דקות, וכל תקלה בחותמת = הורדה מלאה כמו קודם. */
+  const STAMP_FULL_POLL_MS = 120000;
+  let __lastFullPollAt = 0;
+  let __stampSkips = 0;
+  function cloudStampRef(){
+    try { return (typeof CLOUD_DOC !== 'undefined' && CLOUD_DOC) ? CLOUD_DOC.collection('meta').doc('stamp') : null; } catch (e) { return null; }
+  }
+  function bumpCloudStamp(savedAt, force){
+    // אחרי שמירה שכבר הצליחה; כישלון כאן לא נוגע בשמירה עצמה.
+    try {
+      const ref = cloudStampRef();
+      if (!ref || !savedAt || typeof db === 'undefined') return;
+      // טרנזקציה קטנה: החותמת רק מתקדמת, כדי ששמירה ישנה שמגיעה באיחור
+      // לא תחזיר אותה אחורה.
+      db.runTransaction(tx => tx.get(ref).then(d => {
+        const cur = d.exists ? String((d.data() || {}).savedAt || '') : '';
+        if (!force && cur && cur >= String(savedAt)) return;   // force: שחזור מגיבוי, שמחזיר savedAt ישן
+        tx.set(ref, { savedAt: String(savedAt) }, { merge: true });
+      })).catch(err => console.warn('stamp write skipped:', err && err.code));
+    } catch (e) {}
+  }
+  window.__bumpCloudStamp = bumpCloudStamp;
+  function readCloudStamp(){
+    const ref = cloudStampRef();
+    if (!ref) return Promise.resolve(null);
+    // get רגיל עם הגבלת זמן — אם החותמת לא חוזרת תוך 6 שנ', הורדה מלאה כרגיל.
+    return Promise.race([
+      ref.get({ source: 'server' }).then(d => d.exists ? (d.data() || null) : null),
+      new Promise(resolve => setTimeout(() => resolve(null), 6000))
+    ]).catch(() => null);
+  }
   function pollForRemoteUpdates(){
     if (document.hidden || !cloudLoadComplete || !lastLoadedSnapshot) return;
     const __u = auth && auth.currentUser;
@@ -26159,7 +26357,16 @@
     // 120: דרך getDocWithRetry (עוקף ערוץ חסום), ולא יותר מקריאה אחת בכל רגע.
     if (__remotePollInFlight) return;
     __remotePollInFlight = true;
-    getDocWithRetry(CLOUD_DOC, 'poll').then(doc => {
+    const __fullDue = (Date.now() - __lastFullPollAt) >= STAMP_FULL_POLL_MS;
+    (__fullDue ? Promise.resolve(null) : readCloudStamp()).then(stamp => {
+      if (stamp && stamp.srv && stamp.savedAt && stamp.savedAt === lastLoadedSnapshot.savedAt){
+        __stampSkips++; __idlePolls++;
+        return null;   // שום דבר לא השתנה — בלי להוריד את המסמך
+      }
+      __lastFullPollAt = Date.now();
+      return getDocWithRetry(CLOUD_DOC, 'poll');
+    }).then(doc => {
+      if (!doc) return;
       if (!doc.exists || unsavedChangePending || pendingSaveCount > 0) return;
       const rawCloudData = doc.data();
       if (rawCloudData.savedAt === lastLoadedSnapshot.savedAt){ __idlePolls++; return; } // שום דבר לא השתנה
