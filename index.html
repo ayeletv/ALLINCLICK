@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-11-04 · 189">
+<meta name="app-build" content="2026-11-05 · 192">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4807,7 +4807,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-04 · 189';
+        window.__APP_BUILD = '2026-11-05 · 192';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -12983,8 +12983,29 @@
         const bdayDayEl = bdayWrap.querySelector('.mini-bday-day');
         const bdayMonthEl = bdayWrap.querySelector('.mini-bday-month');
         const bdayYearEl = bdayWrap.querySelector('.mini-bday-year');
-        populateDMYPickerEls(bdayDayEl, bdayMonthEl, bdayYearEl, { allowBlank: true, yearsBack: 100, value: c.birthday });
-        [bdayDayEl, bdayMonthEl, bdayYearEl].forEach(el => { el.disabled = true; });
+        /* 192: כל כרטיס בנה 3 רשימות של יום הולדת (31 ימים, 12 חודשים, 100 שנים):
+         * כ-14,000 אפשרויות ב-100 כרטיסים, וזה היה רוב הזמן של ציור הכרטסת.
+         * עכשיו בתצוגה יש רק את הערך עצמו, והרשימות המלאות נבנות כשלוחצים "עריכה". */
+        const bdayParts = String(c.birthday || '').split('-').map(Number);
+        const bdayThisYear = new Date().getFullYear();
+        const bdayOk = bdayParts.length === 3 && !bdayParts.some(isNaN);
+        const oneOpt = (el, ok, value, text, blankText) => {
+          el.innerHTML = '';
+          const o = document.createElement('option');
+          o.value = ok ? value : ''; o.textContent = ok ? text : blankText;
+          el.appendChild(o);
+          el.disabled = true;
+        };
+        oneOpt(bdayDayEl, bdayOk && bdayParts[2] >= 1 && bdayParts[2] <= 31, String(bdayParts[2]), String(bdayParts[2]), 'יום');
+        oneOpt(bdayMonthEl, bdayOk && bdayParts[1] >= 1 && bdayParts[1] <= 12, String(bdayParts[1] - 1), hebrewMonths[bdayParts[1] - 1], 'חודש');
+        oneOpt(bdayYearEl, bdayOk && bdayParts[0] >= bdayThisYear - 100 && bdayParts[0] <= bdayThisYear, String(bdayParts[0]), String(bdayParts[0]), 'שנה');
+        let bdayFull = false;
+        editStartBtn.addEventListener('click', () => {
+          if (bdayFull) return;
+          bdayFull = true;
+          populateDMYPickerEls(bdayDayEl, bdayMonthEl, bdayYearEl, { allowBlank: true, yearsBack: 100, value: c.birthday });
+          [bdayDayEl, bdayMonthEl, bdayYearEl].forEach(el => { el.disabled = false; });
+        });
       }
       editSaveBtn.onclick = async () => {
         const old = cloneJSON(c);
