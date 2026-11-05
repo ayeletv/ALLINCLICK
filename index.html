@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-11-04 · 187">
+<meta name="app-build" content="2026-11-04 · 189">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4807,7 +4807,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-04 · 187';
+        window.__APP_BUILD = '2026-11-04 · 189';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -9865,6 +9865,7 @@
     return { from: sunday, to: new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + 6) };
   }
   function renderReports(range){
+    try { if (window.__hkDeferredRenders) window.__hkDeferredRenders.delete('renderReports'); } catch (e) {}
     const r = reportPresetRange(range, new Date());
     renderReportOutput(computeRealRangeReport(r.from, r.to, range));
     // טווח שנוגע בתורים שעברו לארכיון — טוענים אותו ומציירים שוב
@@ -12699,8 +12700,50 @@
    * "0 ביקורים · אחרון —" ו"אין עדיין היסטוריית טיפולים", כשיש לה טיפול מ-8.10
    * שכבר עבר לארכיון (הארכיון מעביר תורים שעברו לפני 14 יום). המונה השמור
    * (c.visits, גם מההסבה) לא יורד — לוקחים את הגדול מבין השניים. */
+  // 189: בכרטסת, כל כרטיס סרק את כל הארכיון (פעמיים), ולכל תור בארכיון
+  // הריץ ניקוי שם — 100 כרטיסים × כל הארכיון. נמדד 2.3 שנ' מתוך 3.3 של
+  // "ציור מחדש" (4.11). עכשיו בונים אינדקס אחד לכל ציור של הכרטסת, ומחזירים
+  // בדיוק את אותם תורים, באותו סדר (אותו כלל כמו apptBelongsToClient).
+  let __archClientIdx = null;
+  function buildArchiveClientIndex(){
+    const byTz = new Map(), byName = new Map(), ownerByTz = new Map();
+    (clients || []).forEach(x => {
+      const t = x && String(x.teudatZehut || '').trim();
+      if (t && !ownerByTz.has(t)) ownerByTz.set(t, x);
+    });
+    const list = archiveCache.appointments || [];
+    list.forEach((a, i) => {
+      if (!a) return;
+      const at = String(a.teudatZehut || '').trim();
+      if (at){ const b = byTz.get(at); if (b) b.push(i); else byTz.set(at, [i]); }
+      const nk = apptNameKey(a.client);
+      const b2 = byName.get(nk); if (b2) b2.push(i); else byName.set(nk, [i]);
+    });
+    return { list: list, byTz: byTz, byName: byName, ownerByTz: ownerByTz };
+  }
+  function archivedForClientFast(idx, c){
+    const ct = String(c.teudatZehut || '').trim();
+    const nk = apptNameKey(c.name);
+    const seen = new Set(), out = [];
+    const consider = i => {
+      if (seen.has(i)) return; seen.add(i);
+      const a = idx.list[i];
+      const at = String(a.teudatZehut || '').trim();
+      if (at && ct && at === ct){ out.push(i); return; }
+      if (apptNameKey(a.client) !== nk) return;
+      if (!at){ out.push(i); return; }
+      const owner = idx.ownerByTz.get(at);
+      if (!owner || owner === c) out.push(i);
+    };
+    if (ct) (idx.byTz.get(ct) || []).forEach(consider);
+    (idx.byName.get(nk) || []).forEach(consider);
+    out.sort((x, y) => x - y);
+    return out.map(i => idx.list[i]);
+  }
   function clientArchivedAppointments(c){
     if (!c || !archiveCache.loaded) return [];
+    if (__archClientIdx && __archClientIdx.list === archiveCache.appointments)
+      return getClientAppointments(c.name, archivedForClientFast(__archClientIdx, c));
     return getClientAppointments(c.name, archiveCache.appointments.filter(a => apptBelongsToClient(a, c)));
   }
   function clientVisitsLine(c, liveHistory){
@@ -12726,6 +12769,11 @@
       + (isBday ? ' <span class="badge" style="background:rgba(var(--gold-rgb),0.2); color:var(--panel-gold); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : '');
   }
   function renderClients(){
+    try { if (window.__hkDeferredRenders) window.__hkDeferredRenders.delete('renderClients'); } catch (e) {}
+    __archClientIdx = archiveCache.loaded ? buildArchiveClientIndex() : null;
+    try { return renderClientsInner(); } finally { __archClientIdx = null; }
+  }
+  function renderClientsInner(){
     const __rcDiagStart = Array.isArray(clientsRenderCallLog) ? (typeof performance !== 'undefined' ? performance.now() : Date.now()) : null;
     // 147: הארכיון נטען פעם אחת ברקע, ואז הכרטסת מצוירת שוב עם הביקורים הישנים.
     if (!archiveCache.loaded && !__clientsArchiveRequested){
@@ -25163,6 +25211,7 @@
     // 186: נמדד כ"ציור מחדש של כל המסכים", עם שלושת המסכים הכבדים
     const __runAll = () => __reCalls.forEach(([name, fn]) => {
       if (!fn) return;
+      if (hkShouldDeferRender(name, fn)) return;
       const t0 = __reNow();
       try {
         fn();
@@ -25181,6 +25230,54 @@
       top: __reBreakdown.slice(0, 5)
     };
   }
+  // 189: מסך שלא רואים לא מצוירים מחדש בכל עדכון מהענן. הוא מסומן "ממתין",
+  // ומצויר ברגע שנכנסים אליו (אחרי לחיצה שחשפה אותו). פעם ראשונה תמיד מצוירת.
+  // גם כרטיס לקוחה שבעריכה לא נמחק באמצע (עד היום ציור מחדש ביטל את העריכה).
+  const HK_DEFER_TARGETS = {
+    renderClients: 'clientList', renderReports: 'repCount', renderInventory: 'invList',
+    renderStaff: 'staffList', renderHoursEditor: 'hoursList', renderRecAdminList: 'recAdminList',
+    renderOverviewMonthCal: 'ovCalGrid'
+  };
+  window.__hkDeferredRenders = window.__hkDeferredRenders || new Map();
+  const __hkRenderedOnce = new Set();
+  function hkElHidden(el){ return !el || el.getClientRects().length === 0; }
+  function hkRenderBlocked(name, el){
+    if (hkElHidden(el)) return true;
+    if (name === 'renderClients'){
+      if (el.querySelector('.client-card-editing')) return true;
+      const ae = document.activeElement;
+      if (ae && ae !== document.body && el.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return true;
+    }
+    return false;
+  }
+  function hkShouldDeferRender(name, fn){
+    try {
+      const id = HK_DEFER_TARGETS[name];
+      if (!id) return false;
+      if (!__hkRenderedOnce.has(name)){ __hkRenderedOnce.add(name); return false; }
+      if (!hkRenderBlocked(name, document.getElementById(id))) { window.__hkDeferredRenders.delete(name); return false; }
+      window.__hkDeferredRenders.set(name, fn);
+      return true;
+    } catch (e) { return false; }
+  }
+  function hkFlushDeferredRenders(){
+    const m = window.__hkDeferredRenders;
+    if (!m || !m.size) return;
+    Array.from(m.entries()).forEach(([name, fn]) => {
+      let blocked = true;
+      try { blocked = hkRenderBlocked(name, document.getElementById(HK_DEFER_TARGETS[name])); } catch (e) {}
+      if (blocked) return;
+      m.delete(name);
+      const run = () => { try { fn(); } catch (e) { console.error('Deferred render "' + name + '" failed:', e); } };
+      if (typeof window.__hkBusyRun === 'function') window.__hkBusyRun('ציור מסך שנפתח', () => name.replace(/^render/, ''), run);
+      else run();
+    });
+  }
+  ['click', 'keyup', 'focusout'].forEach(function(ev){
+    document.addEventListener(ev, function(){ setTimeout(hkFlushDeferredRenders, 0); }, { passive: true, capture: true });
+  });
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden) setTimeout(hkFlushDeferredRenders, 0); });
+  setInterval(function(){ if (!document.hidden) hkFlushDeferredRenders(); }, 2000);   // מסך שנחשף בלי לחיצה
   let cloudLoadingElapsedTimer = null;
   let cloudOverlayShownAt = null;
   function updateCloudLoadingOverlay(){
