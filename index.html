@@ -4807,7 +4807,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-05 · 192';
+        window.__APP_BUILD = '2026-11-06 · 193';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -16000,8 +16000,13 @@
    * אותה, והציע את השעה התפוסה ללקוחה הבאה. (15.10.2026) */
   async function pullOfferStateFromCloud(){
     if (!lastLoadedSnapshot) return false;
+    const __dlT0 = window.__hkNow ? window.__hkNow() : 0;
     const doc = await getDocWithRetry(CLOUD_DOC, 'offers-refresh');
+    if (window.__hkBusyMark) window.__hkBusyMark('הורדת המסמך (סבב הצעות)', __dlT0, window.__hkNow());
     if (!doc || !doc.exists) return false;
+    return (window.__hkBusyRun || ((l, d, f) => f()))('משיכת הצעות מהענן', null, () => pullOfferStateApply(doc));
+  }
+  function pullOfferStateApply(doc){
     const server = doc.data();
     backfillMissingListIds(server);
     const base = lastLoadedSnapshot;
@@ -16018,6 +16023,7 @@
   }
   let offerRotationBusy = false;
   let __offerDueRounds = 0, __offerLoopReported = false;   // 186
+  let __offerLastStop = '';   // 193: למה הסבב הקודם לא סגר את ההצעה
   async function rotateExpiredOffers(){
     if (offerRotationBusy) return;
     try { if (!isOwnerSession() || !cloudLoadComplete || runningOnPublicData) return; } catch (e) { return; }
@@ -16036,15 +16042,16 @@
       try {
         const kinds = (pendingOffers || []).filter(o => o && ((o.status === 'offered' && !offerIsLive(o, nowCheck)) || (o.status === 'expired' && !o.nextOfferAttempted)))
           .map(o => o.status === 'offered' ? 'offeredPast' : 'expiredNotAttempted');
-        reportDiag('offers-loop', { code: 'הצעה שפגה חוזרת בכל סבב', key: Array.from(new Set(kinds)).join(','), count: kinds.length });
+        reportDiag('offers-loop', { code: 'הצעה שפגה חוזרת בכל סבב', key: Array.from(new Set(kinds)).join(',') + ' · ' + (__offerLastStop || 'none'), count: kinds.length });
       } catch (e) {}
     }
     offerRotationBusy = true;
     try {
       // בלי מצב עדכני מהענן — לא מחליטים כלום בסבב הזה (עדיף לחכות 15 שניות
       // מאשר לפעול על תמונה ישנה). השרת ממילא מקדם את התור בעצמו.
-      try { if (!(await pullOfferStateFromCloud())) return; }
-      catch (e) { console.warn('[offers] refresh before rotation failed — skipping this round:', e && e.code); return; }
+      try { if (!(await pullOfferStateFromCloud())) { __offerLastStop = 'pull-empty'; return; } }
+      catch (e) { __offerLastStop = 'pull-failed ' + String((e && e.code) || '').slice(0, 20); console.warn('[offers] refresh before rotation failed — skipping this round:', e && e.code); return; }
+      __offerLastStop = 'pulled';
       (window.__hkBusyRun || ((l, d, f) => f()))('העברת הצעה שפגה', null, () => {
       if (typeof renderWeekCal === 'function') renderWeekCal();
       const changed = expireStaleOffers();
@@ -16069,8 +16076,10 @@
         createOfferForFreedSlot(slot);
       });
       if ((changed || expired.length) && typeof saveState === 'function') saveState({silent:true});
+      __offerLastStop = changed ? 'expired-saved' : 'not-changed';
       });
     } catch (e) {
+      __offerLastStop = 'error ' + String((e && e.message) || '').slice(0, 30);
       console.error('Offer rotation failed', e);
     } finally {
       offerRotationBusy = false;
@@ -22865,6 +22874,19 @@
     }
   }
   window.__hkBusyRun = hkBusyRun;
+  /* 193: "עבודה לא מזוהה" (5.11: 17 מתוך 19 תקיעות). הורדת מסמך העסק (656 ק"ב)
+   * מפוענחת בתוך Firebase, מחוץ לקוד שלנו, ולכן אי אפשר לעטוף אותה. במקום זה
+   * נרשם "חלון" רך של ההורדה: תקיעה שחופפת לו תקבל את השם שלו (חלקית), אבל
+   * החלון עצמו לא נחשב תקיעה ולא מסתיר תקיעות. */
+  function hkBusyMark(label, t0, t1){
+    try {
+      if (!(t1 - t0 >= 300)) return;
+      __hkBusyLog.push({ label: label, start: t0, end: t1, soft: true });
+      if (__hkBusyLog.length > 20) __hkBusyLog.shift();
+    } catch (e) {}
+  }
+  window.__hkBusyMark = hkBusyMark;
+  window.__hkNow = function(){ return (typeof performance !== 'undefined' ? performance.now() : Date.now()); };
   try {
     if (typeof PerformanceObserver === 'function' && (PerformanceObserver.supportedEntryTypes || []).indexOf('longtask') !== -1){
       new PerformanceObserver(list => {
@@ -22872,7 +22894,7 @@
           if (en.duration < HK_BUSY_REPORT_MS) return;
           if (!(typeof isOwnerSession === 'function' && isOwnerSession())) return;
           // כבר דווח עם שם (חופף לעבודה מתויגת)
-          if (__hkBusyLog.some(b => b.end - b.start >= HK_BUSY_REPORT_MS && b.start < en.startTime + en.duration && b.end > en.startTime)) return;
+          if (__hkBusyLog.some(b => !b.soft && b.end - b.start >= HK_BUSY_REPORT_MS && b.start < en.startTime + en.duration && b.end > en.startTime)) return;
           const near = __hkBusyLog.filter(b => b.start < en.startTime + en.duration && b.end > en.startTime).map(b => b.label);
           reportDiag('page-stuck', { ms: en.duration, code: near.length ? near.join(' + ') : 'עבודה לא מזוהה', key: near.length ? 'חלקית' : '', hiddenMs: document.hidden ? Math.round(en.duration) : 0 });
         });
@@ -23197,7 +23219,9 @@
       // 164: סינון שמחזיר דף חסימה ("<html><bod...") במקום תשובה של Firestore
       // (28.10, 03:27, יחד עם "חיבור מסונן · publicView"). זו לא שגיאה בקוד שלנו —
       // הקריאה עוברת לבד לדרך העוקפת ולערוץ הגיבוי.
-      if (/Unexpected token '<'/.test(String((ev && ev.message) || '')) && /\.js(\?|$)/.test(src)){
+      // 193: גם כשהקובץ לא נגמר ב-.js (5.11, 11:23: "<html><bod" נרשם כ-index.html)
+      const __msg = String((ev && ev.message) || '');
+      if (/Unexpected token '<'/.test(__msg) && (/\.js(\?|$)/.test(src) || /<html|<body|<bod|<!doctype/i.test(__msg))){
         reportDiag('stream-blocked', { key: src.split('?')[0].split('/').pop().slice(0, 40), code: 'הסינון החזיר דף חסימה' });
         return;
       }
@@ -26399,17 +26423,38 @@
       return;
     }
     if (unsavedChangePending){ saveState(); return; }
-    getDocWithRetry(CLOUD_DOC, 'tab-return').then(doc => {
-      if (!doc.exists || unsavedChangePending || pendingSaveCount > 0) return;
-      const rawCloudData = doc.data();
-      backfillMissingListIds(rawCloudData);
-      lastLoadedSnapshot = cloneJSON(rawCloudData);
-      applyCloudData(rawCloudData);
-      alignSnapshotWithNormalisedData();
-      pruneExpiredWaitlistEntries();
-      rebindOpenRecords();
-      rerenderEverything();
-    }).catch(err => console.error('Refresh on tab return failed:', err));
+    /* 193: עד עכשיו כל חזרה ללשונית הורידה את כל מסמך העסק, פענחה אותו וציירה
+     * הכל מחדש — גם כשלא השתנה כלום ("משאירים לשונית, לוחצים, ונתקע").
+     * עכשיו קודם החותמת (187). אם לא השתנה כלום — לא מורידים. רשת הביטחון של
+     * הבדיקה הקבועה (הורדה מלאה כל 2 דק') נשארת כמו שהיא. */
+    if (__remotePollInFlight) return;
+    __remotePollInFlight = true;
+    let __dlT0 = 0;
+    readCloudStamp().then(stamp => {
+      if (stamp && stamp.srv && stamp.savedAt && lastLoadedSnapshot && stamp.savedAt === lastLoadedSnapshot.savedAt){
+        __stampSkips++;
+        return null;
+      }
+      __lastFullPollAt = Date.now();
+      __dlT0 = window.__hkNow();
+      return getDocWithRetry(CLOUD_DOC, 'tab-return');
+    }).then(doc => {
+      if (__dlT0) window.__hkBusyMark('הורדת המסמך (חזרה ללשונית)', __dlT0, window.__hkNow());
+      if (!doc || !doc.exists || unsavedChangePending || pendingSaveCount > 0) return;
+      const changed = (window.__hkBusyRun || ((l, d, f) => f()))('קליטת עדכון מהענן', null, () => {
+        const rawCloudData = doc.data();
+        if (lastLoadedSnapshot && rawCloudData.savedAt === lastLoadedSnapshot.savedAt) return false;
+        backfillMissingListIds(rawCloudData);
+        lastLoadedSnapshot = cloneJSON(rawCloudData);
+        applyCloudData(rawCloudData);
+        alignSnapshotWithNormalisedData();
+        pruneExpiredWaitlistEntries();
+        rebindOpenRecords();
+        return true;
+      });
+      if (changed) rerenderEverything();
+    }).catch(err => console.error('Refresh on tab return failed:', err))
+      .then(() => { __remotePollInFlight = false; });
   });
   let __idlePolls = 0;
   function pollIntervalMs(){
@@ -26476,25 +26521,33 @@
     if (__remotePollInFlight) return;
     __remotePollInFlight = true;
     const __fullDue = (Date.now() - __lastFullPollAt) >= STAMP_FULL_POLL_MS;
+    let __pollDlT0 = 0;
     (__fullDue ? Promise.resolve(null) : readCloudStamp()).then(stamp => {
       if (stamp && stamp.srv && stamp.savedAt && stamp.savedAt === lastLoadedSnapshot.savedAt){
         __stampSkips++; __idlePolls++;
         return null;   // שום דבר לא השתנה — בלי להוריד את המסמך
       }
       __lastFullPollAt = Date.now();
+      __pollDlT0 = window.__hkNow();
       return getDocWithRetry(CLOUD_DOC, 'poll');
     }).then(doc => {
       if (!doc) return;
+      if (__pollDlT0) window.__hkBusyMark('הורדת המסמך (בדיקת עדכונים)', __pollDlT0, window.__hkNow());
       if (!doc.exists || unsavedChangePending || pendingSaveCount > 0) return;
-      const rawCloudData = doc.data();
-      if (rawCloudData.savedAt === lastLoadedSnapshot.savedAt){ __idlePolls++; return; } // שום דבר לא השתנה
-      __idlePolls = 0;
-      backfillMissingListIds(rawCloudData);
-      lastLoadedSnapshot = cloneJSON(rawCloudData);
-      applyCloudData(rawCloudData);
-      alignSnapshotWithNormalisedData();
-      pruneExpiredWaitlistEntries();
-      rebindOpenRecords();
+      // 193: עם שם, כדי שהסיכום לא יגיד "עבודה לא מזוהה"
+      const changed = (window.__hkBusyRun || ((l, d, f) => f()))('קליטת עדכון מהענן', null, () => {
+        const rawCloudData = doc.data();
+        if (rawCloudData.savedAt === lastLoadedSnapshot.savedAt){ __idlePolls++; return false; } // שום דבר לא השתנה
+        __idlePolls = 0;
+        backfillMissingListIds(rawCloudData);
+        lastLoadedSnapshot = cloneJSON(rawCloudData);
+        applyCloudData(rawCloudData);
+        alignSnapshotWithNormalisedData();
+        pruneExpiredWaitlistEntries();
+        rebindOpenRecords();
+        return true;
+      });
+      if (!changed) return;
       rerenderEverything();
       alignSnapshotWithNormalisedData();
     }).catch(err => console.error('Background live-sync check failed:', err))
