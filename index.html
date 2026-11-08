@@ -2195,6 +2195,23 @@
   .template-btn:hover{background:rgba(var(--gold-rgb),0.2);}
   .broadcast-footer{display:flex; align-items:center; justify-content:space-between; margin-top:14px; gap:12px; flex-wrap:wrap;}
   .broadcast-count{font-size:13px; color:var(--panel-text-dim);}
+  /* 195: פרטיות, נגישות והסכמה לדיוור */
+  a:focus-visible, button:focus-visible, select:focus-visible, summary:focus-visible, input[type=checkbox]:focus-visible, input[type=radio]:focus-visible, [role=button]:focus-visible{outline:2px solid #B08D57 !important; outline-offset:2px !important;}
+  .hk-consent{display:flex; gap:8px; align-items:flex-start; font-size:13px; line-height:1.5; margin:10px 0 4px; cursor:pointer;}
+  .hk-consent input{margin-top:3px; width:18px; height:18px; flex-shrink:0;}
+  .hk-privacy-note{font-size:11.5px; color:#8A8178; margin:4px 0 2px; line-height:1.5;}
+  .hk-privacy-note a, .hk-legal-links a{color:inherit; text-decoration:underline;}
+  .hk-legal-links{margin-top:8px; font-size:12px;}
+  .hk-legal-overlay{position:fixed; inset:0; z-index:1000000; background:rgba(20,16,20,0.55); display:none; align-items:flex-end; justify-content:center;}
+  .hk-legal-overlay.show{display:flex;}
+  .hk-legal-sheet{background:#FBF8F3; color:#2b2420; width:100%; max-width:640px; max-height:88vh; overflow:auto; border-radius:18px 18px 0 0; padding:20px 20px 28px; direction:rtl; text-align:right; line-height:1.65; font-size:14.5px;}
+  @media (min-width:700px){ .hk-legal-overlay{align-items:center;} .hk-legal-sheet{border-radius:18px;} }
+  .hk-legal-sheet h2{font-size:20px; margin:0 0 6px;}
+  .hk-legal-sheet h3{font-size:15.5px; margin:16px 0 4px;}
+  .hk-legal-sheet ul{margin:4px 0; padding-inline-start:20px;}
+  .hk-legal-sheet a{color:#7a5a2e;}
+  .hk-legal-close{float:left; border:1px solid #d8cfc3; background:#fff; border-radius:999px; padding:6px 14px; font-size:14px; cursor:pointer;}
+  .hk-mc-label{display:flex; gap:6px; align-items:center; font-size:12.5px; margin-top:8px; color:var(--panel-text-dim);}
   .svc-manage-list{border:1px solid rgba(var(--panel-line-rgb),0.12); border-radius:16px; overflow:hidden; margin-bottom:20px;}
   .svc-manage-row{
     display:flex;
@@ -4053,8 +4070,8 @@
             <div id="bookingIdentityChoice" style="display:none;"></div>
             <div id="newClientRegistration" style="display:none;">
               <div class="field-row">
-                <input class="field" id="bookingFirstNameInput" placeholder="שם פרטי">
-                <input class="field" id="bookingLastNameInput" placeholder="שם משפחה">
+                <input class="field" id="bookingFirstNameInput" placeholder="שם פרטי" aria-label="שם פרטי" autocomplete="given-name">
+                <input class="field" id="bookingLastNameInput" placeholder="שם משפחה" aria-label="שם משפחה" autocomplete="family-name">
               </div>
               <div id="bookingNameError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין שם פרטי ושם משפחה</div>
               
@@ -4062,11 +4079,11 @@
                 <input class="field" id="bookingNewTzInput" type="tel" inputmode="numeric" maxlength="9" placeholder="תעודת זהות (9 ספרות)">
                 <div id="bookingNewTzError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין תעודת זהות בת 9 ספרות</div>
               </div>
-              <input class="field" id="bookingPhoneInput" type="tel" inputmode="numeric" maxlength="10" placeholder="050-0000000">
+              <input class="field" id="bookingPhoneInput" type="tel" inputmode="numeric" maxlength="10" placeholder="050-0000000" aria-label="מספר טלפון" autocomplete="tel-national">
               <div id="bookingPhoneError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">מספר טלפון לא תקין — יש להזין מספר ישראלי תקני (למשל 050-1234567)</div>
               <div id="firstTimePerks" class="first-time-perks">
                 <p class="ftp-title">🎁 פעם ראשונה? נעים להכיר! אפשר גם לעדכן אותנו קצת עלייך כדי לקבל פינוקים שווים ביום ההולדת שלך:</p>
-                <input class="field" id="ftpEmail" type="email" placeholder="אימייל">
+                <input class="field" id="ftpEmail" type="email" placeholder="אימייל" aria-label="אימייל" autocomplete="email">
                 <div id="ftpEmailError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין כתובת אימייל</div>
                 <div class="dmy-date-picker full-width" id="ftpBirthdayWrap" style="margin-top:8px;">
                   <select id="ftpBirthdayDay" aria-label="יום לידה"></select>
@@ -4084,9 +4101,11 @@
             
             <div id="reminderChoiceNotice" class="reminder-choice-notice"></div>
             <p style="font-size:11.5px; color:#8A8178; margin:2px 0 4px;">אישור התור וניהולו תמיד יישלחו גם במייל.</p>
-            <input class="field" id="reminderEmailInput" type="email" placeholder="כתובת אימייל" style="display:none; margin-top:8px;">
+            <input class="field" id="reminderEmailInput" type="email" placeholder="כתובת אימייל" aria-label="כתובת אימייל" autocomplete="email" style="display:none; margin-top:8px;">
             <div id="reminderEmailError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין כתובת אימייל כדי שנוכל לשלוח לך עדכונים על התור</div>
-            <p style="font-size:11.5px; color:#8A8178; margin:6px 0 4px; line-height:1.5;">שימי לב: ביטול או שינוי מועד בפחות מ-24 שעות לפני התור עלול לחייב בתשלום.</p>
+            <label class="hk-consent"><input type="checkbox" id="marketingConsentInput" checked> <span>אשמח לקבל במייל עדכונים, מבצעים וברכות מהסלון. אפשר להסיר בכל רגע.</span></label>
+                <p class="hk-privacy-note">הפרטים נשמרים לצורך קביעת התורים והתזכורות בלבד. <a href="#" onclick="hkOpenLegal('privacy'); return false;">מדיניות הפרטיות</a></p>
+                <p style="font-size:11.5px; color:#8A8178; margin:6px 0 4px; line-height:1.5;">שימי לב: ביטול או שינוי מועד בפחות מ-24 שעות לפני התור עלול לחייב בתשלום.</p>
             <div class="step-nav">
               <button class="step-back" onclick="goToStep(3)">חזרה</button>
               <button class="cta" style="flex:1;" onclick="confirmBooking()">אישור תור</button>
@@ -4394,7 +4413,7 @@
           <div style="position:relative; width:100%;">
             <div class="brand-logo-upload" id="broadcastPhotoUpload" onclick="document.getElementById('broadcastPhotoFile').click()" style="width:100%; height:120px; border-radius:12px;">
               <span id="broadcastPhotoPlaceholder">+ הוספת תמונה</span>
-              <img id="broadcastPhotoPreview" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:12px;">
+              <img alt="" id="broadcastPhotoPreview" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:12px;">
             </div>
             
             <button type="button" id="broadcastPhotoRemoveBtn" onclick="removeBroadcastPhoto(event)" style="display:none; position:absolute; top:6px; left:6px; background:rgba(20,16,20,0.75); color:#fff; border:none; border-radius:999px; width:26px; height:26px; font-size:14px; cursor:pointer; line-height:1;">✕</button>
@@ -4460,7 +4479,7 @@
           <div class="brand-editor">
         <div class="brand-logo-upload" id="logoUpload" onclick="document.getElementById('logoFile').click()">
           <span id="logoPlaceholder">+ לוגו</span>
-          <img id="logoPreview" style="display:none;">
+          <img alt="" id="logoPreview" style="display:none;">
         </div>
         <input type="file" id="logoFile" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
         <div style="flex:1; min-width:200px;">
@@ -4493,7 +4512,7 @@
       <div class="brand-editor">
         <div class="brand-logo-upload" id="aboutPhotoUpload" onclick="document.getElementById('aboutPhotoFile').click()" style="border-radius:50%;">
           <span id="aboutPhotoPlaceholder">+ תמונה</span>
-          <img id="aboutPhotoPreview" style="display:none; border-radius:50%;">
+          <img alt="" id="aboutPhotoPreview" style="display:none; border-radius:50%;">
         </div>
         <input type="file" id="aboutPhotoFile" accept="image/*" style="display:none;" onchange="handleAboutPhotoUpload(event)">
         <div style="flex:1; min-width:200px;">
@@ -4666,7 +4685,7 @@
           <div class="brand-editor" style="margin-bottom:6px;">
             <div class="brand-logo-upload" id="themeLogoUpload" onclick="document.getElementById('themeLogoFile').click()">
               <span id="themeLogoPlaceholder">+ לוגו</span>
-              <img id="themeLogoPreview" style="display:none;">
+              <img alt="" id="themeLogoPreview" style="display:none;">
             </div>
             <input type="file" id="themeLogoFile" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
             <div style="flex:1; min-width:190px; font-size:12.5px; line-height:1.8; color:var(--panel-text-dim);">
@@ -4807,7 +4826,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-08 · 194';
+        window.__APP_BUILD = '2026-11-08 · 195';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -4857,7 +4876,7 @@
         <div class="label" style="margin:6px 0 6px;">תמונה (אופציונלי) — למשל תמונה של המוצר או השירות החדש</div>
         <div class="brand-logo-upload" id="wnPhotoUpload" onclick="document.getElementById('wnPhotoFile').click()" style="width:100%; height:120px; border-radius:12px;">
           <span id="wnPhotoPlaceholder">+ הוספת תמונה</span>
-          <img id="wnPhotoPreview" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:12px;">
+          <img alt="" id="wnPhotoPreview" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:12px;">
         </div>
         <input type="file" id="wnPhotoFile" accept="image/*" style="display:none;" onchange="handleWnPhotoUpload(event)">
         <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--panel-text-dim);">
@@ -4890,12 +4909,82 @@
 <footer>
   <span class="brand">הכל בקליק</span> — ניהול תורים, לקוחות וצוות במקום אחד
   
+  <div class="hk-legal-links"><a href="#" onclick="hkOpenLegal('privacy'); return false;">מדיניות פרטיות</a> · <a href="#" onclick="hkOpenLegal('accessibility'); return false;">הצהרת נגישות</a></div>
   <div id="ownerLoginFooterLink" style="margin-top:10px;"><a href="#" onclick="openLoginOverlayDirect(); return false;" style="color:var(--ivory-dim); font-size:11px; text-decoration:none;">הכל בקליק — לעסקים</a></div>
   
   <div style="display:none;" data-build="17.09-v45-blocked-booking"></div>
 </footer>
 
 
+
+<div id="hkLegalOverlay" class="hk-legal-overlay" role="dialog" aria-modal="true" aria-labelledby="hkLegalTitle" onclick="if (event.target === this) hkCloseLegal();">
+  <div class="hk-legal-sheet" id="hkLegalSheet" tabindex="-1"></div>
+</div>
+<script>
+/* 195: מדיניות פרטיות והצהרת נגישות — נבנות מפרטי העסק שבהגדרות (שם, טלפון, מייל, כתובת). */
+(function(){
+  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"]/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]; }); }
+  function biz(){
+    var b = (typeof branding !== 'undefined' && branding) || {};
+    var name = String(b.name || '').trim() || 'הסלון';
+    var phone = String(b.phone || '').trim();
+    var email = String(b.email || '').trim();
+    var address = String(b.address || '').trim();
+    var contact = [phone ? 'טלפון <a href="tel:' + esc(phone.replace(/[^0-9+]/g, '')) + '">' + esc(phone) + '</a>' : '',
+                   email ? 'מייל <a href="mailto:' + esc(email) + '">' + esc(email) + '</a>' : ''].filter(Boolean).join(', ');
+    return { name: esc(name), contact: contact || 'דרך פרטי הקשר שבאתר', address: esc(address) };
+  }
+  var UPDATED = '8 בנובמבר 2026';
+  function privacyHtml(){
+    var b = biz();
+    return '<h2 id="hkLegalTitle">מדיניות פרטיות</h2><div style="font-size:12.5px; color:#8A8178;">עודכנה: ' + UPDATED + '</div>'
+      + '<h3>מי אחראית על המידע</h3><p>' + b.name + (b.address ? ', ' + b.address : '') + '. לכל שאלה או בקשה: ' + b.contact + '.</p>'
+      + '<h3>מה נאסף ולמה</h3><ul>'
+      + '<li><b>שם וטלפון</b>: כדי לקבוע את התור, לזהות אותך ולשלוח תזכורות.</li>'
+      + '<li><b>תעודת זהות</b>: לזיהוי מאובטח, כדי שאף אחת אחרת לא תוכל לראות, לשנות או לבטל את התורים שלך.</li>'
+      + '<li><b>מייל</b>: לאישור התור ולעדכונים עליו.</li>'
+      + '<li><b>תאריך לידה</b> (רשות): לברכה ולפינוק ביום ההולדת.</li>'
+      + '<li><b>היסטוריית התורים</b>, הביטולים והערות על הטיפול שהסלון רושם, כדי לתת לך שירות מותאם.</li>'
+      + '<li><b>המלצה</b> שכתבת באתר מוצגת לכולם עם השם הפרטי שלך בלבד.</li></ul>'
+      + '<p>אין חובה חוקית למסור את הפרטים, אבל בלי שם, טלפון ותעודת זהות אי אפשר לקבוע תור דרך האתר. אפשר תמיד לקבוע בטלפון.</p>'
+      + '<h3>עדכונים ומבצעים</h3><p>נשלחים במייל ללקוחות הסלון, אלא אם הורדת את הסימון בקביעת התור או ביקשת הסרה. כל מייל כזה מסומן "פרסומת" וכולל דרך להסרה. תזכורות ואישורים על התורים שלך אינם פרסומת ונשלחים בכל מקרה.</p>'
+      + '<h3>מי עוד רואה את המידע</h3><p>רק הסלון. המערכת מופעלת עבור הסלון על ידי "הכל בקליק", והמידע נשמר בשרתי ענן של Google (Firebase ו-Google Cloud). ההודעות נשלחות דרך ספקי שירות של SMS, שיחות ומייל, שמקבלים רק את מה שנחוץ לשליחה. המידע לא נמכר ולא מועבר לפרסום.</p>'
+      + '<h3>עוגיות ומעקב</h3><p>אין באתר עוגיות פרסום, כלי מעקב או סטטיסטיקה. הדפדפן שומר רק הגדרות שימוש בסיסיות, כמו זיהוי לקביעת התור הבא.</p>'
+      + '<h3>הזכויות שלך</h3><p>אפשר לבקש לעיין במידע שלך, לתקן אותו או למחוק אותו, בפנייה לסלון: ' + b.contact + '.</p>';
+  }
+  function accessHtml(){
+    var b = biz();
+    return '<h2 id="hkLegalTitle">הצהרת נגישות</h2><div style="font-size:12.5px; color:#8A8178;">עודכנה: ' + UPDATED + '</div>'
+      + '<p>חשוב לנו שכל אחת ואחד יוכלו לקבוע תור בקלות, כולל אנשים עם מוגבלות. האתר מותאם ככל האפשר לתקן הישראלי ת"י 5568 (WCAG 2.0 ברמה AA).</p>'
+      + '<h3>מה הותאם</h3><ul>'
+      + '<li>האתר בעברית, מימין לשמאל, ומותאם לטלפון, לטאבלט ולמחשב.</li>'
+      + '<li>אפשר להגדיל את הטקסט בלי שהעמוד יישבר.</li>'
+      + '<li>אפשר לנווט במקלדת, והכפתור שנבחר מסומן במסגרת.</li>'
+      + '<li>לשדות הטופס יש שמות שקוראי מסך מקריאים, והדפדפן יכול למלא שם, טלפון ומייל לבד.</li>'
+      + '<li>תזכורות לתור אפשר לקבל גם בשיחה קולית ולא רק בהודעה כתובה.</li></ul>'
+      + '<h3>מה עוד לא מותאם במלואו</h3><p>חלק מהתמונות שהסלון מעלה (צוות, טיפולים) עשויות להופיע בלי תיאור. בחירת השעה בלוח עשויה להיות פחות נוחה בקורא מסך. בכל מקרה כזה אפשר לקבוע תור בטלפון.</p>'
+      + '<h3>פניות בנושא נגישות</h3><p>' + b.name + ': ' + b.contact + '. נשמח לעזור ולתקן.</p>';
+  }
+  var lastFocus = null;
+  window.hkOpenLegal = function(kind){
+    var ov = document.getElementById('hkLegalOverlay'), sh = document.getElementById('hkLegalSheet');
+    if (!ov || !sh) return;
+    lastFocus = document.activeElement;
+    sh.innerHTML = '<button type="button" class="hk-legal-close" onclick="hkCloseLegal()">✕ סגירה</button>' + (kind === 'accessibility' ? accessHtml() : privacyHtml());
+    ov.classList.add('show');
+    sh.scrollTop = 0;
+    var btn = sh.querySelector('.hk-legal-close'); if (btn) btn.focus();
+  };
+  window.hkCloseLegal = function(){
+    var ov = document.getElementById('hkLegalOverlay'); if (ov) ov.classList.remove('show');
+    if (lastFocus && lastFocus.focus) try { lastFocus.focus(); } catch (e) {}
+  };
+  document.addEventListener('keydown', function(e){
+    var ov = document.getElementById('hkLegalOverlay');
+    if (e.key === 'Escape' && ov && ov.classList.contains('show')) hkCloseLegal();
+  });
+})();
+</script>
 <div id="saveStatusIndicator" style="position:fixed; bottom:84px; inset-inline-end:16px; background:rgba(20,16,20,0.92); color:#F5EEE4; font-size:13.5px; font-weight:600; padding:9px 18px; border-radius:999px; z-index:999998; display:none; direction:rtl; box-shadow:0 2px 12px rgba(0,0,0,.35);"></div>
 <div id="myDayOverlay" class="myday-overlay">
   <div class="myday-sheet">
@@ -4936,7 +5025,7 @@
     <div class="add-modal-body">
       <div class="brand-logo-upload small" id="clientPhotoUpload" onclick="document.getElementById('clientPhotoFile').click()">
         <span id="clientPhotoPlaceholder">+ תמונה</span>
-        <img id="clientPhotoPreview" style="display:none;">
+        <img alt="" id="clientPhotoPreview" style="display:none;">
       </div>
       <input type="file" id="clientPhotoFile" accept="image/*" style="display:none;" onchange="handleClientPhotoUpload(event)">
       <input type="tel" inputmode="numeric" maxlength="9" id="newClientId" class="field" placeholder="תעודת זהות (חובה)">
@@ -4972,7 +5061,7 @@
     <div class="add-modal-body">
       <div class="brand-logo-upload small" id="staffPhotoUpload" onclick="document.getElementById('staffPhotoFile').click()">
         <span id="staffPhotoPlaceholder">+ תמונה</span>
-        <img id="staffPhotoPreview" style="display:none;">
+        <img alt="" id="staffPhotoPreview" style="display:none;">
       </div>
       <input type="file" id="staffPhotoFile" accept="image/*" style="display:none;" onchange="handleStaffPhotoUpload(event)">
       <input type="text" id="newStaffName" class="field" placeholder="שם העובדת">
@@ -4997,7 +5086,7 @@
     <div class="add-modal-body">
       <div class="brand-logo-upload small" id="newSvcPhotoUpload" onclick="document.getElementById('newSvcPhotoFile').click()">
         <span id="newSvcPhotoPlaceholder">+ תמונה</span>
-        <img id="newSvcPhotoPreview" style="display:none;">
+        <img alt="" id="newSvcPhotoPreview" style="display:none;">
       </div>
       <input type="file" id="newSvcPhotoFile" accept="image/*" style="display:none;" onchange="handleSvcPhotoUpload(event)">
       <span id="newSvcCategoryLockedLabel" class="svc-add-cat-locked" style="display:none;"></span>
@@ -8888,7 +8977,7 @@
     const photos = Array.isArray(c.photos) ? c.photos : [];
     grid.innerHTML = photos.map((src, i) => `
       <div class="cp-photo-thumb">
-        <img src="${src}" data-photo-idx="${i}" title="לחיצה להגדלה">
+        <img alt="" src="${src}" data-photo-idx="${i}" title="לחיצה להגדלה">
         <button type="button" class="cp-photo-del" data-photo-idx="${i}" title="מחיקת תמונה" aria-label="מחיקת תמונה">✕</button>
       </div>`).join('');
     grid.querySelectorAll('.cp-photo-thumb img').forEach(img => {
@@ -10213,11 +10302,14 @@
   // ב-gatedTabsConfig.reportsCode ולא מוצג באף מסך.
   const GATED_TAB_LABELS = { clients: 'לקוחות', staff: 'צוות', servicesgroup: 'שירותים', inventory: 'מלאי', settings: 'הגדרות' };
   const pendingEmailQueue = {};
-  function sendEmail(to, subject, text, imageDataUrl){
+  function sendEmail(to, subject, text, imageDataUrl, opts){
     if (!to) return;
+    // 195: מייל שיווקי נשלח לבד (לא מתאחד עם אישורי תורים) ועם "השב אל" של הסלון
+    if (opts && opts.marketing){ pendingEmailQueue[to] = pendingEmailQueue[to] || { items: [], timer: null }; flushEmailQueue(to); }
     if (!pendingEmailQueue[to]) pendingEmailQueue[to] = { items: [], timer: null };
     const queue = pendingEmailQueue[to];
-    queue.items.push({ subject, text, imageDataUrl: imageDataUrl || null });
+    queue.items.push({ subject, text, imageDataUrl: imageDataUrl || null, replyTo: (opts && opts.replyTo) || null, marketing: !!(opts && opts.marketing) });
+    if (opts && opts.marketing){ flushEmailQueue(to); return; }
     clearTimeout(queue.timer);
     queue.timer = setTimeout(() => flushEmailQueue(to), 5000);
   }
@@ -10240,7 +10332,7 @@
   }
   function textToHtmlBlock(text, imageDataUrl, cid){
     const escaped = linkifyEscapedHtml((text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'));
-    const imgHtml = imageDataUrl ? `<img src="cid:${cid}" style="max-width:100%; border-radius:8px; margin-bottom:12px; display:block;">` : '';
+    const imgHtml = imageDataUrl ? `<img alt="" src="cid:${cid}" style="max-width:100%; border-radius:8px; margin-bottom:12px; display:block;">` : '';
     return `${imgHtml}<p style="font-family:sans-serif; font-size:15px; line-height:1.6; direction:rtl; text-align:right;">${escaped}</p>`;
   }
   function flushEmailQueue(to){
@@ -10273,6 +10365,8 @@
       createdAt: new Date().toISOString(),
     };
     if (attachments.length) payload.message.attachments = attachments;
+    const hkReplyTo = queue.items.map(it => it.replyTo).find(Boolean);   // 195
+    if (hkReplyTo) payload.replyTo = hkReplyTo;
     db.collection('mail').add(payload).catch(err => console.error('Email send failed:', err));
     delete pendingEmailQueue[to];
   }
@@ -12301,7 +12395,7 @@
     try { renderContactIntroSettings(); } catch (e) {}
     try { renderCancelFeeSettings(); } catch (e) {}
     const logoHtml = branding.logo
-      ? `<img src="${branding.logo}">`
+      ? `<img alt="" src="${branding.logo}">`
       : branding.name.trim().charAt(0);
     document.getElementById('brandPreview').innerHTML = `
       <div class="logo-dot">${logoHtml}</div>
@@ -12811,7 +12905,7 @@
       if (!isBirthdayToday(c.birthday)) return;
       birthdayClients.push(c.name);
       const todayYear = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }).slice(0, 4);
-      if (c.email && c.lastBirthdayGreetingYear !== todayYear){
+      if (c.email && c.marketingConsent !== false && c.lastBirthdayGreetingYear !== todayYear){   // 195: רק למי שאישרה דיוור
         c.lastBirthdayGreetingYear = todayYear;
         sendEmail(c.email, 'מזל טוב מ' + (branding.name || 'הכל בקליק') + '!', `היי ${c.name}, מזל טוב ליום ההולדת שלך! מאחלים לך יום נפלא, ומחכים לראותך אצלנו בקרוב.`);
         if (typeof saveState === 'function') saveState();
@@ -12844,7 +12938,7 @@
       const row = document.createElement('div');
       row.className = 'client-card';
       row.dataset.clientName = c.name;
-      const avatarHtml = c.photo ? `<img src="${c.photo}">` : c.name.trim().charAt(0);
+      const avatarHtml = c.photo ? `<img alt="" src="${c.photo}">` : c.name.trim().charAt(0);
       const allAppointments = getClientAppointments(c.name, apptsByClientIndex.get(i) || []);
       const todayAppts = allAppointments.filter(isAppointmentToday);
       const history = allAppointments.filter(isAppointmentHistory);
@@ -12890,6 +12984,7 @@
               </div>
             </div>
           </div>
+          <label class="hk-mc-label"><input type="checkbox" class="hk-mc-input" disabled ${c.marketingConsent !== false ? 'checked' : ''}> מאשרת קבלת עדכונים ומבצעים במייל</label>
           <div class="visits">${visitsLine}${isBday ? ' <span class="badge" style="background:rgba(var(--gold-rgb),0.2); color:var(--panel-gold); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : ''}</div>
           <textarea class="client-note" disabled placeholder="הערה אישית (העדפות, רגישויות...)">${escHtml(c.note || '')}</textarea>
           ${todayAppts.length ? `
@@ -12964,7 +13059,7 @@
       const editSaveBtn = row.querySelector('[data-client-edit="save"]');
       const editCancelBtn = row.querySelector('[data-client-edit="cancel"]');
       const bdayWrap = row.querySelector('[data-birthday-picker]');
-      const editableControls = Array.from(row.querySelectorAll('.client-name-input, .client-mini-input, .client-note, .mini-bday-day, .mini-bday-month, .mini-bday-year'));
+      const editableControls = Array.from(row.querySelectorAll('.client-name-input, .client-mini-input, .hk-mc-input, .client-note, .mini-bday-day, .mini-bday-month, .mini-bday-year'));
       const setClientEditMode = (editing) => {
         editableControls.forEach(el => { el.disabled = !editing; });
         editStartBtn.style.display = editing ? 'none' : '';
@@ -13024,6 +13119,9 @@
         c.email = String(row.querySelector('[data-field="email"]').value || '').trim();
         c.note = String(row.querySelector('.client-note').value || '');
         c.birthday = readDMYPickerEls(row.querySelector('.mini-bday-day'), row.querySelector('.mini-bday-month'), row.querySelector('.mini-bday-year') );
+        { const mcEl = row.querySelector('.hk-mc-input');   // 195
+          if (mcEl){ const want = !!mcEl.checked;
+            if (want !== (c.marketingConsent !== false)){ c.marketingConsent = want; c.marketingConsentAt = new Date().toISOString(); c.marketingConsentSource = 'owner'; } } }
         if (oldName && oldName !== newName){
           weekAppointments.forEach(a => { if (a.client === oldName) a.client = newName; });
           waitlist.forEach(w => { if (c.teudatZehut && w.teudatZehut ? w.teudatZehut === c.teudatZehut : w.name === oldName) w.name = newName; });
@@ -13943,20 +14041,25 @@
   function renderBroadcastCount(){
     const countEl = document.getElementById('broadcastCount');
     if (!countEl) return;
-    const withEmail = clients.filter(c => c.email && c.email.trim()).length;
-    countEl.textContent = `יישלח ל-${withEmail} מתוך ${clients.length} לקוחות (עם כתובת מייל רשומה)`;
+    const withEmail = clients.filter(c => c.email && c.email.trim() && c.marketingConsent !== false).length;
+    countEl.textContent = `יישלח ל-${withEmail} מתוך ${clients.length} לקוחות (בלי מי שביקשה הסרה)`;
   }
   function sendBroadcast(){
     const msgEl = document.getElementById('broadcastMessage');
     const msg = msgEl.value.trim();
-    const clientsWithEmail = clients.filter(c => c.email && c.email.trim());
+    // 195: חוק התקשורת (30א) — רק למי שאישרה, עם "פרסומת" בנושא ודרך להסרה
+    const clientsWithEmail = clients.filter(c => c.email && c.email.trim() && c.marketingConsent !== false);
     const resultEl = document.getElementById('broadcastResult');
     if (!msg){
       resultEl.style.display = 'block';
       resultEl.textContent = 'יש לכתוב תוכן להודעה לפני השליחה.';
       return;
     }
-    clientsWithEmail.forEach(c => sendEmail(c.email, (branding.name || 'הכל בקליק') + ' — עדכון', msg, broadcastPhoto));
+    const bizReply = cleanEmailAddress(branding.email || '');
+    const removeLine = '\n\n———\nקיבלת את המייל כלקוחה של ' + (branding.name || 'הסלון') + '. להסרה מרשימת התפוצה: '
+      + (bizReply ? 'השיבי למייל הזה במילה "הסרה"' : '')
+      + (bizReply && branding.phone ? ' או ' : '') + (branding.phone ? 'התקשרי ל-' + branding.phone : '') + '.';
+    clientsWithEmail.forEach(c => sendEmail(c.email, 'פרסומת: ' + (branding.name || 'הכל בקליק') + ' — עדכון', msg + removeLine, broadcastPhoto, { replyTo: bizReply || null, marketing: true }));
     resultEl.style.display = 'block';
     resultEl.innerHTML = `✓ &nbsp;ההודעה${broadcastPhoto ? ' (עם התמונה המצורפת)' : ''} נשלחה ל-${clientsWithEmail.length} לקוחות במייל.`;
     msgEl.value = '';
@@ -13995,7 +14098,7 @@
       if (!Array.isArray(s.categories)) s.categories = categories.slice();
       const row = document.createElement('div');
       row.className = 'client-card';
-      const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
+      const avatarHtml = s.photo ? `<img alt="" src="${s.photo}">` : s.name.trim().charAt(0);
       const isEditing = editingStaffIndices.has(i);
       if (!isEditing){
         const catsViewHtml = categories.length ? `
@@ -14054,7 +14157,7 @@
           if (!file) return;
           readImageCompressed(file, (dataUrl) => {
             s.photo = dataUrl;
-            avatarEditEl.innerHTML = `<img src="${dataUrl}"><span class="staff-avatar-edit-badge">✎</span>`;
+            avatarEditEl.innerHTML = `<img alt="" src="${dataUrl}"><span class="staff-avatar-edit-badge">✎</span>`;
             if (typeof saveState === 'function') saveState();
             if (typeof renderStaffPicker === 'function') renderStaffPicker();
             if (typeof renderStaffFilterRow === 'function') renderStaffFilterRow();
@@ -14168,7 +14271,7 @@
       const s = staff[i];
       const chip = document.createElement('div');
       chip.className = 'staff-chip' + (i === selectedStaffIndex ? ' selected' : '');
-      const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
+      const avatarHtml = s.photo ? `<img alt="" src="${s.photo}">` : s.name.trim().charAt(0);
       chip.innerHTML = `<div class="avatar">${avatarHtml}</div><span>${s.name}</span>`;
       chip.onclick = () => { selectedStaffIndex = i; renderStaffPicker(); if (typeof renderAvailableSlots === 'function') renderAvailableSlots(); if (typeof renderMiniCal === 'function') renderMiniCal(); };
       pickerEl.appendChild(chip);
@@ -17878,7 +17981,7 @@
       const selected = bkSelectedServices.some(sel => sel.svcIndex === i);
       const el = document.createElement('div');
       el.className = 'svc-card' + (selected ? ' selected' : '');
-      const photoHtml = s.photo ? `<img src="${s.photo}" style="width:36px; height:36px; border-radius:8px; object-fit:cover; flex-shrink:0;">` : '';
+      const photoHtml = s.photo ? `<img alt="" src="${s.photo}" style="width:36px; height:36px; border-radius:8px; object-fit:cover; flex-shrink:0;">` : '';
       el.innerHTML = `<span style="display:flex; align-items:center; gap:10px;">${selected ? '✓ ' : ''}${photoHtml}${s.name}</span><span>${s.price} ש"ח · ${s.duration} דק'</span>`;
       el.onclick = () => bkToggleService(i);
       custList.appendChild(el);
@@ -17993,7 +18096,7 @@
       if (s.category !== cat) return;
       const row = document.createElement('div');
       row.className = 'svc-manage-row';
-      const photoHtml = s.photo ? `<img src="${s.photo}" style="width:28px; height:28px; border-radius:6px; object-fit:cover; margin-inline-end:8px; vertical-align:middle;">` : '';
+      const photoHtml = s.photo ? `<img alt="" src="${s.photo}" style="width:28px; height:28px; border-radius:6px; object-fit:cover; margin-inline-end:8px; vertical-align:middle;">` : '';
       const on = isServiceAvailable(s);
       if (!on) row.classList.add('svc-manage-row-off');
       row.innerHTML = `<span>${photoHtml}${s.name}${on ? '' : ' <span class="svc-off-tag">לא זמין</span>'}</span><span><span class="price">${s.price} ש"ח · ${s.duration} דק'</span><button type="button" class="svc-availability${on ? '' : ' off'}" onclick="setServiceAvailability(${i}, ${on ? 'false' : 'true'})" title="${on ? 'כיבוי — הטיפול לא יוצג ללקוחות' : 'הדלקה — הטיפול יוצג שוב ללקוחות'}" aria-label="${on ? 'כיבוי הטיפול' : 'הדלקת הטיפול'}">${on ? 'זמין' : 'כבוי'}</button><button class="svc-del" onclick="removeService(${i})" aria-label="מחיקת שירות">✕</button></span>`;
@@ -18083,7 +18186,7 @@
       const isEditing = editingWnIndices.has(i);
       if (!isEditing){
         row.innerHTML = `
-          ${item.photo ? `<div class="client-avatar"><img src="${item.photo}"></div>` : ''}
+          ${item.photo ? `<div class="client-avatar"><img alt="" src="${item.photo}"></div>` : ''}
           <div class="client-info">
             <div class="name-row">
               <div>
@@ -18107,7 +18210,7 @@
             <div class="label" style="margin:6px 0 6px;">תמונה (אופציונלי)</div>
             <div class="brand-logo-upload wn-edit-photo-upload" style="width:100%; height:120px; border-radius:12px; margin-bottom:8px;">
               <span class="wn-edit-photo-placeholder" style="display:${pendingPhoto ? 'none' : 'flex'};">+ הוספת תמונה</span>
-              <img class="wn-edit-photo-preview" src="${pendingPhoto || ''}" style="display:${pendingPhoto ? 'block' : 'none'}; width:100%; height:100%; object-fit:cover; border-radius:12px;">
+              <img alt="" class="wn-edit-photo-preview" src="${pendingPhoto || ''}" style="display:${pendingPhoto ? 'block' : 'none'}; width:100%; height:100%; object-fit:cover; border-radius:12px;">
             </div>
             <input type="file" class="wn-edit-photo-file" accept="image/*" style="display:none;">
             <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--panel-text-dim); margin-bottom:10px;">
@@ -18797,7 +18900,7 @@
       const s = staff[i];
       const chip = document.createElement('div');
       chip.className = 'staff-chip' + (i === mbSelectedStaffIndex ? ' selected' : '');
-      const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
+      const avatarHtml = s.photo ? `<img alt="" src="${s.photo}">` : s.name.trim().charAt(0);
       chip.innerHTML = `<div class="avatar">${avatarHtml}</div><span>${s.name}</span>`;
       chip.onclick = () => {
         mbSelectedStaffIndex = i;
@@ -20824,6 +20927,9 @@
       }
     }
     let customerEmail = '';
+    // 195: דיוור שיווקי — מסומן מראש (בקשת איילת, 8.11). הורידה את הסימון = הוסרה.
+    const hkMarketingConsent = !!(document.getElementById('marketingConsentInput') || {}).checked;
+    const hkConsentStamp = c => { if (c && c.marketingConsent !== hkMarketingConsent){ c.marketingConsent = hkMarketingConsent; c.marketingConsentAt = new Date().toISOString(); c.marketingConsentSource = 'booking'; } };
     const appointmentDateOnly = new Date(bookingSelectedDate.getFullYear(), bookingSelectedDate.getMonth(), bookingSelectedDate.getDate());
     const isTodayOrPastBooking = appointmentDateOnly <= getTodayDateOnly();
     if (existingClient){
@@ -20837,6 +20943,7 @@
       }
       customerEmail = existingClient.email || '';
       existingClient.reminderChannelPref = reminderChannels;
+      hkConsentStamp(existingClient);
     } else {
       const ftpEmail = document.getElementById('ftpEmail').value.trim();
       const reminderEmailEl = document.getElementById('reminderEmailInput');
@@ -20844,6 +20951,7 @@
       const finalEmail = ftpEmail || reminderEmailVal;
       const ftpBirthday = readDMYPicker('ftpBirthdayDay', 'ftpBirthdayMonth', 'ftpBirthdayYear');
       clients.push({ name: clientNameVal, phone: phoneVal.trim(), teudatZehut: idDigits, email: finalEmail, photo: null, visits: isTodayOrPastBooking ? 1 : 0, daysSinceVisit: isTodayOrPastBooking ? 0 : null, note: '', birthday: ftpBirthday, reminderChannelPref: reminderChannels });
+      hkConsentStamp(clients[clients.length - 1]);
       customerEmail = finalEmail;
     }
     const locallyAddedClient = existingClient ? null : clients[clients.length - 1];
@@ -20890,6 +20998,7 @@
           email: customerEmail || '',
           birthday: readFirstTimeBirthday(),
           reminderChannels,
+          marketingConsent: hkMarketingConsent,   // 195
           appointment: currentBookedAppointment,
           siteUrl: getSiteUrl(),
         });
@@ -22325,7 +22434,7 @@
       if (s.deleted) return;
       const chip = document.createElement('div');
       chip.className = 'staff-filter-chip' + (hoursEditorStaffIndex === i ? ' active' : '');
-      const avatarHtml = s.photo ? `<img src="${s.photo}">` : s.name.trim().charAt(0);
+      const avatarHtml = s.photo ? `<img alt="" src="${s.photo}">` : s.name.trim().charAt(0);
       chip.innerHTML = `<div class="avatar">${avatarHtml}</div><span>${s.name}</span>`;
       chip.onclick = () => { hoursEditorStaffIndex = i; renderHoursStaffPicker(); renderHoursEditor(); renderClosedDates(); };
       pickerEl.appendChild(chip);
