@@ -4807,7 +4807,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-06 · 193';
+        window.__APP_BUILD = '2026-11-08 · 194';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -14837,7 +14837,12 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') onApptDragCancel(); });
   }
 
+  /* 194: ציור היומן נקרא מכ-50 מקומות (לחיצה, שמירה, הצעות). עם שם — כדי
+   * שתקיעה בו לא תופיע בסיכום כ"עבודה לא מזוהה". */
   function renderWeekCal(opts){
+    return (window.__hkBusyRun || ((l, d, f) => f()))('ציור היומן', null, () => __renderWeekCalImpl(opts));
+  }
+  function __renderWeekCalImpl(opts){
     const __o = opts || {};
     // 175: בזמן גרירה לא מציירים מחדש (רענון ברקע היה מוחק את הריבוע שנגרר)
     if (apptDrag && apptDrag.active){ apptDragPendingRender = true; return; }
@@ -22855,17 +22860,20 @@
    * שלא מתויגת נתפסת דרך PerformanceObserver (כרום/אדג'). */
   const HK_BUSY_REPORT_MS = 1000;
   const __hkBusyLog = [];   // [{label, start, end}] — 20 אחרונים, כדי ש-longtask לא ידווח פעמיים
+  let __hkBusyDepth = 0;   // 194: עבודה מתויגת בתוך עבודה מתויגת — רק החיצונית מדווחת
   function hkBusyRun(label, detailFn, fn){
     const t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    __hkBusyDepth++;
     try { return fn(); }
     finally {
+      __hkBusyDepth--;
       try {
         const t1 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
         if (t1 - t0 >= 300){
           __hkBusyLog.push({ label: label, start: t0, end: t1 });
           if (__hkBusyLog.length > 20) __hkBusyLog.shift();
         }
-        if (t1 - t0 >= HK_BUSY_REPORT_MS && typeof isOwnerSession === 'function' && isOwnerSession()){
+        if (__hkBusyDepth === 0 && t1 - t0 >= HK_BUSY_REPORT_MS && typeof isOwnerSession === 'function' && isOwnerSession()){
           let detail = '';
           try { detail = detailFn ? String(detailFn() || '') : ''; } catch (e) {}
           reportDiag('page-stuck', { ms: t1 - t0, code: label, key: detail.slice(0, 60), hiddenMs: document.hidden ? Math.round(t1 - t0) : 0 });
@@ -26262,7 +26270,9 @@
       if (typeof updateCloudLoadingOverlay === 'function') updateCloudLoadingOverlay();
     }
     runningOnPublicData = false;
+    const __openDlT0 = window.__hkNow ? window.__hkNow() : 0;   // 194
     return getDocWithRetry(CLOUD_DOC, 'business').then(doc => {
+      if (window.__hkBusyMark) window.__hkBusyMark('הורדת המסמך (פתיחת היומן)', __openDlT0, window.__hkNow());
       hideCloudErrorBanner();
       hideBizNotReadyBanner();
       cloudLoadRetryCount = 0;
@@ -26283,15 +26293,19 @@
         if (typeof window.__resolveBrandingReady === 'function') window.__resolveBrandingReady();
         return;
       }
-      const rawCloudData = doc.data();
       const __hadBlockedEdit = __changeBlockedByLoading && unsavedChangePending;
-      backfillMissingListIds(rawCloudData);
-      lastLoadedSnapshot = cloneJSON(rawCloudData);
-      __cloudDocWasMissing = false;
-      applyCloudData(rawCloudData);
-      alignSnapshotWithNormalisedData();
-      pruneExpiredWaitlistEntries();
-      rebindOpenRecords();
+      // 194: פתיחת היומן — עם שם (7.11 23:10: תקיעה בטלפון בפתיחה, "לא מזוהה")
+      const rawCloudData = (window.__hkBusyRun || ((l, d, f) => f()))('פתיחת היומן: קליטת הנתונים', null, () => {
+        const raw = doc.data();
+        backfillMissingListIds(raw);
+        lastLoadedSnapshot = cloneJSON(raw);
+        __cloudDocWasMissing = false;
+        applyCloudData(raw);
+        alignSnapshotWithNormalisedData();
+        pruneExpiredWaitlistEntries();
+        rebindOpenRecords();
+        return raw;
+      });
       rerenderEverything();
       alignSnapshotWithNormalisedData();
       // שינויים שנשמרו במכשיר הזה ולא הגיעו לענן (רענון, סגירת הדפדפן, נפילת
