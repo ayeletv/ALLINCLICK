@@ -651,6 +651,8 @@
   body.th-on #phoneBrand{display:none;}
   body.th-on .phone-screen{padding-top:18px; background:var(--th-c1-pale);}
   body.th-on footer{background:transparent; color:#5E3B38; border-top:1px solid rgba(94,59,56,0.18);}
+  /* 197: הרקע של ערכת הצבע (hero-ground, fixed) כיסה את כל התחתית — כולל מדיניות פרטיות ונגישות */
+  body.th-on footer{position:relative; z-index:2;}
   body.th-on footer a{color:var(--th-primary-deep);}
 
   body.th-on, body.th-on h1, body.th-on h2, body.th-on h3, body.th-on h4,
@@ -4827,7 +4829,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-08 · 196';
+        window.__APP_BUILD = '2026-11-08 · 197';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -19731,7 +19733,7 @@
             document.getElementById('waitlistBox').innerHTML = '<div class="waitlist-prompt">לא מצאנו כרטיס לקוחה. נא להתחיל שוב ולהשלים את הפרטים.</div>';
             return;
           }
-          serverIdentity = Object.assign({ id: idDigits }, lookup);
+          serverIdentity = Object.assign({ id: idDigits }, lookup); hkSyncConsentBox();
         }
         if (!serverIdentity.hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim())) {
           document.getElementById('waitlistBox').innerHTML = '<div class="waitlist-prompt">זיהינו אותך 😊 חסר לנו אימייל תקין. נא להזין אימייל כדי שנוכל לעדכן אותך אם יתפנה תור.</div>';
@@ -20208,7 +20210,19 @@
     box.appendChild(btn);
     anchor.parentNode.insertBefore(box, anchor);
   }
-  function clearServerIdentity(){ serverIdentity = null; serverIdentityPick = null; }
+  function clearServerIdentity(){ serverIdentity = null; serverIdentityPick = null; hkSyncConsentBox(true); }
+  /* 197: מי שהוסרה מהדיוור — התיבה מופיעה לה ריקה, והיא יכולה לסמן בעצמה כדי לחזור.
+   * כל השאר — מסומנת מראש (בקשת איילת, 8.11). לחיצה של הלקוחה לא נדרסת. */
+  function hkSyncConsentBox(reset){
+    const cb = document.getElementById('marketingConsentInput');
+    if (!cb) return;
+    if (!cb.dataset.hkWired){ cb.dataset.hkWired = '1'; cb.addEventListener('change', () => { cb.dataset.touched = '1'; }); }
+    if (reset) delete cb.dataset.touched;
+    if (cb.dataset.touched) return;
+    const optedOut = !!(serverIdentity && serverIdentity.marketingOptedOut);
+    cb.checked = !optedOut;
+    cb.dataset.shownUnchecked = optedOut ? '1' : '';
+  }
   function renderIdentityChoice(candidates, onPick, boxId){
     const box = document.getElementById(boxId || 'bookingIdentityChoice');
     if (!box) return;
@@ -20236,7 +20250,7 @@
       serverIdentityPick = null;
       return;
     }
-    serverIdentity = Object.assign({ id: digits }, res);
+    serverIdentity = Object.assign({ id: digits }, res); hkSyncConsentBox();
     serverIdentitySeq++;
     applyServerIdentityToBookingForm();
   }
@@ -20301,7 +20315,7 @@
     if (digits.length < 9){ clearServerIdentity(); applyServerIdentityToBookingForm(); return; }
     const cachedHit = cachedServerIdentity(digits);
     if (cachedHit){
-      serverIdentity = cachedHit;
+      serverIdentity = cachedHit; hkSyncConsentBox();
       serverIdentitySeq++;
       applyServerIdentityToBookingForm();
       return;
@@ -20312,7 +20326,7 @@
       const result = await fetchServerIdentity(digits);
       if (mySeq !== serverIdentitySeq) return;
       clearTimeout(serverIdentityCheckingTimer);
-      serverIdentity = result;
+      serverIdentity = result; hkSyncConsentBox();
       applyServerIdentityToBookingForm();
     }, 120);
   }
@@ -20929,8 +20943,12 @@
     }
     let customerEmail = '';
     // 195: דיוור שיווקי — מסומן מראש (בקשת איילת, 8.11). הורידה את הסימון = הוסרה.
-    const hkMarketingConsent = !!(document.getElementById('marketingConsentInput') || {}).checked;
-    const hkConsentStamp = c => { if (c && c.marketingConsent !== hkMarketingConsent){ c.marketingConsent = hkMarketingConsent; c.marketingConsentAt = new Date().toISOString(); c.marketingConsentSource = 'booking'; } };
+    const hkConsentEl = document.getElementById('marketingConsentInput') || {};
+    const hkMarketingConsent = !!hkConsentEl.checked;
+    // 197: חזרה לדיוור אחרי הסרה — רק כשהתיבה הוצגה ריקה והיא סימנה בעצמה
+    const hkConsentActive = hkMarketingConsent && !!(hkConsentEl.dataset && hkConsentEl.dataset.shownUnchecked === '1');
+    const hkConsentStamp = c => { if (c && c.marketingConsent === false && hkMarketingConsent && !hkConsentActive) return;
+      if (c && c.marketingConsent !== hkMarketingConsent){ c.marketingConsent = hkMarketingConsent; c.marketingConsentAt = new Date().toISOString(); c.marketingConsentSource = 'booking'; } };
     const appointmentDateOnly = new Date(bookingSelectedDate.getFullYear(), bookingSelectedDate.getMonth(), bookingSelectedDate.getDate());
     const isTodayOrPastBooking = appointmentDateOnly <= getTodayDateOnly();
     if (existingClient){
@@ -21000,6 +21018,7 @@
           birthday: readFirstTimeBirthday(),
           reminderChannels,
           marketingConsent: hkMarketingConsent,   // 195
+          marketingConsentActive: hkConsentActive,   // 197
           appointment: currentBookedAppointment,
           siteUrl: getSiteUrl(),
         });
