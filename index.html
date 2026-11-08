@@ -2213,6 +2213,35 @@
   .hk-legal-sheet h3{font-size:15.5px; margin:16px 0 4px;}
   .hk-legal-sheet ul{margin:4px 0; padding-inline-start:20px;}
   .hk-legal-sheet a{color:#7a5a2e;}
+  /* 200: הצהרת נגישות ופרטיות כדף מלא, במבנה של thebwas.com */
+  .hk-legal-overlay.hk-page{background:#fff; align-items:stretch; justify-content:stretch;}
+  .hk-legal-overlay.hk-page .hk-legal-sheet{max-width:none; max-height:none; height:100%; border-radius:0; padding:0; background:#fff; color:#111; font-size:16px; line-height:1.75;}
+  .hkp-top{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px max(16px, calc((100% - 1100px)/2)); border-bottom:1px solid #e2e2e2; position:sticky; top:0; background:#fff; z-index:2;}
+  .hkp-top .hkp-brand{font-weight:800; font-size:18px; color:#111;}
+  .hkp-back{background:#e9e9e9 !important; color:#111 !important; border:0 !important; box-shadow:none !important; border-radius:8px; padding:10px 16px; font:inherit; font-weight:700; font-size:15px; cursor:pointer; text-decoration:underline;}
+  .hkp-back:hover{background:#dcdcdc;}
+  .hkp-head{padding:28px max(16px, calc((100% - 1100px)/2)) 30px;}
+  .hkp-crumb{font-size:14px; color:#444; margin-bottom:14px;}
+  .hkp-crumb a{color:#111 !important; text-decoration:underline;}
+  .hk-legal-sheet h1.hkp-title{font-size:clamp(30px, 6vw, 52px); font-weight:900; line-height:1.15; margin:0 0 16px; padding:6px 14px; border:2px solid #555; color:#111;}
+  .hkp-lead{font-size:17px; color:#333; letter-spacing:.02em; margin:0; max-width:720px;}
+  .hkp-body{background:#f3f3f3; padding:16px max(16px, calc((100% - 1100px)/2)) 48px; display:grid; grid-template-columns:1fr; gap:22px;}
+  .hkp-toc{background:#fff; border-radius:12px; padding:18px 22px; align-self:start;}
+  .hkp-toc h2{font-size:16px !important; margin:0 0 10px !important; border:0 !important; background:none !important; padding:0 !important; letter-spacing:.04em;}
+  .hkp-toc ul{list-style:none; margin:0; padding:0;}
+  .hkp-toc li{margin:0 0 10px;}
+  .hkp-toc a{color:#111 !important; text-decoration:underline; font-size:14.5px;}
+  .hkp-main{max-width:780px;}
+  .hkp-updated{font-size:13.5px; color:#444; margin:0 0 18px;}
+  .hkp-main h2{font-size:22px; font-weight:800; margin:26px 0 12px; padding:6px 12px; border:2px solid #555; background:#efefef; color:#111;}
+  .hkp-main section:first-of-type h2{margin-top:0;}
+  .hkp-main h3{font-size:17px; margin:16px 0 6px;}
+  .hkp-main ul, .hkp-main ol{margin:6px 0; padding-inline-start:22px;}
+  .hkp-main li{margin:0 0 8px;}
+  .hkp-main a{color:#111 !important; text-decoration:underline;}
+  .hkp-box{background:#fff; border:2px solid #555; border-radius:6px; padding:14px 18px; margin-top:12px;}
+  html.hk-legal-open body > *:not(#hkLegalOverlay):not(#nagish-skip){visibility:hidden !important;}
+  @media (min-width:900px){ .hkp-body{grid-template-columns:260px 1fr; gap:40px;} .hkp-toc{position:sticky; top:84px;} }
   .hk-legal-close{float:left; border:1px solid #d8cfc3; background:#fff; border-radius:999px; padding:6px 14px; font-size:14px; cursor:pointer;}
   .hk-mc-label{display:flex; gap:6px; align-items:center; font-size:12.5px; margin-top:8px; color:var(--panel-text-dim);}
   .svc-manage-list{border:1px solid rgba(var(--panel-line-rgb),0.12); border-radius:16px; overflow:hidden; margin-bottom:20px;}
@@ -3826,7 +3855,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     </div>
   </div>
 </div>
-<div class="biz-subnav-backdrop" id="bizSubNavBackdrop" onclick="closeBizSubNavDrawer()"></div>
+<div aria-hidden="true" class="biz-subnav-backdrop" id="bizSubNavBackdrop" onclick="closeBizSubNavDrawer()"></div>
 <div class="biz-subnav-drawer" id="bizSubNavDrawer">
   <div class="biz-subnav-drawer-head">
     <span class="biz-subnav-drawer-title">ניווט</span>
@@ -4030,7 +4059,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
             <span class="step-dot" data-step="4"></span>
           </div>
           <div class="booking-step active" id="bstep-1">
-            <div class="label">בחירת טיפול</div>
+            <div class="label" role="heading" aria-level="2" tabindex="-1">בחירת טיפול</div>
             
             <div id="bkSelectedServicesList" class="mb-svc-chip-row"></div>
             <div id="catGridView">
@@ -4042,7 +4071,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
                 <button class="cat-back-btn" onclick="showCategoryGrid()">‹ חזרה לקטגוריות</button>
                 <button class="cta" style="flex:1;" onclick="goToBookingStep2()">המשך</button>
               </div>
-              <div class="label" id="catServicesLabel" style="margin-top:12px;">בחירת שירות</div>
+              <div class="label" id="catServicesLabel" role="heading" aria-level="3" tabindex="-1" style="margin-top:12px;">בחירת שירות</div>
               <div id="custSvcList"></div>
               
               <button type="button" class="cat-back-btn bk-add-more-btn" onclick="showCategoryGrid()">+ הוספת טיפול נוסף</button>
@@ -4051,7 +4080,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
           </div>
           
           <div class="booking-step" id="bstep-2">
-            <div class="label">בחירת עובדת</div>
+            <div class="label" role="heading" aria-level="2" tabindex="-1">בחירת עובדת</div>
             <div class="staff-picker" id="staffPicker"></div>
             <div id="svcBillingNotice" class="billing-notice"></div>
             <div class="step-nav">
@@ -4060,7 +4089,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
             </div>
           </div>
           <div class="booking-step" id="bstep-3">
-            <div class="label">בחירת יום</div>
+            <div class="label" role="heading" aria-level="2" tabindex="-1">בחירת יום</div>
             <div class="mini-cal" id="miniCal">
               <div class="mini-cal-header">
                 <button type="button" onclick="calShiftMonth(-1)" id="calPrevBtn" aria-label="חודש קודם">‹</button>
@@ -4072,7 +4101,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
               </div>
               <div class="mini-cal-grid" id="miniCalGrid"></div>
             </div>
-            <div class="label" id="slotsLabel">שעות פנויות</div>
+            <div class="label" id="slotsLabel" role="heading" aria-level="3" tabindex="-1">שעות פנויות</div>
             <div class="slot-grid" id="slots"></div>
             <div class="waitlist-box" id="waitlistBox"></div>
             
@@ -4085,7 +4114,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
             </div>
           </div>
           <div class="booking-step" id="bstep-4">
-            <div class="label">פרטי קשר</div>
+            <div class="label" role="heading" aria-level="2" tabindex="-1">פרטי קשר</div>
             
             <input class="field" id="bookingIdInput" type="tel" inputmode="numeric" maxlength="10" placeholder="תעודת זהות או מספר טלפון">
             
@@ -4868,7 +4897,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-08 · 199';
+        window.__APP_BUILD = '2026-11-08 · 201';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5001,37 +5030,97 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     var b = biz();
     return '<h3>נגישות הסלון</h3><p>' + esc(t) + ' לשאלות על ההגעה והכניסה לסלון אפשר לפנות: ' + b.contact + '.</p>';
   }
-  function accessHtml(){
+  // 200: ההצהרה בנויה כדף מלא, כמו אצל עמית: כותרת במסגרת, פירורי לחם, "בעמוד הזה" בצד וכותרות במסגרת.
+  function accessDoc(){
     var b = biz();
-    return '<h2 id="hkLegalTitle">הצהרת נגישות</h2><div style="font-size:12.5px; color:#6B6259;">עודכנה: ' + UPDATED + '</div>'
-      + '<p>חשוב לנו שכל אחת ואחד יוכלו לקבוע תור בקלות, כולל אנשים עם מוגבלות. האתר מותאם ככל האפשר לתקן הישראלי ת"י 5568 (WCAG 2.0 ברמה AA).</p>'
-      + '<h3>מה הותאם</h3><ul>'
-      + '<li>האתר בעברית, מימין לשמאל, ומותאם לטלפון, לטאבלט ולמחשב.</li>'
-      + '<li>אפשר להגדיל את הטקסט בלי שהעמוד יישבר.</li>'
-      + '<li>אפשר לקבוע תור עם המקלדת בלבד: Tab למעבר, Enter או רווח לבחירה. הרכיב שנבחר מסומן במסגרת בולטת.</li>'
-      + '<li>הצבעים נבחרו כך שיהיה ניגוד מספיק בין הטקסט לרקע, והאנימציות נעצרות לבד כשמגדירים במכשיר "הפחתת תנועה".</li>'
-      + '<li>בפינת המסך יש כפתור נגישות כחול. אפשר בו להגדיל טקסט, לעבור לניגודיות גבוהה או לגווני אפור, להדגיש קישורים וכותרות, לבחור גופן קריא וריווח טקסט, לעצור אנימציות ולהגדיל את סמן העכבר. ההגדרות נשמרות בדפדפן.</li>'
-      + '<li>האתר נבדק בכלי הבדיקה האוטומטי axe ובבדיקה ידנית במקלדת, ונבדק שוב אוטומטית כל שבוע.</li>'
-      + '<li>לשדות הטופס יש שמות שקוראי מסך מקריאים, והדפדפן יכול למלא שם, טלפון ומייל לבד.</li>'
-      + '<li>תזכורות לתור אפשר לקבל גם בשיחה קולית ולא רק בהודעה כתובה.</li></ul>'
-      + '<h3>מה עוד לא מותאם במלואו</h3><p>חלק מהתמונות שהסלון מעלה (צוות, טיפולים) עשויות להופיע בלי תיאור. בכל מקרה של קושי אפשר לקבוע תור בטלפון.</p>'
-      + premisesHtml()
-      + '<h3>פניות בנושא נגישות</h3><p>' + b.name + ': ' + b.contact + '. נשמח לעזור ולתקן.</p>';
+    var prem = String((typeof branding !== 'undefined' && branding && branding.accessPremises) || '').trim();
+    if (!prem && window.__BIZ_ID === 'default') prem = 'יש חניה קרובה לסלון, ויש שירותים במקום.';
+    var sec = [
+      ['hkp-level', 'רמת הנגישות', '<p>האתר נבנה בהתאם לתקן הישראלי ת"י 5568 חלק 1 (2021), המבוסס על הנחיות WCAG 2.0 ברמה AA, ובהתאם לתקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות), התשע"ג-2013. האתר נבדק בדפדפנים Chrome, Edge, Firefox ו-Safari, בטלפון ובמחשב.</p>'],
+      ['hkp-done', 'מה הונגש באתר', '<ul>'
+        + '<li>האתר בעברית, מימין לשמאל, ומותאם לטלפון, לטאבלט ולמחשב.</li>'
+        + '<li>אפשר להגדיל את הטקסט בלי שהעמוד יישבר.</li>'
+        + '<li>אפשר לקבוע תור עם המקלדת בלבד: Tab למעבר, Enter או רווח לבחירה. הרכיב שנבחר מסומן במסגרת בולטת, ויש קישור "דילוג לתוכן הראשי". אחרי כל בחירה הסמן עובר לשלב הבא.</li>'
+        + '<li>לכל שלב בקביעת התור יש כותרת, כך שקל לנווט בין השלבים.</li>'
+        + '<li>לשדות הטופס ולכפתורים יש שמות שקוראי מסך מקריאים, והדפדפן יכול למלא שם, טלפון ומייל לבד.</li>'
+        + '<li>לתמונות יש תיאור לקורא מסך: תמונות הצוות והטיפולים מופיעות ליד השם שלהם, ותמונות שהסלון מעלה מתוארות לפי הכותרת שלהן.</li>'
+        + '<li>הצבעים נבחרו כך שיהיה ניגוד מספיק בין הטקסט לרקע, והאנימציות נעצרות לבד כשמגדירים במכשיר "הפחתת תנועה".</li>'
+        + '<li>תזכורות לתור אפשר לקבל גם בשיחה קולית ולא רק בהודעה כתובה.</li>'
+        + '<li>האתר נבדק בכלי הבדיקה האוטומטיים axe ו-IBM Equal Access ובבדיקה ידנית במקלדת, ונבדק שוב אוטומטית כל שבוע.</li></ul>'],
+      ['hkp-menu', 'תפריט הנגישות', '<p>בכל עמוד יש כפתור נגישות כחול בפינת המסך. ההגדרות נשמרות בדפדפן שלך. האפשרויות בתפריט:</p><ol>'
+        + '<li>גודל טקסט: הקטנה, חזרה ל-100% והגדלה</li><li>ניגודיות גבוהה</li><li>גווני אפור</li><li>הדגשת קישורים</li><li>הדגשת כותרות</li>'
+        + '<li>גופן קריא</li><li>ריווח טקסט</li><li>עצירת אנימציות</li><li>סמן עכבר גדול</li><li>איפוס הגדרות</li></ol>'],
+      ['hkp-limits', 'מגבלות ידועות ודרכים חלופיות', '<ul><li>תמונות שהסלון מעלה (למשל ב"פינוקים חדשים") מתוארות לפי הכותרת שלהן. אם יש בתמונה מידע נוסף, כמו מחיר או תאריך, אפשר לקבל אותו בטלפון.</li></ul><p>אם נתקלת בקושי כלשהו, אפשר תמיד לקבוע תור בטלפון, ונשמח לשמוע ולתקן כמה שיותר מהר.</p>']
+    ];
+    if (prem) sec.push(['hkp-place', 'נגישות הסלון', '<p>' + esc(prem) + ' לשאלות על ההגעה והכניסה לסלון אפשר לפנות: ' + b.contact + '.</p>']);
+    sec.push(['hkp-contact', 'פניות בנושא נגישות', '<div class="hkp-box"><p style="margin:0;">' + b.name + (b.address ? ', ' + b.address : '') + '<br>' + b.contact + '</p><p style="margin:8px 0 0;">בפנייה כדאי לציין באיזה חלק באתר הייתה הבעיה ומה ניסית לעשות.</p></div>']);
+    return { title: 'הצהרת נגישות', lead: 'חשוב לנו שכל אחת ואחד יוכלו לקבוע תור בקלות, כולל אנשים עם מוגבלות. הנגישות נבנתה לתוך האתר, ואנחנו ממשיכים לשפר אותה.', sec: sec };
   }
-  var lastFocus = null;
-  window.hkOpenLegal = function(kind){
+  function privacyDoc(){
+    // המדיניות הקיימת, מחולקת לפרקים לפי הכותרות שלה
+    var html = privacyHtml().replace(/^<h2[^>]*>.*?<\/h2><div[^>]*>.*?<\/div>/, '');
+    var parts = html.split(/<h3>/).filter(Boolean), sec = [];
+    parts.forEach(function(p, i){ var k = p.indexOf('</h3>'); sec.push(['hkp-p' + i, p.slice(0, k), p.slice(k + 5)]); });
+    return { title: 'מדיניות פרטיות', lead: 'מה נאסף כשקובעים תור באתר, למה, ומי רואה את זה.', sec: sec };
+  }
+  function pageHtml(kind){
+    var d = kind === 'accessibility' ? accessDoc() : privacyDoc();
+    var b = biz();
+    return '<div class="hkp-top"><span class="hkp-brand">' + b.name + '</span><button type="button" class="hkp-back hk-legal-close" onclick="hkCloseLegal()">חזרה לאתר ←</button></div>'
+      + '<div class="hkp-head"><div class="hkp-crumb"><a href="#" onclick="hkCloseLegal(); return false;">דף הבית</a> &nbsp;›&nbsp; ' + d.title + '</div>'
+      + '<h1 class="hkp-title" id="hkLegalTitle">' + d.title + '</h1><p class="hkp-lead">' + d.lead + '</p></div>'
+      + '<div class="hkp-body"><nav class="hkp-toc" aria-labelledby="hkpTocTitle"><h2 id="hkpTocTitle">בעמוד הזה</h2><ul>'
+      + d.sec.map(function(x){ return '<li><a href="#' + x[0] + '" onclick="hkLegalJump(\'' + x[0] + '\'); return false;">' + x[1] + '</a></li>'; }).join('')
+      + '</ul></nav><div class="hkp-main"><p class="hkp-updated">עודכן לאחרונה: ' + UPDATED + '</p>'
+      + d.sec.map(function(x){ return '<section aria-labelledby="' + x[0] + '"><h2 id="' + x[0] + '" tabindex="-1">' + x[1] + '</h2>' + x[2] + '</section>'; }).join('')
+      + '</div></div>';
+  }
+  window.hkLegalJump = function(id){
+    var el = document.getElementById(id); if (!el) return;
+    el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    try { el.focus({ preventScroll: true }); } catch (e) {}
+  };
+  var lastFocus = null, pushed = false, prevOverflow = '';
+  var HASH = { accessibility: '#accessibility', privacy: '#privacy' };
+  function showPage(kind){
     var ov = document.getElementById('hkLegalOverlay'), sh = document.getElementById('hkLegalSheet');
-    if (!ov || !sh) return;
-    lastFocus = document.activeElement;
-    sh.innerHTML = '<button type="button" class="hk-legal-close" onclick="hkCloseLegal()">✕ סגירה</button>' + (kind === 'accessibility' ? accessHtml() : privacyHtml());
-    ov.classList.add('show');
+    if (!ov || !sh) return false;
+    if (!ov.classList.contains('show')) { lastFocus = document.activeElement; prevOverflow = document.documentElement.style.overflow; }
+    sh.innerHTML = pageHtml(kind === 'accessibility' ? 'accessibility' : 'privacy');
+    ov.classList.add('show', 'hk-page');
+    document.documentElement.classList.add('hk-legal-open');
+    document.documentElement.style.overflow = 'hidden';
     sh.scrollTop = 0;
-    var btn = sh.querySelector('.hk-legal-close'); if (btn) btn.focus();
+    var h = document.getElementById('hkLegalTitle'); if (h) { h.setAttribute('tabindex', '-1'); try { h.focus(); } catch (e) {} }
+    return true;
+  }
+  function hidePage(){
+    var ov = document.getElementById('hkLegalOverlay'); if (!ov || !ov.classList.contains('show')) return;
+    ov.classList.remove('show', 'hk-page');
+    document.documentElement.classList.remove('hk-legal-open');
+    document.documentElement.style.overflow = prevOverflow;
+    if (lastFocus && lastFocus.focus) try { lastFocus.focus(); } catch (e) {}
+  }
+  // 200: הדף מקבל כתובת משלו (#accessibility), וכפתור "אחורה" בטלפון סוגר אותו
+  window.hkOpenLegal = function(kind){
+    kind = kind === 'accessibility' ? 'accessibility' : 'privacy';
+    if (!showPage(kind)) return;
+    if (location.hash !== HASH[kind]) { try { history.pushState({ hkLegal: kind }, '', HASH[kind]); pushed = true; } catch (e) {} }
   };
   window.hkCloseLegal = function(){
-    var ov = document.getElementById('hkLegalOverlay'); if (ov) ov.classList.remove('show');
-    if (lastFocus && lastFocus.focus) try { lastFocus.focus(); } catch (e) {}
+    if (pushed) { pushed = false; try { history.back(); return; } catch (e) {} }
+    if (location.hash === HASH.accessibility || location.hash === HASH.privacy) { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
+    hidePage();
   };
+  window.addEventListener('popstate', function(){
+    var k = location.hash === HASH.accessibility ? 'accessibility' : (location.hash === HASH.privacy ? 'privacy' : '');
+    if (k) showPage(k); else { pushed = false; hidePage(); }
+  });
+  function openFromHash(){
+    var k = location.hash === HASH.accessibility ? 'accessibility' : (location.hash === HASH.privacy ? 'privacy' : '');
+    if (k) showPage(k);
+  }
+  if (document.readyState === 'complete') setTimeout(openFromHash, 400); else window.addEventListener('load', function(){ setTimeout(openFromHash, 400); });
   document.addEventListener('keydown', function(e){
     var ov = document.getElementById('hkLegalOverlay');
     if (e.key === 'Escape' && ov && ov.classList.contains('show')) hkCloseLegal();
@@ -18224,7 +18313,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     const custEl = document.getElementById('whatsNewList');
     custEl.innerHTML = whatsNewItems.length ? whatsNewItems.map(item => `
       <div class="new-card${item.photo ? ' has-photo' : ''}">
-        ${item.photo ? `<div class="new-card-photo"><img src="${item.photo}" alt=""></div>` : '<div class="new-icon">✦</div>'}
+        ${item.photo ? `<div class="new-card-photo"><img src="${item.photo}" alt="${'תמונה: ' + String(item.title || '').replace(/<[^>]*>/g, '').replace(/"/g, '&quot;').trim()}"></div>` : '<div class="new-icon">✦</div>'}
         <div class="new-body">
           <h4>${item.title}</h4>
           <p>${item.desc}</p>
@@ -22074,7 +22163,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     const body = document.getElementById('aboutTextBody');
     if (!wrap || !img || !body) return;
     const photo = (aboutMe && aboutMe.photo) || null;
-    if (photo){ img.src = photo; wrap.classList.remove('is-empty'); }
+    if (photo){ img.src = photo; img.alt = 'תמונה של ' + String((typeof branding !== 'undefined' && branding && branding.name) || 'הסלון').trim(); wrap.classList.remove('is-empty'); }
     else { img.removeAttribute('src'); wrap.classList.add('is-empty'); }
     const text = ((aboutMe && aboutMe.text) || '').trim();
     if (text){ body.textContent = text; body.className = 'about-text'; }
@@ -27471,6 +27560,33 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       if (el.getAttribute('aria-disabled') === 'true') return;
       el.click();
     });
+    // 201: אחרי בחירה במקלדת (כרטיס או כפתור המשך/חזרה) הפוקוס נשאר במקום הגיוני ולא קופץ לראש הדף
+    root.addEventListener('keydown', function(e){
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      var el = e.target; if (!el || !root.contains(el)) return;
+      if (!el.matches(SEL + ', button, a')) return;
+      var step = currentStep(), cls = null, idx = -1, box = null;
+      for (var k = 0, list = SEL.split(', '); k < list.length; k++) if (el.matches(list[k])){ cls = list[k]; break; }
+      if (cls){ box = el.parentElement; idx = Array.prototype.indexOf.call(box.querySelectorAll(cls), el); }
+      var catBefore = catView();
+      [80, 450].forEach(function(ms){ setTimeout(function(){ refocus(step, cls, box, idx, catBefore); }, ms); });
+    }, true);
+  }
+  function currentStep(){ var a = root.querySelector('.booking-step.active'); return a ? a.id : ''; }
+  function catView(){ var v = document.getElementById('catServicesView'); return !!(v && v.style.display !== 'none'); }
+  function lost(){
+    var a = document.activeElement;
+    return !a || a === document.body || a === document.documentElement || !a.isConnected || !a.getClientRects().length;
+  }
+  function go(el){ if (!el) return false; try { el.focus({ preventScroll: false }); } catch (e) { return false; } return document.activeElement === el; }
+  function stepHead(){ var a = root.querySelector('.booking-step.active'); return a && a.querySelector('[role="heading"]'); }
+  function refocus(step, cls, box, idx, catBefore){
+    if (!lost()) return;
+    if (currentStep() !== step) return void go(stepHead());
+    if (catView() !== catBefore) return void go(catView() ? document.getElementById('catServicesLabel') : stepHead());
+    if (cls && box && box.isConnected){ var same = box.querySelectorAll(cls)[idx]; if (same && same.getAttribute('tabindex') === '0' && go(same)) return; }
+    if (cls){ var any = root.querySelector('.booking-step.active ' + cls + '.selected[tabindex="0"]'); if (any && go(any)) return; }
+    go(stepHead());
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
