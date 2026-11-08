@@ -2199,9 +2199,10 @@
   a:focus-visible, button:focus-visible, select:focus-visible, summary:focus-visible, input[type=checkbox]:focus-visible, input[type=radio]:focus-visible, [role=button]:focus-visible{outline:2px solid #B08D57 !important; outline-offset:2px !important;}
   .hk-consent{display:flex; gap:8px; align-items:flex-start; font-size:13px; line-height:1.5; margin:10px 0 4px; cursor:pointer;}
   .hk-consent input{margin-top:3px; width:18px; height:18px; flex-shrink:0;}
-  .hk-privacy-note{font-size:11.5px; color:#8A8178; margin:4px 0 2px; line-height:1.5;}
-  .hk-privacy-note a, .hk-legal-links a{color:inherit; text-decoration:underline;}
-  .hk-legal-links{margin-top:8px; font-size:12px;}
+  /* 196: השורה הייתה באפור קבוע ולא נראתה על הרקע של רותי — עכשיו בצבע הטקסט של האתר */
+  .hk-privacy-note{font-size:12.5px; color:inherit; margin:6px 0 2px; line-height:1.5;}
+  .hk-privacy-note a, .hk-legal-links a{color:var(--th-primary-deep, inherit) !important; text-decoration:underline; font-weight:700;}
+  .hk-legal-links{margin-top:10px; font-size:13.5px;}
   .hk-legal-overlay{position:fixed; inset:0; z-index:1000000; background:rgba(20,16,20,0.55); display:none; align-items:flex-end; justify-content:center;}
   .hk-legal-overlay.show{display:flex;}
   .hk-legal-sheet{background:#FBF8F3; color:#2b2420; width:100%; max-width:640px; max-height:88vh; overflow:auto; border-radius:18px 18px 0 0; padding:20px 20px 28px; direction:rtl; text-align:right; line-height:1.65; font-size:14.5px;}
@@ -4826,7 +4827,7 @@
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-08 · 195';
+        window.__APP_BUILD = '2026-11-08 · 196';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
