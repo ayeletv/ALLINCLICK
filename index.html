@@ -2240,6 +2240,8 @@
   .hkp-main li{margin:0 0 8px;}
   .hkp-main a{color:#111 !important; text-decoration:underline;}
   .hkp-box{background:#fff; border:2px solid #555; border-radius:6px; padding:14px 18px; margin-top:12px;}
+  .hk-nagish-inline{display:none;}
+  @media (max-width:600px){ .hk-nagish-inline{display:inline-flex; align-items:center; gap:8px; margin:14px auto 0; background:#1F4FA8 !important; color:#fff !important; border:2px solid #fff !important; border-radius:999px; padding:10px 18px; font:inherit; font-weight:700; font-size:15px; cursor:pointer; box-shadow:0 3px 10px rgba(0,0,0,.25);} }
   html.hk-legal-open body > *:not(#hkLegalOverlay):not(#nagish-skip){visibility:hidden !important;}
   @media (min-width:900px){ .hkp-body{grid-template-columns:260px 1fr; gap:40px;} .hkp-toc{position:sticky; top:84px;} }
   .hk-legal-close{float:left; border:1px solid #d8cfc3; background:#fff; border-radius:999px; padding:6px 14px; font-size:14px; cursor:pointer;}
@@ -4897,7 +4899,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-08 · 201';
+        window.__APP_BUILD = '2026-11-09 · 203';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -4975,6 +4977,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     
     <!-- 165: מוביל לאתר של הכל בקליק (במקום מייל) — לקוחות שרואות מגיעות לאתר, וגוגל רואה קישור מאתר פעיל -->
     <a href="https://hakolbeklik.com/" id="joinUsLink" target="_blank" rel="noopener">רוצה מערכת כזו לעסק שלך? לפרטים</a>
+    <!-- 202: בטלפון כפתור הנגישות יושב כאן בסוף העמוד ולא צף מעל הכרטיסים (במחשב הוא נשאר בצד) -->
+    <button type="button" id="hkNagishInline" class="hk-nagish-inline" onclick="if (window.nagishOpen) nagishOpen();" aria-label="תפריט נגישות"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="#fff"><circle cx="12" cy="4" r="2"/><path d="M19 8.5c-2.3.6-4.6.9-7 .9s-4.7-.3-7-.9l-.5 1.9c1.9.5 3.8.8 5.7 1v3.1L8.6 21l1.9.7 1.5-5.4 1.5 5.4 1.9-.7-1.6-6.5v-3.1c1.9-.2 3.8-.5 5.7-1z"/></svg><span>נגישות</span></button>
   </div>
 </section>
 <footer>
@@ -5047,7 +5051,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         + '<li>הצבעים נבחרו כך שיהיה ניגוד מספיק בין הטקסט לרקע, והאנימציות נעצרות לבד כשמגדירים במכשיר "הפחתת תנועה".</li>'
         + '<li>תזכורות לתור אפשר לקבל גם בשיחה קולית ולא רק בהודעה כתובה.</li>'
         + '<li>האתר נבדק בכלי הבדיקה האוטומטיים axe ו-IBM Equal Access ובבדיקה ידנית במקלדת, ונבדק שוב אוטומטית כל שבוע.</li></ul>'],
-      ['hkp-menu', 'תפריט הנגישות', '<p>בכל עמוד יש כפתור נגישות כחול בפינת המסך. ההגדרות נשמרות בדפדפן שלך. האפשרויות בתפריט:</p><ol>'
+      ['hkp-menu', 'תפריט הנגישות', '<p>במחשב יש כפתור נגישות כחול בצד המסך. בטלפון כפתור הנגישות הכחול נמצא בסוף העמוד. ההגדרות נשמרות בדפדפן שלך. האפשרויות בתפריט:</p><ol>'
         + '<li>גודל טקסט: הקטנה, חזרה ל-100% והגדלה</li><li>ניגודיות גבוהה</li><li>גווני אפור</li><li>הדגשת קישורים</li><li>הדגשת כותרות</li>'
         + '<li>גופן קריא</li><li>ריווח טקסט</li><li>עצירת אנימציות</li><li>סמן עכבר גדול</li><li>איפוס הגדרות</li></ol>'],
       ['hkp-limits', 'מגבלות ידועות ודרכים חלופיות', '<ul><li>תמונות שהסלון מעלה (למשל ב"פינוקים חדשים") מתוארות לפי הכותרת שלהן. אם יש בתמונה מידע נוסף, כמו מחיר או תאריך, אפשר לקבל אותו בטלפון.</li></ul><p>אם נתקלת בקושי כלשהו, אפשר תמיד לקבוע תור בטלפון, ונשמח לשמוע ולתקן כמה שיותר מהר.</p>']
@@ -5071,7 +5075,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       + '<h1 class="hkp-title" id="hkLegalTitle">' + d.title + '</h1><p class="hkp-lead">' + d.lead + '</p></div>'
       + '<div class="hkp-body"><nav class="hkp-toc" aria-labelledby="hkpTocTitle"><h2 id="hkpTocTitle">בעמוד הזה</h2><ul>'
       + d.sec.map(function(x){ return '<li><a href="#' + x[0] + '" onclick="hkLegalJump(\'' + x[0] + '\'); return false;">' + x[1] + '</a></li>'; }).join('')
-      + '</ul></nav><div class="hkp-main"><p class="hkp-updated">עודכן לאחרונה: ' + UPDATED + '</p>'
+      + '</ul></nav><div class="hkp-main"><p class="hkp-updated" id="hkpUpdated">עודכן לאחרונה: ' + UPDATED + '</p>'
       + d.sec.map(function(x){ return '<section aria-labelledby="' + x[0] + '"><h2 id="' + x[0] + '" tabindex="-1">' + x[1] + '</h2>' + x[2] + '</section>'; }).join('')
       + '</div></div>';
   }
@@ -5092,7 +5096,19 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     document.documentElement.style.overflow = 'hidden';
     sh.scrollTop = 0;
     var h = document.getElementById('hkLegalTitle'); if (h) { h.setAttribute('tabindex', '-1'); try { h.focus(); } catch (e) {} }
+    if (kind === 'accessibility') lastCheckDate();
     return true;
+  }
+  // 202: הבדיקה השבועית (GitHub Actions) שומרת את התאריך שלה ב-nagish-status.json. כשלא נמצאו בעיות חובה, זה "עודכן לאחרונה".
+  var UPDATED_ISO = '2026-11-08';
+  function lastCheckDate(){
+    if (!window.fetch) return;
+    fetch('nagish-status.json', { cache: 'no-store' }).then(function(r){ return r.ok ? r.json() : null; }).then(function(st){
+      if (!st || st.lawIssues !== 0 || !/^\d{4}-\d{2}-\d{2}$/.test(st.lastCheck || '') || st.lastCheck <= UPDATED_ISO) return;
+      var el = document.getElementById('hkpUpdated'); if (!el) return;
+      var p = st.lastCheck.split('-'), d = new Date(+p[0], +p[1] - 1, +p[2]);
+      el.textContent = 'עודכן לאחרונה: ' + d.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' }) + ' (בדיקת נגישות שבועית)';
+    }).catch(function(){});
   }
   function hidePage(){
     var ov = document.getElementById('hkLegalOverlay'); if (!ov || !ov.classList.contains('show')) return;
@@ -23173,6 +23189,54 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     } catch (e) {}
   }
   window.__hkBusyMark = hkBusyMark;
+  /* 203: "פירורי לחם" — מה קרה רגע לפני תקיעה (לחיצה על איזה כפתור, הקלדה,
+   * חזרה ללשונית, שמירה). כך גם בדפדפן בלי long-animation-frame, ובתקיעה
+   * בתוך קוד אנונימי, הסיכום אומר באיזה רגע זה קרה. רק מזהה הכפתור — בלי
+   * טקסט מהמסך, כדי ששמות לקוחות לא יישלחו. */
+  const __hkActs = [];
+  function hkAct(what){
+    try {
+      __hkActs.push({ what: String(what || '').replace(/[0-9_\-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 26), t: window.__hkNow() });
+      if (__hkActs.length > 10) __hkActs.shift();
+    } catch (e) {}
+  }
+  window.__hkAct = hkAct;
+  function hkActNear(start, dur){
+    for (let i = __hkActs.length - 1; i >= 0; i--){
+      const a = __hkActs[i];
+      if (a.t <= start + dur && a.t >= start - 3000) return a.what;
+    }
+    return '';
+  }
+  window.__hkActNear = hkActNear;
+  try {
+    document.addEventListener('click', function(e){
+      try {
+        const el = e.target && e.target.closest ? e.target.closest('[id],button,a,[onclick],[data-act]') : null;
+        let w = '';
+        if (el){
+          w = el.id || el.getAttribute('data-act') || '';
+          if (!w){
+            let par = el.parentElement, hops = 0;
+            while (par && !par.id && hops < 6){ par = par.parentElement; hops++; }
+            w = String(el.className || '').split(' ')[0] + (par && par.id ? ' ב-' + par.id : '');
+          }
+          if (!w) w = el.tagName.toLowerCase();
+        }
+        hkAct('לחיצה ' + w);
+      } catch (e2) {}
+    }, { capture: true, passive: true });
+    let __lastTypeAct = 0;
+    document.addEventListener('input', function(e){
+      try {
+        const n = window.__hkNow();
+        if (n - __lastTypeAct < 1000) return;
+        __lastTypeAct = n;
+        hkAct('הקלדה ' + ((e.target && e.target.id) || ''));
+      } catch (e2) {}
+    }, { capture: true, passive: true });
+    document.addEventListener('visibilitychange', function(){ if (!document.hidden) hkAct('חזרה ללשונית'); });
+  } catch (e) {}
   window.__hkNow = function(){ return (typeof performance !== 'undefined' ? performance.now() : Date.now()); };
   try {
     if (typeof PerformanceObserver === 'function' && (PerformanceObserver.supportedEntryTypes || []).indexOf('longtask') !== -1){
@@ -23183,9 +23247,52 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
           // כבר דווח עם שם (חופף לעבודה מתויגת)
           if (__hkBusyLog.some(b => !b.soft && b.end - b.start >= HK_BUSY_REPORT_MS && b.start < en.startTime + en.duration && b.end > en.startTime)) return;
           const near = __hkBusyLog.filter(b => b.start < en.startTime + en.duration && b.end > en.startTime).map(b => b.label);
-          reportDiag('page-stuck', { ms: en.duration, code: near.length ? near.join(' + ') : 'עבודה לא מזוהה', key: near.length ? 'חלקית' : '', hiddenMs: document.hidden ? Math.round(en.duration) : 0 });
+          if (!near.length && __hkLoafOn) return;   // 203: תקיעה בלי שם — הדיווח המפורט מגיע מ-long-animation-frame
+          const __after = near.length ? '' : hkActNear(en.startTime, en.duration);
+          reportDiag('page-stuck', { ms: en.duration, code: near.length ? near.join(' + ') : ('עבודה לא מזוהה' + (__after ? ' · אחרי: ' + __after : '')).slice(0, 60), key: near.length ? 'חלקית' : '', hiddenMs: document.hidden ? Math.round(en.duration) : 0 });
         });
       }).observe({ type: 'longtask', buffered: false });
+    }
+  } catch (e) {}
+  /* 203: 8.11 (יום עבודה מלא, 55 תורים) — כ-70 "הדף נתקע", כמעט כולן "עבודה לא
+   * מזוהה", גם אחרי התיוג של 193/194. במקום לנחש עוד מקומות לתייג: Long
+   * Animation Frames (כרום/אדג' 123+) אומר על כל תקיעה איזו פונקציה רצה ומי
+   * הפעיל אותה (לחיצה, טיימר, תשובה מהרשת). נשלחות רק מילים — השרת מוחק ספרות. */
+  var __hkLoafOn = false;
+  try {
+    if (typeof PerformanceObserver === 'function' && (PerformanceObserver.supportedEntryTypes || []).indexOf('long-animation-frame') !== -1){
+      __hkLoafOn = true;
+      new PerformanceObserver(list => {
+        list.getEntries().forEach(en => {
+          try {
+            if (en.duration < HK_BUSY_REPORT_MS) return;
+            if (!(typeof isOwnerSession === 'function' && isOwnerSession())) return;
+            if (__hkBusyLog.some(b => !b.soft && b.end - b.start >= HK_BUSY_REPORT_MS && b.start < en.startTime + en.duration && b.end > en.startTime)) return;
+            const near = __hkBusyLog.filter(b => b.start < en.startTime + en.duration && b.end > en.startTime).map(b => b.label);
+            if (near.length) return;   // הדיווח עם השם כבר יצא מ-longtask
+            const scripts = (en.scripts || []).slice().sort((a, b) => b.duration - a.duration);
+            const top = scripts[0];
+            const fileOf = u => String(u || '').split('?')[0].split('#')[0].split('/').pop().slice(0, 20);
+            const scriptMs = scripts.reduce((t, x) => t + (x.duration || 0), 0);
+            const layoutMs = scripts.reduce((t, x) => t + (x.forcedStyleAndLayoutDuration || 0), 0);
+            let code, key;
+            if (top){
+              const fn = String(top.sourceFunctionName || '').slice(0, 30) || 'אנונימית';
+              const inv = String(top.invoker || top.invokerType || '').replace(/^https?:\/\/[^ ]*/, 'url').slice(0, 30);
+              code = 'פונקציה: ' + fn;
+              key = inv + ' · ' + (fileOf(top.sourceURL) || 'inline') +
+                (layoutMs > scriptMs / 3 ? ' · חישוב עיצוב' : '') +
+                (scripts.length > 1 ? ' · +' + (scripts.length - 1) : '');
+            } else {
+              code = 'ציור הדף (בלי קוד)';
+              key = 'render';
+            }
+            const __after = hkActNear(en.startTime, en.duration);
+            if (__after) code += ' · אחרי: ' + __after;
+            reportDiag('page-stuck', { ms: en.duration, code: code.slice(0, 60), key: key.slice(0, 60), hiddenMs: document.hidden ? Math.round(en.duration) : 0 });
+          } catch (e) {}
+        });
+      }).observe({ type: 'long-animation-frame', buffered: false });
     }
   } catch (e) {}
   const __diagState = { n: 0, last: {} };
@@ -23990,6 +24097,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       if (!silent) showSaveStatus('⚠ עוד לא נשמר — הדף עדיין נטען', 6000, 'bad');
       return Promise.resolve();
     }
+    if (window.__hkAct) window.__hkAct('שמירה');   // 203
     const saveRevision = ++__saveRequestRevision;
     const nowIso = new Date().toISOString();
     // specialRequests ו-pendingOffers יצאו מכאן (15.10.2026): הם נכתבים גם מהשרת
@@ -24221,6 +24329,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       // (בבדיקה: 10 תורים ברצף, 2 נשארו). עכשיו מה שהענן החזיר ממוזג עם מה
       // שעל המסך, בדיוק כמו בשמירה הבאה: תוספות ושינויים חדשים נשארים,
       // ותורים ממכשירים אחרים נכנסים.
+      if (window.__hkAct) window.__hkAct('סיום שמירה');   // 203
       const committedCopy = committedPayload.__committedCopy || cloneJSON(committedPayload);
       const prevBase = lastLoadedSnapshot || {};
       const reconcile = (key, live, keyFn) => Array.isArray(committedCopy[key])
@@ -27591,6 +27700,6 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
 </script>
-<script src="nagish.js" defer data-statement-fn="hkOpenLegal" data-main="#panel-customer"></script>
+<script src="nagish.js" defer data-statement-fn="hkOpenLegal" data-main="#panel-customer" data-mobile="footer"></script>
 </body>
 </html>
