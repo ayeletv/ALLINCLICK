@@ -61,6 +61,9 @@
 <!-- 147: הגדרות Firebase, הצבעים והלוגו — לפני קוד Firebase. הם צריכים רק את
      ההגדרות ו-fetch, ועד היום חיכו ~3 שניות שקוד Firebase (160 ק"ב) יירד. -->
 <script>
+/* 206: אבטחה — טקסט שהגיע מלקוחה (שם, טיפול, טלפון) לא נכנס ל-HTML כקוד */
+window.__hkE = function(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); };
+
   const firebaseConfig = {
     apiKey: "AIzaSyDdFyCz3er-cxE0uoa5bGGTxe37cBFA12w",
     authDomain: "allinklik.firebaseapp.com",
@@ -4902,7 +4905,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-09 · 205';
+        window.__APP_BUILD = '2026-11-09 · 206';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -8129,7 +8132,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     const box = document.createElement('div');
     box.id = 'waitlistMatchAlert';
     box.className = 'waitlist-match-alert';
-    box.innerHTML = `<strong>🔔 התפנה מקום!</strong><div style="font-size:13px;margin-top:5px;">התפנה תור ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time}.</div>`;
+    box.innerHTML = `<strong>🔔 התפנה מקום!</strong><div style="font-size:13px;margin-top:5px;">התפנה תור ל${__hkE(appt.service)} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time}.</div>`;
     matches.forEach(w => {
       const digits = (w.phone || '').replace(/[^0-9]/g,'');
       const smsMsg = encodeURIComponent(`היי ${w.name}, התפנה תור ל${appt.service} בתאריך ${formatDateDMY(appt.date)} בשעה ${appt.time}. אם תרצי, אפשר לקבוע אותו כאן: ${getSiteUrl()}`);
@@ -8137,7 +8140,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       // Do not send email while rendering; repeated renders must not resend notifications.
       const row = document.createElement('div');
       row.className='wl-match';
-      row.innerHTML = `<div><b>${w.name}</b> · ${w.phone}${clientEmail ? ' · נשלח גם מייל אוטומטית' : ''}</div><div class="wl-actions">
+      row.innerHTML = `<div><b>${__hkE(w.name)}</b> · ${__hkE(w.phone)}${clientEmail ? ' · נשלח גם מייל אוטומטית' : ''}</div><div class="wl-actions">
         <button type="button" class="wl-book-btn">📅 קביעת התור עבורה</button>
         <a href="sms:${digits}?body=${smsMsg}">💬 שליחת SMS</a>
         <a href="tel:${digits}">📞 התקשרות</a>
@@ -9234,23 +9237,23 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     fieldsEl.innerHTML = `
       <div class="name-field-wrap">
         <span class="mini-field-label">שם</span>
-        <input class="client-name-input" id="cpNameInput" value="${c.name || ''}" placeholder="שם הלקוחה">
+        <input class="client-name-input" id="cpNameInput" value="${__hkE(c.name || '')}" placeholder="שם הלקוחה">
       </div>
       <div class="client-mini-row" style="margin-top:14px;">
         <div class="mini-field" data-field-wrap="teudatZehut">
           <span class="mini-field-label">ת.ז.</span>
-          <input class="client-mini-input" id="cpTzInput" inputmode="numeric" maxlength="9" value="${c.teudatZehut || ''}" placeholder="תעודת זהות">
+          <input class="client-mini-input" id="cpTzInput" inputmode="numeric" maxlength="9" value="${__hkE(c.teudatZehut || '')}" placeholder="תעודת זהות">
         </div>
         <div class="mini-field" data-field-wrap="phone">
           <span class="mini-field-label">טלפון</span>
           <div class="mini-field-with-call">
-            <input class="client-mini-input" id="cpPhoneInput" value="${c.phone || ''}" placeholder="טלפון">
+            <input class="client-mini-input" id="cpPhoneInput" value="${__hkE(c.phone || '')}" placeholder="טלפון">
             <a id="cpPhoneCallIcon" class="mini-field-call-icon${c.phone ? '' : ' disabled'}" href="${c.phone ? 'tel:' + c.phone.replace(/[^0-9+]/g,'') : '#'}" title="התקשרות" aria-label="התקשרות">📞</a>
           </div>
         </div>
         <div class="mini-field" data-field-wrap="email">
           <span class="mini-field-label">אימייל</span>
-          <input class="client-mini-input" id="cpEmailInput" type="email" value="${c.email || ''}" placeholder="אימייל">
+          <input class="client-mini-input" id="cpEmailInput" type="email" value="${__hkE(c.email || '')}" placeholder="אימייל">
         </div>
       </div>
       <div class="cp-contact-icons">
@@ -9967,7 +9970,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       row.className = 'cancel-row';
       const dateLbl = c.date ? c.date.split('-').reverse().join('/') : '';
       const byLbl = CANCEL_BY_LABEL[c.by] || '';
-      row.innerHTML = `<span class="c-date">${dateLbl}${c.time ? ' · ' + c.time : ''}</span><span class="c-client">${c.client || 'לקוחה'}</span><span class="c-detail">${c.service || ''}${c.staffName ? ' · ' + c.staffName : ''}</span><span class="c-cancelled">בוטל: ${formatCancelledAtLabel(c)}${byLbl ? ' · ' + byLbl : ''}</span>`;
+      row.innerHTML = `<span class="c-date">${dateLbl}${c.time ? ' · ' + c.time : ''}</span><span class="c-client">${__hkE(c.client || 'לקוחה')}</span><span class="c-detail">${__hkE(c.service || '')}${c.staffName ? ' · ' + c.staffName : ''}</span><span class="c-cancelled">בוטל: ${formatCancelledAtLabel(c)}${byLbl ? ' · ' + byLbl : ''}</span>`;
       return row;
     }
     if (data.cancellations.length > CANCEL_LIST_PAGE_SIZE){
@@ -12876,7 +12879,10 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   let __calArchiveRequested = false;
   const CAL_ARCHIVE_DAYS_BACK = 28;
   function calArchiveFloorKey(){
-    const d = new Date(); d.setDate(d.getDate() - CAL_ARCHIVE_DAYS_BACK);
+    // 206: 4 שבועות *שלמים* — מיום ראשון. אחרת השבוע הרביעי נחתך באמצע,
+    // וכל יום נעלם ממנו עוד יום ("למה 11 לא מלא", איילת 9.11).
+    const d = new Date(); d.setHours(12, 0, 0, 0);
+    d.setDate(d.getDate() - d.getDay() - CAL_ARCHIVE_DAYS_BACK);
     return formatDateKey(d);
   }
   function apptsForCalDate(dateKey){
@@ -13155,7 +13161,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
           <div class="client-avatar">${avatarHtml}</div>
           <div class="name-field-wrap cc-banner-name">
             <span class="mini-field-label">שם</span>
-            <input class="client-name-input" value="${c.name}" placeholder="שם הלקוחה" disabled>
+            <input class="client-name-input" value="${__hkE(c.name)}" placeholder="שם הלקוחה" disabled>
           </div>
           <button type="button" class="template-btn small client-edit-start" data-client-edit="start" title="עריכת פרטי הלקוחה">✎ עריכה</button>
           <button type="button" class="template-btn small client-edit-save" data-client-edit="save" style="display:none;">שמור</button>
@@ -13166,18 +13172,18 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
           <div class="client-mini-row">
             <div class="mini-field" data-field-wrap="teudatZehut">
               <span class="mini-field-label">ת.ז.</span>
-              <input class="client-mini-input" data-field="teudatZehut" inputmode="numeric" maxlength="9" disabled value="${c.teudatZehut || ''}" placeholder="תעודת זהות">
+              <input class="client-mini-input" data-field="teudatZehut" inputmode="numeric" maxlength="9" disabled value="${__hkE(c.teudatZehut || '')}" placeholder="תעודת זהות">
             </div>
             <div class="mini-field" data-field-wrap="phone">
               <span class="mini-field-label">טלפון</span>
               <div class="mini-field-with-call">
-                <input class="client-mini-input" data-field="phone" disabled value="${c.phone || ''}" placeholder="טלפון">
+                <input class="client-mini-input" data-field="phone" disabled value="${__hkE(c.phone || '')}" placeholder="טלפון">
                 <a class="mini-field-call-icon${c.phone ? '' : ' disabled'}" data-call-icon href="${c.phone ? 'tel:' + c.phone.replace(/[^0-9+]/g,'') : '#'}" title="התקשרות" aria-label="התקשרות">📞</a>
               </div>
             </div>
             <div class="mini-field" data-field-wrap="email">
               <span class="mini-field-label">אימייל</span>
-              <input class="client-mini-input" data-field="email" type="email" disabled value="${c.email || ''}" placeholder="אימייל">
+              <input class="client-mini-input" data-field="email" type="email" disabled value="${__hkE(c.email || '')}" placeholder="אימייל">
             </div>
             <div class="mini-field" data-field-wrap="birthday">
               <span class="mini-field-label">🎂 יום הולדת</span>
@@ -14815,7 +14821,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       row.innerHTML = `
         <div class="appt-status-main">
           <span class="t">${a.time}</span>
-          <span>${a.client} · ${a.service}${empName ? ' · ' + empName : ''}</span>
+          <span>${__hkE(a.client)} · ${__hkE(a.service)}${empName ? ' · ' + empName : ''}</span>
         </div>
         <div class="appt-status-actions">
           <button class="appt-status-btn ${status === 'completed' ? 'active-ok' : ''}" data-action="completed">✓ הגיעה</button>
@@ -15480,10 +15486,10 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         if (blockHeightPx < 22) block.classList.add('cal-appt-tiny');
         else if (blockHeightPx >= 26) block.classList.add('cal-appt-wrap');
         block.innerHTML = (blockHeightPx >= 48)
-          ? `<span class="cal-appt-name">${a.client}</span><span class="cal-appt-meta">${a.time.slice(0,5)} · ${a.service}</span>${apptCreatedLabel ? `<span class="cal-appt-meta">נקבע: ${apptCreatedLabel}</span>` : ''}`
+          ? `<span class="cal-appt-name">${__hkE(a.client)}</span><span class="cal-appt-meta">${a.time.slice(0,5)} · ${__hkE(a.service)}</span>${apptCreatedLabel ? `<span class="cal-appt-meta">נקבע: ${apptCreatedLabel}</span>` : ''}`
           : (blockHeightPx >= 34)
-            ? `<span class="cal-appt-name">${a.client}</span><span class="cal-appt-meta">${a.time.slice(0,5)} · ${a.service}</span>`
-            : `<span class="cal-appt-name">${a.client}</span>`;
+            ? `<span class="cal-appt-name">${__hkE(a.client)}</span><span class="cal-appt-meta">${a.time.slice(0,5)} · ${__hkE(a.service)}</span>`
+            : `<span class="cal-appt-name">${__hkE(a.client)}</span>`;
         block.onclick = (e) => {
           e.stopPropagation();
           if (Date.now() < apptDragSuppressClickUntil) return;   // 175: סוף גרירה, לא לחיצה
@@ -17250,10 +17256,10 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         : (w.date || '—');
       const isMatchedW = w.status === 'matched';
       cardEl.innerHTML =
-        srDetailRow('לקוחה', w.name || 'ללא שם') +
-        (w.phone ? srDetailRow('טלפון', `<a href="tel:${w.phone.replace(/[^0-9+]/g,'')}">${w.phone}</a>`) : '') +
-        (w.email ? srDetailRow('אימייל', w.email) : '') +
-        srDetailRow('שירות', w.service || '—') +
+        srDetailRow('לקוחה', __hkE(w.name || 'ללא שם')) +
+        (w.phone ? srDetailRow('טלפון', `<a href="tel:${w.phone.replace(/[^0-9+]/g,'')}">${__hkE(w.phone)}</a>`) : '') +
+        (w.email ? srDetailRow('אימייל', __hkE(w.email)) : '') +
+        srDetailRow('שירות', __hkE(w.service || '—')) +
         (function(){ const c = (services.find(x => x && x.name === w.service) || {}).category; return c ? srDetailRow('קטגוריה', c) : ''; })() +
         (w.staffName ? srDetailRow('עובדת', w.staffName) : '') +
         srDetailRow('תאריך מבוקש', dateLabel) +
@@ -20441,7 +20447,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     box.style.display = 'block';
     box.innerHTML = '<div class="reminder-choice-notice" style="margin-bottom:8px;">המספר הזה רשום אצלנו על יותר מלקוחה אחת. מי מכן את?</div>'
       + '<div class="identity-choice-row">'
-      + candidates.map(c => `<button type="button" class="identity-choice-btn" data-pick="${c.index}">${c.firstName || 'לקוחה'}</button>`).join('')
+      + candidates.map(c => `<button type="button" class="identity-choice-btn" data-pick="${c.index}">${__hkE(c.firstName || 'לקוחה')}</button>`).join('')
       + '</div>';
     box.querySelectorAll('.identity-choice-btn').forEach(btn => {
       btn.onclick = () => onPick(parseInt(btn.dataset.pick, 10));
@@ -22168,8 +22174,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     const contentEl = document.getElementById('clientArrivalContent');
     const queueNote = arrivalQueue.length ? `<p style="color:#6B6259; font-size:12px; margin-top:10px;">עוד ${arrivalQueue.length} לקוחה/ות ממתינות בתור להצגה</p>` : '';
     contentEl.innerHTML = `
-      <div class="arrival-name">${appt.client}</div>
-      <div class="arrival-meta">${appt.service} · ${appt.time}${emp ? ' · אצל ' + emp.name : ''}</div>
+      <div class="arrival-name">${__hkE(appt.client)}</div>
+      <div class="arrival-meta">${__hkE(appt.service)} · ${appt.time}${emp ? ' · אצל ' + emp.name : ''}</div>
       ${client && client.note ? `<div class="arrival-section-label">הערה כללית</div><div class="arrival-note-box" style="white-space:pre-wrap;">${escHtml(client.note)}</div>` : ''}
       <div class="arrival-section-label">היסטוריית טיפולים (${history.length})</div>
       ${history.length ? history.map(h => `<div class="arrival-history-row"><span>${escHtml(h.service)} · ${formatHistoryDate(h)}</span><span style="color:#6B6259; white-space:pre-wrap;">${escHtml(h.note || '')}</span></div>`).join('') : '<p style="color:#6B6259; font-size:13px;">אין עדיין היסטוריה.</p>'}
@@ -25609,7 +25615,27 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       alert('השחזור נכשל. נסי שוב, ואם זה ממשיך לקרות תגידי לי.');
     });
   }
+  /* 206: בדיקת אבטחה חד-פעמית בכל טעינה: האם יש בנתונים שם/טיפול/טקסט עם
+   * תגית HTML (סימן לניסיון הזרקה מבחוץ, לפני תיקון השרת). רק סופר ומדווח
+   * לסיכום היומי — בלי פרטים של לקוחות. */
+  let __hkTagScanDone = false;
+  function scanForHtmlTags(data){
+    if (__hkTagScanDone || !data) return;
+    __hkTagScanDone = true;
+    try {
+      const F = ['client', 'name', 'service', 'phone', 'email', 'text', 'firstName', 'note'];
+      let n = 0; const where = {};
+      ['clients', 'weekAppointments', 'waitlist', 'specialRequests', 'recommendations', 'cancellationLog'].forEach(k => {
+        (Array.isArray(data[k]) ? data[k] : []).forEach(x => {
+          if (!x || typeof x !== 'object') return;
+          if (F.some(f => typeof x[f] === 'string' && /<\s*[a-z!\/]/i.test(x[f]))) { n++; where[k] = (where[k] || 0) + 1; }
+        });
+      });
+      if (n && typeof reportDiag === 'function') reportDiag('security-tag', { code: 'html-in-data', key: Object.keys(where).map(k => k + ':' + where[k]).join(',') });
+    } catch (e) {}
+  }
   function applyCloudData(data){
+    try { if (isOwnerSession()) scanForHtmlTags(data); } catch (e) {}
     if (data.branding){ branding = data.branding; window.__themeDataKnown = true; }
     if (typeof applySiteTheme === 'function') applySiteTheme();
     if (data.clients) clients = data.clients;
