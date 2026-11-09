@@ -4899,7 +4899,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-09 · 203';
+        window.__APP_BUILD = '2026-11-09 · 204';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -23168,7 +23168,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
           __hkBusyLog.push({ label: label, start: t0, end: t1 });
           if (__hkBusyLog.length > 20) __hkBusyLog.shift();
         }
-        if (__hkBusyDepth === 0 && t1 - t0 >= HK_BUSY_REPORT_MS && typeof isOwnerSession === 'function' && isOwnerSession()){
+        if (__hkBusyDepth === 0 && t1 - t0 - hkDialogMsIn(t0, t1 - t0) >= HK_BUSY_REPORT_MS && typeof isOwnerSession === 'function' && isOwnerSession()){   // 204: בלי זמן בחלון אישור
           let detail = '';
           try { detail = detailFn ? String(detailFn() || '') : ''; } catch (e) {}
           reportDiag('page-stuck', { ms: t1 - t0, code: label, key: detail.slice(0, 60), hiddenMs: document.hidden ? Math.round(t1 - t0) : 0 });
@@ -23209,6 +23209,33 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     return '';
   }
   window.__hkActNear = hkActNear;
+  /* 204: הממצא של 9.11 (203): כל 11 ה"תקיעות" של הבוקר היו חלון אישור של
+   * הדפדפן (confirm / alert) — "לאשר את התור?", "אופן ההתקשרות מולא אוטומטית"
+   * וכו'. כשהחלון פתוח הדף עומד בכוונה, והמדידה ספרה את הזמן שרותי קראה אותו
+   * כ"הדף נתקע". עכשיו הזמן בחלון נרשם, ומנוכה לפני שמחליטים שזו תקיעה. */
+  const __hkDialogs = [];
+  ['confirm', 'alert', 'prompt'].forEach(function(name){
+    try {
+      const orig = window[name];
+      if (typeof orig !== 'function' || orig.__hkWrapped) return;
+      const wrapped = function(){
+        const t0 = window.__hkNow();
+        try { return orig.apply(window, arguments); }
+        finally {
+          __hkDialogs.push({ start: t0, end: window.__hkNow() });
+          if (__hkDialogs.length > 20) __hkDialogs.shift();
+        }
+      };
+      wrapped.__hkWrapped = true;
+      window[name] = wrapped;
+    } catch (e) {}
+  });
+  function hkDialogMsIn(start, dur){
+    let ms = 0;
+    __hkDialogs.forEach(d => { const a = Math.max(d.start, start), b = Math.min(d.end, start + dur); if (b > a) ms += b - a; });
+    return ms;
+  }
+  window.__hkDialogMsIn = hkDialogMsIn;
   try {
     document.addEventListener('click', function(e){
       try {
@@ -23243,6 +23270,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       new PerformanceObserver(list => {
         list.getEntries().forEach(en => {
           if (en.duration < HK_BUSY_REPORT_MS) return;
+          if (en.duration - hkDialogMsIn(en.startTime, en.duration) < HK_BUSY_REPORT_MS) return;   // 204: חלון אישור, לא תקיעה
           if (!(typeof isOwnerSession === 'function' && isOwnerSession())) return;
           // כבר דווח עם שם (חופף לעבודה מתויגת)
           if (__hkBusyLog.some(b => !b.soft && b.end - b.start >= HK_BUSY_REPORT_MS && b.start < en.startTime + en.duration && b.end > en.startTime)) return;
@@ -23266,6 +23294,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         list.getEntries().forEach(en => {
           try {
             if (en.duration < HK_BUSY_REPORT_MS) return;
+            const __dlgMs = hkDialogMsIn(en.startTime, en.duration);   // 204
+            if (en.duration - __dlgMs < HK_BUSY_REPORT_MS) return;
             if (!(typeof isOwnerSession === 'function' && isOwnerSession())) return;
             if (__hkBusyLog.some(b => !b.soft && b.end - b.start >= HK_BUSY_REPORT_MS && b.start < en.startTime + en.duration && b.end > en.startTime)) return;
             const near = __hkBusyLog.filter(b => b.start < en.startTime + en.duration && b.end > en.startTime).map(b => b.label);
@@ -23289,7 +23319,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
             }
             const __after = hkActNear(en.startTime, en.duration);
             if (__after) code += ' · אחרי: ' + __after;
-            reportDiag('page-stuck', { ms: en.duration, code: code.slice(0, 60), key: key.slice(0, 60), hiddenMs: document.hidden ? Math.round(en.duration) : 0 });
+            if (__dlgMs > 0) key += ' · בלי חלון אישור';
+            reportDiag('page-stuck', { ms: en.duration - __dlgMs, code: code.slice(0, 60), key: key.slice(0, 60), hiddenMs: document.hidden ? Math.round(en.duration) : 0 });
           } catch (e) {}
         });
       }).observe({ type: 'long-animation-frame', buffered: false });
