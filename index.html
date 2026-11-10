@@ -4905,7 +4905,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-09 · 206';
+        window.__APP_BUILD = '2026-11-10 · 207';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -13072,7 +13072,22 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     el.innerHTML = (row.dataset.visitsLine || `${c.visits || 0} ביקורים · אחרון ${formatLastVisit(c.daysSinceVisit)}`)
       + (isBday ? ' <span class="badge" style="background:rgba(var(--gold-rgb),0.2); color:var(--panel-gold); margin-inline-start:6px;">🎂 יום הולדת היום</span>' : '');
   }
+  /* 207: מסך שלא על המסך (display:none) — לא מצויר עכשיו אלא נרשם ב"ממתינים"
+   * של 189, ומצויר ברגע שנחשף. אחרי ציור ראשון בלבד. */
+  const __hkDeferOnce = new Set();
+  function hkDeferIfHidden(name, elId, fn){
+    if (!window.__hkDeferredRenders) return false;
+    if (!__hkDeferOnce.has(name)){ __hkDeferOnce.add(name); return false; }
+    const el = document.getElementById(elId);
+    if (!el || el.getClientRects().length > 0) return false;
+    window.__hkDeferredRenders.set(name, fn);
+    return true;
+  }
   function renderClients(){
+    // 207: גם קריאה ישירה (אישור/ביטול תור, שמירה) — כשהכרטסת לא על המסך היא
+    // מסומנת "ממתינה" ומצוירת כשנכנסים אליה, במקום לעכב את הלחיצה (כ-50% מהזמן).
+    // רק "לא על המסך" — לא עריכה/פוקוס: שמירת כרטיס בעריכה חייבת לצייר מיד.
+    try { if (hkDeferIfHidden('renderClients', 'clientList', renderClients)) return; } catch (e) {}
     try { if (window.__hkDeferredRenders) window.__hkDeferredRenders.delete('renderClients'); } catch (e) {}
     __archClientIdx = archiveCache.loaded ? buildArchiveClientIndex() : null;
     try { return renderClientsInner(); } finally { __archClientIdx = null; }
@@ -15936,11 +15951,24 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
    * (איילת, 22.10). זהה ל-offersQuietNow בשרת: בין 23:00 ל-08:00 היומן לא
    * שולח אף הצעה ולא מעביר לבאה בתור. שעה שהתפנתה בלילה נרשמת ב-freedSlots,
    * והשרת מציע אותה ב-08:00. */
+  /* 207: offersQuietNow נקרא על כל הצעה בכל יום בכל ציור של היומן, ובכל פעם
+   * בנה Intl.DateTimeFormat חדש — הפעולה הכי יקרה בציור (כמו בשרת ב-188).
+   * עכשיו: פורמט אחד, והשעה נשמרת ל-20 שניות. */
+  let __ilHourFmt = null, __ilHourAt = 0, __ilHourVal = 12;
+  function israelHourNow(){
+    const now = Date.now();
+    if (now - __ilHourAt < 20000) return __ilHourVal;
+    try {
+      if (!__ilHourFmt) __ilHourFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', hour: 'numeric', hourCycle: 'h23' });
+      __ilHourVal = Number(__ilHourFmt.format(new Date(now))) % 24;
+    } catch (e) { __ilHourVal = 12; }
+    __ilHourAt = now;
+    return __ilHourVal;
+  }
   function offersQuietNow(){
     const from = offerSetting('quietFrom'), to = offerSetting('quietTo');
     if (from === to) return false;
-    let h = 12;
-    try { h = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', hour: 'numeric', hourCycle: 'h23' }).format(new Date())) % 24; } catch (e) {}
+    const h = israelHourNow();
     return from > to ? (h >= from || h < to) : (h >= from && h < to);
   }
   function deferFreedSlotToMorning(slot){
@@ -17607,6 +17635,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     renderOverviewMonthCal();
   }
   function renderOverviewMonthCal(){
+    try { if (hkDeferIfHidden('renderOverviewMonthCal', 'ovCalGrid', renderOverviewMonthCal)) return; } catch (e) {}   // 207
     const gridEl = document.getElementById('ovCalGrid');
     const titleEl = document.getElementById('ovCalTitle');
     if (!gridEl || !titleEl) return;
