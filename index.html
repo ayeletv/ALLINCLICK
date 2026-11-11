@@ -4182,7 +4182,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
             <p style="font-size:11.5px; color:#6B6259; margin:2px 0 4px;">אישור התור וניהולו תמיד יישלחו גם במייל.</p>
             <input class="field" id="reminderEmailInput" type="email" placeholder="כתובת אימייל" aria-label="כתובת אימייל" autocomplete="email" style="display:none; margin-top:8px;">
             <div id="reminderEmailError" style="display:none; color:var(--wine); font-size:12px; margin:-4px 0 8px;">יש להזין כתובת אימייל כדי שנוכל לשלוח לך עדכונים על התור</div>
-            <label class="hk-consent"><input type="checkbox" id="marketingConsentInput" checked> <span>אשמח לקבל במייל עדכונים, מבצעים וברכות מהסלון. אפשר להסיר בכל רגע.</span></label>
+            <label class="hk-consent"><input type="checkbox" id="marketingConsentInput"> <span>אשמח לקבל במייל עדכונים, מבצעים וברכות מהסלון. אפשר להסיר בכל רגע.</span></label>
                 <p class="hk-privacy-note">הפרטים נשמרים לצורך קביעת התורים והתזכורות בלבד. <a href="#" onclick="hkOpenLegal('privacy'); return false;">מדיניות הפרטיות</a></p>
                 <p style="font-size:11.5px; color:#6B6259; margin:6px 0 4px; line-height:1.5;">שימי לב: ביטול או שינוי מועד בפחות מ-24 שעות לפני התור עלול לחייב בתשלום.</p>
             <div class="step-nav">
@@ -4348,69 +4348,121 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
           table.rep-appt-table tr.rep-future td.rep-tag{color:#8A6D3B;}
           .rep-empty{padding:14px; color:var(--panel-text-dim); font-size:13px;}
         </style>
-        <div class="subswitcher" id="reportRangeSwitcher" style="margin-bottom:0.9rem;">
-          <button class="active" onclick="showReportRange('week', this)">השבוע</button>
-          <button onclick="showReportRange('month', this)">החודש</button>
-          <button onclick="showReportRange('custom', this)">טווח מותאם אישית</button>
-        </div>
-        <div id="customRangeControls" style="display:none; margin-bottom:1rem;">
-          <div class="inv-email-row">
-            <span class="label" style="margin:0;">מתאריך</span>
-            <div class="dmy-date-picker" id="reportFromDateWrap">
-              <select id="reportFromDateDay" aria-label="יום"></select>
-              <select id="reportFromDateMonth" aria-label="חודש"></select>
-              <select id="reportFromDateYear" aria-label="שנה"></select>
-            </div>
-            <span class="label" style="margin:0;">עד תאריך</span>
-            <div class="dmy-date-picker" id="reportToDateWrap">
-              <select id="reportToDateDay" aria-label="יום"></select>
-              <select id="reportToDateMonth" aria-label="חודש"></select>
-              <select id="reportToDateYear" aria-label="שנה"></select>
-            </div>
-            <button class="cta" style="width:auto; margin-top:0;" onclick="renderCustomRangeReport()">הצגת דוח</button>
+        <style>
+          /* 208: דוחות מסודרים ונגישים (ת"י 5568) */
+          .rep-sr{position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;}
+          .rep-h{font-size:15px; font-weight:700; color:var(--panel-text); margin:26px 0 10px; letter-spacing:0;}
+          .rep-h-main{font-size:18px; margin:0 0 12px;}
+          .rep-range-box{border:1px solid rgba(var(--panel-line-rgb),0.18); border-radius:14px; padding:14px; margin-bottom:14px;}
+          .rep-range-box .subswitcher{margin-bottom:0;}
+          .rep-range-box .subswitcher button, .rep-tabs button{min-height:40px;}
+          .rep-nav-row{display:flex; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap;}
+          .rep-nav-row .cta{width:auto; margin-top:0; padding:8px 14px; font-size:13px; min-height:40px;}
+          .rep-nav-row .rep-nav-title{font-weight:700; font-size:15px; min-width:150px; text-align:center; flex:1 1 auto;}
+          .rep-custom{margin-top:12px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;}
+          .rep-custom fieldset{border:1px solid rgba(var(--panel-line-rgb),0.18); border-radius:10px; padding:6px 10px 10px; margin:0;}
+          .rep-custom legend{font-size:13px; font-weight:600; padding:0 4px; color:var(--panel-text);}
+          .rep-custom select{min-height:38px; font-size:14px;}
+          .rep-custom .cta{width:auto; margin-top:0; min-height:40px;}
+          .rep-err{color:#B3261E; font-size:13px; font-weight:600; margin-top:8px;}
+          .rep-err:empty{display:none;}
+          .rep-tabs{margin-bottom:1.2rem !important;}
+          .rep-stat .num{font-size:22px;}
+          .rep-sub{font-size:12px; color:var(--panel-text-dim); margin-top:2px;}
+          .rep-chart{display:flex; align-items:flex-end; gap:6px; height:170px; border:1px solid rgba(var(--panel-line-rgb),0.12); border-radius:16px; padding:22px 12px 10px; overflow-x:auto;}
+          .rep-chart .bar-col{min-width:26px; height:100%; justify-content:flex-end;}
+          .rep-chart .bar-val{font-size:10.5px; color:var(--panel-text-dim); font-variant-numeric:tabular-nums; white-space:nowrap;}
+          .rep-chart .bar-fill{min-height:2px;}
+          ul.rep-pop{list-style:none; margin:0; padding:0;}
+          table.rep-appt-table caption{caption-side:top; text-align:right; padding:8px 10px; font-size:12.5px; color:var(--panel-text-dim);}
+          table.rep-appt-table th[scope="rowgroup"]{text-align:right; font-weight:600; font-size:13px; color:var(--panel-text); background:rgba(var(--panel-line-rgb),0.07); padding:7px 10px;}
+          .rep-actions-label{display:block; font-size:12.5px; color:var(--panel-text-dim); margin:4px 0;}
+          #reportActionStatus{font-size:13px; color:var(--panel-text); margin-top:6px; min-height:1.2em;}
+          .report-actions-row .cta:focus-visible, .rep-range-box button:focus-visible, .rep-tabs button:focus-visible, .rep-custom select:focus-visible{outline:3px solid #1a5fb4; outline-offset:2px;}
+          @media (max-width:640px){
+            .rep-nav-row .rep-nav-title{order:-1; flex-basis:100%;}
+            .rep-custom{flex-direction:column; align-items:stretch;}
+          }
+        </style>
+        <h2 class="rep-h rep-h-main" id="repMainHeading" tabindex="-1">דוחות</h2>
+        <div class="rep-range-box" role="group" aria-labelledby="repRangeLegend">
+          <div class="rep-h" id="repRangeLegend" style="margin:0 0 8px; font-size:13.5px;">בחירת תקופה</div>
+          <div class="subswitcher rep-switch" id="reportRangeSwitcher">
+            <button type="button" class="active" aria-pressed="true" data-range="week" onclick="showReportRange('week', this)">שבוע</button>
+            <button type="button" aria-pressed="false" data-range="month" onclick="showReportRange('month', this)">חודש</button>
+            <button type="button" aria-pressed="false" data-range="custom" onclick="showReportRange('custom', this)">טווח תאריכים לבחירה</button>
           </div>
+          <div class="rep-nav-row" id="repNavRow">
+            <button type="button" class="cta ghost" id="repNavPrev" onclick="shiftReportPeriod(-1)">→ <span id="repNavPrevLbl">השבוע הקודם</span></button>
+            <div class="rep-nav-title" id="repNavTitle"></div>
+            <button type="button" class="cta ghost" id="repNavNext" onclick="shiftReportPeriod(1)"><span id="repNavNextLbl">השבוע הבא</span> ←</button>
+            <button type="button" class="cta ghost" id="repNavNow" onclick="shiftReportPeriod(0)">חזרה לתקופה הנוכחית</button>
+          </div>
+          <div id="customRangeControls" class="rep-custom" style="display:none;">
+            <fieldset>
+              <legend>מתאריך</legend>
+              <div class="dmy-date-picker" id="reportFromDateWrap">
+                <select id="reportFromDateDay" aria-label="יום, מתאריך"></select>
+                <select id="reportFromDateMonth" aria-label="חודש, מתאריך"></select>
+                <select id="reportFromDateYear" aria-label="שנה, מתאריך"></select>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>עד תאריך</legend>
+              <div class="dmy-date-picker" id="reportToDateWrap">
+                <select id="reportToDateDay" aria-label="יום, עד תאריך"></select>
+                <select id="reportToDateMonth" aria-label="חודש, עד תאריך"></select>
+                <select id="reportToDateYear" aria-label="שנה, עד תאריך"></select>
+              </div>
+            </fieldset>
+            <button type="button" class="cta" onclick="renderCustomRangeReport()">הצגת הדוח</button>
+          </div>
+          <div class="rep-err" id="reportRangeError" role="alert"></div>
         </div>
-        <div class="report-range-echo" id="reportRangeEcho"></div>
-        <div class="subswitcher" id="reportTabSwitcher" style="margin-bottom:1.4rem;">
-          <button class="active" onclick="showReportTab('income', this)">דוח הכנסות</button>
-          <button onclick="showReportTab('cancel', this)">דוח ביטולים</button>
+        <div class="report-range-echo" id="reportRangeEcho" role="status" aria-live="polite"></div>
+        <div class="subswitcher rep-switch rep-tabs" id="reportTabSwitcher" role="group" aria-label="סוג הדוח">
+          <button type="button" class="active" aria-pressed="true" data-tab="income" onclick="showReportTab('income', this)">דוח הכנסות</button>
+          <button type="button" aria-pressed="false" data-tab="cancel" onclick="showReportTab('cancel', this)">דוח ביטולים</button>
         </div>
 
-        <div id="reportTabIncome">
+        <section id="reportTabIncome" aria-labelledby="repIncomeHeading">
+          <h3 class="rep-sr" id="repIncomeHeading">דוח הכנסות</h3>
           <div class="stat-row">
-            <div class="stat"><div class="num mono" id="repRevenue">0 ₪</div><div class="lbl">הכנסה</div></div>
-            <div class="stat"><div class="num mono" id="repCount">0</div><div class="lbl">תורים</div></div>
-            <div class="stat"><div class="num mono" id="repAvg">0 ₪</div><div class="lbl">ממוצע לתור</div></div>
+            <div class="stat rep-stat"><div class="num mono" id="repRevenue">0 ₪</div><div class="lbl">הכנסה</div></div>
+            <div class="stat rep-stat"><div class="num mono" id="repCount">0</div><div class="lbl">תורים</div></div>
+            <div class="stat rep-stat"><div class="num mono" id="repAvg">0 ₪</div><div class="lbl">ממוצע לתור</div></div>
           </div>
-          <div id="repIncomeNotes" style="font-size:12.5px; color:var(--panel-text-dim); margin:10px 0 0; line-height:1.7;"></div>
-          <div class="label" style="margin:24px 0 10px;">הכנסה לפי יום</div>
-          <div class="bar-chart" id="revChart"></div>
-          <div class="label" style="margin:24px 0 10px;">השירותים הכי מבוקשים</div>
-          <div class="popular-list" id="popularList"></div>
-          <div class="label" style="margin:24px 0 10px;">פירוט התורים בטווח</div>
-          <div class="rep-table-wrap"><div id="repApptTable"></div></div>
-          <div class="report-actions-row">
-            <button class="cta ghost" onclick="exportReportToXlsx('income')">⬇ הורדה לאקסל</button>
-            <button class="cta ghost" onclick="printReport('income')">🖨 הדפסה</button>
-            <input type="email" id="reportEmailTo" class="search-input" placeholder="מייל לשליחת הדוח...">
-            <button class="cta ghost" onclick="emailReport('income')">✉ שלח למייל</button>
+          <div id="repIncomeNotes" style="font-size:13px; color:var(--panel-text-dim); margin:10px 0 0; line-height:1.7;"></div>
+          <h3 class="rep-h" id="repChartHeading">הכנסה לפי יום</h3>
+          <div class="bar-chart rep-chart" id="revChart" role="img" aria-labelledby="repChartHeading"></div>
+          <h3 class="rep-h">השירותים הכי מבוקשים</h3>
+          <ul class="popular-list rep-pop" id="popularList"></ul>
+          <h3 class="rep-h">פירוט התורים בתקופה</h3>
+          <div class="rep-table-wrap" tabindex="0" role="region" aria-label="טבלת פירוט התורים (אפשר לגלול לצדדים)"><div id="repApptTable"></div></div>
+          <div class="report-actions-row" role="group" aria-label="פעולות על דוח ההכנסות">
+            <button type="button" class="cta ghost" onclick="exportReportToXlsx('income')"><span aria-hidden="true">⬇ </span>הורדה לאקסל</button>
+            <button type="button" class="cta ghost" onclick="printReport('income')"><span aria-hidden="true">🖨 </span>הדפסה</button>
+            <label for="reportEmailTo" class="rep-sr">כתובת מייל לשליחת הדוח</label>
+            <input type="email" id="reportEmailTo" class="search-input" placeholder="מייל לשליחת הדוח..." autocomplete="email">
+            <button type="button" class="cta ghost" onclick="emailReport('income')"><span aria-hidden="true">✉ </span>שליחה למייל</button>
           </div>
-        </div>
+        </section>
 
-        <div id="reportTabCancel" style="display:none;">
-          <div class="stat-row">
-            <div class="stat"><div class="num mono" id="repCancellations">0</div><div class="lbl">ביטולים</div></div>
-            <div class="stat"><div class="num mono" id="repCancelValue">0 ₪</div><div class="lbl">שווי התורים שבוטלו</div></div>
+        <section id="reportTabCancel" style="display:none;" aria-labelledby="repCancelHeading">
+          <h3 class="rep-sr" id="repCancelHeading">דוח ביטולים</h3>
+          <div class="stat-row stat-row-2">
+            <div class="stat rep-stat"><div class="num mono" id="repCancellations">0</div><div class="lbl">ביטולים</div></div>
+            <div class="stat rep-stat"><div class="num mono" id="repCancelValue">0 ₪</div><div class="lbl">שווי התורים שבוטלו</div></div>
           </div>
-          <div class="label" style="margin:24px 0 10px;">ביטולים בטווח</div>
-          <div class="cancel-list" id="cancelList"></div>
-          <div class="report-actions-row">
-            <button class="cta ghost" onclick="exportReportToXlsx('cancel')">⬇ הורדה לאקסל</button>
-            <button class="cta ghost" onclick="printReport('cancel')">🖨 הדפסה</button>
-            <button class="cta ghost" onclick="emailReport('cancel')">✉ שלח למייל</button>
+          <h3 class="rep-h">פירוט הביטולים בתקופה</h3>
+          <div class="rep-table-wrap" tabindex="0" role="region" aria-label="טבלת פירוט הביטולים (אפשר לגלול לצדדים)"><div class="cancel-list" id="cancelList"></div></div>
+          <div class="report-actions-row" role="group" aria-label="פעולות על דוח הביטולים">
+            <button type="button" class="cta ghost" onclick="exportReportToXlsx('cancel')"><span aria-hidden="true">⬇ </span>הורדה לאקסל</button>
+            <button type="button" class="cta ghost" onclick="printReport('cancel')"><span aria-hidden="true">🖨 </span>הדפסה</button>
+            <button type="button" class="cta ghost" onclick="emailReport('cancel')"><span aria-hidden="true">✉ </span>שליחה למייל</button>
           </div>
-        </div>
-        <div id="reportActionStatus" style="font-size:12px; color:var(--panel-text-dim); margin-top:-6px;"></div>
+        </section>
+        <div id="reportActionStatus" role="status" aria-live="polite"></div>
       </div>
     </div>
     <div id="sub-clients" class="subpanel">
@@ -4905,7 +4957,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-10 · 207';
+        window.__APP_BUILD = '2026-11-11 · 209';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5027,7 +5079,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       + '<li><b>היסטוריית התורים</b>, הביטולים והערות על הטיפול שהסלון רושם, כדי לתת לך שירות מותאם.</li>'
       + '<li><b>המלצה</b> שכתבת באתר מוצגת לכולם עם השם הפרטי שלך בלבד.</li></ul>'
       + '<p>אין חובה חוקית למסור את הפרטים, אבל בלי שם, טלפון ותעודת זהות אי אפשר לקבוע תור דרך האתר. אפשר תמיד לקבוע בטלפון.</p>'
-      + '<h3>עדכונים ומבצעים</h3><p>נשלחים במייל ללקוחות הסלון, אלא אם הורדת את הסימון בקביעת התור או ביקשת הסרה. כל מייל כזה מסומן "פרסומת" וכולל דרך להסרה. תזכורות ואישורים על התורים שלך אינם פרסומת ונשלחים בכל מקרה.</p>'
+      + '<h3>עדכונים ומבצעים</h3><p>נשלחים במייל רק ללקוחות שאישרו לקבל אותם, למשל בסימון התיבה בקביעת התור. אפשר לבקש הסרה בכל רגע. כל מייל כזה מסומן "פרסומת" וכולל דרך להסרה. תזכורות ואישורים על התורים שלך אינם פרסומת ונשלחים בכל מקרה.</p>'
       + '<h3>מי עוד רואה את המידע</h3><p>רק הסלון. המערכת מופעלת עבור הסלון על ידי "הכל בקליק", והמידע נשמר בשרתי ענן של Google (Firebase ו-Google Cloud). ההודעות נשלחות דרך ספקי שירות של SMS, שיחות ומייל, שמקבלים רק את מה שנחוץ לשליחה. המידע לא נמכר ולא מועבר לפרסום.</p>'
       + '<h3>עוגיות ומעקב</h3><p>אין באתר עוגיות פרסום, כלי מעקב או סטטיסטיקה. הדפדפן שומר רק הגדרות שימוש בסיסיות, כמו זיהוי לקביעת התור הבא.</p>'
       + '<h3>הזכויות שלך</h3><p>אפשר לבקש לעיין במידע שלך, לתקן אותו או למחוק אותו, בפנייה לסלון: ' + b.contact + '.</p>';
@@ -7365,11 +7417,9 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       if (errEl){ errEl.style.display = 'block'; errEl.textContent = 'לא ניתן להמשיך — יש לבחור איך לשלוח ללקוחה תזכורת: SMS, שיחת טלפון, או שניהם. (ללקוחה עם טלפון כשר יש לבחור שיחה — SMS לא יגיע אליה.)'; }
       return;
     }
-    if (mbChannelsAutoFilled){
-      const label = mbChosen.map(v => (v === 'sms' ? 'SMS' : 'שיחת טלפון')).join(' + ');
-      mbChannelsAutoFilled = false;
-      if (!confirm(`שים לב — אופן ההתקשרות מולא אוטומטית לפי התור הקודם של הלקוחה:\n\n${label}\n\nלהמשיך עם זה?`)) return;
-    }
+    /* 208: החלון "אופן ההתקשרות מולא אוטומטית" הוסר (איילת, 11.11). מה שמולא
+     * מוצג באדום מעל הכפתורים (mbChannelAutoHint), ובלי בחירה אי אפשר להמשיך. */
+    mbChannelsAutoFilled = false;
     if (errEl) errEl.style.display = 'none';
     mbGoToStep(2);
   }
@@ -9514,6 +9564,13 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       errorEl.textContent = 'צריך לפחות אחד משניים: תעודת זהות בת 9 ספרות, או מספר טלפון תקין.';
       return;
     }
+    /* 208: גם בשמירה עצמה — אין תור בלי אופן התקשרות (גם אם חזרו לשלב 1 וביטלו את הסימון). */
+    if (!document.querySelectorAll('input[name="mbReminderChannel"]:checked').length){
+      mbGoToStep(1);
+      const e1 = document.getElementById('mbStep1Error');
+      if (e1){ e1.style.display = 'block'; e1.textContent = 'לא ניתן לקבוע את התור — יש לבחור איך לשלוח ללקוחה תזכורת: SMS, שיחת טלפון, או שניהם. (ללקוחה עם טלפון כשר יש לבחור שיחה — SMS לא יגיע אליה.)'; }
+      return;
+    }
     errorEl.style.display = 'none';
     const mbSvcObjs = mbSelectedServiceObjs();
     const combinedServiceName = mbSvcObjs.map(s => s.name).join(' + ');
@@ -9831,32 +9888,112 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       console.error('Manual booking: refreshing the views after save failed (the appointment itself was saved fine):', e);
     }
   }
-  function showReportRange(range, btn){
-    document.querySelectorAll('#reportRangeSwitcher button').forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
+  // 209: הדוחות זוכרים מה רותי בחרה. עד 208 כל רענון מהענן (בערך כל דקה) צייר
+  // מחדש את הדוח עם "השבוע" וקפץ מהטווח שנבחר. עכשיו הציור מחדש תמיד לפי reportState.
+  const reportState = { preset: 'week', offset: 0, customFrom: null, customTo: null, tab: 'income' };
+  function reportFmtKey(d){ return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function reportKeyToDate(k){ const p = String(k).split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+  function reportShortDate(d){ return d.getDate() + '/' + (d.getMonth() + 1); }
+  function syncReportSwitchers(){
+    document.querySelectorAll('#reportRangeSwitcher button').forEach(b => {
+      const on = b.dataset.range === reportState.preset;
+      b.classList.toggle('active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('#reportTabSwitcher button').forEach(b => {
+      const on = b.dataset.tab === reportState.tab;
+      b.classList.toggle('active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  function currentReportRange(){
+    if (reportState.preset === 'custom' && reportState.customFrom && reportState.customTo){
+      return { from: reportKeyToDate(reportState.customFrom), to: reportKeyToDate(reportState.customTo) };
+    }
+    const t = new Date();
+    if (reportState.preset === 'month') return reportPresetRange('month', new Date(t.getFullYear(), t.getMonth() + reportState.offset, 1));
+    return reportPresetRange('week', new Date(t.getFullYear(), t.getMonth(), t.getDate() + 7 * reportState.offset));
+  }
+  function reportPeriodTitle(){
+    const r = currentReportRange();
+    if (reportState.preset === 'month'){
+      return hebrewMonths[r.from.getMonth()] + ' ' + r.from.getFullYear() + (reportState.offset === 0 ? ' (החודש)' : '');
+    }
+    if (reportState.preset === 'week'){
+      return 'שבוע ' + reportShortDate(r.from) + '–' + reportShortDate(r.to) + '/' + r.to.getFullYear() + (reportState.offset === 0 ? ' (השבוע)' : '');
+    }
+    return 'טווח שנבחר';
+  }
+  function updateReportNavRow(){
+    const custom = reportState.preset === 'custom';
+    const row = document.getElementById('repNavRow');
     const customEl = document.getElementById('customRangeControls');
-    if (range === 'custom'){
-      customEl.style.display = 'block';
-      const today = new Date();
-      const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-      populateDMYPicker('reportFromDateDay', 'reportFromDateMonth', 'reportFromDateYear', { yearsBack: 5, value: fmt(firstOfMonth) });
-      populateDMYPicker('reportToDateDay', 'reportToDateMonth', 'reportToDateYear', { yearsBack: 5, value: fmt(today) });
-      renderCustomRangeReport();
-    } else {
-      customEl.style.display = 'none';
-      renderReports(range);
+    if (row) row.style.display = custom ? 'none' : 'flex';
+    if (customEl) customEl.style.display = custom ? 'flex' : 'none';
+    if (custom) return;
+    const isMonth = reportState.preset === 'month';
+    const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+    set('repNavPrevLbl', isMonth ? 'החודש הקודם' : 'השבוע הקודם');
+    set('repNavNextLbl', isMonth ? 'החודש הבא' : 'השבוע הבא');
+    set('repNavTitle', reportPeriodTitle());
+    const nowBtn = document.getElementById('repNavNow');
+    if (nowBtn){
+      nowBtn.style.display = reportState.offset === 0 ? 'none' : '';
+      nowBtn.textContent = isMonth ? 'חזרה לחודש הנוכחי' : 'חזרה לשבוע הנוכחי';
     }
   }
-  const REPORT_PRESET_LABELS = { week: 'השבוע (ראשון עד שבת)', month: 'החודש (מה-1 עד סוף החודש)', custom: 'טווח שנבחר' };
+  function setReportRangeError(msg){
+    const el = document.getElementById('reportRangeError');
+    if (el) el.textContent = msg || '';
+  }
+  function showReportRange(range, btn){
+    reportState.preset = (range === 'month' || range === 'custom') ? range : 'week';
+    if (reportState.preset !== 'custom') reportState.offset = 0;
+    setReportRangeError('');
+    if (reportState.preset === 'custom'){
+      if (!reportState.customFrom || !reportState.customTo){
+        const t = new Date();
+        reportState.customFrom = reportFmtKey(new Date(t.getFullYear(), t.getMonth(), 1));
+        reportState.customTo = reportFmtKey(t);
+      }
+      // הבחירה הקודמת נשמרת — לחיצה חוזרת לא מאפסת את התאריכים
+      populateDMYPicker('reportFromDateDay', 'reportFromDateMonth', 'reportFromDateYear', { yearsBack: 5, yearsForward: 1, value: reportState.customFrom });
+      populateDMYPicker('reportToDateDay', 'reportToDateMonth', 'reportToDateYear', { yearsBack: 5, yearsForward: 1, value: reportState.customTo });
+    }
+    syncReportSwitchers();
+    updateReportNavRow();
+    refreshReportsView();
+  }
+  function shiftReportPeriod(dir){
+    if (reportState.preset === 'custom') return;
+    reportState.offset = dir === 0 ? 0 : reportState.offset + dir;
+    updateReportNavRow();
+    refreshReportsView();
+    if (dir === 0){ const t = document.getElementById('repNavTitle'); if (t){ t.setAttribute('tabindex', '-1'); t.focus(); } }
+  }
+  function reportRangeTouchesArchive(fromD){
+    try { return typeof archiveCache !== 'undefined' && !archiveCache.loaded && formatDateKey(fromD) < archiveCutoffKey(); } catch (e) { return false; }
+  }
+  let reportArchiveLoading = false;
+  function refreshReportsView(){
+    try { if (window.__hkDeferredRenders) window.__hkDeferredRenders.delete('renderReports'); } catch (e) {}
+    const r = currentReportRange();
+    renderReportOutput(computeRealRangeReport(r.from, r.to, reportState.preset));
+    // טווח שנוגע בתורים שעברו לארכיון — טוענים אותו ומציירים שוב (לפי הבחירה של אותו רגע)
+    if (reportRangeTouchesArchive(r.from) && !reportArchiveLoading){
+      reportArchiveLoading = true;
+      loadArchive().then(() => { reportArchiveLoading = false; if (archiveCache.loaded) refreshReportsView(); },
+        () => { reportArchiveLoading = false; });
+    }
+  }
   function renderReportRangeEcho(data){
     const el = document.getElementById('reportRangeEcho');
     if (!el) return;
-    const from = data.fromKey.split('-').reverse().join('/');
-    const to = data.toKey.split('-').reverse().join('/');
-    const days = Math.round((new Date(data.toKey) - new Date(data.fromKey)) / 86400000) + 1;
-    el.innerHTML = `הדוח מציג את <b>${REPORT_PRESET_LABELS[data.preset] || 'הטווח שנבחר'}</b>: `
-      + `מ-<b>${from}</b> עד <b>${to}</b> כולל (${days} ימים).`;
+    const from = formatDateDMY(data.fromKey);
+    const to = formatDateDMY(data.toKey);
+    const days = Math.round((reportKeyToDate(data.toKey) - reportKeyToDate(data.fromKey)) / 86400000) + 1;
+    const what = data.preset === 'custom' ? 'הטווח שנבחר' : reportPeriodTitle();
+    let html = `הדוח מציג את <b>${__hkE(what)}</b>: מ-<b>${from}</b> עד <b>${to}</b> כולל (${days} ימים).`;
+    if (reportArchiveLoading) html += ' <span>טוענת גם תורים ישנים מהארכיון…</span>';
+    el.innerHTML = html;
   }
   function renderIncomeNotes(data){
     const el = document.getElementById('repIncomeNotes');
@@ -9865,8 +10002,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     if (data.futureCount){
       notes.push(`מתוך הסכום הזה <b>${data.futureRevenueRaw.toLocaleString('he-IL')} ₪</b> הם `
         + (data.futureCount === 1
-          ? 'תור אחד שעדיין לא התקיים — הוא בטווח, אבל הכסף עוד לא נכנס.'
-          : `${data.futureCount} תורים שעדיין לא התקיימו — הם בטווח, אבל הכסף עוד לא נכנס.`));
+          ? 'תור אחד שעדיין לא התקיים. הוא בטווח, אבל הכסף עוד לא נכנס.'
+          : `${data.futureCount} תורים שעדיין לא התקיימו. הם בטווח, אבל הכסף עוד לא נכנס.`));
     }
     if (data.noShowCount){
       notes.push(data.noShowCount === 1
@@ -9874,37 +10011,42 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         : `<b>${data.noShowCount}</b> תורים סומנו "לא הגיעה" ולכן אינם נספרים בהכנסה `
           + `(${data.noShowRevenueRaw.toLocaleString('he-IL')} ₪). הם מופיעים בפירוט למטה, מסומנים.`);
     }
-    el.innerHTML = notes.map(n => '• ' + n).join('<br>');
+    el.innerHTML = notes.length ? '<ul style="margin:0; padding-inline-start:18px;">' + notes.map(n => '<li>' + n + '</li>').join('') + '</ul>' : '';
     el.style.display = notes.length ? 'block' : 'none';
   }
   function renderApptDetailTable(data){
     const host = document.getElementById('repApptTable');
     if (!host) return;
     if (!data.apptRows.length){
-      host.innerHTML = '<div class="rep-empty">אין תורים בטווח התאריכים הזה.</div>';
+      host.innerHTML = '<div class="rep-empty">אין תורים בתקופה הזו.</div>';
       return;
     }
-    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
-    let html = '<table class="rep-appt-table"><thead><tr>'
-      + '<th>שעה</th><th>לקוחה</th><th>מטפלת</th><th>טיפול</th><th>מחיר</th><th></th>'
-      + '</tr></thead><tbody>';
+    const esc = window.__hkE;
+    let html = '<table class="rep-appt-table"><caption>פירוט התורים מ-' + formatDateDMY(data.fromKey) + ' עד ' + formatDateDMY(data.toKey)
+      + ', מקובץ לפי יום. שורת היום מציגה את ההכנסה ומספר התורים של אותו יום.</caption><thead><tr>'
+      + '<th scope="col">שעה</th><th scope="col">לקוחה</th><th scope="col">מטפלת</th><th scope="col">טיפול</th><th scope="col">מחיר</th><th scope="col">מצב</th>'
+      + '</tr></thead>';
+    const dayMap = {};
+    data.dailyRows.forEach(x => { dayMap[x.date] = x; });
     let currentDate = '';
     data.apptRows.forEach(r => {
       if (r.date !== currentDate){
+        if (currentDate) html += '</tbody>';
         currentDate = r.date;
-        const dayRow = data.dailyRows.find(x => x.date === r.date) || { revenue: 0, count: 0 };
-        html += `<tr class="rep-day-head"><td colspan="4">${esc(formatDateDMY(r.date))} · ${hebrewDayName(r.date)}</td>`
+        const dayRow = dayMap[r.date] || { revenue: 0, count: 0 };
+        html += `<tbody><tr class="rep-day-head"><th scope="rowgroup" colspan="4">יום ${hebrewDayName(r.date)}, ${esc(formatDateDMY(r.date))}</th>`
           + `<td class="num">${dayRow.revenue.toLocaleString('he-IL')} ₪</td><td class="num">${dayRow.count} תורים</td></tr>`;
       }
       const cls = !r.counted ? ' class="rep-noshow"' : (r.future ? ' class="rep-future"' : '');
-      const tag = !r.counted ? 'לא הגיעה' : (r.future ? 'עתידי' : '');
+      const tag = !r.counted ? 'לא הגיעה (לא נספר)' : (r.future ? 'עתידי' : 'התקיים');
       html += `<tr${cls}><td class="num">${esc(r.time)}</td><td>${esc(r.client)}</td>`
         + `<td>${esc(r.staffName) || '—'}</td><td>${esc(r.service)}</td>`
         + `<td class="num">${r.price.toLocaleString('he-IL')} ₪</td><td class="rep-tag">${tag}</td></tr>`;
     });
-    html += `<tr class="rep-total-row"><td colspan="4">סך הכול בטווח ${formatDateDMY(data.fromKey)} – ${formatDateDMY(data.toKey)}</td>`
+    html += '</tbody><tfoot>';
+    html += `<tr class="rep-total-row"><th scope="row" colspan="4" style="text-align:right;">סך הכול ${formatDateDMY(data.fromKey)} – ${formatDateDMY(data.toKey)}</th>`
       + `<td class="num">${data.revenue}</td><td class="num">${data.count} תורים</td></tr>`;
-    html += '</tbody></table>';
+    html += '</tfoot></table>';
     host.innerHTML = html;
   }
   function hebrewDayName(dateKey){
@@ -9914,14 +10056,16 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     return isNaN(d.getTime()) ? '' : names[d.getDay()];
   }
   function showReportTab(tab, btn){
-    document.querySelectorAll('#reportTabSwitcher button').forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
+    reportState.tab = tab === 'cancel' ? 'cancel' : 'income';
+    syncReportSwitchers();
     const inc = document.getElementById('reportTabIncome');
     const can = document.getElementById('reportTabCancel');
-    if (inc) inc.style.display = tab === 'income' ? 'block' : 'none';
-    if (can) can.style.display = tab === 'cancel' ? 'block' : 'none';
+    if (inc) inc.style.display = reportState.tab === 'income' ? 'block' : 'none';
+    if (can) can.style.display = reportState.tab === 'cancel' ? 'block' : 'none';
   }
+  const CANCEL_BY_LABEL = { client: 'הלקוחה באתר', ivr: 'הלקוחה בשיחה', owner: 'הסלון' };
   function renderReportOutput(data){
+    const esc = window.__hkE;
     document.getElementById('repRevenue').textContent = data.revenue;
     document.getElementById('repCount').textContent = data.count;
     document.getElementById('repAvg').textContent = data.avg;
@@ -9931,70 +10075,53 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     renderReportRangeEcho(data);
     renderIncomeNotes(data);
     renderApptDetailTable(data);
+    // גרף: ערך מעל כל עמודה + תיאור טקסטואלי לקורא מסך
+    const chartHeading = document.getElementById('repChartHeading');
+    if (chartHeading) chartHeading.textContent = data.weeklyBars ? 'הכנסה לפי שבוע' : 'הכנסה לפי יום';
     const maxVal = Math.max(...data.bars.map(b => b.val), 1);
     const chartEl = document.getElementById('revChart');
     chartEl.innerHTML = '';
     data.bars.forEach(b => {
       const col = document.createElement('div');
       col.className = 'bar-col';
+      col.setAttribute('aria-hidden', 'true');
       const height = Math.round((b.val / maxVal) * 100);
-      col.innerHTML = `<div class="bar-fill" style="height:${height}%;"></div><span class="bar-lbl">${b.lbl}</span>`;
+      col.innerHTML = `<span class="bar-val">${b.val ? b.val.toLocaleString('he-IL') : ''}</span><div class="bar-fill" style="height:${height}%;"></div><span class="bar-lbl">${esc(b.lbl)}</span>`;
+      col.title = b.lbl + ': ' + b.val.toLocaleString('he-IL') + ' ₪';
       chartEl.appendChild(col);
     });
+    const best = data.bars.reduce((m, b) => (b.val > m.val ? b : m), { val: 0, lbl: '' });
+    chartEl.setAttribute('aria-label', (data.weeklyBars ? 'גרף הכנסה לפי שבוע. ' : 'גרף הכנסה לפי יום. ')
+      + data.bars.map(b => b.lbl + ': ' + b.val.toLocaleString('he-IL') + ' ₪').join('; ')
+      + (best.val ? '. הכי גבוה: ' + best.lbl + '.' : '. אין הכנסות בתקופה.'));
     const maxCount = Math.max(...data.popular.map(p => p.count), 1);
     const popEl = document.getElementById('popularList');
     popEl.innerHTML = '';
     if (!data.popular.length){
-      popEl.innerHTML = '<div class="popular-row" style="color:#6B6259;">אין נתונים בטווח זה</div>';
+      popEl.innerHTML = '<li class="popular-row" style="color:var(--panel-text-dim);">אין נתונים בתקופה הזו</li>';
     }
     data.popular.forEach(p => {
-      const row = document.createElement('div');
+      const row = document.createElement('li');
       row.className = 'popular-row';
       const width = Math.round((p.count / maxCount) * 100);
-      row.innerHTML = `<span class="pop-name">${p.name}</span><div class="pop-bar-track"><div class="pop-bar-fill" style="width:${width}%;"></div></div><span class="pop-count">${p.count}</span>`;
+      row.innerHTML = `<span class="pop-name">${esc(p.name)}</span><div class="pop-bar-track" aria-hidden="true"><div class="pop-bar-fill" style="width:${width}%;"></div></div><span class="pop-count"><span class="rep-sr">: </span>${p.count}<span class="rep-sr"> תורים</span></span>`;
       popEl.appendChild(row);
     });
+    // ביטולים — טבלה מלאה במקום רשימה של 3 + "הצג עוד"
     const cancelEl = document.getElementById('cancelList');
-    cancelEl.innerHTML = '';
     if (!data.cancellations.length){
-      cancelEl.innerHTML = '<div class="cancel-row" style="color:#6B6259;">אין ביטולים בטווח זה</div>';
-    }
-    const CANCEL_LIST_PAGE_SIZE = 3;
-    const CANCEL_BY_LABEL = {
-      client: '👤 הלקוחה באתר',
-      ivr: '📞 הלקוחה בשיחה',
-      owner: '✎ הסלון',
-    };
-    function buildCancelRow(c){
-      const row = document.createElement('div');
-      row.className = 'cancel-row';
-      const dateLbl = c.date ? c.date.split('-').reverse().join('/') : '';
-      const byLbl = CANCEL_BY_LABEL[c.by] || '';
-      row.innerHTML = `<span class="c-date">${dateLbl}${c.time ? ' · ' + c.time : ''}</span><span class="c-client">${__hkE(c.client || 'לקוחה')}</span><span class="c-detail">${__hkE(c.service || '')}${c.staffName ? ' · ' + c.staffName : ''}</span><span class="c-cancelled">בוטל: ${formatCancelledAtLabel(c)}${byLbl ? ' · ' + byLbl : ''}</span>`;
-      return row;
-    }
-    if (data.cancellations.length > CANCEL_LIST_PAGE_SIZE){
-      data.cancellations.slice(0, CANCEL_LIST_PAGE_SIZE).forEach(c => cancelEl.appendChild(buildCancelRow(c)));
-      const restWrap = document.createElement('div');
-      restWrap.className = 'visit-rows-rest';
-      restWrap.style.display = 'none';
-      data.cancellations.slice(CANCEL_LIST_PAGE_SIZE).forEach(c => restWrap.appendChild(buildCancelRow(c)));
-      cancelEl.appendChild(restWrap);
-      const showMoreBtn = document.createElement('button');
-      showMoreBtn.type = 'button';
-      showMoreBtn.className = 'visit-show-more-btn';
-      showMoreBtn.style.cssText = 'width:100%; background:none; border:1px dashed rgba(var(--panel-line-rgb),0.2); color:var(--panel-text-dim); border-radius:8px; font-size:12px; padding:6px; margin-top:4px; cursor:pointer;';
-      showMoreBtn.textContent = `הצג עוד (${data.cancellations.length - CANCEL_LIST_PAGE_SIZE})`;
-      showMoreBtn.onclick = () => {
-        const nowShowing = restWrap.style.display !== 'none';
-        restWrap.style.display = nowShowing ? 'none' : 'block';
-        showMoreBtn.textContent = nowShowing
-          ? showMoreBtn.textContent.replace('הצג פחות', 'הצג עוד')
-          : showMoreBtn.textContent.replace('הצג עוד', 'הצג פחות');
-      };
-      cancelEl.appendChild(showMoreBtn);
+      cancelEl.innerHTML = '<div class="rep-empty">אין ביטולים בתקופה הזו.</div>';
     } else {
-      data.cancellations.forEach(c => cancelEl.appendChild(buildCancelRow(c)));
+      let h = '<table class="rep-appt-table"><caption>הביטולים של תורים שהיו אמורים להיות מ-' + formatDateDMY(data.fromKey) + ' עד ' + formatDateDMY(data.toKey) + '</caption><thead><tr>'
+        + '<th scope="col">תאריך התור</th><th scope="col">שעה</th><th scope="col">לקוחה</th><th scope="col">טיפול</th><th scope="col">מטפלת</th><th scope="col">מחיר</th><th scope="col">מתי בוטל</th><th scope="col">מי ביטלה</th>'
+        + '</tr></thead><tbody>';
+      data.cancellations.forEach(c => {
+        h += `<tr><td class="num">${c.date ? esc(formatDateDMY(c.date)) : ''}</td><td class="num">${esc(c.time || '')}</td><td>${esc(c.client || 'לקוחה')}</td>`
+          + `<td>${esc(c.service || '')}</td><td>${esc(c.staffName || '') || '—'}</td><td class="num">${(Number(c.price) || 0).toLocaleString('he-IL')} ₪</td>`
+          + `<td class="num">${formatCancelledAtLabel(c)}</td><td>${CANCEL_BY_LABEL[c.by] || '—'}</td></tr>`;
+      });
+      h += `</tbody><tfoot><tr class="rep-total-row"><th scope="row" colspan="5" style="text-align:right;">סך הכול ${data.cancellations.length} ביטולים</th><td class="num">${data.cancelValue}</td><td></td><td></td></tr></tfoot></table>`;
+      cancelEl.innerHTML = h;
     }
     lastReportData = data;
   }
@@ -10027,18 +10154,23 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     let totalRevenue = 0, totalCount = 0;
     let futureRevenue = 0, futureCount = 0;
     let noShowRevenue = 0, noShowCount = 0;
-    let weekBucketRevenue = 0, weekIndex = 1;
+    let weekBucketRevenue = 0, weekBucketStart = null;
     const todayKey = formatDateKey(new Date());
     // 175: תור של היום שעוד לא התחיל — "עדיין לא התקיים" (עד היום נספר כאילו הכסף כבר נכנס)
     const nowHHMM = (function(){ const n = new Date(); return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); })();
-    // תורים שעברו לארכיון נכללים בדוח (אם הארכיון נטען — renderReports דואג לזה)
+    // תורים שעברו לארכיון נכללים בדוח (אם הארכיון נטען — refreshReportsView דואג לזה)
     const apptPool = archiveCache.loaded ? weekAppointments.concat(archiveCache.appointments) : weekAppointments;
+    const fromKey = formatDateKey(fromD), toKey = formatDateKey(toD);
+    // 209: מפה לפי תאריך פעם אחת (עד היום סריקה של כל התורים לכל יום — איטי בטווח ארוך)
+    const byDate = {};
+    apptPool.forEach(a => {
+      if (!a || !a.date || a.date < fromKey || a.date > toKey) return;
+      (byDate[a.date] = byDate[a.date] || []).push(a);
+    });
     for (let i = 0; i < totalDays; i++){
-      const d = new Date(fromD);
-      d.setDate(fromD.getDate() + i);
+      const d = new Date(fromD.getFullYear(), fromD.getMonth(), fromD.getDate() + i);
       const dateKey = formatDateKey(d);
-      const dayAppts = apptPool
-        .filter(a => a.date === dateKey)
+      const dayAppts = (byDate[dateKey] || [])
         .slice()
         .sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
       let dayRevenue = 0, dayCounted = 0;
@@ -10071,13 +10203,14 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       });
       dailyRows.push({ date: dateKey, revenue: dayRevenue, count: dayCounted });
       if (!useWeekly){
-        bars.push({ lbl: d.getDate() + '/' + (d.getMonth()+1), val: dayRevenue });
+        bars.push({ lbl: reportShortDate(d), val: dayRevenue });
       } else {
+        if (!weekBucketStart) weekBucketStart = d;
         weekBucketRevenue += dayRevenue;
         if ((i + 1) % 7 === 0 || i === totalDays - 1){
-          bars.push({ lbl: 'שבוע ' + weekIndex, val: weekBucketRevenue });
-          weekIndex++;
+          bars.push({ lbl: reportShortDate(weekBucketStart) + '–' + reportShortDate(d), val: weekBucketRevenue });
           weekBucketRevenue = 0;
+          weekBucketStart = null;
         }
       }
     }
@@ -10085,18 +10218,20 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
-    const fromKey = formatDateKey(fromD), toKey = formatDateKey(toD);
     const cancelPool = archiveCache.loaded ? cancellationLog.concat(archiveCache.cancellations) : cancellationLog;
     const cancellations = cancelPool
       .filter(c => c && c.date && c.date >= fromKey && c.date <= toKey)
       .sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
     const cancelValueRaw = cancellations.reduce((s, c) => s + (Number(c.price) || 0), 0);
+    const avgRaw = totalCount ? Math.round(totalRevenue / totalCount) : 0;
     return {
       revenue: totalRevenue.toLocaleString('he-IL') + ' ₪',
       revenueRaw: totalRevenue,
       count: totalCount,
-      avg: totalCount ? Math.round(totalRevenue / totalCount).toLocaleString('he-IL') + ' ₪' : '0 ₪',
+      avg: avgRaw.toLocaleString('he-IL') + ' ₪',
+      avgRaw,
       bars: bars.length ? bars : [{ lbl: '', val: 0 }],
+      weeklyBars: useWeekly,
       dailyRows,
       apptRows,
       popular,
@@ -10123,28 +10258,27 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     const sunday = new Date(base.getFullYear(), base.getMonth(), base.getDate() - base.getDay());
     return { from: sunday, to: new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + 6) };
   }
+  // נשאר בשם הישן (נקרא בטעינה ובציור מחדש) — מצייר לפי מה שנבחר, אף פעם לא מאפס ל"השבוע"
   function renderReports(range){
-    try { if (window.__hkDeferredRenders) window.__hkDeferredRenders.delete('renderReports'); } catch (e) {}
-    const r = reportPresetRange(range, new Date());
-    renderReportOutput(computeRealRangeReport(r.from, r.to, range));
-    // טווח שנוגע בתורים שעברו לארכיון — טוענים אותו ומציירים שוב
-    if (!archiveCache.loaded && formatDateKey(r.from) < archiveCutoffKey()){
-      loadArchive().then(() => { if (archiveCache.loaded) renderReportOutput(computeRealRangeReport(r.from, r.to, range)); });
-    }
+    try { updateReportNavRow(); } catch (e) {}
+    refreshReportsView();
   }
   function renderCustomRangeReport(){
     const fromVal = readDMYPicker('reportFromDateDay', 'reportFromDateMonth', 'reportFromDateYear');
     const toVal = readDMYPicker('reportToDateDay', 'reportToDateMonth', 'reportToDateYear');
-    if (!fromVal || !toVal) return;
-    const fromParts = fromVal.split('-').map(Number);
-    const toParts = toVal.split('-').map(Number);
-    const fromD = new Date(fromParts[0], fromParts[1]-1, fromParts[2]);
-    const toD = new Date(toParts[0], toParts[1]-1, toParts[2]);
-    if (toD < fromD) return;
-    renderReportOutput(computeRealRangeReport(fromD, toD, 'custom'));
-    if (!archiveCache.loaded && formatDateKey(fromD) < archiveCutoffKey()){
-      loadArchive().then(() => { if (archiveCache.loaded) renderReportOutput(computeRealRangeReport(fromD, toD, 'custom')); });
-    }
+    if (!fromVal || !toVal){ setReportRangeError('נא לבחור יום, חודש ושנה בשני התאריכים.'); return; }
+    const fromD = reportKeyToDate(fromVal);
+    const toD = reportKeyToDate(toVal);
+    if (reportFmtKey(fromD) !== fromVal){ setReportRangeError('התאריך "מתאריך" לא קיים בלוח השנה (למשל 31 בחודש של 30 יום). נא לתקן.'); document.getElementById('reportFromDateDay').focus(); return; }
+    if (reportFmtKey(toD) !== toVal){ setReportRangeError('התאריך "עד תאריך" לא קיים בלוח השנה (למשל 31 בחודש של 30 יום). נא לתקן.'); document.getElementById('reportToDateDay').focus(); return; }
+    if (toD < fromD){ setReportRangeError('"עד תאריך" מוקדם מ"מתאריך". נא לבחור תאריך סיום מאוחר יותר.'); document.getElementById('reportToDateDay').focus(); return; }
+    if ((toD - fromD) / 86400000 > 3 * 366){ setReportRangeError('אפשר להציג עד 3 שנים בדוח אחד.'); return; }
+    setReportRangeError('');
+    reportState.preset = 'custom';
+    reportState.customFrom = fromVal;
+    reportState.customTo = toVal;
+    syncReportSwitchers();
+    refreshReportsView();
   }
   function reportRangeLabel(){
     if (!lastReportData) return '';
@@ -10219,7 +10353,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     }
     return s;
   }
-  function buildXlsxBlob(rows, sheetName){
+  // 209: תא יכול להיות ערך רגיל או { v, s } — s: 1 מודגש, 2 שקלים, 3 מודגש+שקלים, 4 כותרת גדולה, 5 תאריך
+  function buildXlsxBlob(rows, sheetName, colWidths){
     sheetName = (sheetName || 'דוח').slice(0, 31); // Excel's own sheet-name length limit
     const enc = new TextEncoder();
     const sharedStrings = [];
@@ -10234,25 +10369,29 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     let rowsXml = '';
     rows.forEach((row, ri) => {
       let cellsXml = '';
-      row.forEach((val, ci) => {
+      row.forEach((cell, ci) => {
+        let val = cell, st = 0;
+        if (cell && typeof cell === 'object'){ val = cell.v; st = cell.s || 0; }
         if (val === undefined || val === null || val === '') return;
         const ref = xlsxColLetter(ci) + (ri + 1);
         if (typeof val === 'number' && isFinite(val)){
-          cellsXml += `<c r="${ref}" s="0"><v>${val}</v></c>`;
+          cellsXml += `<c r="${ref}" s="${st}"><v>${val}</v></c>`;
         } else {
           const idx = sharedStringId(String(val));
-          cellsXml += `<c r="${ref}" s="0" t="s"><v>${idx}</v></c>`;
+          cellsXml += `<c r="${ref}" s="${st}" t="s"><v>${idx}</v></c>`;
         }
       });
       rowsXml += `<row r="${ri + 1}">${cellsXml}</row>`;
     });
+    const widths = colWidths || [22, 26, 14, 14, 14, 14];
+    const colsXml = widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('');
     const sharedStringsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${sharedStrings.length}" uniqueCount="${sharedStrings.length}">${sharedStrings.map(s => `<si><t xml:space="preserve">${xlsxXmlEscape(s)}</t></si>`).join('')}</sst>`;
     const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
   <sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews>
   <sheetFormatPr defaultRowHeight="15"/>
-  <cols><col min="1" max="1" width="22" customWidth="1"/><col min="2" max="2" width="26" customWidth="1"/><col min="3" max="6" width="14" customWidth="1"/></cols>
+  <cols>${colsXml}</cols>
   <sheetData>${rowsXml}</sheetData>
 </worksheet>`;
     const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -10280,13 +10419,19 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
 </Relationships>`;
     const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>
-  <fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
+  <numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0 &quot;₪&quot;"/><numFmt numFmtId="165" formatCode="dd/mm/yyyy"/></numFmts>
+  <fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><name val="Calibri"/></font></fonts>
+  <fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEFEFEF"/><bgColor indexed="64"/></patternFill></fill></fills>
   <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
   <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-  
-  <cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyAlignment="1"><alignment readingOrder="2"/></xf></cellXfs>
-  
+  <cellXfs count="6">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyAlignment="1"><alignment readingOrder="2"/></xf>
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment readingOrder="2"/></xf>
+    <xf numFmtId="164" fontId="0" fillId="0" borderId="0" applyNumberFormat="1" applyAlignment="1"><alignment readingOrder="2"/></xf>
+    <xf numFmtId="164" fontId="1" fillId="2" borderId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyAlignment="1"><alignment readingOrder="2"/></xf>
+    <xf numFmtId="0" fontId="2" fillId="0" borderId="0" applyFont="1" applyAlignment="1"><alignment readingOrder="2"/></xf>
+    <xf numFmtId="165" fontId="0" fillId="0" borderId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="right" readingOrder="2"/></xf>
+  </cellXfs>
   <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
     return buildZipBlob([
@@ -10299,97 +10444,115 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       { name: 'xl/worksheets/sheet1.xml', data: enc.encode(sheetXml) }
     ]);
   }
-  function exportReportToXlsx(kind){
-    if (!lastReportData) return;
-    const which = kind === 'cancel' ? 'cancel' : 'income';
+  function buildReportXlsxRows(which, d){
+    const B = v => ({ v, s: 1 }), NIS = v => ({ v: Number(v) || 0, s: 2 }), BNIS = v => ({ v: Number(v) || 0, s: 3 });
+    // תאריך אמיתי של אקסל (אפשר למיין ולסנן), מוצג כ-dd/mm/yyyy
+    const DT = k => { const p = String(k || '').split('-').map(Number); if (p.length !== 3 || p.some(isNaN)) return k || ''; return { v: Math.round((Date.UTC(p[0], p[1] - 1, p[2]) - Date.UTC(1899, 11, 30)) / 86400000), s: 5 }; };
+    const nAppts = n => n === 1 ? 'תור אחד' : n + ' תורים';
     const title = which === 'cancel' ? 'דוח ביטולים' : 'דוח הכנסות';
-    const rangeLbl = reportRangeLabel();
     const rows = [];
-    rows.push([title, branding.name || 'הכל בקליק']);
-    rows.push(['טווח תאריכים', rangeLbl]);
+    rows.push([{ v: title + ' — ' + (branding.name || 'הכל בקליק'), s: 4 }]);
+    rows.push(['תקופה', d.fromKey.split('-').reverse().join('/') + ' עד ' + d.toKey.split('-').reverse().join('/')]);
+    rows.push(['הופק בתאריך', formatCancelledAtLabel({ cancelledAtIso: new Date().toISOString() })]);
     rows.push([]);
     if (which === 'income'){
-      rows.push(['סיכום']);
-      rows.push(['הכנסה', lastReportData.revenue]);
-      rows.push(['מספר תורים', lastReportData.count]);
-      rows.push(['ממוצע לתור', lastReportData.avg]);
-      if (lastReportData.futureCount) rows.push(['מתוך זה — תורים שעדיין לא התקיימו', lastReportData.futureRevenueRaw, lastReportData.futureCount]);
-      if (lastReportData.noShowCount) rows.push(['לא נספר — תורים שסומנו "לא הגיעה"', lastReportData.noShowRevenueRaw, lastReportData.noShowCount]);
+      rows.push([B('סיכום'), B('')]);
+      rows.push(['הכנסה', NIS(d.revenueRaw)]);
+      rows.push(['מספר תורים', d.count]);
+      rows.push(['ממוצע לתור', NIS(d.avgRaw)]);
+      if (d.futureCount) rows.push(['מתוך זה: תורים שעדיין לא התקיימו', NIS(d.futureRevenueRaw), nAppts(d.futureCount)]);
+      if (d.noShowCount) rows.push(['לא נספר: תורים שסומנו "לא הגיעה"', NIS(d.noShowRevenueRaw), nAppts(d.noShowCount)]);
       rows.push([]);
-      rows.push(['פירוט התורים']);
-      rows.push(['תאריך', 'יום', 'שעה', 'לקוחה', 'מטפלת', 'טיפול', 'מחיר', 'הערה']);
-      lastReportData.apptRows.forEach(r => rows.push([
-        r.date.split('-').reverse().join('/'), hebrewDayName(r.date), r.time, r.client,
-        r.staffName, r.service, r.price,
-        !r.counted ? 'לא הגיעה — אינו נספר בהכנסה' : (r.future ? 'תור עתידי' : '')
+      rows.push([B('פירוט התורים')]);
+      rows.push(['תאריך', 'יום', 'שעה', 'לקוחה', 'מטפלת', 'טיפול', 'מחיר', 'מצב'].map(B));
+      d.apptRows.forEach(r => rows.push([
+        DT(r.date), hebrewDayName(r.date), r.time, r.client,
+        r.staffName, r.service, NIS(r.price),
+        !r.counted ? 'לא הגיעה (לא נספר בהכנסה)' : (r.future ? 'עתידי' : 'התקיים')
       ]));
-      rows.push(['', '', '', '', '', 'סך הכול', lastReportData.revenueRaw, '']);
+      rows.push([B('סך הכול'), B(''), B(''), B(''), B(''), B(nAppts(d.count)), BNIS(d.revenueRaw), B('')]);
       rows.push([]);
-      rows.push(['הכנסה יומית']);
-      rows.push(['תאריך', 'הכנסה', 'מספר תורים']);
-      lastReportData.dailyRows.forEach(r => rows.push([r.date.split('-').reverse().join('/'), r.revenue, r.count]));
+      rows.push([B('הכנסה לפי יום')]);
+      rows.push(['תאריך', 'יום', 'הכנסה', 'מספר תורים'].map(B));
+      d.dailyRows.forEach(r => rows.push([DT(r.date), hebrewDayName(r.date), NIS(r.revenue), r.count]));
       rows.push([]);
-      rows.push(['השירותים הכי מבוקשים']);
-      rows.push(['שירות', 'כמות']);
-      lastReportData.popular.forEach(p => rows.push([p.name, p.count]));
+      rows.push([B('השירותים הכי מבוקשים')]);
+      rows.push(['שירות', 'כמות'].map(B));
+      d.popular.forEach(p => rows.push([p.name, p.count]));
     } else {
-      rows.push(['סיכום']);
-      rows.push(['מספר ביטולים', lastReportData.cancellations.length]);
-      rows.push(['שווי התורים שבוטלו', lastReportData.cancelValueRaw]);
+      rows.push([B('סיכום'), B('')]);
+      rows.push(['מספר ביטולים', d.cancellations.length]);
+      rows.push(['שווי התורים שבוטלו', NIS(d.cancelValueRaw)]);
       rows.push([]);
-      rows.push(['פירוט הביטולים']);
-      rows.push(['תאריך', 'שעה', 'לקוחה', 'שירות', 'מטפלת', 'מחיר', 'בוטל בתאריך']);
-      lastReportData.cancellations.forEach(c => rows.push([
-        c.date ? c.date.split('-').reverse().join('/') : '', c.time || '', c.client || '', c.service || '', c.staffName || '', c.price || 0, formatCancelledAtLabel(c)
+      rows.push([B('פירוט הביטולים')]);
+      rows.push(['תאריך התור', 'יום', 'שעה', 'לקוחה', 'טיפול', 'מטפלת', 'מחיר', 'מתי בוטל', 'מי ביטלה'].map(B));
+      d.cancellations.forEach(c => rows.push([
+        DT(c.date), c.date ? hebrewDayName(c.date) : '', c.time || '', c.client || '', c.service || '', c.staffName || '',
+        NIS(c.price), formatCancelledAtLabel(c), CANCEL_BY_LABEL[c.by] || ''
       ]));
+      rows.push([B('סך הכול'), B(''), B(''), B(''), B(''), B(''), BNIS(d.cancelValueRaw), B(''), B('')]);
     }
-    const blob = buildXlsxBlob(rows, title);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${title} ${rangeLbl.replace(/\//g, '-')}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-    showReportActionStatus('הקובץ ירד בהצלחה — אפשר לפתוח אותו באקסל.');
+    return rows;
+  }
+  function exportReportToXlsx(kind){
+    if (!lastReportData){ showReportActionStatus('אין עדיין דוח להורדה. נא לבחור תקופה.'); return; }
+    const which = kind === 'cancel' ? 'cancel' : 'income';
+    const title = which === 'cancel' ? 'דוח ביטולים' : 'דוח הכנסות';
+    try {
+      const rows = buildReportXlsxRows(which, lastReportData);
+      const widths = which === 'cancel' ? [16, 9, 8, 22, 22, 14, 12, 18, 14] : [34, 14, 10, 22, 14, 22, 12, 24];
+      const blob = buildXlsxBlob(rows, title, widths);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${title} ${lastReportData.fromKey.split('-').reverse().join('-')} עד ${lastReportData.toKey.split('-').reverse().join('-')}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      showReportActionStatus('קובץ האקסל ירד (בתיקיית ההורדות).');
+    } catch (e) {
+      console.error('Report xlsx export failed:', e);
+      showReportActionStatus('ההורדה לאקסל נכשלה. נסי שוב, ואם זה חוזר אפשר להשתמש ב"הדפסה".');
+    }
   }
   function printReport(kind){
     if (!lastReportData) return;
+    const esc = window.__hkE;
     const which = kind === 'cancel' ? 'cancel' : 'income';
     const title = which === 'cancel' ? 'דוח ביטולים' : 'דוח הכנסות';
     const rangeLbl = reportRangeLabel();
     const win = window.open('', '_blank');
-    if (!win){ showReportActionStatus('הדפדפן חסם את פתיחת חלון ההדפסה — נסי לאשר חלונות קופצים לאתר.'); return; }
+    if (!win){ showReportActionStatus('הדפדפן חסם את פתיחת חלון ההדפסה. נסי לאשר חלונות קופצים לאתר.'); return; }
     const d = lastReportData;
     let bodyHtml;
     if (which === 'income'){
-      const popularRows = d.popular.map(p => `<tr><td>${p.name}</td><td>${p.count}</td></tr>`).join('') || '<tr><td colspan="2">אין נתונים</td></tr>';
-      const apptRows = d.apptRows.map(r => `<tr${!r.counted ? ' class="muted"' : ''}><td>${r.date.split('-').reverse().join('/')}</td><td>${hebrewDayName(r.date)}</td><td>${r.time}</td><td>${r.client}</td><td>${r.staffName || '—'}</td><td>${r.service}</td><td>${r.price.toLocaleString('he-IL')} ₪</td><td>${!r.counted ? 'לא הגיעה' : (r.future ? 'עתידי' : '')}</td></tr>`).join('')
-        || '<tr><td colspan="8">אין תורים בטווח זה</td></tr>';
+      const popularRows = d.popular.map(p => `<tr><td>${esc(p.name)}</td><td>${p.count}</td></tr>`).join('') || '<tr><td colspan="2">אין נתונים</td></tr>';
+      const apptRows = d.apptRows.map(r => `<tr${!r.counted ? ' class="muted"' : ''}><td>${formatDateDMY(r.date)}</td><td>${hebrewDayName(r.date)}</td><td>${esc(r.time)}</td><td>${esc(r.client)}</td><td>${esc(r.staffName) || '—'}</td><td>${esc(r.service)}</td><td>${r.price.toLocaleString('he-IL')} ₪</td><td>${!r.counted ? 'לא הגיעה' : (r.future ? 'עתידי' : 'התקיים')}</td></tr>`).join('')
+        || '<tr><td colspan="8">אין תורים בתקופה הזו</td></tr>';
       const notes = [];
-      if (d.futureCount) notes.push(`מתוך הסכום — ${d.futureRevenueRaw.toLocaleString('he-IL')} ₪ מ-${d.futureCount} תורים שעדיין לא התקיימו.`);
+      if (d.futureCount) notes.push(`מתוך הסכום ${d.futureRevenueRaw.toLocaleString('he-IL')} ₪ מ-${d.futureCount} תורים שעדיין לא התקיימו.`);
       if (d.noShowCount) notes.push(`${d.noShowCount} תורים סומנו "לא הגיעה" ואינם נספרים בהכנסה.`);
       bodyHtml = `<div class="stats">
           <div><b>${d.revenue}</b>הכנסה</div>
           <div><b>${d.count}</b>תורים</div>
           <div><b>${d.avg}</b>ממוצע לתור</div>
         </div>
-        ${notes.length ? '<div class="notes">' + notes.map(n => '• ' + n).join('<br>') + '</div>' : ''}
+        ${notes.length ? '<ul class="notes">' + notes.map(n => '<li>' + n + '</li>').join('') + '</ul>' : ''}
         <h2>פירוט התורים</h2>
-        <table><tr><th>תאריך</th><th>יום</th><th>שעה</th><th>לקוחה</th><th>מטפלת</th><th>טיפול</th><th>מחיר</th><th>הערה</th></tr>
-        ${apptRows}
-        <tr class="total"><td colspan="6">סך הכול</td><td>${d.revenue}</td><td>${d.count} תורים</td></tr></table>
+        <table><thead><tr><th scope="col">תאריך</th><th scope="col">יום</th><th scope="col">שעה</th><th scope="col">לקוחה</th><th scope="col">מטפלת</th><th scope="col">טיפול</th><th scope="col">מחיר</th><th scope="col">מצב</th></tr></thead>
+        <tbody>${apptRows}</tbody>
+        <tfoot><tr class="total"><td colspan="6">סך הכול</td><td>${d.revenue}</td><td>${d.count} תורים</td></tr></tfoot></table>
         <h2>השירותים הכי מבוקשים</h2>
-        <table><tr><th>שירות</th><th>כמות</th></tr>${popularRows}</table>`;
+        <table><thead><tr><th scope="col">שירות</th><th scope="col">כמות</th></tr></thead><tbody>${popularRows}</tbody></table>`;
     } else {
-      const cancelRows = d.cancellations.map(c => `<tr><td>${c.date ? c.date.split('-').reverse().join('/') : ''}</td><td>${c.time || ''}</td><td>${c.client || ''}</td><td>${c.service || ''}</td><td>${c.staffName || ''}</td><td>${(Number(c.price) || 0).toLocaleString('he-IL')} ₪</td><td>${formatCancelledAtLabel(c)}</td></tr>`).join('') || '<tr><td colspan="7">אין ביטולים בטווח זה</td></tr>';
+      const cancelRows = d.cancellations.map(c => `<tr><td>${c.date ? formatDateDMY(c.date) : ''}</td><td>${esc(c.time || '')}</td><td>${esc(c.client || '')}</td><td>${esc(c.service || '')}</td><td>${esc(c.staffName || '')}</td><td>${(Number(c.price) || 0).toLocaleString('he-IL')} ₪</td><td>${formatCancelledAtLabel(c)}</td><td>${CANCEL_BY_LABEL[c.by] || ''}</td></tr>`).join('') || '<tr><td colspan="8">אין ביטולים בתקופה הזו</td></tr>';
       bodyHtml = `<div class="stats">
           <div><b>${d.cancellations.length}</b>ביטולים</div>
           <div><b>${d.cancelValue}</b>שווי התורים שבוטלו</div>
         </div>
         <h2>פירוט הביטולים</h2>
-        <table><tr><th>תאריך</th><th>שעה</th><th>לקוחה</th><th>שירות</th><th>מטפלת</th><th>מחיר</th><th>בוטל בתאריך</th></tr>${cancelRows}</table>`;
+        <table><thead><tr><th scope="col">תאריך התור</th><th scope="col">שעה</th><th scope="col">לקוחה</th><th scope="col">טיפול</th><th scope="col">מטפלת</th><th scope="col">מחיר</th><th scope="col">מתי בוטל</th><th scope="col">מי ביטלה</th></tr></thead><tbody>${cancelRows}</tbody></table>`;
     }
     win.document.write(`<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>${title} ${rangeLbl}</title>
       <style>
@@ -10399,14 +10562,15 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         .stats{display:flex; gap:24px; margin:16px 0;}
         .stats div{font-size:14px;}
         .stats b{display:block; font-size:20px;}
-        .notes{font-size:12px; color:#555; margin:8px 0 4px;}
+        .notes{font-size:12px; color:#444; margin:8px 0 4px;}
         table{width:100%; border-collapse:collapse; margin-top:8px;}
-        td, th{border:1px solid #ddd; padding:6px 10px; text-align:right; font-size:13px;}
-        tr.muted td{color:#999;}
+        td, th{border:1px solid #ccc; padding:6px 10px; text-align:right; font-size:13px;}
+        th{background:#f3f3f3;}
+        tr.muted td{color:#666; text-decoration:line-through;}
         tr.total td{font-weight:bold; background:#f3f3f3;}
       </style></head><body>
-      <h1>${title} — ${branding.name || 'הכל בקליק'}</h1>
-      <div>טווח תאריכים: ${rangeLbl}</div>
+      <h1>${title} — ${esc(branding.name || 'הכל בקליק')}</h1>
+      <div>תקופה: ${rangeLbl}</div>
       ${bodyHtml}
     </body></html>`);
     win.document.close();
@@ -17574,7 +17738,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   let ovSelectedDate = null;
   function setOverviewView(mode, btn){
     overviewViewMode = mode;
-    document.querySelectorAll('#sub-overview .subswitcher button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#sub-overview .subswitcher:not(.rep-switch) button').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
     const viewSelectEl = document.getElementById('calViewModeSelect');
     if (viewSelectEl) viewSelectEl.value = mode;
@@ -20454,16 +20618,16 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   }
   function clearServerIdentity(){ serverIdentity = null; serverIdentityPick = null; hkSyncConsentBox(true); }
   /* 197: מי שהוסרה מהדיוור — התיבה מופיעה לה ריקה, והיא יכולה לסמן בעצמה כדי לחזור.
-   * כל השאר — מסומנת מראש (בקשת איילת, 8.11). לחיצה של הלקוחה לא נדרסת. */
+   * 208: מאז 11.11 התיבה ריקה לכולן. לחיצה של הלקוחה לא נדרסת. */
   function hkSyncConsentBox(reset){
     const cb = document.getElementById('marketingConsentInput');
     if (!cb) return;
     if (!cb.dataset.hkWired){ cb.dataset.hkWired = '1'; cb.addEventListener('change', () => { cb.dataset.touched = '1'; }); }
     if (reset) delete cb.dataset.touched;
     if (cb.dataset.touched) return;
-    const optedOut = !!(serverIdentity && serverIdentity.marketingOptedOut);
-    cb.checked = !optedOut;
-    cb.dataset.shownUnchecked = optedOut ? '1' : '';
+    /* 208: התיבה לא מסומנת מראש, לאף אחת (איילת, 11.11). הסכמה = סימון של הלקוחה בעצמה. */
+    cb.checked = false;
+    cb.dataset.shownUnchecked = '1';
   }
   function renderIdentityChoice(candidates, onPick, boxId){
     const box = document.getElementById(boxId || 'bookingIdentityChoice');
@@ -21184,13 +21348,18 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       }
     }
     let customerEmail = '';
-    // 195: דיוור שיווקי — מסומן מראש (בקשת איילת, 8.11). הורידה את הסימון = הוסרה.
+    // 195: דיוור שיווקי. 208: התיבה ריקה מראש (איילת, 11.11), ר' hkConsentFor.
     const hkConsentEl = document.getElementById('marketingConsentInput') || {};
     const hkMarketingConsent = !!hkConsentEl.checked;
     // 197: חזרה לדיוור אחרי הסרה — רק כשהתיבה הוצגה ריקה והיא סימנה בעצמה
     const hkConsentActive = hkMarketingConsent && !!(hkConsentEl.dataset && hkConsentEl.dataset.shownUnchecked === '1');
-    const hkConsentStamp = c => { if (c && c.marketingConsent === false && hkMarketingConsent && !hkConsentActive) return;
-      if (c && c.marketingConsent !== hkMarketingConsent){ c.marketingConsent = hkMarketingConsent; c.marketingConsentAt = new Date().toISOString(); c.marketingConsentSource = 'booking'; } };
+    /* 208: התיבה ריקה מראש. סימנה = מאשרת. סימנה והורידה = לא מאשרת. לא נגעה:
+     * לקוחה חדשה = לא מאשרת, ולקוחה קיימת = בלי שינוי (לא מוציאים אותה מהדיוור). */
+    const hkConsentTouched = !!(hkConsentEl.dataset && hkConsentEl.dataset.touched);
+    const hkConsentFor = isNew => (hkMarketingConsent ? true : (hkConsentTouched || isNew) ? false : undefined);
+    const hkConsentStamp = (c, isNew) => { const want = hkConsentFor(!!isNew); if (!c || want === undefined) return;
+      if (c.marketingConsent === false && want && !hkConsentActive) return;
+      if (c.marketingConsent !== want){ c.marketingConsent = want; c.marketingConsentAt = new Date().toISOString(); c.marketingConsentSource = 'booking'; } };
     const appointmentDateOnly = new Date(bookingSelectedDate.getFullYear(), bookingSelectedDate.getMonth(), bookingSelectedDate.getDate());
     const isTodayOrPastBooking = appointmentDateOnly <= getTodayDateOnly();
     if (existingClient){
@@ -21212,7 +21381,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       const finalEmail = ftpEmail || reminderEmailVal;
       const ftpBirthday = readDMYPicker('ftpBirthdayDay', 'ftpBirthdayMonth', 'ftpBirthdayYear');
       clients.push({ name: clientNameVal, phone: phoneVal.trim(), teudatZehut: idDigits, email: finalEmail, photo: null, visits: isTodayOrPastBooking ? 1 : 0, daysSinceVisit: isTodayOrPastBooking ? 0 : null, note: '', birthday: ftpBirthday, reminderChannelPref: reminderChannels });
-      hkConsentStamp(clients[clients.length - 1]);
+      hkConsentStamp(clients[clients.length - 1], true);
       customerEmail = finalEmail;
     }
     const locallyAddedClient = existingClient ? null : clients[clients.length - 1];
@@ -21261,7 +21430,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
           email: customerEmail || '',
           birthday: readFirstTimeBirthday(),
           reminderChannels,
-          marketingConsent: hkMarketingConsent,   // 195
+          marketingConsent: hkConsentFor(!serverIdentity),   // 195; 208: undefined = בלי שינוי
           marketingConsentActive: hkConsentActive,   // 197
           // 198: המקום של כל טיפול ברשימה — רק לשרת, לא נשמר בתור
           appointment: Object.assign({}, currentBookedAppointment, { services: (currentBookedAppointment.services || []).map((o, k) => Object.assign({}, o, { idx: svcObjsForAppt[k] ? services.indexOf(svcObjsForAppt[k]) : -1 })) }),
@@ -22454,7 +22623,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     window.scrollTo(0, 0);
     document.querySelectorAll('.subpanel').forEach(p => p.classList.remove('active'));
     document.getElementById('sub-' + name).classList.add('active');
-    document.querySelectorAll('.subswitcher button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.subswitcher:not(.rep-switch) button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     var topbarFilters = document.getElementById('bizTopbarCalFilters');
     if (topbarFilters) topbarFilters.style.display = (name === 'overview') ? 'flex' : 'none';
@@ -25770,7 +25939,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       ['renderRecommendations', typeof renderRecommendations === 'function' ? renderRecommendations : null],
       ['renderAboutSettings', isAdminActive && typeof renderAboutSettings === 'function' ? renderAboutSettings : null],
       ['renderRecAdminList', isAdminActive && typeof renderRecAdminList === 'function' ? renderRecAdminList : null],
-      ['renderReports', isAdminActive && typeof renderReports === 'function' ? () => renderReports('week') : null],
+      ['renderReports', isAdminActive && typeof refreshReportsView === 'function' ? refreshReportsView : null],   // 209: לפי הבחירה, לא 'week'
       ['renderOverviewDayView', isAdminActive && typeof renderOverviewDayView === 'function' ? renderOverviewDayView : null],
       ['renderOverviewMonthCal', isAdminActive && typeof renderOverviewMonthCal === 'function' ? renderOverviewMonthCal : null],
       ['recheckAllPendingFlexibleRequests', typeof recheckAllPendingFlexibleRequests === 'function' ? recheckAllPendingFlexibleRequests : null]
