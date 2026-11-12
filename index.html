@@ -4957,7 +4957,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-11 · 209';
+        window.__APP_BUILD = '2026-11-12 · 210';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -12919,12 +12919,19 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     }
     return str;
   }
+  // 210: פורמט אחד לכל הדף ותוצאה שמורה לכל יום. עד 209 כל קריאה בנתה
+  // Intl.DateTimeFormat חדש — יקר מאוד בטלפון, ונקרא בכל ציור של היומן.
+  let __hkHebFmt = null;
+  const __hkHebDateMemo = Object.create(null);
   function hebrewDateStr(date){
     try {
-      const parts = new Intl.DateTimeFormat('he-u-ca-hebrew', { day: 'numeric', month: 'long' }).formatToParts(date);
+      const memoKey = date.getFullYear() + '-' + date.getMonth() + '-' + date.getDate();
+      if (__hkHebDateMemo[memoKey] !== undefined) return __hkHebDateMemo[memoKey];
+      if (!__hkHebFmt) __hkHebFmt = new Intl.DateTimeFormat('he-u-ca-hebrew', { day: 'numeric', month: 'long' });
+      const parts = __hkHebFmt.formatToParts(date);
       const dayNum = parseInt(parts.find(p => p.type === 'day').value);
       const monthName = parts.find(p => p.type === 'month').value;
-      return hebrewDayNumeral(dayNum) + ' ב' + monthName;
+      return (__hkHebDateMemo[memoKey] = hebrewDayNumeral(dayNum) + ' ב' + monthName);
     } catch(e){
       return '';
     }
@@ -15331,6 +15338,20 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
 
   /* 194: ציור היומן נקרא מכ-50 מקומות (לחיצה, שמירה, הצעות). עם שם — כדי
    * שתקיעה בו לא תופיע בסיכום כ"עבודה לא מזוהה". */
+  // 210: "נקבע: 11.11.2026 10:40" בכל ריבוע — עם פורמט שמור. toLocaleDateString /
+  // toLocaleTimeString בונים פורמט חדש בכל קריאה: 300 קריאות = 232 אלפיות
+  // שנייה במעבדה (CPU פי 4), ועם פורמט שמור 7. בטלפון של רותי זה היה רוב
+  // ה"ציור היומן" של 1–1.6 שנ׳ (סיכום 11.11).
+  let __hkCalCreatedFmtD = null, __hkCalCreatedFmtT = null;
+  function calCreatedLabelOf(d){
+    try {
+      if (!__hkCalCreatedFmtD) __hkCalCreatedFmtD = new Intl.DateTimeFormat('he-IL');
+      if (!__hkCalCreatedFmtT) __hkCalCreatedFmtT = new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit' });
+      return __hkCalCreatedFmtD.format(d) + ' ' + __hkCalCreatedFmtT.format(d);
+    } catch (e) {
+      return d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+    }
+  }
   function renderWeekCal(opts){
     return (window.__hkBusyRun || ((l, d, f) => f()))('ציור היומן', null, () => __renderWeekCalImpl(opts));
   }
@@ -15654,7 +15675,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         if (apptCreatedRaw){
           const apptCreatedDate = new Date(apptCreatedRaw);
           if (!Number.isNaN(apptCreatedDate.getTime())){
-            apptCreatedLabel = apptCreatedDate.toLocaleDateString('he-IL') + ' ' + apptCreatedDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+            apptCreatedLabel = calCreatedLabelOf(apptCreatedDate);   // 210
           }
         }
         block.title = `${a.client} · ${a.service}${apptCatName ? ' (' + apptCatName + ')' : ''} · ${a.time} (${dur} דק')`
@@ -15712,9 +15733,13 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       /* 170: "זה לא מעניין, זה צריך לרדת ולהראות כמו תור רגיל" (איילת, 30.10).
        * סבב שנגמר בלי אישור כבר לא נשאר ביומן — השעה נראית פנויה רגילה (היא
        * גם לא חסומה לקביעה: slotIsHeldByOffer בודק רק הצעה פתוחה). */
+      // 210: קודם התאריך והעובדת (זול), ורק אז הבדיקות היקרות — עד 209 כל
+      // הצעה בכל יום עברה את nightWait/handingOver, שכל אחת סורקת את כל ההצעות.
+      const __dayKeyForOffers = formatDateKey(day.fullDate);
       const dayOffers = allOffersNow
-        .filter(o => o && (offerIsLive(o) || handingOver(o) || nightWait(o)) && o.date === formatDateKey(day.fullDate)
-          && (selectedStaffFilter === 'all' || o.staff === selectedStaffFilter));
+        .filter(o => o && o.date === __dayKeyForOffers
+          && (selectedStaffFilter === 'all' || o.staff === selectedStaffFilter)
+          && (offerIsLive(o) || handingOver(o) || nightWait(o)));
       dayOffers.forEach(o => {
         const mins = timeToMinutes(o.time);
         const hourIdx = Math.floor(mins / 60) - calStartHour;
@@ -16535,6 +16560,17 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   }
   let offerRotationBusy = false;
   let __offerDueRounds = 0, __offerLoopReported = false;   // 186
+  /* 210: "הצעה שפגה חוזרת ברקע" (סיכום 11.11, 6 פעמים, pull-failed deadline-exceeded).
+   * השרת ("שעון ההצעות", כל 2 דקות) מעביר הצעה שפגה לבאה בתור בעצמו, והיומן
+   * מקבל את זה בבדיקת החותמת הרגילה. עד 209 היומן גם ניסה בעצמו, כל 15 שנ',
+   * והורדה מלאה של המסמך (כ-670 ק"ב) לפני כל ניסיון — בקו של רותי היא לא
+   * הסתיימה בזמן, נכשלה, וחזרה שוב ושוב, על אותו קו של השמירות.
+   * מעכשיו: היומן נותן לשרת 4 דקות מהרגע שראה את ההצעה פגה. רק אם היא עדיין
+   * תקועה — הוא מנסה בעצמו, ואחרי כישלון מחכה יותר (30 שנ', דקה, 2, 4, 5).
+   * אחרי 10 דקות תקועה — נרשם בסיכום ("offers-stuck"), כי אז גם השרת לא טיפל. */
+  const OFFER_SERVER_GRACE_MS = 4 * 60000, OFFER_STUCK_REPORT_MS = 10 * 60000;
+  const __offerDueSince = Object.create(null);
+  let __offerPullFails = 0, __offerNextPullAt = 0;
   let __offerLastStop = '';   // 193: למה הסבב הקודם לא סגר את ההצעה
   async function rotateExpiredOffers(){
     if (offerRotationBusy) return;
@@ -16545,24 +16581,43 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     const due = (pendingOffers || []).some(function(o){
       return o && ((o.status === 'offered' && !offerIsLive(o, nowCheck)) || (o.status === 'expired' && !o.nextOfferAttempted));
     });
-    // 186: הצעה ש"פגה" ונשארת כך סבב אחרי סבב — כל סבב מוריד את כל המסמך ושומר.
-    // אחרי 4 סבבים ברצף (כדקה) — נרשם ביומן האבחון, פעם אחת בביקור.
-    if (!due){ __offerDueRounds = 0; return; }
+    if (!due){
+      __offerDueRounds = 0; __offerPullFails = 0; __offerNextPullAt = 0;
+      Object.keys(__offerDueSince).forEach(k => { delete __offerDueSince[k]; });
+      return;
+    }
     __offerDueRounds++;
-    if (__offerDueRounds >= 4 && !__offerLoopReported){
+    // 210: מתי כל הצעה נראתה כאן לראשונה "פגה" (ולא מתי פגה — בבוקר, אחרי
+    // הלילה, גם הצעה מאתמול מקבלת 4 דקות לשרת, שמתחיל ב-08:00).
+    const __dueNowMs = Date.now();
+    const __dueKey = o => String(o.id || (o.date + '|' + o.time + '|' + o.staff));
+    const __dueList = (pendingOffers || []).filter(o => o && ((o.status === 'offered' && !offerIsLive(o, nowCheck)) || (o.status === 'expired' && !o.nextOfferAttempted)));
+    const __dueKeys = new Set(__dueList.map(__dueKey));
+    Object.keys(__offerDueSince).forEach(k => { if (!__dueKeys.has(k)) delete __offerDueSince[k]; });
+    __dueList.forEach(o => { const k = __dueKey(o); if (!__offerDueSince[k]) __offerDueSince[k] = __dueNowMs; });
+    const __oldestDue = Math.min.apply(null, __dueList.map(o => __offerDueSince[__dueKey(o)]));
+    if (__dueNowMs - __oldestDue >= OFFER_STUCK_REPORT_MS && !__offerLoopReported){
       __offerLoopReported = true;
       try {
-        const kinds = (pendingOffers || []).filter(o => o && ((o.status === 'offered' && !offerIsLive(o, nowCheck)) || (o.status === 'expired' && !o.nextOfferAttempted)))
-          .map(o => o.status === 'offered' ? 'offeredPast' : 'expiredNotAttempted');
-        reportDiag('offers-loop', { code: 'הצעה שפגה חוזרת בכל סבב', key: Array.from(new Set(kinds)).join(',') + ' · ' + (__offerLastStop || 'none'), count: kinds.length });
+        const kinds = __dueList.map(o => o.status === 'offered' ? 'offeredPast' : 'expiredNotAttempted');
+        reportDiag('offers-stuck', { code: 'הצעה שפגה תקועה 10 דקות', key: Array.from(new Set(kinds)).join(',') + ' · ' + (__offerLastStop || 'none') + (__offerPullFails ? ' · fails ' + __offerPullFails : ''), count: kinds.length });
       } catch (e) {}
     }
+    if (__dueNowMs - __oldestDue < OFFER_SERVER_GRACE_MS) { __offerLastStop = 'waiting-server'; return; }
+    if (__dueNowMs < __offerNextPullAt) return;
     offerRotationBusy = true;
     try {
-      // בלי מצב עדכני מהענן — לא מחליטים כלום בסבב הזה (עדיף לחכות 15 שניות
+      // בלי מצב עדכני מהענן — לא מחליטים כלום בסבב הזה (עדיף לחכות
       // מאשר לפעול על תמונה ישנה). השרת ממילא מקדם את התור בעצמו.
       try { if (!(await pullOfferStateFromCloud())) { __offerLastStop = 'pull-empty'; return; } }
-      catch (e) { __offerLastStop = 'pull-failed ' + String((e && e.code) || '').slice(0, 20); console.warn('[offers] refresh before rotation failed — skipping this round:', e && e.code); return; }
+      catch (e) {
+        __offerLastStop = 'pull-failed ' + String((e && e.code) || '').slice(0, 20);
+        __offerPullFails++;
+        __offerNextPullAt = Date.now() + Math.min(5 * 60000, 30000 * Math.pow(2, __offerPullFails - 1));
+        console.warn('[offers] refresh before rotation failed — next try in ' + Math.round((__offerNextPullAt - Date.now()) / 1000) + 's:', e && e.code);
+        return;
+      }
+      __offerPullFails = 0; __offerNextPullAt = 0;
       __offerLastStop = 'pulled';
       (window.__hkBusyRun || ((l, d, f) => f()))('העברת הצעה שפגה', null, () => {
       if (typeof renderWeekCal === 'function') renderWeekCal();
@@ -24503,6 +24558,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     let __saveReads = 0, __saveFirstReadAt = 0, __saveReadMs = 0;
     let __saveComputeMs = 0, __saveComputeEndAt = 0;   // 186
     const saveStartedAt = Date.now();
+    const __bgAtStart = (window.__hkDlInFlight || 0), __bgStartedAtStart = (window.__hkDlStarted || 0);   // 210
     // כמה מזמן השמירה הלשונית הייתה ברקע — דפדפן מאט לשוניות ברקע, ולכן
     // "שמירה איטית" ברקע אינה בהכרח המתנה אמיתית. (16.10.2026)
     const saveHiddenAtStart = (typeof getPageHiddenMsSoFar === 'function') ? getPageHiddenMsSoFar() : 0;
@@ -24548,8 +24604,14 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         const commitMs = __saveComputeEndAt ? Math.max(0, Date.now() - __saveComputeEndAt) : 0;
         if (__saveComputeMs > 1500) why.push('החישוב בדף איטי');
         if (commitMs > 3000) why.push('הכתיבה לענן איטית');
+        // 210: הזמן שלא נמדד עד היום — ניסיון כתיבה שנדחה (מישהו כתב באמצע, ו-Firebase
+        // חיכה והתחיל מחדש), והורדות אחרות של המסמך שרצו באותו זמן על אותו קו.
+        const __totalMs = Date.now() - saveStartedAt;
+        const rejMs = __saveReads > 1 ? Math.max(0, __totalMs - waitMs - __saveReadMs - __saveComputeMs - commitMs) : 0;
+        const bg = __bgAtStart + Math.max(0, (window.__hkDlStarted || 0) - __bgStartedAtStart);
+        if (rejMs > 2000) why.push('כתיבה נדחתה ונוסתה שוב');
         reportDiag('save-slow', { ms: Date.now() - saveStartedAt, kb: lastSavePayloadBytes / 1024, hiddenMs: saveHiddenMs(), keys: lastSaveWrittenKeys, code: window.__forceLongPolling ? 'מצב עוקף' : '',
-          key: why.join(' · ').slice(0, 60), waitMs: waitMs, tries: __saveReads, readMs: __saveReadMs, computeMs: __saveComputeMs, commitMs: commitMs });
+          key: why.join(' · ').slice(0, 60), waitMs: waitMs, tries: __saveReads, readMs: __saveReadMs, computeMs: __saveComputeMs, commitMs: commitMs, rejMs: rejMs, bg: bg });
       }
       // שמירה גדולה (מעל 150 ק"ב), גם אם הייתה מהירה — כדי לראות בסיכום היומי
       // מה עדיין נשלח בשלמותו. (17.10.2026)
@@ -26819,7 +26881,16 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   let __streamReadBlocked = false;
   // 185: בבדיקה השקטה ברקע — איזו דרך ענתה קודם בפעם הקודמת בדף הזה ('tx' = העוקפת).
   let __quietReadFirst = 'tx';
+  // 210: כמה הורדות של המסמך רצות עכשיו (לשמירה איטית: "הורדות ברקע במקביל")
   function getDocWithRetry(ref, label){
+    window.__hkDlStarted = (window.__hkDlStarted || 0) + 1;
+    window.__hkDlInFlight = (window.__hkDlInFlight || 0) + 1;
+    const __dlDone = () => { window.__hkDlInFlight = Math.max(0, (window.__hkDlInFlight || 1) - 1); };
+    let __p;
+    try { __p = __getDocWithRetryImpl(ref, label); } catch (e) { __dlDone(); throw e; }
+    return Promise.resolve(__p).then(v => { __dlDone(); return v; }, e => { __dlDone(); throw e; });
+  }
+  function __getDocWithRetryImpl(ref, label){
     let attempt = 0;
     // קריאה רגילה עוברת בערוץ הרציף של Firestore. כשהוא חסום, קריאה בתוך
     // טרנזקציה עוברת בבקשת רשת רגילה — ולכן היא דרך עוקפת שעובדת מיד, בלי
