@@ -2715,6 +2715,42 @@ window.__hkE = function(v){ return String(v == null ? '' : v).replace(/[&<>"']/g
   }
   .add-modal .add-modal-actions .cta.ghost:hover{background:#EBE2D3;}
   .add-modal .myday-actions button{padding:6px 12px; font-size:12.5px;}
+  /* 211: חלון "זמן חסום" — לקצר/להאריך חסימת זמן אישי על שעון היום (איילת, 15.11) */
+  .be-sheet{max-width:440px;}
+  .be-info{font-size:13.5px; color:#6B6259; line-height:1.6;}
+  .be-info b{color:var(--ink);}
+  .be-range{font-size:17px; font-weight:700; color:var(--wine-deep); text-align:center;}
+  .be-range small{display:block; font-size:12px; font-weight:400; color:#6B6259;}
+  .be-times{display:flex; gap:10px;}
+  .be-time{flex:1 1 0; min-width:0;}
+  .be-time .add-modal-label{display:block; margin:0 0 4px;}
+  .be-time input{width:100%; text-align:center; padding:9px 4px; direction:ltr; box-sizing:border-box;}
+  .be-step{display:flex; gap:6px; margin-top:6px;}
+  .be-step button{flex:1 1 0; border:1.5px solid #E4DACB; background:#FBF7F1; border-radius:10px;
+    font-family:'Heebo'; font-size:12.5px; padding:6px 4px; cursor:pointer; color:var(--ink); white-space:nowrap;}
+  .be-step button:hover{background:#F3ECE0;}
+  .be-hint{font-size:12px; color:#6B6259; text-align:center;}
+  .be-tl-wrap{height:300px; overflow-y:auto; border:1.5px solid #E4DACB; border-radius:12px; background:#FFFDF9; position:relative;}
+  .be-tl{position:relative; margin-inline-start:46px; margin-inline-end:8px;}
+  .be-hr{position:absolute; inset-inline:0; border-top:1px solid #EFE7DA;}
+  .be-hr span{position:absolute; right:-44px; top:-8px; font-size:11px; color:#8A8077; width:38px; text-align:center; direction:ltr;}
+  .be-appt{position:absolute; inset-inline:4px; background:#EDE7DF; border-inline-start:4px solid #B9AEA2; border-radius:6px;
+    font-size:11px; color:#4A423B; padding:1px 6px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; pointer-events:none;}
+  .be-appt.be-other-block{background:repeating-linear-gradient(45deg,#F1EAE2,#F1EAE2 5px,#E7DED3 5px,#E7DED3 10px); border-inline-start-color:#C9BDB0;}
+  .be-appt.be-clash{background:#FBE3E3; border-inline-start-color:#C0392B;}
+  .be-block{position:absolute; inset-inline:14px; background:var(--wine); color:#fff; border-radius:8px; opacity:0.92;
+    box-shadow:0 4px 14px rgba(20,16,20,0.22); cursor:grab; touch-action:none; display:flex; align-items:center; justify-content:center;
+    font-size:12.5px; font-weight:600; user-select:none; -webkit-user-select:none; z-index:2;}
+  .be-block:active{cursor:grabbing;}
+  .be-handle{position:absolute; inset-inline:0; height:22px; display:flex; align-items:center; justify-content:center;
+    cursor:ns-resize; touch-action:none; z-index:3; outline:none;}
+  .be-handle::before{content:''; width:44px; height:6px; border-radius:3px; background:#fff; box-shadow:0 0 0 2px var(--wine-deep);}
+  .be-handle:focus-visible::before{box-shadow:0 0 0 3px #1a5fb4;}
+  .be-handle.top{top:-11px;}
+  .be-handle.bottom{bottom:-11px;}
+  .be-warn{display:none; background:#FFF4E5; border:1px solid #F0C27A; border-radius:10px; padding:8px 10px; font-size:12.5px; line-height:1.6;}
+  .be-remove{background:none; border:none; color:#B0302A; font-family:'Heebo'; font-size:14px; font-weight:600;
+    text-decoration:underline; cursor:pointer; padding:6px; align-self:center;}
   .client-add-row .cta{flex:0 0 auto; padding:11px 24px;}
   .dmy-date-picker{
     display:flex;
@@ -4957,7 +4993,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-12 · 210';
+        window.__APP_BUILD = '2026-11-15 · 211';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5831,6 +5867,52 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   </div>
 </div>
 
+<!-- 211: לחיצה על חסימת זמן אישי ביומן — חלון לקיצור/הארכה/הסרה -->
+<div id="blockEditOverlay" class="myday-overlay add-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="beTitle" onclick="if(event.target===this)closeBlockEdit()">
+  <div class="myday-sheet add-modal be-sheet">
+    <div class="myday-header">
+      <h3 id="beTitle">🚫 זמן חסום</h3>
+      <div class="myday-actions">
+        <button type="button" onclick="closeBlockEdit()">✕ סגירה</button>
+      </div>
+    </div>
+    <div class="add-modal-body">
+      <div class="be-info" id="beInfo"></div>
+      <div class="be-range" id="beRange" aria-live="polite"></div>
+      <div class="be-hint">אפשר לקצר או להאריך: גוררים את הפסים הלבנים בשעון, או משנים את השעות כאן.</div>
+      <div class="be-times">
+        <div class="be-time">
+          <label class="add-modal-label" for="beStart">שעת התחלה</label>
+          <input type="time" id="beStart" class="field" step="300" onchange="beOnTimeInput('start')">
+          <div class="be-step">
+            <button type="button" onclick="beNudge('start',-15)" aria-label="להקדים את ההתחלה ברבע שעה">15 דק' קודם</button>
+            <button type="button" onclick="beNudge('start',15)" aria-label="לאחר את ההתחלה ברבע שעה">15 דק' אחרי</button>
+          </div>
+        </div>
+        <div class="be-time">
+          <label class="add-modal-label" for="beEnd">שעת סיום</label>
+          <input type="time" id="beEnd" class="field" step="300" onchange="beOnTimeInput('end')">
+          <div class="be-step">
+            <button type="button" onclick="beNudge('end',-15)" aria-label="להקדים את הסיום ברבע שעה">15 דק' קודם</button>
+            <button type="button" onclick="beNudge('end',15)" aria-label="לאחר את הסיום ברבע שעה">15 דק' אחרי</button>
+          </div>
+        </div>
+      </div>
+      <div class="be-tl-wrap" id="beTlWrap"><div class="be-tl" id="beTl"></div></div>
+      <div class="be-warn" id="beWarn" role="status"></div>
+      <div>
+        <label class="add-modal-label" for="beReason">סיבה (אופציונלי)</label>
+        <input type="text" id="beReason" class="field" placeholder="למשל: פגישה אישית, הפסקה" style="margin-top:4px;">
+      </div>
+      <div class="add-modal-error" id="beError" role="alert"></div>
+      <div class="add-modal-actions">
+        <button type="button" class="cta" id="beSaveBtn" onclick="saveBlockEdit()">שמירה</button>
+        <button type="button" class="cta ghost" onclick="closeBlockEdit()">ביטול</button>
+      </div>
+      <button type="button" class="be-remove" onclick="removeBlockEdit()">🗑 להסיר את החסימה לגמרי</button>
+    </div>
+  </div>
+</div>
 
 <div id="openHoursOverlay" class="appt-detail-overlay">
   <div class="appt-detail-topbar">
@@ -7542,6 +7624,216 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
     if (typeof saveState === 'function') saveState();
   }
+  /* 211: "חסימת זמן אישי שלוחצים עליה — רק שאלה אם להסיר. לפעמים אני רוצה לקצר או
+   * להאריך" (איילת, 15.11). חלון מעל היומן: שעון של אותו יום עם התורים, גוררים את
+   * הקצוות (או את כל החסימה), או משנים שעות. שמירה משנה רק time/duration/reason של
+   * אותה חסימה — אותו מבנה שהשרת כבר קורא. */
+  const BE_PX_PER_HOUR = 44, BE_SNAP = 5;
+  let beState = null; // { id, ref, date, staff, origStart, origEnd, start, end }
+  function beFindBlock(st){
+    if (!st) return null;
+    if (st.id){ const byId = personalBlocks.find(x => x && x.id === st.id); if (byId) return byId; }
+    if (personalBlocks.indexOf(st.ref) !== -1) return st.ref;
+    return personalBlocks.find(x => x && x.date === st.date && x.time === st.ref.time && String(x.staff) === String(st.staff)) || null;
+  }
+  function beFmt(m){ m = Math.max(0, Math.min(24 * 60 - 1, Math.round(m))); return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+  // טווח שעות בתוך טקסט עברי: בלי הבידוד הוא מוצג הפוך (14:30–12:00)
+  function beRng(a, b){ return '\u2066' + beFmt(a) + '–' + beFmt(b) + '\u2069'; }
+  function beDurText(mins){
+    const h = Math.floor(mins / 60), m = mins % 60;
+    if (!h) return m + ' דק\'';
+    const hs = h === 1 ? 'שעה' : h === 2 ? 'שעתיים' : h + ' שעות';
+    if (!m) return hs;
+    if (m === 30) return hs + ' וחצי';
+    if (m === 15) return hs + ' ורבע';
+    return hs + ' ו-' + m + ' דק\'';
+  }
+  function beBounds(){
+    const lo = Math.min(calStartHour * 60, beState ? beState.origStart : 1e9);
+    return [Math.floor(lo / 60) * 60, 24 * 60];
+  }
+  function beY(min){ return ((min - beBounds()[0]) / 60) * BE_PX_PER_HOUR; }
+  function beRelevantAppts(){
+    const st = beState;
+    return apptsForCalDate(st.date).filter(a => a && a.time && a.status !== 'cancelled' && a.status !== 'canceled'
+      && (st.staff === 'all' || a.staff === 'all' || a.staff === st.staff));
+  }
+  function openBlockEdit(b){
+    if (!b) return;
+    const s = timeToMinutes(String(b.time).slice(0, 5));
+    const e = s + (b.duration || 15);
+    beState = { id: b.id || null, ref: b, date: b.date, staff: b.staff, origStart: s, origEnd: e, start: s, end: e };
+    const staffLabel = b.staff === 'all' ? 'כל הצוות' : ((staff[b.staff] && staff[b.staff].name) || '');
+    let dayName = '';
+    try { dayName = days[new Date(b.date + 'T12:00:00').getDay()].name + ', '; } catch (err) {}
+    document.getElementById('beInfo').innerHTML = `<b>${__hkE(dayName + formatDateDMY(b.date))}</b>${staffLabel ? ' · ' + __hkE(staffLabel) : ''}`;
+    document.getElementById('beReason').value = b.reason || '';
+    document.getElementById('beError').style.display = 'none';
+    beBuildTimeline();
+    beRefresh();
+    document.getElementById('blockEditOverlay').classList.add('show');
+    const wrap = document.getElementById('beTlWrap');
+    wrap.scrollTop = Math.max(0, beY(s) - 70);
+    if (!window.__beEscWired){
+      window.__beEscWired = true;
+      document.addEventListener('keydown', ev => {
+        if (ev.key === 'Escape' && document.getElementById('blockEditOverlay')?.classList.contains('show')) closeBlockEdit();
+      });
+    }
+  }
+  function closeBlockEdit(){
+    document.getElementById('blockEditOverlay').classList.remove('show');
+    beState = null;
+  }
+  function beBuildTimeline(){
+    const tl = document.getElementById('beTl');
+    const [lo, hi] = beBounds();
+    tl.style.height = ((hi - lo) / 60) * BE_PX_PER_HOUR + 'px';
+    let html = '';
+    for (let m = lo; m <= hi; m += 60){
+      html += `<div class="be-hr" style="top:${beY(m)}px"><span>${m >= 24 * 60 ? '24:00' : beFmt(m)}</span></div>`;
+    }
+    beRelevantAppts().forEach(a => {
+      const as = timeToMinutes(a.time), ae = as + (a.dur || 30);
+      html += `<div class="be-appt" data-s="${as}" data-e="${ae}" style="top:${beY(as)}px;height:${Math.max(14, beY(ae) - beY(as) - 1)}px">${__hkE(String(a.time).slice(0, 5) + ' ' + (a.client || '') + (a.service ? ' · ' + a.service : ''))}</div>`;
+    });
+    personalBlocks.filter(x => x && x.date === beState.date && x !== beFindBlock(beState)
+        && (beState.staff === 'all' || x.staff === 'all' || x.staff === beState.staff)).forEach(x => {
+      const xs = timeToMinutes(String(x.time).slice(0, 5)), xe = xs + (x.duration || 15);
+      html += `<div class="be-appt be-other-block" style="top:${beY(xs)}px;height:${Math.max(14, beY(xe) - beY(xs) - 1)}px">${__hkE('חסימה אחרת' + (x.reason ? ' · ' + x.reason : ''))}</div>`;
+    });
+    html += `<div class="be-block" id="beBlock" aria-hidden="false"><span id="beBlockLbl"></span>
+      <div class="be-handle top" id="beHTop" tabindex="0" role="slider" aria-label="שעת התחלה — חצים למעלה/למטה"></div>
+      <div class="be-handle bottom" id="beHBot" tabindex="0" role="slider" aria-label="שעת סיום — חצים למעלה/למטה"></div></div>`;
+    tl.innerHTML = html;
+    beWireDrag(document.getElementById('beHTop'), 'start');
+    beWireDrag(document.getElementById('beHBot'), 'end');
+    beWireDrag(document.getElementById('beBlock'), 'move');
+  }
+  function beSet(start, end){
+    const [lo] = beBounds();
+    const maxEnd = 24 * 60 - 1;
+    start = Math.max(lo, Math.min(start, maxEnd - BE_SNAP));
+    end = Math.max(start + BE_SNAP, Math.min(end, maxEnd));
+    beState.start = start; beState.end = end;
+    beRefresh();
+  }
+  function beRefresh(){
+    const st = beState; if (!st) return;
+    const blk = document.getElementById('beBlock');
+    if (blk){
+      blk.style.top = beY(st.start) + 'px';
+      blk.style.height = Math.max(18, beY(st.end) - beY(st.start)) + 'px';
+      document.getElementById('beBlockLbl').textContent = beRng(st.start, st.end);
+      const ht = document.getElementById('beHTop'), hb = document.getElementById('beHBot');
+      ht.setAttribute('aria-valuetext', beFmt(st.start)); hb.setAttribute('aria-valuetext', beFmt(st.end));
+    }
+    const si = document.getElementById('beStart'), ei = document.getElementById('beEnd');
+    if (document.activeElement !== si) si.value = beFmt(st.start);
+    if (document.activeElement !== ei) ei.value = beFmt(st.end);
+    const changed = st.start !== st.origStart || st.end !== st.origEnd;
+    const diff = (st.end - st.start) - (st.origEnd - st.origStart);
+    document.getElementById('beRange').innerHTML = `חסום ${beRng(st.start, st.end)} (${beDurText(st.end - st.start)})`
+      + (changed ? `<small>היה: ${beRng(st.origStart, st.origEnd)}${diff ? (diff > 0 ? ' · הארכה ב' : ' · קיצור ב') + (/^\d/.test(beDurText(Math.abs(diff))) ? '-' : '') + beDurText(Math.abs(diff)) : ''}</small>` : '');
+    document.getElementById('beSaveBtn').textContent = changed ? 'שמירת השינוי' : 'שמירה';
+    // תורים שנופלים בתוך הטווח החדש — רק אזהרה, אפשר לשמור בכל זאת
+    const clash = [];
+    document.querySelectorAll('#beTl .be-appt[data-s]').forEach(el => {
+      const as = +el.dataset.s, ae = +el.dataset.e;
+      const hit = st.start < ae && st.end > as;
+      el.classList.toggle('be-clash', hit);
+      if (hit) clash.push(el.textContent);
+    });
+    const w = document.getElementById('beWarn');
+    if (clash.length){
+      w.style.display = 'block';
+      w.innerHTML = '⚠️ בתוך הזמן החסום יש ' + (clash.length === 1 ? 'תור' : clash.length + ' תורים') + ': ' + clash.map(t => __hkE(t)).join('; ') + '. התור לא נמחק — אפשר לשמור בכל זאת.';
+    } else { w.style.display = 'none'; w.innerHTML = ''; }
+  }
+  function beWireDrag(el, mode){
+    let startY = 0, s0 = 0, e0 = 0, dragging = false;
+    el.addEventListener('pointerdown', ev => {
+      if (!beState) return;
+      ev.preventDefault(); ev.stopPropagation();
+      dragging = true; startY = ev.clientY; s0 = beState.start; e0 = beState.end;
+      try { el.setPointerCapture(ev.pointerId); } catch (err) {}
+    });
+    el.addEventListener('pointermove', ev => {
+      if (!dragging || !beState) return;
+      const dMin = Math.round(((ev.clientY - startY) / BE_PX_PER_HOUR) * 60 / BE_SNAP) * BE_SNAP;
+      if (mode === 'start') beSet(Math.min(s0 + dMin, beState.end - BE_SNAP), beState.end);
+      else if (mode === 'end') beSet(beState.start, Math.max(e0 + dMin, beState.start + BE_SNAP));
+      else {
+        const len = e0 - s0, [lo] = beBounds();
+        let ns = Math.max(lo, Math.min(s0 + dMin, 24 * 60 - 1 - len));
+        beSet(ns, ns + len);
+      }
+    });
+    const stop = ev => { dragging = false; try { el.releasePointerCapture(ev.pointerId); } catch (err) {} };
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointercancel', stop);
+    if (mode !== 'move'){
+      el.addEventListener('keydown', ev => {
+        if (!beState) return;
+        const d = ev.key === 'ArrowUp' ? -BE_SNAP : ev.key === 'ArrowDown' ? BE_SNAP : 0;
+        if (!d) return;
+        ev.preventDefault();
+        if (mode === 'start') beSet(Math.min(beState.start + d, beState.end - BE_SNAP), beState.end);
+        else beSet(beState.start, Math.max(beState.end + d, beState.start + BE_SNAP));
+      });
+    }
+  }
+  function beNudge(which, d){
+    if (!beState) return;
+    if (which === 'start') beSet(Math.min(beState.start + d, beState.end - BE_SNAP), beState.end);
+    else beSet(beState.start, Math.max(beState.end + d, beState.start + BE_SNAP));
+  }
+  function beOnTimeInput(which){
+    if (!beState) return;
+    const v = document.getElementById(which === 'start' ? 'beStart' : 'beEnd').value;
+    if (!/^\d{1,2}:\d{2}/.test(v || '')) return;
+    const m = timeToMinutes(v.slice(0, 5));
+    const err = document.getElementById('beError');
+    if (which === 'start' && m >= beState.end){ err.textContent = 'שעת ההתחלה חייבת להיות לפני שעת הסיום.'; err.style.display = 'block'; return; }
+    if (which === 'end' && m <= beState.start){ err.textContent = 'שעת הסיום חייבת להיות אחרי שעת ההתחלה.'; err.style.display = 'block'; return; }
+    err.style.display = 'none';
+    if (which === 'start') beSet(m, beState.end); else beSet(beState.start, m);
+  }
+  async function saveBlockEdit(){
+    const st = beState; if (!st) return;
+    const b = beFindBlock(st);
+    const err = document.getElementById('beError');
+    if (!b){ err.textContent = 'החסימה הזו כבר לא קיימת (אולי הוסרה ממכשיר אחר). היומן יתעדכן.'; err.style.display = 'block'; renderWeekCal(); return; }
+    if (st.end <= st.start){ err.textContent = 'שעת הסיום חייבת להיות אחרי שעת ההתחלה.'; err.style.display = 'block'; return; }
+    const reason = document.getElementById('beReason').value.trim();
+    const changed = st.start !== st.origStart || st.end !== st.origEnd || reason !== (b.reason || '');
+    closeBlockEdit();
+    if (!changed) return;
+    const shorter = st.start > st.origStart || st.end < st.origEnd;
+    b.time = beFmt(st.start);
+    b.duration = st.end - st.start;
+    b.reason = reason;
+    renderWeekCal();
+    if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+    if (typeof saveState === 'function') await saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ הזמן החסום עודכן: ' + beRng(st.start, st.end));
+    // התפנה זמן — בודקים בקשות גמישות שמחכות, כמו בהסרה
+    if (shorter && typeof recheckAllPendingFlexibleRequests === 'function') await recheckAllPendingFlexibleRequests();
+  }
+  async function removeBlockEdit(){
+    const st = beState; if (!st) return;
+    if (!confirm(`להסיר את חסימת הזמן ${beRng(st.origStart, st.origEnd)} בתאריך ${formatDateDMY(st.date)}?`)) return;
+    const b = beFindBlock(st);
+    closeBlockEdit();
+    const idx = b ? personalBlocks.indexOf(b) : -1;
+    if (idx !== -1) personalBlocks.splice(idx, 1);
+    renderWeekCal();
+    if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+    if (typeof saveState === 'function') await saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ חסימת הזמן הוסרה בהצלחה');
+    if (typeof recheckAllPendingFlexibleRequests === 'function') await recheckAllPendingFlexibleRequests();
+  }
+  window.openBlockEdit = openBlockEdit;
   let openHoursCurrent = null; // { date:'YYYY-MM-DD' } כל עוד המסך פתוח
   function renderOhStaffOptions(){
     const sel = document.getElementById('ohStaff');
@@ -15816,17 +16108,11 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
           block.style.borderInlineStart = `5px solid ${staffStripeColor(b.staff)}`;
         }
         const staffLabel = b.staff === 'all' ? 'כל הצוות' : ((staff[b.staff] && staff[b.staff].name) || '');
-        block.title = `חסום${b.reason ? ' — ' + b.reason : ''} · ${staffLabel} · ${b.time} (${b.duration} דק') — לחיצה מסירה את החסימה`;
+        block.title = `חסום${b.reason ? ' — ' + b.reason : ''} · ${staffLabel} · ${b.time} (${b.duration} דק') — לחיצה לקיצור, הארכה או הסרה`;
         block.innerHTML = `<b>🚫 ${b.time.slice(0,5)} חסום${b.reason ? ' · ' + b.reason : ''}</b>`;
-        block.onclick = async (e) => {
+        block.onclick = (e) => {
           e.stopPropagation();
-          if (!confirm(`להסיר את חסימת הזמן בשעה ${b.time} בתאריך ${formatDateDMY(b.date)}?`)) return;
-          const idx = personalBlocks.indexOf(b);
-          if (idx !== -1) personalBlocks.splice(idx, 1);
-          renderWeekCal();
-          if (typeof saveState === 'function') await saveState();
-          if (typeof showAdminToast === 'function') showAdminToast('✓ חסימת הזמן הוסרה בהצלחה');
-          if (typeof recheckAllPendingFlexibleRequests === 'function') await recheckAllPendingFlexibleRequests();
+          openBlockEdit(b);   // 211: חלון "זמן חסום" — קיצור, הארכה או הסרה
         };
         body.appendChild(block);
       });
