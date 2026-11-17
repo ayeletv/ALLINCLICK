@@ -2285,6 +2285,9 @@ window.__hkE = function(v){ return String(v == null ? '' : v).replace(/[&<>"']/g
     transition:all 0.2s ease;
   }
   .svc-edit:hover{border-color:var(--gold-soft); color:var(--panel-gold);}
+  /* 213: עריכת שירות */
+  .svc-manage-row .svc-edit{margin-inline-end:6px;}
+  .svc-edit-note{font-size:12.5px; color:var(--panel-text-dim); line-height:1.5; margin:6px 2px 0;}
   .view-tag{font-size:12px; background:rgba(var(--panel-line-rgb),0.08); padding:4px 8px; border-radius:8px; display:inline-block;}
   .svc-add-row{
     display:flex;
@@ -4993,7 +4996,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-16 · 212';
+        window.__APP_BUILD = '2026-11-17 · 213';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5330,7 +5333,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
 <div id="addServiceOverlay" class="myday-overlay add-modal-overlay">
   <div class="myday-sheet add-modal">
     <div class="myday-header">
-      <h3>הוספת שירות</h3>
+      <h3 id="addServiceTitle">הוספת שירות</h3>
       <div class="myday-actions">
         <button type="button" onclick="closeAddServiceModal()">✕ סגירה</button>
       </div>
@@ -5348,6 +5351,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         <input type="number" id="newSvcPrice" class="field" placeholder="מחיר בש&quot;ח">
         <input type="number" id="newSvcDuration" class="field" placeholder="משך בדקות">
       </div>
+      <div id="editSvcNote" class="svc-edit-note" style="display:none;">התורים שכבר נקבעו נשארים במחיר ובמשך שנקבעו. השינוי חל על תורים חדשים.</div>
       <div id="newSvcError" class="add-modal-error"></div>
       <div class="add-modal-actions">
         <button class="cta" onclick="addService()">שמירה</button>
@@ -6382,7 +6386,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       }
     });
     return Object.entries(counts)
-      .map(([name, count]) => ({ name, count, svcIndex: services.findIndex(s => s.name === name) }))
+      .map(([name, count]) => ({ name, count, svcIndex: svcIndexByName(name) }))
       .filter(o => o.svcIndex !== -1)
       .sort((a, b) => b.count - a.count)
       .slice(0, limit || 3);
@@ -7025,7 +7029,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       if (count > bestCount){ bestCount = count; bestService = name; }
     });
     if (!bestService) return null;
-    const idx = services.findIndex(s => s.name === bestService);
+    const idx = svcIndexByName(bestService);
     return idx !== -1 ? idx : null;
   }
   function openRescheduleModal(appt){
@@ -7055,7 +7059,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       : mostFrequentServiceIndexFor(opts.clientName);
     const hasSuggestion = suggestedSvcIdx !== null && suggestedSvcIdx !== undefined && !!services[suggestedSvcIdx];
     const presetServiceIdx = (opts.services || [])
-      .map(n => services.findIndex(s => s && s.name === n))
+      .map(n => svcIndexByName(n))
       .filter(i => i !== -1)
       .map(i => ({ svcIndex: i }));
     mbSelectedServices = presetServiceIdx.length
@@ -8624,7 +8628,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     const names = Array.isArray(appt.services) && appt.services.length
       ? appt.services.map(s => s && s.name).filter(Boolean)
       : String(appt.service || '').split('+').map(s => s.trim()).filter(Boolean);
-    return names.map(n => ({ name: n, svc: services.find(s => s && s.name === n) || null }));
+    return names.map(n => ({ name: n, svc: svcByName(n) || null }));
   }
   function describeApptServices(appt){
     const objs = apptServiceObjects(appt);
@@ -8636,7 +8640,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     if (!names.length) return '';
     const cats = [];
     names.forEach(n => {
-      const svc = services.find(x => x && x.name === n);
+      const svc = svcByName(n);
       if (svc && svc.category && cats.indexOf(svc.category) === -1) cats.push(svc.category);
     });
     return names.join(' + ') + (cats.length ? ' (' + cats.join(' + ') + ')' : '');
@@ -8667,12 +8671,23 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       time: appt.time || '',
       forcedTime: false,
       note: appt.note || '',
-      services: apptServiceObjects(appt).map(o => ({
-        name: o.name,
-        duration: (o.svc && o.svc.duration) || 0,
-        price: (o.svc && o.svc.price) || 0,
-        category: (o.svc && o.svc.category) || '',
-      })),
+      // 213: המחיר והמשך כפי שנשמרו על התור — ולא מהמחירון הנוכחי, כדי ששינוי
+      // מחיר של שירות לא ישנה תור שכבר נקבע כשפותחים אותו לעריכה.
+      services: (function(){
+        const objs = apptServiceObjects(appt);
+        const stored = Array.isArray(appt.services) ? appt.services : [];
+        return objs.map(o => {
+          const st = stored.find(x => x && x.name === o.name) || null;
+          let price = (st && typeof st.price === 'number') ? st.price : ((o.svc && o.svc.price) || 0);
+          if (!st && objs.length === 1 && typeof appt.price === 'number') price = appt.price;
+          return {
+            name: o.name,
+            duration: (st && Number(st.duration)) || (o.svc && o.svc.duration) || 0,
+            price,
+            category: (st && st.category) || (o.svc && o.svc.category) || '',
+          };
+        });
+      })(),
     };
     const durEl = document.getElementById('apptEditDur');
     if (durEl) durEl.value = apptEditDraft.dur;
@@ -10432,7 +10447,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   function getApptPrice(a){
     if (typeof a.price === 'number') return a.price;
     if (Array.isArray(a.services) && a.services.length) return a.services.reduce((sum, s) => sum + (s.price || 0), 0);
-    const svcMatch = services.find(s => s.name === a.service);
+    const svcMatch = svcByName(a.service);
     return svcMatch ? (svcMatch.price || 0) : 0;
   }
   function apptCountsAsIncome(a){ return !a || a.status !== 'no-show'; }
@@ -14058,6 +14073,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   }
   function closeAddStaffModal(){ closeAddModal('addStaffOverlay'); }
   function openAddServiceModal(){
+    editingSvcIndex = -1;   // 213
+    setSvcModalMode(false);
     newSvcPhoto = null;
     const prev = document.getElementById('newSvcPhotoPreview');
     const ph = document.getElementById('newSvcPhotoPlaceholder');
@@ -14067,7 +14084,63 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     if (typeof updateSvcAddRowForCategory === 'function') updateSvcAddRowForCategory(svcManageCurrentCategory || '');
     openAddModal('addServiceOverlay', ['newSvcName', 'newSvcPrice', 'newSvcDuration'], 'newSvcName', 'newSvcError');
   }
-  function closeAddServiceModal(){ closeAddModal('addServiceOverlay'); }
+  function closeAddServiceModal(){
+    closeAddModal('addServiceOverlay');
+    // 213: יציאה מעריכה — החלון חוזר להיות "הוספת שירות"
+    if (editingSvcIndex !== -1){
+      editingSvcIndex = -1;
+      setSvcModalMode(false);
+      newSvcPhoto = null;
+      if (typeof updateSvcAddRowForCategory === 'function') updateSvcAddRowForCategory(svcManageCurrentCategory || '');
+    }
+  }
+  /* 213: עריכת שירות קיים (מחיר, שם, משך, קטגוריה, תמונה) — עד עכשיו היה רק
+   * זמין/כבוי ומחיקה, ולשנות מחיר הצריך למחוק וליצור מחדש (איילת, 17.11).
+   * אותו חלון של "הוספת שירות", במצב עריכה. תורים שכבר נקבעו לא משתנים:
+   * המחיר והמשך שמורים על התור עצמו, ושם שהשתנה נשמר ב-formerNames כדי
+   * שתורים ורשימת המתנה בשם הישן ימשיכו למצוא את הטיפול (צבע, קטגוריה). */
+  let editingSvcIndex = -1;
+  function setSvcModalMode(editing){
+    const t = document.getElementById('addServiceTitle');
+    if (t) t.textContent = editing ? 'עריכת שירות' : 'הוספת שירות';
+    const note = document.getElementById('editSvcNote');
+    if (note) note.style.display = editing ? 'block' : 'none';
+  }
+  function openEditServiceModal(i){
+    const svc = services[i];
+    if (!svc) return;
+    if (typeof renderCategoryOptions === 'function') renderCategoryOptions();
+    openAddModal('addServiceOverlay', ['newSvcName', 'newSvcPrice', 'newSvcDuration'], 'newSvcPrice', 'newSvcError');
+    editingSvcIndex = i;
+    setSvcModalMode(true);
+    // בעריכה הקטגוריה פתוחה לבחירה — כך אפשר גם להעביר שירות לקטגוריה אחרת
+    if (typeof updateSvcAddRowForCategory === 'function') updateSvcAddRowForCategory(null);
+    const catEl = document.getElementById('newSvcCategory');
+    if (catEl) catEl.value = svc.category || '';
+    document.getElementById('newSvcName').value = svc.name || '';
+    document.getElementById('newSvcPrice').value = (svc.price != null ? svc.price : '');
+    document.getElementById('newSvcDuration').value = (svc.duration != null ? svc.duration : '');
+    newSvcPhoto = svc.photo || null;
+    const prev = document.getElementById('newSvcPhotoPreview');
+    const ph = document.getElementById('newSvcPhotoPlaceholder');
+    if (svc.photo){
+      if (prev){ prev.src = svc.photo; prev.style.display = 'block'; }
+      if (ph) ph.style.display = 'none';
+    } else {
+      if (prev){ prev.style.display = 'none'; prev.src = ''; }
+      if (ph) ph.style.display = 'block';
+    }
+  }
+  // 213: חיפוש טיפול לפי שם — גם לפי שם קודם (שירות ששמו שונה בעריכה)
+  function svcIndexByName(n){
+    if (n == null) return -1;
+    for (let k = 0; k < services.length; k++){ if (services[k] && services[k].name === n) return k; }
+    return services.findIndex(x => x && Array.isArray(x.formerNames) && x.formerNames.indexOf(n) !== -1);
+  }
+  function svcByName(n){
+    const i = svcIndexByName(n);
+    return i === -1 ? undefined : services[i];
+  }
   function openAddCategoryModal(){
     openAddModal('addCategoryOverlay', ['newCategoryName', 'newCategoryMessage'], 'newCategoryName', 'newCategoryError');
   }
@@ -17366,7 +17439,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     if (parts.length !== 3 || parts.some(n => isNaN(n))) return null;
     const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
     const dow = dateObj.getDay();
-    const svc = services.find(s => s.name === w.service);
+    const svc = svcByName(w.service);
     const duration = svc ? (svc.duration || 30) : 30;
     const startMin = timeToMinutes(w.requestedTime || '00:00');
     const endMin = startMin + duration;
@@ -17405,7 +17478,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       return null;
     }
     const dateObj = match.dateObj;
-    const svc = services.find(s => s.name === w.service);
+    const svc = svcByName(w.service);
     const duration = svc ? (svc.duration || 30) : 30;
     const startMin = timeToMinutes(match.time);
     let committed = null;
@@ -17522,7 +17595,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     // הבקשות הגמישות; פחות מ-3 שעות — לכולן יחד; מי שלא ענתה לא מקבלת את אותה
     // שעה שוב). מעבר לזה — קביעה ישירה. עד 120: תמיד הצעה, תמיד לאחת, ואחרי
     // שפגה — שוב לאותה אחת, כך שהבאה בתור לא קיבלה אף פעם.
-    const dur = Number((services.find(s => s.name === w.service) || {}).duration) || 30;
+    const dur = Number((svcByName(w.service) || {}).duration) || 30;
     const now = new Date();
     const away = offerMinutesUntil(match.date, match.time, now);
     if (away !== null){   // 146: בכל מרחק
@@ -17644,7 +17717,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         const block = document.createElement('div');
         block.className = 'sr-block ' + (isFlexible ? 'sr-block-flexible' : 'sr-block-manual');
         const srCat = ((r.services || [])[0] || {}).category
-          || (services.find(x => x && x.name === ((r.services || [])[0] || {}).name) || {}).category || '';
+          || (svcByName(((r.services || [])[0] || {}).name) || {}).category || '';
         const srColor = srCat && typeof categoryBaseColor === 'function' ? categoryBaseColor(srCat) : null;
         if (srColor){
           block.style.background = srColor;
@@ -17676,7 +17749,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         const block = document.createElement('div');
         block.className = 'sr-block sr-block-waitlist';
         const wlSvc = w.service || '';
-        const wlCat = (services.find(x => x && x.name === wlSvc) || {}).category || '';
+        const wlCat = (svcByName(wlSvc) || {}).category || '';
         block.appendChild((function(){
           const main = document.createElement('span');
           main.className = 'sr-block-main';
@@ -17814,11 +17887,11 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         (w.phone ? srDetailRow('טלפון', `<a href="tel:${w.phone.replace(/[^0-9+]/g,'')}">${__hkE(w.phone)}</a>`) : '') +
         (w.email ? srDetailRow('אימייל', __hkE(w.email)) : '') +
         srDetailRow('שירות', __hkE(w.service || '—')) +
-        (function(){ const c = (services.find(x => x && x.name === w.service) || {}).category; return c ? srDetailRow('קטגוריה', c) : ''; })() +
+        (function(){ const c = (svcByName(w.service) || {}).category; return c ? srDetailRow('קטגוריה', c) : ''; })() +
         (w.staffName ? srDetailRow('עובדת', w.staffName) : '') +
         srDetailRow('תאריך מבוקש', dateLabel) +
         srDetailRow('שעה מבוקשת', w.requestedTime || '—') +
-        srDetailRow('משך התור', `${Number(w.duration || (services.find(s => s && s.name === w.service) || {}).duration) || 0} דקות`) +
+        srDetailRow('משך התור', `${Number(w.duration || (svcByName(w.service) || {}).duration) || 0} דקות`) +
         srDetailRow('מועד הוספה', formatRecordCreatedAt(w.createdAt)) +
         srDetailRow('נוסף על ידי', recordAddedByLabel(w, 'waitlist') || '—') +
         srDetailRow('סטטוס', isMatchedW ? '✓ נמצא תור' : '⏳ ממתין') +
@@ -17847,7 +17920,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         bookBtn.className = 'cta';
         bookBtn.textContent = '📅 קביעת תור';
         bookBtn.onclick = () => {
-          const svcIdxW = services.findIndex(s => s.name === w.service);
+          const svcIdxW = svcIndexByName(w.service);
           const staffIdxW = w.staffName ? staff.findIndex(s => s.name === w.staffName) : -1;
           const wDateParts = (w.date || '').split('-').map(Number);
           const wDateObj = (wDateParts.length === 3 && wDateParts.every(n => !isNaN(n))) ? new Date(wDateParts[0], wDateParts[1] - 1, wDateParts[2]) : undefined;
@@ -17884,7 +17957,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       if (svcNames) html += srDetailRow('שירותים', svcNames);
       const reqCats = [];
       (r.services || []).forEach(x => {
-        const svc = services.find(y => y && y.name === (x && x.name));
+        const svc = svcByName((x && x.name));
         const c = (svc && svc.category) || (x && x.category);
         if (c && reqCats.indexOf(c) === -1) reqCats.push(c);
       });
@@ -17895,7 +17968,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       const requestedDuration = (r.services || []).reduce((total, item) => {
         const savedDuration = Number(item && item.duration);
         if (Number.isFinite(savedDuration) && savedDuration > 0) return total + savedDuration;
-        const catalogService = services.find(s => s && s.name === (item && item.name));
+        const catalogService = svcByName((item && item.name));
         const catalogDuration = Number(catalogService && catalogService.duration);
         return total + (Number.isFinite(catalogDuration) && catalogDuration > 0 ? catalogDuration : 0);
       }, 0);
@@ -18535,7 +18608,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     return `rgb(${r}, ${g}, ${b})`;
   }
   function categoryOfServiceName(serviceName){
-    const s = services.find(x => x && x.name === serviceName);
+    const s = svcByName(serviceName);
     return (s && s.category) || '';
   }
   function categoryOfAppointment(a){
@@ -18870,7 +18943,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       const photoHtml = s.photo ? `<img alt="" src="${s.photo}" style="width:28px; height:28px; border-radius:6px; object-fit:cover; margin-inline-end:8px; vertical-align:middle;">` : '';
       const on = isServiceAvailable(s);
       if (!on) row.classList.add('svc-manage-row-off');
-      row.innerHTML = `<span>${photoHtml}${s.name}${on ? '' : ' <span class="svc-off-tag">לא זמין</span>'}</span><span><span class="price">${s.price} ש"ח · ${s.duration} דק'</span><button type="button" class="svc-availability${on ? '' : ' off'}" onclick="setServiceAvailability(${i}, ${on ? 'false' : 'true'})" title="${on ? 'כיבוי — הטיפול לא יוצג ללקוחות' : 'הדלקה — הטיפול יוצג שוב ללקוחות'}" aria-label="${on ? 'כיבוי הטיפול' : 'הדלקת הטיפול'}">${on ? 'זמין' : 'כבוי'}</button><button class="svc-del" onclick="removeService(${i})" aria-label="מחיקת שירות">✕</button></span>`;
+      row.innerHTML = `<span>${photoHtml}${s.name}${on ? '' : ' <span class="svc-off-tag">לא זמין</span>'}</span><span><span class="price">${s.price} ש"ח · ${s.duration} דק'</span><button type="button" class="svc-availability${on ? '' : ' off'}" onclick="setServiceAvailability(${i}, ${on ? 'false' : 'true'})" title="${on ? 'כיבוי — הטיפול לא יוצג ללקוחות' : 'הדלקה — הטיפול יוצג שוב ללקוחות'}" aria-label="${on ? 'כיבוי הטיפול' : 'הדלקת הטיפול'}">${on ? 'זמין' : 'כבוי'}</button><button type="button" class="svc-edit" onclick="openEditServiceModal(${i})" title="עריכה" aria-label="עריכת שירות">✎</button><button class="svc-del" onclick="removeService(${i})" aria-label="מחיקת שירות">✕</button></span>`;
       manageList.appendChild(row);
     });
   }
@@ -18879,7 +18952,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     const nameEl = document.getElementById('newSvcName');
     const priceEl = document.getElementById('newSvcPrice');
     const durationEl = document.getElementById('newSvcDuration');
-    const category = svcManageCurrentCategory || catEl.value;
+    const editing = editingSvcIndex !== -1 && !!services[editingSvcIndex];   // 213
+    const category = editing ? catEl.value : (svcManageCurrentCategory || catEl.value);
     const name = nameEl.value.trim();
     const price = parseInt(priceEl.value);
     const duration = parseInt(durationEl.value);
@@ -18887,6 +18961,13 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     if (!name){ addModalShowError('newSvcError', 'יש להקליד שם שירות.', nameEl); return; }
     if (!price){ addModalShowError('newSvcError', 'יש להקליד מחיר.', priceEl); return; }
     if (!duration){ addModalShowError('newSvcError', 'יש להקליד משך טיפול בדקות — בלעדיו אי אפשר לחשב שעות פנויות.', durationEl); return; }
+    if (editing){
+      if (services.some((x, k) => k !== editingSvcIndex && x && x.name === name)){
+        addModalShowError('newSvcError', 'כבר יש שירות בשם הזה. אפשר לבחור שם אחר.', nameEl); return;
+      }
+      saveEditedService(editingSvcIndex, { name, price, duration, category });
+      return;
+    }
     addModalShowError('newSvcError', '');
     closeAddServiceModal();
     services.push({ name, price, duration, category, photo: newSvcPhoto });
@@ -18901,6 +18982,32 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     renderServices();
     if (typeof saveState === 'function') saveState();
     if (typeof showAdminToast === 'function') showAdminToast('✓ השירות נוסף בהצלחה');
+  }
+  function saveEditedService(i, upd){
+    const svc = services[i];
+    if (!svc) return;
+    const oldName = svc.name;
+    // אובייקט חדש (ולא שינוי במקום) — כך ההשוואה המהירה של השמירה רואה שהשתנה
+    const next = Object.assign({}, svc, {
+      name: upd.name, price: upd.price, duration: upd.duration, category: upd.category,
+    });
+    if (newSvcPhoto) next.photo = newSvcPhoto; else delete next.photo;
+    if (oldName && oldName !== upd.name){
+      const former = (Array.isArray(svc.formerNames) ? svc.formerNames : []).filter(n => n && n !== upd.name);
+      if (former.indexOf(oldName) === -1) former.push(oldName);
+      next.formerNames = former.slice(-10);
+    }
+    services[i] = next;
+    addModalShowError('newSvcError', '');
+    closeAddServiceModal();
+    if (svcManageCurrentCategory && svcManageCurrentCategory !== upd.category
+        && !services.some(x => x && x.category === svcManageCurrentCategory)){
+      showSvcManageCategoryGrid();
+    }
+    renderServices();
+    if (typeof renderAvailableSlots === 'function') renderAvailableSlots();
+    if (typeof saveState === 'function') saveState();
+    if (typeof showAdminToast === 'function') showAdminToast('✓ השירות עודכן. תורים שכבר נקבעו לא השתנו');
   }
   let newSvcPhoto = null;
   function handleSvcPhotoUpload(event){
