@@ -4993,7 +4993,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-15 · 211';
+        window.__APP_BUILD = '2026-11-16 · 212';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -16858,6 +16858,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   const __offerDueSince = Object.create(null);
   let __offerPullFails = 0, __offerNextPullAt = 0;
   let __offerLastStop = '';   // 193: למה הסבב הקודם לא סגר את ההצעה
+  let __offerServerTicks = 0;   // 212: כמה פעמים ביקשנו מהשרת להעביר את ההצעה הזו
   async function rotateExpiredOffers(){
     if (offerRotationBusy) return;
     try { if (!isOwnerSession() || !cloudLoadComplete || runningOnPublicData) return; } catch (e) { return; }
@@ -16868,7 +16869,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       return o && ((o.status === 'offered' && !offerIsLive(o, nowCheck)) || (o.status === 'expired' && !o.nextOfferAttempted));
     });
     if (!due){
-      __offerDueRounds = 0; __offerPullFails = 0; __offerNextPullAt = 0;
+      __offerDueRounds = 0; __offerPullFails = 0; __offerNextPullAt = 0; __offerServerTicks = 0;
       Object.keys(__offerDueSince).forEach(k => { delete __offerDueSince[k]; });
       return;
     }
@@ -16886,11 +16887,31 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       __offerLoopReported = true;
       try {
         const kinds = __dueList.map(o => o.status === 'offered' ? 'offeredPast' : 'expiredNotAttempted');
-        reportDiag('offers-stuck', { code: 'הצעה שפגה תקועה 10 דקות', key: Array.from(new Set(kinds)).join(',') + ' · ' + (__offerLastStop || 'none') + (__offerPullFails ? ' · fails ' + __offerPullFails : ''), count: kinds.length });
+        // 212: יומן שלא הצליח להוריד את המסמך 5 דקות ומעלה רואה תמונה ישנה — ייתכן שהשרת כבר העביר
+        const __stale = (Date.now() - (window.__hkLastDocOkAt || 0)) > 5 * 60000;
+        reportDiag('offers-stuck', { code: 'הצעה שפגה תקועה 10 דקות', key: (Array.from(new Set(kinds)).join(',') + ' · ' + (__offerLastStop || 'none') + (__offerPullFails ? ' · fails ' + __offerPullFails : '') + (__stale ? ' · היומן לא התעדכן' : '')).slice(0, 60), count: kinds.length });
       } catch (e) {}
     }
     if (__dueNowMs - __oldestDue < OFFER_SERVER_GRACE_MS) { __offerLastStop = 'waiting-server'; return; }
     if (__dueNowMs < __offerNextPullAt) return;
+    /* 212: סיכום 15.11 — 5 פעמים "offers-stuck · pull-failed deadline-exceeded" במחשב בסלון.
+     * ההורדה המלאה (671 ק"ב) לא הסתיימה בזמן בקו של הסלון. במקום להוריד את כל
+     * המסמך כדי להחליט בעצמו, היומן מבקש מהשרת להריץ את "שעון ההצעות" עכשיו
+     * (בקשה של כמה מאות בייטים). השרת מעביר בטרנזקציה שלו, והיומן רואה את
+     * התוצאה בבדיקת העדכונים הבאה. רק אם השרת לא ענה פעמיים — הדרך הישנה. */
+    if (__offerServerTicks < 2 && typeof callClientApi === 'function'){
+      offerRotationBusy = true;
+      let __tickRes = null;
+      try { __tickRes = await callClientApi('offersTick', { siteUrl: getSiteUrl() }); } catch (e) { __tickRes = null; }
+      finally { offerRotationBusy = false; }
+      if (__tickRes && !__tickRes.error){
+        __offerServerTicks++;
+        __offerLastStop = 'server-tick ' + (__tickRes.throttled ? 'throttled' : (__tickRes.changed ? 'changed' : 'nothing'));
+        __offerNextPullAt = Date.now() + 90000;
+        try { __lastFullPollAt = 0; } catch (e) {}   // בדיקת העדכונים הבאה מורידה את המסמך
+        return;
+      }
+    }
     offerRotationBusy = true;
     try {
       // בלי מצב עדכני מהענן — לא מחליטים כלום בסבב הזה (עדיף לחכות
@@ -22885,6 +22906,10 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     if (!wasOpen) section.classList.add('open');
   }
   function showPanel(name, btn){
+    // 212: עם שם, כדי שתקיעה במעבר מהאתר ליומן לא תירשם "פונקציה: onclick"
+    return (window.__hkBusyRun || ((l, d, f) => f()))(name === 'business' ? 'כניסה ליומן' : 'מעבר מסך', () => name, () => __showPanelImpl(name, btn));
+  }
+  function __showPanelImpl(name, btn){
     const __spStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById('panel-' + name).classList.add('active');
@@ -23753,7 +23778,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       __hkBusyDepth--;
       try {
         const t1 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
-        if (t1 - t0 >= 300){
+        if (t1 - t0 >= 50){   // 212: היה 300
           __hkBusyLog.push({ label: label, start: t0, end: t1 });
           if (__hkBusyLog.length > 20) __hkBusyLog.shift();
         }
@@ -23901,6 +23926,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
               code = 'פונקציה: ' + fn;
               key = inv + ' · ' + (fileOf(top.sourceURL) || 'inline') +
                 (layoutMs > scriptMs / 3 ? ' · חישוב עיצוב' : '') +
+                (scriptMs < en.duration / 2 ? ' · בעיקר ציור' : '') +   // 212
                 (scripts.length > 1 ? ' · +' + (scripts.length - 1) : '');
             } else {
               code = 'ציור הדף (בלי קוד)';
@@ -27127,7 +27153,10 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     const ownerIsWatching = (typeof isLoggedIn !== 'undefined' && isLoggedIn)
       || (typeof isOwnerSession === 'function' && isOwnerSession())
       || !runningOnPublicData;
-    if (ownerIsWatching || cloudLoadRetryCount >= 2) showCloudErrorBanner();
+    // 212: סיכום 12.11 09:22 — הניסיון הראשון נכשל ב-deadline-exceeded, השני (אחרי 3 שנ') הצליח,
+    // והפס האדום הופיע לכמה שניות מעל "טוען…". בתקלה חולפת — הפס רק מהכישלון השני.
+    const __transientFirst = cloudLoadRetryCount < 2 && /deadline|unavailable|timeout|network|aborted/i.test(String(lastCloudErrorCode || ''));
+    if (!__transientFirst && (ownerIsWatching || cloudLoadRetryCount >= 2)) showCloudErrorBanner();
     const delay = Math.min(30000, 3000 * cloudLoadRetryCount);
     __cloudRetryAt = Date.now() + delay;
     setTimeout(function(){
@@ -27174,7 +27203,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     const __dlDone = () => { window.__hkDlInFlight = Math.max(0, (window.__hkDlInFlight || 1) - 1); };
     let __p;
     try { __p = __getDocWithRetryImpl(ref, label); } catch (e) { __dlDone(); throw e; }
-    return Promise.resolve(__p).then(v => { __dlDone(); return v; }, e => { __dlDone(); throw e; });
+    return Promise.resolve(__p).then(v => { __dlDone(); window.__hkLastDocOkAt = Date.now(); return v; }, e => { __dlDone(); throw e; });   // 212: __hkLastDocOkAt
   }
   function __getDocWithRetryImpl(ref, label){
     let attempt = 0;
@@ -27442,7 +27471,10 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     };
     return Object.keys(fields).some(function(k){
       try {
-        const differs = stable(lastLoadedSnapshot[k]) !== stable(fields[k]);
+        // 212: JSON.stringify (מובנה בדפדפן) מהיר פי כמה מ-stable. אם המחרוזות זהות —
+        // אין שינוי בוודאות; רק כשהן שונות (סדר מפתחות אחר, null מול '') — ההשוואה המלאה.
+        const __a = lastLoadedSnapshot[k], __b = fields[k];
+        const differs = (__a === __b || JSON.stringify(__a) === JSON.stringify(__b)) ? false : stable(__a) !== stable(__b);
         if (differs) window.__lastDirtyField = k;   // 186: לאבחון "שמירה ריקה שחוזרת"
         return differs;
       } catch (e) {
