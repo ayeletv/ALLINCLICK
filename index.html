@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-11-05 · 192">
+<meta name="app-build" content="2026-11-18 · 215">
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -4974,7 +4974,17 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       </div>
       <button class="template-btn" style="margin-bottom:10px;" onclick="loadBackupsList()">🔄 טעינת רשימת גיבויים</button>
       <div id="backupsList" class="client-list"></div>
-      
+      <!-- 215: פיצול המסמך, שלב א' — רק למנהלת המערכת (כל האזור הזה מוסתר מבעלות העסק) -->
+      <div class="label" style="margin:28px 0 10px;">מסמך ההצעות (פיצול המסמך)</div>
+      <div style="font-size:13px; color:var(--panel-text-dim); margin-bottom:10px; max-width:480px; line-height:1.7;">
+        ההצעות לשעה שהתפנתה, הבקשות המיוחדות ורשימת ההמתנה יכולות לשבת במסמך קטן נפרד.
+        כך "שעון ההצעות" לא מוריד ולא כותב את כל מסמך העסק. אפשר להחזיר בכל רגע.
+        לפני שמפצלים: כל המכשירים של העסק צריכים להיות בגרסה 215 ומעלה.
+      </div>
+      <div id="offersSplitStatus" style="font-size:13px; font-weight:700; margin-bottom:10px;"></div>
+      <button class="template-btn" style="margin-bottom:10px;" onclick="splitOffersToPart()">✂ העברה למסמך נפרד</button>
+      <button class="template-btn" style="margin-bottom:10px;" onclick="mergeOffersBack()">↩ החזרה למסמך אחד</button>
+
         </div>
       </div>
       <div class="settings-section" data-settings-section="account">
@@ -4996,7 +5006,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-17 · 213';
+        window.__APP_BUILD = '2026-11-18 · 215';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -16382,8 +16392,10 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     }
     pendingSaveCount++;
     try {
-      committed = await db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
+      committed = await db.runTransaction(tx => txGetBiz(tx, true).then(__rd => {   // 215
+        const doc = __rd.doc;
         const server = doc.exists ? doc.data() : {};
+        if (__rd.split) mergeOffersPartInto(server, partDataOf(__rd));
         backfillMissingListIds(server);
         const serverRequests = server.specialRequests || lastLoadedSnapshot.specialRequests || [];
         const serverReq = serverRequests.find(r => r && r.id === req.id);
@@ -16431,8 +16443,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         const localRequestsWithMatch = specialRequests.map(r => r.id === req.id ? updatedReq : r);
         const mergedRequests = mergeListField(server.specialRequests, lastLoadedSnapshot.specialRequests, localRequestsWithMatch, r => r && r.id);
         const payload = { savedAt: new Date().toISOString(), weekAppointments: mergedAppts, specialRequests: mergedRequests };
-        tx.set(CLOUD_DOC, payload, { merge: true });
-        return { appt, payload };
+        txWriteBiz(tx, __rd.split, payload, payload.savedAt);   // 215
+        return { appt, payload, split: __rd.split };
       }));
     } catch (e) {
       console.error('bookFlexibleRequest: transaction failed — treating as no match this time (will retry on the next check):', e);
@@ -16441,10 +16453,11 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     pendingSaveCount--;
     if (!committed) return null; // lost the race, or a save error — no appt, no SMS, nothing duplicated
     const { appt, payload } = committed;
-    if (payload && payload.savedAt && typeof bumpCloudStamp === 'function') bumpCloudStamp(payload.savedAt);   // 187
+    if (payload && payload.savedAt && typeof bumpCloudStamp === 'function') bumpCloudStamp(payload.savedAt, false, committed.split ? payload.savedAt : null);   // 187, 215
     weekAppointments = payload.weekAppointments;
     specialRequests = payload.specialRequests;
     lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(payload));
+    if (committed.split) __offersAtSeen = String(payload.savedAt);   // 215
     Object.assign(req, { status: 'matched', matchedDate: match.date, matchedTime: match.time, matchedStaff: match.staffIdx });
     specialRequests = specialRequests.map(r => r.id === req.id ? req : r);
     const idDigits = (req.teudatZehut || '').replace(/[^0-9]/g, '');
@@ -16897,7 +16910,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   async function pullOfferStateFromCloud(){
     if (!lastLoadedSnapshot) return false;
     const __dlT0 = window.__hkNow ? window.__hkNow() : 0;
-    const doc = await getDocWithRetry(CLOUD_DOC, 'offers-refresh');
+    const doc = await getBizDocWithParts('offers-refresh');
     if (window.__hkBusyMark) window.__hkBusyMark('הורדת המסמך (סבב הצעות)', __dlT0, window.__hkNow());
     if (!doc || !doc.exists) return false;
     return (window.__hkBusyRun || ((l, d, f) => f()))('משיכת הצעות מהענן', null, () => pullOfferStateApply(doc));
@@ -16914,8 +16927,37 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     // היומן היה מציע לה שוב את השעה שכבר יש לה.
     waitlist = keepServerDecisions(pull('waitlist', waitlist, w => w && w.id), server.waitlist, w => !!(w && w.status === 'matched'));
     ['weekAppointments', 'pendingOffers', 'specialRequests', 'waitlist'].forEach(k => { lastLoadedSnapshot[k] = cloneJSON(server[k] || []); });
+    if (server.offersSplit === true) __offersAtSeen = String(server.__offersAt || '');   // 215
     saveDiag('offers-refresh', { offers: pendingOffers.length });
     return true;
+  }
+  /* 215: רק מסמך ההצעות (כמה ק"ב) — כשהחותמת אומרת שרק הוא השתנה. אותו מיזוג
+   * כמו pullOfferStateApply: שינוי מקומי שעוד לא נשמר נשאר, החלטה של השרת גוברת. */
+  function pullOffersPartOnly(label){
+    if (!__offersSplitOn || !lastLoadedSnapshot) return Promise.resolve(false);
+    const __dlT0 = window.__hkNow ? window.__hkNow() : 0;
+    return getDocWithRetry(offersPartRef(), label).then(p => {
+      if (window.__hkBusyMark) window.__hkBusyMark('הורדת מסמך ההצעות', __dlT0, window.__hkNow());
+      if (!p || !lastLoadedSnapshot || unsavedChangePending || pendingSaveCount > 0) return false;
+      const part = p.exists ? (p.data() || {}) : {};
+      return (window.__hkBusyRun || ((l, d, f) => f()))('קליטת עדכון הצעות מהענן', null, () => {
+        backfillMissingListIds(part);
+        const base = lastLoadedSnapshot;
+        const pull = (key, live) => mergeListField(cloneJSON(part[key] || []), base[key], live, x => x && x.id);
+        pendingOffers = keepServerDecisions(pull('pendingOffers', pendingOffers), part.pendingOffers, isFinalOfferDecision);
+        specialRequests = keepServerDecisions(pull('specialRequests', specialRequests), part.specialRequests, isFinalRequestDecision);
+        waitlist = keepServerDecisions(pull('waitlist', waitlist), part.waitlist, w => !!(w && w.status === 'matched'));
+        OFFERS_PART_KEYS.forEach(k => { lastLoadedSnapshot[k] = cloneJSON(part[k] || []); });
+        __offersAtSeen = String(part.savedAt || '');
+        try { pruneExpiredWaitlistEntries(); } catch (e) {}
+        try { rebindOpenRecords(); } catch (e) {}
+        saveDiag('offers-part', { offers: pendingOffers.length });
+        return true;
+      });
+    }).then(changed => {
+      if (changed) { rerenderEverything(); alignSnapshotWithNormalisedData(); }
+      return changed;
+    }).catch(err => { console.warn('[offers-part] pull failed:', err && err.code); return false; });
   }
   let offerRotationBusy = false;
   let __offerDueRounds = 0, __offerLoopReported = false;   // 186
@@ -16931,6 +16973,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   const __offerDueSince = Object.create(null);
   let __offerPullFails = 0, __offerNextPullAt = 0;
   let __offerLastStop = '';   // 193: למה הסבב הקודם לא סגר את ההצעה
+  let __offerTickFails = 0, __offerTickOkAt = 0;   // 214
   let __offerServerTicks = 0;   // 212: כמה פעמים ביקשנו מהשרת להעביר את ההצעה הזו
   async function rotateExpiredOffers(){
     if (offerRotationBusy) return;
@@ -16942,7 +16985,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       return o && ((o.status === 'offered' && !offerIsLive(o, nowCheck)) || (o.status === 'expired' && !o.nextOfferAttempted));
     });
     if (!due){
-      __offerDueRounds = 0; __offerPullFails = 0; __offerNextPullAt = 0; __offerServerTicks = 0;
+      __offerDueRounds = 0; __offerPullFails = 0; __offerNextPullAt = 0; __offerServerTicks = 0; __offerTickFails = 0;
       Object.keys(__offerDueSince).forEach(k => { delete __offerDueSince[k]; });
       return;
     }
@@ -16956,7 +16999,10 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     Object.keys(__offerDueSince).forEach(k => { if (!__dueKeys.has(k)) delete __offerDueSince[k]; });
     __dueList.forEach(o => { const k = __dueKey(o); if (!__offerDueSince[k]) __offerDueSince[k] = __dueNowMs; });
     const __oldestDue = Math.min.apply(null, __dueList.map(o => __offerDueSince[__dueKey(o)]));
-    if (__dueNowMs - __oldestDue >= OFFER_STUCK_REPORT_MS && !__offerLoopReported){
+    /* 214: סיכום 17.11 — 7 פעמים "offers-stuck · היומן לא התעדכן" אחרי 212. השרת ענה
+     * לבקשה להעביר, ולכן ההצעה יצאה ללקוחה הבאה. רק היומן במחשב לא הוריד עדיין את
+     * המצב החדש. זו לא תקלה של ההצעות: מדווחים רק אם השרת לא ענה ב-10 הדקות האחרונות. */
+    if (__dueNowMs - __oldestDue >= OFFER_STUCK_REPORT_MS && !__offerLoopReported && (Date.now() - __offerTickOkAt) > OFFER_STUCK_REPORT_MS){
       __offerLoopReported = true;
       try {
         const kinds = __dueList.map(o => o.status === 'offered' ? 'offeredPast' : 'expiredNotAttempted');
@@ -16972,18 +17018,19 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
      * המסמך כדי להחליט בעצמו, היומן מבקש מהשרת להריץ את "שעון ההצעות" עכשיו
      * (בקשה של כמה מאות בייטים). השרת מעביר בטרנזקציה שלו, והיומן רואה את
      * התוצאה בבדיקת העדכונים הבאה. רק אם השרת לא ענה פעמיים — הדרך הישנה. */
-    if (__offerServerTicks < 2 && typeof callClientApi === 'function'){
+    if (__offerTickFails < 2 && typeof callClientApi === 'function'){   // 214: כל עוד השרת עונה — רק דרכו
       offerRotationBusy = true;
       let __tickRes = null;
       try { __tickRes = await callClientApi('offersTick', { siteUrl: getSiteUrl() }); } catch (e) { __tickRes = null; }
       finally { offerRotationBusy = false; }
       if (__tickRes && !__tickRes.error){
-        __offerServerTicks++;
+        __offerServerTicks++; __offerTickFails = 0; __offerTickOkAt = Date.now();   // 214
         __offerLastStop = 'server-tick ' + (__tickRes.throttled ? 'throttled' : (__tickRes.changed ? 'changed' : 'nothing'));
         __offerNextPullAt = Date.now() + 90000;
         try { __lastFullPollAt = 0; } catch (e) {}   // בדיקת העדכונים הבאה מורידה את המסמך
         return;
       }
+      __offerTickFails++;   // 214: השרת לא ענה — אחרי פעמיים, הדרך הישנה
     }
     offerRotationBusy = true;
     try {
@@ -17485,8 +17532,10 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     if (!cloudLoadComplete || !lastLoadedSnapshot) return null;
     pendingSaveCount++;
     try {
-      committed = await db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
+      committed = await db.runTransaction(tx => txGetBiz(tx, true).then(__rd => {   // 215
+        const doc = __rd.doc;
         const server = doc.exists ? doc.data() : {};
+        if (__rd.split) mergeOffersPartInto(server, partDataOf(__rd));
         backfillMissingListIds(server);
         const serverWaitlist = server.waitlist || lastLoadedSnapshot.waitlist || [];
         const serverEntry = serverWaitlist.find(x => x && x.id === w.id);
@@ -17522,8 +17571,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         const localWaitlistWithMatch = waitlist.map(x => x.id === w.id ? updatedEntry : x);
         const mergedWaitlist = mergeListField(server.waitlist, lastLoadedSnapshot.waitlist, localWaitlistWithMatch, x => x && x.id);
         const payload = { savedAt: new Date().toISOString(), weekAppointments: mergedAppts, waitlist: mergedWaitlist };
-        tx.set(CLOUD_DOC, payload, { merge: true });
-        return { appt, payload };
+        txWriteBiz(tx, __rd.split, payload, payload.savedAt);   // 215
+        return { appt, payload, split: __rd.split };
       }));
     } catch (e) {
       console.error('bookWaitlistAutoMatch: transaction failed — treating as no match this time (will retry on the next check):', e);
@@ -17532,10 +17581,11 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     pendingSaveCount--;
     if (!committed) return null;
     const { appt, payload } = committed;
-    if (payload && payload.savedAt && typeof bumpCloudStamp === 'function') bumpCloudStamp(payload.savedAt);   // 187
+    if (payload && payload.savedAt && typeof bumpCloudStamp === 'function') bumpCloudStamp(payload.savedAt, false, committed.split ? payload.savedAt : null);   // 187, 215
     weekAppointments = payload.weekAppointments;
     waitlist = payload.waitlist;
     lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(payload));
+    if (committed.split) __offersAtSeen = String(payload.savedAt);   // 215
     Object.assign(w, { status: 'matched', matchedDate: match.date, matchedTime: match.time, matchedStaff: match.staffIdx });
     waitlist = waitlist.map(x => x.id === w.id ? w : x);
     const idDigits = (w.teudatZehut || '').replace(/[^0-9]/g, '');
@@ -23835,6 +23885,64 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   let BIZ_ID = resolveBizId();
   window.__BIZ_ID = BIZ_ID;
   let CLOUD_DOC = db.collection('business').doc(BIZ_ID || '__unconfigured__');
+  /* 215: פיצול המסמך, שלב א' (18.11.2026). ההצעות, הבקשות ורשימת ההמתנה יכולות
+   * לשבת במסמך נפרד, business/{bizId}/parts/offers, כשבמסמך הראשי offersSplit: true.
+   * בלי הדגל — הכול כמו קודם. מכאן כל קריאה של מסמך העסק מחזירה אובייקט אחד
+   * (הראשי + ההצעות), וכל כתיבה מפרידה: שדות ההצעות למסמך ההצעות, השאר לראשי.
+   * לחותמת (meta/stamp) נוסף offersAt: כשהשתנו רק הצעות, היומן מוריד רק את
+   * המסמך הקטן ולא את כל 670 הק"ב. */
+  const OFFERS_PART_KEYS = ['pendingOffers', 'specialRequests', 'waitlist'];
+  let __offersSplitOn = false;   // נלמד מהמסמך הראשי בכל קליטה
+  let __offersAtSeen = '';       // savedAt של מסמך ההצעות שהיומן כבר קלט
+  function offersPartRef(){ return CLOUD_DOC.collection('parts').doc('offers'); }
+  function isOffersPartKey(k){ return OFFERS_PART_KEYS.indexOf(k) !== -1; }
+  function mergeOffersPartInto(mainData, partData){
+    OFFERS_PART_KEYS.forEach(k => { mainData[k] = (partData && Array.isArray(partData[k])) ? partData[k] : []; });
+    Object.defineProperty(mainData, '__offersAt', { value: String((partData && partData.savedAt) || ''), enumerable: false, configurable: true, writable: true });
+    return mainData;
+  }
+  /* כמו getDocWithRetry(CLOUD_DOC) — אבל כשהמסמך מפוצל, גם מסמך ההצעות,
+   * ומחזיר "מסמך" אחד ממוזג. */
+  function getBizDocWithParts(label){
+    return getDocWithRetry(CLOUD_DOC, label).then(doc => {
+      if (!doc || !doc.exists) return doc;
+      const data = doc.data();
+      if (!data || data.offersSplit !== true) return doc;
+      return getDocWithRetry(offersPartRef(), label + '-offers').then(p => {
+        const merged = mergeOffersPartInto(data, (p && p.exists) ? p.data() : null);
+        return { exists: true, id: doc.id, data: () => merged };
+      });
+    });
+  }
+  /* בתוך טרנזקציה: קריאת הראשי, ואם הוא מפוצל — גם מסמך ההצעות (כל הקריאות
+   * לפני כל הכתיבות). withPart=false: לא קוראים את מסמך ההצעות (שמירה שלא
+   * נגעה בהצעות) — כך כתיבה של השרת להצעות לא מפילה את השמירה הזו. */
+  function txGetBiz(tx, withPart){
+    return tx.get(CLOUD_DOC).then(doc => {
+      const split = !!(doc.exists && (doc.data() || {}).offersSplit === true);
+      if (!split || withPart === false) return { doc: doc, split: split, partSnap: null };
+      return tx.get(offersPartRef()).then(p => ({ doc: doc, split: true, partSnap: p }));
+    });
+  }
+  function partDataOf(rd){ return (rd && rd.partSnap && rd.partSnap.exists) ? (rd.partSnap.data() || {}) : null; }
+  /* כתיבה בתוך טרנזקציה: במצב מפוצל שדות ההצעות למסמך ההצעות (עם savedAt
+   * משלו), השאר לראשי. הראשי לא נכתב כשהשתנו רק הצעות. */
+  function txWriteBiz(tx, split, payload, atIso){
+    if (!split){ tx.set(CLOUD_DOC, payload, { merge: true }); return { main: true, offers: false }; }
+    const main = {}, part = {};
+    Object.keys(payload).forEach(k => { (isOffersPartKey(k) ? part : main)[k] = payload[k]; });
+    const offers = Object.keys(part).length > 0;
+    const mainW = Object.keys(main).some(k => k !== 'savedAt') || !offers;
+    if (offers) tx.set(offersPartRef(), Object.assign(part, { savedAt: atIso }), { merge: true });
+    if (mainW) tx.set(CLOUD_DOC, main, { merge: true });
+    return { main: mainW, offers: offers };
+  }
+  // נקלט מסמך מהענן — האם הוא שונה ממה שהיומן מחזיק (כולל מסמך ההצעות)
+  function cloudDataUnchanged(raw){
+    if (!raw || !lastLoadedSnapshot || raw.savedAt !== lastLoadedSnapshot.savedAt) return false;
+    if (raw.offersSplit === true && String(raw.__offersAt || '') !== __offersAtSeen) return false;
+    return true;
+  }
   let lastBackupDateKey = '';
   let lastLoadedSnapshot = null;
   let pendingSaveCount = 0;
@@ -24868,11 +24976,19 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     let __useDeltaThisSave = deltaSaveAllowed();
     // 185: מדידה — כמה פעמים המסמך נקרא בשמירה הזו (Firebase מתחיל מחדש כשמישהו
     // כתב באמצע), כמה זמן לקחה ההורדה, ומתי התחילה (מה שלפני = המתנה בתור).
-    const runSaveTransaction = () => db.runTransaction(tx => { __saveReads++; if (!__saveFirstReadAt) __saveFirstReadAt = Date.now(); const __readStartedAt = Date.now(); return tx.get(CLOUD_DOC).then(doc => (window.__hkBusyRun || ((l, d, f) => f()))('החישוב בתוך השמירה', null, () => { const __computeStartedAt = Date.now(); try {
+    const runSaveTransaction = () => db.runTransaction(tx => { __saveReads++; if (!__saveFirstReadAt) __saveFirstReadAt = Date.now(); const __readStartedAt = Date.now();
+      // 215: מסמך ההצעות נקרא רק אם ההצעות/הבקשות/ההמתנה השתנו כאן מאז הקליטה
+      const __offersTouched = OFFERS_PART_KEYS.some(k => !sameStable(lastLoadedSnapshot[k], ({ pendingOffers: pendingOffers, specialRequests: specialRequests, waitlist: waitlist })[k]));
+      let __rd = null;
+      return txGetBiz(tx, __offersTouched).then(rd => { __rd = rd; return rd.doc; }).then(doc => (window.__hkBusyRun || ((l, d, f) => f()))('החישוב בתוך השמירה', null, () => { const __computeStartedAt = Date.now(); try {
       __saveReadMs += Date.now() - __readStartedAt;
       const server = doc.exists ? doc.data() : {};
       // עותק "גולמי" נפרד, בדיוק כמו בענן — רק ממנו אפשר להסיר פריט.
       const rawServer = doc.exists ? doc.data() : {};
+      // 215: main = מסמך אחד (כמו תמיד); part = מפוצל וההצעות השתנו כאן;
+      // skip = מפוצל וההצעות לא השתנו כאן — לא נוגעים בהן בשמירה הזו בכלל.
+      const __offersMode = !(__rd && __rd.split) ? 'main' : (__rd.partSnap ? 'part' : 'skip');
+      if (__offersMode === 'part'){ mergeOffersPartInto(server, partDataOf(__rd)); mergeOffersPartInto(rawServer, partDataOf(__rd)); }
       if (__cloudDocWasMissing && doc.exists && serverHasRealContent(server)) return { __stale: true };
       backfillMissingListIds(server);
       if (dedupeListsById(server)) { try { reportDiag('dup-fixed', {}); } catch (e) {} }
@@ -24893,9 +25009,11 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       const mergedAppts = mergeListField(server.weekAppointments, lastLoadedSnapshot.weekAppointments, weekAppointments, a => a && a.id);
       if (!sameStable(mergedAppts, server.weekAppointments || [])) changedKeys.add('weekAppointments');
       payload.weekAppointments = mergedAppts;
-      const mergedWaitlist = mergeListField(server.waitlist, lastLoadedSnapshot.waitlist, waitlist, w => w && w.id);
-      if (!sameStable(mergedWaitlist, server.waitlist || [])) changedKeys.add('waitlist');
-      payload.waitlist = mergedWaitlist;
+      if (__offersMode !== 'skip'){   // 215
+        const mergedWaitlist = mergeListField(server.waitlist, lastLoadedSnapshot.waitlist, waitlist, w => w && w.id);
+        if (!sameStable(mergedWaitlist, server.waitlist || [])) changedKeys.add('waitlist');
+        payload.waitlist = mergedWaitlist;
+      }
       const mergedClients = mergeListField(server.clients, lastLoadedSnapshot.clients, clients, c => c && c.teudatZehut ? 'tz:' + c.teudatZehut : (c && c.phone ? 'p:' + String(c.phone).replace(/[^0-9]/g, '') : null));
       if (!sameStable(mergedClients, server.clients || [])) changedKeys.add('clients');
       payload.clients = mergedClients;
@@ -24909,16 +25027,18 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       const mergedLateCancellations = mergeListField(server.lateCancellations, lastLoadedSnapshot.lateCancellations, lateCancellations, c => c && c.id);
       if (!sameStable(mergedLateCancellations, server.lateCancellations || [])) changedKeys.add('lateCancellations');
       payload.lateCancellations = mergedLateCancellations;
-      const mergedOffers = keepServerDecisions(
-        mergeListField(server.pendingOffers, lastLoadedSnapshot.pendingOffers, pendingOffers, o => o && o.id),
-        server.pendingOffers, isFinalOfferDecision);
-      if (!sameStable(mergedOffers, server.pendingOffers || [])) changedKeys.add('pendingOffers');
-      payload.pendingOffers = mergedOffers;
-      const mergedRequests = keepServerDecisions(
-        mergeListField(server.specialRequests, lastLoadedSnapshot.specialRequests, specialRequests, r => r && r.id),
-        server.specialRequests, isFinalRequestDecision);
-      if (!sameStable(mergedRequests, server.specialRequests || [])) changedKeys.add('specialRequests');
-      payload.specialRequests = mergedRequests;
+      if (__offersMode !== 'skip'){   // 215
+        const mergedOffers = keepServerDecisions(
+          mergeListField(server.pendingOffers, lastLoadedSnapshot.pendingOffers, pendingOffers, o => o && o.id),
+          server.pendingOffers, isFinalOfferDecision);
+        if (!sameStable(mergedOffers, server.pendingOffers || [])) changedKeys.add('pendingOffers');
+        payload.pendingOffers = mergedOffers;
+        const mergedRequests = keepServerDecisions(
+          mergeListField(server.specialRequests, lastLoadedSnapshot.specialRequests, specialRequests, r => r && r.id),
+          server.specialRequests, isFinalRequestDecision);
+        if (!sameStable(mergedRequests, server.specialRequests || [])) changedKeys.add('specialRequests');
+        payload.specialRequests = mergedRequests;
+      }
       const repairs = repairPayloadBeforeWrite(payload, server, changedKeys);
       __lastWriteRepairs = repairs.fixed;
       __moreRemovalsPending = repairs.moreToRemove;
@@ -24952,20 +25072,33 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         }).join(',');
       } catch (e) { lastSaveWrittenKeys = Array.from(changedKeys).join(','); }
       saveDiag('write', { attempt: ++__saveTxAttempts, keys: Array.from(changedKeys), delta: deltaKeys, kb: Math.round(lastSavePayloadBytes / 1024) });
-      tx.set(CLOUD_DOC, writePayload, { merge: true });
+      // 215: במצב מפוצל — שדות ההצעות למסמך ההצעות, השאר לראשי. הראשי לא
+      // נכתב כשהשתנו רק הצעות. בלי פיצול: בדיוק כמו קודם (הכול לראשי).
+      const __isPartKey = k => __offersMode === 'part' && isOffersPartKey(k);
+      const __changedList = Array.from(changedKeys);
+      const __wroteOffers = __changedList.some(__isPartKey);
+      const __wroteMain = __changedList.some(k => !__isPartKey(k)) || !__wroteOffers;
+      const __mainWrite = {}, __partWrite = {};
+      Object.keys(writePayload).forEach(k => { (__isPartKey(k) ? __partWrite : __mainWrite)[k] = writePayload[k]; });
+      if (__wroteMain) tx.set(CLOUD_DOC, __mainWrite, { merge: true });
+      if (__wroteOffers) tx.set(offersPartRef(), Object.assign(__partWrite, { savedAt: payload.savedAt }), { merge: true });
+      Object.defineProperty(payload, '__wroteMain', { value: __wroteMain, enumerable: false });
+      Object.defineProperty(payload, '__wroteOffers', { value: __wroteOffers, enumerable: false });
       if (deltaKeys.length){
         const FV = firebase.firestore.FieldValue;
-        const removes = {}, adds = {};
+        const removes = {}, adds = {}, partRemoves = {}, partAdds = {};
         deltaKeys.forEach(k => {
           const p = deltaPlans[k];
-          if (p.removedRaw.length) removes[k] = FV.arrayRemove.apply(FV, p.removedRaw);
-          if (p.added.length) adds[k] = FV.arrayUnion.apply(FV, p.added);
+          if (p.removedRaw.length) (__isPartKey(k) ? partRemoves : removes)[k] = FV.arrayRemove.apply(FV, p.removedRaw);
+          if (p.added.length) (__isPartKey(k) ? partAdds : adds)[k] = FV.arrayUnion.apply(FV, p.added);
           payload[k] = p.result;   // מה שיהיה בענן אחרי הכתיבה — בסדר של הענן
         });
         // הסרה קודם, הוספה אחר כך — שתי כתיבות לאותו מסמך באותה טרנזקציה
         // (Firebase לא מקבל הסרה והוספה לאותו שדה בכתיבה אחת).
         if (Object.keys(removes).length) tx.update(CLOUD_DOC, removes);
+        if (Object.keys(partRemoves).length) tx.update(offersPartRef(), partRemoves);
         if (Object.keys(adds).length) tx.update(CLOUD_DOC, adds);
+        if (Object.keys(partAdds).length) tx.update(offersPartRef(), partAdds);
       }
       // עותק קפוא של מה שנכתב. הרשימות ב-payload הן אותם אובייקטים שעל המסך,
       // ועריכה שנעשית בזמן שהשמירה בדרך משנה גם אותם — ואז הבסיס החדש היה
@@ -25039,7 +25172,11 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         clearLocalPendingBackupIfCurrent(saveRevision);
         if (__wroteSomething) __intendedClientRemovals.clear();
         // 187: לעדכן את החותמת, כדי שמכשירים אחרים יידעו שיש מה להוריד
-        if (__wroteSomething && committedPayload.savedAt && typeof bumpCloudStamp === 'function') bumpCloudStamp(committedPayload.savedAt);
+        if (__wroteSomething && committedPayload.savedAt && typeof bumpCloudStamp === 'function'){
+          // 215: במצב מפוצל — offersAt למסמך ההצעות, savedAt רק אם נכתב הראשי
+          if (committedPayload.__wroteOffers) bumpCloudStamp(committedPayload.__wroteMain ? committedPayload.savedAt : null, false, committedPayload.savedAt);
+          else bumpCloudStamp(committedPayload.savedAt);
+        }
         flushDeferredSuccessToast(saveRevision);
         __syncPendingShown = false;
       }
@@ -25102,7 +25239,13 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       lateCancellations = reconcile('lateCancellations', lateCancellations, c => c && c.id);
       pendingOffers = reconcile('pendingOffers', pendingOffers, o => o && o.id);
       specialRequests = reconcile('specialRequests', specialRequests, r => r && r.id);
+      const __prevMainSavedAt = lastLoadedSnapshot ? lastLoadedSnapshot.savedAt : undefined;
       lastLoadedSnapshot = Object.assign({}, lastLoadedSnapshot, cloneJSON(committedCopy));
+      // 215: נכתב רק מסמך ההצעות — הראשי נשאר בגרסה שהיומן כבר מחזיק
+      if (committedPayload.__wroteOffers){
+        __offersAtSeen = String(committedPayload.savedAt || '');
+        if (!committedPayload.__wroteMain) lastLoadedSnapshot.savedAt = __prevMainSavedAt;
+      }
       publishPublicView(); // כל שינוי שנשמר מתעדכן גם במסמך הציבורי
       if (__lastWriteRepairs.length){
         const whatWasKept = __lastWriteRepairs.join(', ');
@@ -26294,6 +26437,84 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       alert('השחזור נכשל. נסי שוב, ואם זה ממשיך לקרות תגידי לי.');
     });
   }
+  /* 215: הכלי של פיצול המסמך, שלב א' — רק למנהלת המערכת (האזור מוסתר מבעלות העסק).
+   * כל פעולה היא טרנזקציה אחת: או שהכול עבר, או ששום דבר לא השתנה.
+   * הפיצול: מסמך ההצעות נכתב מחדש מהראשי, ומהראשי נמחקים שלושת השדות + offersSplit: true.
+   * ההחזרה: שלושת השדות חוזרים לראשי מתוך מסמך ההצעות, והדגל יורד. מסמך ההצעות
+   * עצמו לא נמחק (נשאר כמו שהוא, לגיבוי; פיצול חדש כותב אותו מחדש). */
+  function updateOffersSplitStatus(){
+    const el = document.getElementById('offersSplitStatus');
+    if (!el) return;
+    el.textContent = __offersSplitOn ? '✓ עכשיו: ההצעות במסמך נפרד' : 'עכשיו: הכול במסמך אחד';
+  }
+  function offersToolGuard(){
+    if (!isPlatformAdmin()) { alert('הכלי הזה רק למנהלת המערכת.'); return false; }
+    if (!cloudLoadComplete || !lastLoadedSnapshot || runningOnPublicData) { alert('הנתונים עוד נטענים — לנסות שוב בעוד רגע.'); return false; }
+    if (unsavedChangePending || pendingSaveCount > 0) { alert('יש שמירה בדרך — לנסות שוב בעוד כמה שניות.'); return false; }
+    return true;
+  }
+  async function splitOffersToPart(){
+    if (!offersToolGuard()) return;
+    if (!confirm('להעביר את ההצעות, הבקשות ורשימת ההמתנה של העסק "' + BIZ_ID + '" למסמך נפרד?\n\nאפשר להחזיר בכל רגע בכפתור "החזרה למסמך אחד".')) return;
+    const FV = firebase.firestore.FieldValue;
+    let r = null;
+    try {
+      r = await db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
+        if (!doc.exists) throw Object.assign(new Error('no-business'), { code: 'no-business' });
+        const d = doc.data() || {};
+        if (d.offersSplit === true) return { already: true };
+        const at = new Date().toISOString();
+        const part = { savedAt: at, splitAt: at };
+        const counts = {};
+        OFFERS_PART_KEYS.forEach(k => { part[k] = Array.isArray(d[k]) ? d[k] : []; counts[k] = part[k].length; });
+        tx.set(offersPartRef(), part);   // בלי merge: מסמך ההצעות נכתב מחדש במלואו
+        const main = { offersSplit: true, savedAt: at };
+        OFFERS_PART_KEYS.forEach(k => { main[k] = FV.delete(); });
+        tx.update(CLOUD_DOC, main);
+        return { at: at, counts: counts, kb: Math.round(measurePayloadBytes(part) / 1024) };
+      }));
+    } catch (e) {
+      alert('ההעברה נכשלה, ושום דבר לא השתנה. (' + String((e && (e.code || e.message)) || '') + ')');
+      return;
+    }
+    if (r.already) { alert('ההצעות כבר במסמך נפרד.'); updateOffersSplitStatus(); return; }
+    bumpCloudStamp(r.at, false, r.at);
+    try { reportDiag('offers-split', { code: 'split', key: 'p' + r.counts.pendingOffers + ' s' + r.counts.specialRequests + ' w' + r.counts.waitlist + ' ' + r.kb + 'kb' }); } catch (e) {}
+    await refreshCalendarFromCloud();
+    alert('✓ הועבר למסמך נפרד: ' + r.counts.pendingOffers + ' הצעות, ' + r.counts.specialRequests + ' בקשות, ' + r.counts.waitlist + ' ברשימת ההמתנה (' + r.kb + ' ק"ב).');
+  }
+  async function mergeOffersBack(){
+    if (!offersToolGuard()) return;
+    if (!confirm('להחזיר את ההצעות, הבקשות ורשימת ההמתנה של העסק "' + BIZ_ID + '" למסמך אחד (כמו שהיה)?')) return;
+    const FV = firebase.firestore.FieldValue;
+    let r = null;
+    try {
+      r = await db.runTransaction(tx => tx.get(CLOUD_DOC).then(doc => {
+        if (!doc.exists) throw Object.assign(new Error('no-business'), { code: 'no-business' });
+        if ((doc.data() || {}).offersSplit !== true) return { already: true };
+        return tx.get(offersPartRef()).then(p => {
+          const part = p.exists ? (p.data() || {}) : {};
+          const at = new Date().toISOString();
+          const main = { offersSplit: FV.delete(), savedAt: at };
+          const counts = {};
+          OFFERS_PART_KEYS.forEach(k => { main[k] = Array.isArray(part[k]) ? part[k] : []; counts[k] = main[k].length; });
+          tx.update(CLOUD_DOC, main);
+          tx.set(offersPartRef(), { mergedBackAt: at }, { merge: true });   // נשאר לגיבוי, לא נמחק
+          return { at: at, counts: counts };
+        });
+      }));
+    } catch (e) {
+      alert('ההחזרה נכשלה, ושום דבר לא השתנה. (' + String((e && (e.code || e.message)) || '') + ')');
+      return;
+    }
+    if (r.already) { alert('הכול כבר במסמך אחד.'); updateOffersSplitStatus(); return; }
+    bumpCloudStamp(r.at, false, r.at);
+    try { reportDiag('offers-split', { code: 'merge-back', key: 'p' + r.counts.pendingOffers + ' s' + r.counts.specialRequests + ' w' + r.counts.waitlist }); } catch (e) {}
+    await refreshCalendarFromCloud();
+    alert('✓ הוחזר למסמך אחד: ' + r.counts.pendingOffers + ' הצעות, ' + r.counts.specialRequests + ' בקשות, ' + r.counts.waitlist + ' ברשימת ההמתנה.');
+  }
+  window.splitOffersToPart = splitOffersToPart;
+  window.mergeOffersBack = mergeOffersBack;
   /* 206: בדיקת אבטחה חד-פעמית בכל טעינה: האם יש בנתונים שם/טיפול/טקסט עם
    * תגית HTML (סימן לניסיון הזרקה מבחוץ, לפני תיקון השרת). רק סופר ומדווח
    * לסיכום היומי — בלי פרטים של לקוחות. */
@@ -26314,6 +26535,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     } catch (e) {}
   }
   function applyCloudData(data){
+    // 215: איזה מבנה המסמך, ומה הגרסה של מסמך ההצעות שנקלטה עכשיו
+    try { __offersSplitOn = !!(data && data.offersSplit === true); __offersAtSeen = __offersSplitOn ? String(data.__offersAt || '') : ''; updateOffersSplitStatus(); } catch (e) {}
     try { if (isOwnerSession()) scanForHtmlTags(data); } catch (e) {}
     if (data.branding){ branding = data.branding; window.__themeDataKnown = true; }
     if (typeof applySiteTheme === 'function') applySiteTheme();
@@ -27451,7 +27674,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     }
     runningOnPublicData = false;
     const __openDlT0 = window.__hkNow ? window.__hkNow() : 0;   // 194
-    return getDocWithRetry(CLOUD_DOC, 'business').then(doc => {
+    return getBizDocWithParts('business').then(doc => {
       if (window.__hkBusyMark) window.__hkBusyMark('הורדת המסמך (פתיחת היומן)', __openDlT0, window.__hkNow());
       hideCloudErrorBanner();
       hideBizNotReadyBanner();
@@ -27629,18 +27852,20 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     let __dlT0 = 0;
     readCloudStamp().then(stamp => {
       if (stamp && stamp.srv && stamp.savedAt && lastLoadedSnapshot && stamp.savedAt === lastLoadedSnapshot.savedAt){
+        // 215: רק מסמך ההצעות השתנה — מורידים רק אותו
+        if (__offersSplitOn && stamp.offersAt && String(stamp.offersAt) !== __offersAtSeen) return pullOffersPartOnly('tab-return-offers').then(() => null);
         __stampSkips++;
         return null;
       }
       __lastFullPollAt = Date.now();
       __dlT0 = window.__hkNow();
-      return getDocWithRetry(CLOUD_DOC, 'tab-return');
+      return getBizDocWithParts('tab-return');
     }).then(doc => {
       if (__dlT0) window.__hkBusyMark('הורדת המסמך (חזרה ללשונית)', __dlT0, window.__hkNow());
       if (!doc || !doc.exists || unsavedChangePending || pendingSaveCount > 0) return;
       const changed = (window.__hkBusyRun || ((l, d, f) => f()))('קליטת עדכון מהענן', null, () => {
         const rawCloudData = doc.data();
-        if (lastLoadedSnapshot && rawCloudData.savedAt === lastLoadedSnapshot.savedAt) return false;
+        if (lastLoadedSnapshot && cloudDataUnchanged(rawCloudData)) return false;   // 215
         backfillMissingListIds(rawCloudData);
         lastLoadedSnapshot = cloneJSON(rawCloudData);
         applyCloudData(rawCloudData);
@@ -27680,17 +27905,23 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   function cloudStampRef(){
     try { return (typeof CLOUD_DOC !== 'undefined' && CLOUD_DOC) ? CLOUD_DOC.collection('meta').doc('stamp') : null; } catch (e) { return null; }
   }
-  function bumpCloudStamp(savedAt, force){
+  function bumpCloudStamp(savedAt, force, offersAt){
     // אחרי שמירה שכבר הצליחה; כישלון כאן לא נוגע בשמירה עצמה.
+    // 215: offersAt — הגרסה של מסמך ההצעות (במצב מפוצל). savedAt=null: הראשי לא נכתב.
     try {
       const ref = cloudStampRef();
-      if (!ref || !savedAt || typeof db === 'undefined') return;
+      if (!ref || (!savedAt && !offersAt) || typeof db === 'undefined') return;
       // טרנזקציה קטנה: החותמת רק מתקדמת, כדי ששמירה ישנה שמגיעה באיחור
       // לא תחזיר אותה אחורה.
       db.runTransaction(tx => tx.get(ref).then(d => {
-        const cur = d.exists ? String((d.data() || {}).savedAt || '') : '';
-        if (!force && cur && cur >= String(savedAt)) return;   // force: שחזור מגיבוי, שמחזיר savedAt ישן
-        tx.set(ref, { savedAt: String(savedAt) }, { merge: true });
+        const curData = d.exists ? (d.data() || {}) : {};
+        const upd = {};
+        const cur = String(curData.savedAt || '');
+        if (savedAt && (force || !cur || cur < String(savedAt))) upd.savedAt = String(savedAt);   // force: שחזור מגיבוי, שמחזיר savedAt ישן
+        const curOffers = String(curData.offersAt || '');
+        if (offersAt && (force || !curOffers || curOffers < String(offersAt))) upd.offersAt = String(offersAt);
+        if (!Object.keys(upd).length) return;
+        tx.set(ref, upd, { merge: true });
       })).catch(err => console.warn('stamp write skipped:', err && err.code));
     } catch (e) {}
   }
@@ -27721,12 +27952,17 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     let __pollDlT0 = 0;
     (__fullDue ? Promise.resolve(null) : readCloudStamp()).then(stamp => {
       if (stamp && stamp.srv && stamp.savedAt && stamp.savedAt === lastLoadedSnapshot.savedAt){
+        // 215: הראשי לא השתנה, אבל מסמך ההצעות כן — מורידים רק אותו
+        if (__offersSplitOn && stamp.offersAt && String(stamp.offersAt) !== __offersAtSeen){
+          __idlePolls = 0;
+          return pullOffersPartOnly('poll-offers').then(() => null);
+        }
         __stampSkips++; __idlePolls++;
         return null;   // שום דבר לא השתנה — בלי להוריד את המסמך
       }
       __lastFullPollAt = Date.now();
       __pollDlT0 = window.__hkNow();
-      return getDocWithRetry(CLOUD_DOC, 'poll');
+      return getBizDocWithParts('poll');
     }).then(doc => {
       if (!doc) return;
       if (__pollDlT0) window.__hkBusyMark('הורדת המסמך (בדיקת עדכונים)', __pollDlT0, window.__hkNow());
@@ -27734,7 +27970,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       // 193: עם שם, כדי שהסיכום לא יגיד "עבודה לא מזוהה"
       const changed = (window.__hkBusyRun || ((l, d, f) => f()))('קליטת עדכון מהענן', null, () => {
         const rawCloudData = doc.data();
-        if (rawCloudData.savedAt === lastLoadedSnapshot.savedAt){ __idlePolls++; return false; } // שום דבר לא השתנה
+        if (cloudDataUnchanged(rawCloudData)){ __idlePolls++; return false; } // שום דבר לא השתנה (215: כולל מסמך ההצעות)
         __idlePolls = 0;
         backfillMissingListIds(rawCloudData);
         lastLoadedSnapshot = cloneJSON(rawCloudData);
@@ -28102,7 +28338,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     // 120: הקריאה עוברת דרך getDocWithRetry, כמו הטעינה הראשונה — כולל הדרך
     // העוקפת כשהערוץ הרציף חסום (חלון גלישה בסתר). עד 119 הרענון השתמש
     // בקריאה הרגילה בלבד, ונתקע על "מרעננת..." עד שנכשל.
-    return getDocWithRetry(CLOUD_DOC, 'refresh').then(doc => {
+    return getBizDocWithParts('refresh').then(doc => {
       if (!doc.exists) return false;
       if (unsavedChangePending || pendingSaveCount > 0) return true; // שינוי נכנס בזמן הקריאה — השמירה תביא את הגרסה העדכנית
       const rawCloudData = doc.data();
