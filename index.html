@@ -7,7 +7,21 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-11-18 · 215">
+<meta name="app-build" content="2026-11-23 · 216">
+<script>
+  /* 216: באתר של רותי (rutizolberg.com) — תוסף הנגישות של accessible.org.il במקום הכפתור
+   * הכחול שלנו (nagish.js). בכל שאר העסקים הכול כמו קודם. ההגדרות שמישהי שמרה
+   * בתפריט הישן שלנו נמחקות כאן, לפני ש-nagish.js נטען, כדי שלא יהיו שני תפריטים
+   * שמשנים את הדף. לבדיקה מקומית בלבד: ?a11yVendor=1 על localhost. */
+  (function(){
+    var h = String(location.hostname || '').toLowerCase();
+    var on = /^(www\.)?rutizolberg\.com$/.test(h) || (/^(localhost|127\.0\.0\.1)$/.test(h) && /[?&]a11yVendor=1\b/.test(location.search));
+    window.__hkA11yVendor = on;
+    if (!on) return;
+    document.documentElement.classList.add('hk-a11y-vendor');
+    try { localStorage.removeItem('nagish-v1'); } catch (e) {}
+  })();
+</script>
 
 <title>רותי זולברג — קביעת תורים אונליין | הכל בקליק</title>
 <meta name="description" content="רותי זולברג — קביעת תור עצמאית באתר, בלי צורך בשיחת טלפון.">
@@ -2249,6 +2263,11 @@ window.__hkE = function(v){ return String(v == null ? '' : v).replace(/[&<>"']/g
   .hk-nagish-inline{display:none;}
   @media (max-width:600px){ .hk-nagish-inline{display:inline-flex; align-items:center; gap:8px; margin:14px auto 0; background:#1F4FA8 !important; color:#fff !important; border:2px solid #fff !important; border-radius:999px; padding:10px 18px; font:inherit; font-weight:700; font-size:15px; cursor:pointer; box-shadow:0 3px 10px rgba(0,0,0,.25);} }
   html.hk-legal-open body > *:not(#hkLegalOverlay):not(#nagish-skip){visibility:hidden !important;}
+  /* 216: אצל רותי — בלי הכפתור הכחול שלנו (גם לא זה שבסוף העמוד בטלפון); והתוסף של
+     accessible.org.il לא מופיע במסך הניהול */
+  html.hk-a11y-vendor #nagish-host, html.hk-a11y-vendor .hk-nagish-inline{display:none !important;}
+  body.admin-mode #acc-root, html:has(body.admin-mode) #acc-root, html.hk-legal-open #acc-root{display:none !important;}
+  #accessible-statement{min-height:120px;}
   @media (min-width:900px){ .hkp-body{grid-template-columns:260px 1fr; gap:40px;} .hkp-toc{position:sticky; top:84px;} }
   .hk-legal-close{float:left; border:1px solid #d8cfc3; background:#fff; border-radius:999px; padding:6px 14px; font-size:14px; cursor:pointer;}
   .hk-mc-label{display:flex; gap:6px; align-items:center; font-size:12.5px; margin-top:8px; color:var(--panel-text-dim);}
@@ -5006,7 +5025,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-18 · 215';
+        window.__APP_BUILD = '2026-11-23 · 216';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5158,7 +5177,9 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         + '<li>הצבעים נבחרו כך שיהיה ניגוד מספיק בין הטקסט לרקע, והאנימציות נעצרות לבד כשמגדירים במכשיר "הפחתת תנועה".</li>'
         + '<li>תזכורות לתור אפשר לקבל גם בשיחה קולית ולא רק בהודעה כתובה.</li>'
         + '<li>האתר נבדק בכלי הבדיקה האוטומטיים axe ו-IBM Equal Access ובבדיקה ידנית במקלדת, ונבדק שוב אוטומטית כל שבוע.</li></ul>'],
-      ['hkp-menu', 'תפריט הנגישות', '<p>במחשב יש כפתור נגישות כחול בצד המסך. בטלפון כפתור הנגישות הכחול נמצא בסוף העמוד. ההגדרות נשמרות בדפדפן שלך. האפשרויות בתפריט:</p><ol>'
+      window.__hkA11yVendor
+        ? ['hkp-menu', 'תפריט הנגישות', '<p>בכל עמוד באתר יש כפתור לתפריט נגישות. בתפריט אפשר להגדיל את הטקסט, לשנות ניגודיות וצבעים, להדגיש קישורים וכותרות, לעצור אנימציות ועוד. ההגדרות נשמרות בדפדפן שלך.</p>']
+        : ['hkp-menu', 'תפריט הנגישות', '<p>במחשב יש כפתור נגישות כחול בצד המסך. בטלפון כפתור הנגישות הכחול נמצא בסוף העמוד. ההגדרות נשמרות בדפדפן שלך. האפשרויות בתפריט:</p><ol>'
         + '<li>גודל טקסט: הקטנה, חזרה ל-100% והגדלה</li><li>ניגודיות גבוהה</li><li>גווני אפור</li><li>הדגשת קישורים</li><li>הדגשת כותרות</li>'
         + '<li>גופן קריא</li><li>ריווח טקסט</li><li>עצירת אנימציות</li><li>סמן עכבר גדול</li><li>איפוס הגדרות</li></ol>'],
       ['hkp-limits', 'מגבלות ידועות ודרכים חלופיות', '<ul><li>תמונות שהסלון מעלה (למשל ב"פינוקים חדשים") מתוארות לפי הכותרת שלהן. אם יש בתמונה מידע נוסף, כמו מחיר או תאריך, אפשר לקבל אותו בטלפון.</li></ul><p>אם נתקלת בקושי כלשהו, אפשר תמיד לקבוע תור בטלפון, ונשמח לשמוע ולתקן כמה שיותר מהר.</p>']
@@ -5186,6 +5207,39 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       + d.sec.map(function(x){ return '<section aria-labelledby="' + x[0] + '"><h2 id="' + x[0] + '" tabindex="-1">' + x[1] + '</h2>' + x[2] + '</section>'; }).join('')
       + '</div></div>';
   }
+  /* 216: אצל רותי — הצהרת הנגישות של accessible.org.il, בתוך אותו חלון. אם היא לא
+   * נטענת (חסומה, עוד לא פורסמה אצלם, או ריקה אחרי 8 שניות) — ההצהרה שלנו. */
+  var VENDOR_STATEMENT = 'https://cdn.accessible.org.il/a/rutizolberg.com/statement.js';
+  function vendorStatementHtml(){
+    var b = biz();
+    return '<div class="hkp-top"><span class="hkp-brand">' + b.name + '</span><button type="button" class="hkp-back hk-legal-close" onclick="hkCloseLegal()">חזרה לאתר ←</button></div>'
+      + '<div class="hkp-head"><div class="hkp-crumb"><a href="#" onclick="hkCloseLegal(); return false;">דף הבית</a> &nbsp;›&nbsp; הצהרת נגישות</div>'
+      + '<h1 class="hkp-title" id="hkLegalTitle">הצהרת נגישות</h1></div>'
+      + '<div class="hkp-body"><div class="hkp-main" style="width:100%; max-width:none;"><div id="accessible-statement"><p style="color:#6B6259;">טוענת את ההצהרה…</p></div></div></div>';
+  }
+  var vendorTimer = null;
+  function vendorFallback(){
+    if (vendorTimer) { clearTimeout(vendorTimer); vendorTimer = null; }
+    var sh = document.getElementById('hkLegalSheet'), el = document.getElementById('accessible-statement');
+    if (!sh || !el || el.getAttribute('data-hk-ok') === '1') return;
+    sh.innerHTML = pageHtml('accessibility');
+    var h = document.getElementById('hkLegalTitle'); if (h) h.setAttribute('tabindex', '-1');
+  }
+  function loadVendorStatement(){
+    var old = document.getElementById('hkAccStatementScript'); if (old && old.parentNode) old.parentNode.removeChild(old);
+    var s = document.createElement('script');
+    s.id = 'hkAccStatementScript'; s.async = true; s.src = VENDOR_STATEMENT;
+    s.onerror = vendorFallback;
+    (document.head || document.body).appendChild(s);
+    if (vendorTimer) clearTimeout(vendorTimer);
+    vendorTimer = setTimeout(function(){
+      vendorTimer = null;
+      var el = document.getElementById('accessible-statement');
+      if (!el) return;
+      var placeholder = el.children.length === 1 && el.firstElementChild.tagName === 'P' && /טוענת את ההצהרה/.test(el.textContent);
+      if (placeholder || !el.textContent.trim()) vendorFallback(); else el.setAttribute('data-hk-ok', '1');
+    }, 8000);
+  }
   window.hkLegalJump = function(id){
     var el = document.getElementById(id); if (!el) return;
     el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
@@ -5197,13 +5251,15 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     var ov = document.getElementById('hkLegalOverlay'), sh = document.getElementById('hkLegalSheet');
     if (!ov || !sh) return false;
     if (!ov.classList.contains('show')) { lastFocus = document.activeElement; prevOverflow = document.documentElement.style.overflow; }
-    sh.innerHTML = pageHtml(kind === 'accessibility' ? 'accessibility' : 'privacy');
+    var vendorStmt = kind === 'accessibility' && !!window.__hkA11yVendor;   // 216
+    sh.innerHTML = vendorStmt ? vendorStatementHtml() : pageHtml(kind === 'accessibility' ? 'accessibility' : 'privacy');
+    if (vendorStmt) loadVendorStatement();
     ov.classList.add('show', 'hk-page');
     document.documentElement.classList.add('hk-legal-open');
     document.documentElement.style.overflow = 'hidden';
     sh.scrollTop = 0;
     var h = document.getElementById('hkLegalTitle'); if (h) { h.setAttribute('tabindex', '-1'); try { h.focus(); } catch (e) {} }
-    if (kind === 'accessibility') lastCheckDate();
+    if (kind === 'accessibility' && !vendorStmt) lastCheckDate();
     return true;
   }
   // 202: הבדיקה השבועית (GitHub Actions) שומרת את התאריך שלה ב-nagish-status.json. כשלא נמצאו בעיות חובה, זה "עודכן לאחרונה".
@@ -28732,5 +28788,34 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
 })();
 </script>
 <script src="nagish.js" defer data-statement-fn="hkOpenLegal" data-main="#panel-customer" data-mobile="footer"></script>
+<script>
+  /* 216: התוסף של accessible.org.il — רק אצל רותי, ורק בצד של הלקוחות. במסך הניהול
+   * הוא לא נטען בכלל; אם רותי נכנסה קודם לאתר ואחר כך ליומן — הוא מוסתר (CSS למעלה).
+   * נטען ברקע (async): אם סינון חוסם את הכתובת שלהם, האתר עובד כרגיל בלי התפריט. */
+  (function(){
+    if (!window.__hkA11yVendor) return;
+    var SRC = 'https://cdn.accessible.org.il/a/rutizolberg.com/accessibility.js';
+    function inAdmin(){ return !!(document.body && document.body.classList.contains('admin-mode')); }
+    function load(){
+      if (window.__accessibleWidgetLoaded || document.getElementById('hkAccVendorScript')) return true;
+      if (inAdmin()) return false;
+      var s = document.createElement('script');
+      s.id = 'hkAccVendorScript'; s.async = true; s.src = SRC;
+      s.setAttribute('data-cfasync', 'false');
+      (document.head || document.body).appendChild(s);
+      return true;
+    }
+    function start(){
+      if (load()) return;
+      // היומן פתוח עכשיו — נטען רק כשעוברים לצד של הלקוחות
+      try {
+        var mo = new MutationObserver(function(){ if (load()) mo.disconnect(); });
+        mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      } catch (e) {}
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(start, 300); });
+    else setTimeout(start, 300);
+  })();
+</script>
 </body>
 </html>
