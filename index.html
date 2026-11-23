@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-11-23 · 217">
+<meta name="app-build" content="2026-11-23 · 218">
 <script>
   /* 216: באתר של רותי (rutizolberg.com) — תוסף הנגישות של accessible.org.il במקום הכפתור
    * הכחול שלנו (nagish.js). בכל שאר העסקים הכול כמו קודם. ההגדרות שמישהי שמרה
@@ -5025,7 +5025,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-23 · 217';
+        window.__APP_BUILD = '2026-11-23 · 218';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5283,7 +5283,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   /* 217: אצל רותי ההצהרה היא עמוד נפרד, accessibility.html (בקשת accessible.org.il, כדי שיהיה קישור לשתף).
    * אם ההצהרה שלהם לא נטענה שם, העמוד מסמן את זה ב-sessionStorage וחוזר ל-/#accessibility,
    * ואז מוצגת מיד ההצהרה שלנו, בלי לנסות שוב לטעון את שלהם. */
-  function vendorStmtFailed(){ try { return sessionStorage.getItem('hkVendorStmtFail') === '1'; } catch (e) { return false; } }
+  // 218: הסימון תקף רק 2 דקות (ב-217 הוא נשאר בלשונית לתמיד, ואז ההצהרה שלנו נפתחה גם אחרי שזו שלהם כבר עבדה)
+  function vendorStmtFailed(){ try { var t = +sessionStorage.getItem('hkVendorStmtFail'); return t > 1e12 && Date.now() - t < 120000; } catch (e) { return false; } }
   // 200: הדף מקבל כתובת משלו (#accessibility), וכפתור "אחורה" בטלפון סוגר אותו
   window.hkOpenLegal = function(kind){
     kind = kind === 'accessibility' ? 'accessibility' : 'privacy';

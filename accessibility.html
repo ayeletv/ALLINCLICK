@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- 217: הצהרת הנגישות של רותי כעמוד נפרד עם כתובת משלו (בקשת accessible.org.il).
-     התוכן נטען מ-accessible.org.il (statement.js). אם הוא לא נטען תוך 8 שניות,
+<!-- 217/218: הצהרת הנגישות של רותי כעמוד נפרד עם כתובת משלו (בקשת accessible.org.il).
+     התוכן נטען מ-accessible.org.il (statement.js). אם הוא לא נטען תוך 12 שניות,
      או נחסם (סינון), עוברים להצהרה שלנו באתר: /#accessibility -->
 <title>הצהרת נגישות | רותי זולברג</title>
 <meta name="description" content="הצהרת הנגישות של האתר של רותי זולברג, קביעת תורים אונליין.">
@@ -45,7 +45,7 @@
   var done = false;
   function fallback(){
     if (done) return; done = true;
-    try { sessionStorage.setItem('hkVendorStmtFail', '1'); } catch (e) {}
+    try { sessionStorage.setItem('hkVendorStmtFail', String(Date.now())); } catch (e) {}
     location.replace('/#accessibility');
   }
   function ok(){
@@ -59,7 +59,13 @@
   s.src = 'https://cdn.accessible.org.il/a/rutizolberg.com/statement.js';
   s.onerror = fallback;
   document.head.appendChild(s);
-  setTimeout(function(){ if (!ok()) fallback(); else { done = true; try { sessionStorage.removeItem('hkVendorStmtFail'); } catch (e) {} } }, 8000);
+  try { sessionStorage.removeItem('hkVendorStmtFail'); } catch (e) {}   // 218: כל כניסה מנסה מחדש את ההצהרה שלהם
+  // 218: אם התוכן שלהם מגיע — מפסיקים לחכות מיד. אחרי 12 שניות בלי תוכן — ההצהרה שלנו.
+  var t0 = Date.now(), iv = setInterval(function(){
+    if (done) { clearInterval(iv); return; }
+    if (ok()) { done = true; clearInterval(iv); return; }
+    if (Date.now() - t0 > 12000) { clearInterval(iv); fallback(); }
+  }, 500);
 })();
 </script>
 <!-- תפריט הנגישות של accessible.org.il, כמו בשאר האתר -->
