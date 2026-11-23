@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 217: הצהרת הנגישות של רותי כעמוד נפרד עם כתובת משלו (בקשת accessible.org.il).
+     התוכן נטען מ-accessible.org.il (statement.js). אם הוא לא נטען תוך 8 שניות,
+     או נחסם (סינון), עוברים להצהרה שלנו באתר: /#accessibility -->
+<title>הצהרת נגישות | רותי זולברג</title>
+<meta name="description" content="הצהרת הנגישות של האתר של רותי זולברג, קביעת תורים אונליין.">
+<link rel="canonical" href="https://rutizolberg.com/accessibility.html">
+<style>
+  :root{ --ink:#2B2326; --muted:#6B6259; --line:#E4DCD2; --bg:#FBF8F4; --focus:#1A56DB; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:"Heebo", Arial, sans-serif; font-size:17px; line-height:1.7; }
+  .skip{ position:absolute; inset-inline-start:8px; top:-60px; background:#fff; color:var(--ink); padding:8px 14px; border:2px solid var(--focus); border-radius:8px; z-index:10; }
+  .skip:focus{ top:8px; }
+  header{ border-bottom:1px solid var(--line); background:#fff; }
+  .wrap{ max-width:860px; margin:0 auto; padding:0 16px; }
+  .top{ display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 0; }
+  .brand{ font-weight:700; font-size:18px; }
+  a{ color:#5A3E8C; }
+  a:focus-visible, button:focus-visible{ outline:3px solid var(--focus); outline-offset:2px; border-radius:4px; }
+  .crumb{ font-size:14px; color:var(--muted); margin:18px 0 0; }
+  h1{ font-size:30px; margin:6px 0 18px; }
+  main{ padding-bottom:48px; }
+  .loading{ color:var(--muted); }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">דילוג לתוכן הראשי</a>
+<header>
+  <div class="wrap top">
+    <span class="brand">רותי זולברג</span>
+    <a href="/">חזרה לאתר ←</a>
+  </div>
+</header>
+<main id="main" class="wrap" tabindex="-1">
+  <nav class="crumb" aria-label="פירורי לחם"><a href="/">דף הבית</a> &nbsp;›&nbsp; הצהרת נגישות</nav>
+  <h1>הצהרת נגישות</h1>
+  <div id="accessible-statement"><p class="loading" role="status">טוענת את ההצהרה…</p></div>
+</main>
+<script>
+(function(){
+  var done = false;
+  function fallback(){
+    if (done) return; done = true;
+    try { sessionStorage.setItem('hkVendorStmtFail', '1'); } catch (e) {}
+    location.replace('/#accessibility');
+  }
+  function ok(){
+    var el = document.getElementById('accessible-statement');
+    if (!el) return false;
+    var placeholder = el.children.length === 1 && /טוענת את ההצהרה/.test(el.textContent);
+    return !placeholder && !!el.textContent.trim();
+  }
+  var s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://cdn.accessible.org.il/a/rutizolberg.com/statement.js';
+  s.onerror = fallback;
+  document.head.appendChild(s);
+  setTimeout(function(){ if (!ok()) fallback(); else { done = true; try { sessionStorage.removeItem('hkVendorStmtFail'); } catch (e) {} } }, 8000);
+})();
+</script>
+<!-- תפריט הנגישות של accessible.org.il, כמו בשאר האתר -->
+<script async src="https://cdn.accessible.org.il/a/rutizolberg.com/accessibility.js"></script>
+</body>
+</html>

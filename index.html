@@ -7,7 +7,7 @@
 <!-- גרסת הקובץ. חייבת להישאר בתחילת הקובץ (ב-1,500 הבתים הראשונים): יומן
      פתוח קורא רק אותם כדי לדעת אם הועלתה גרסה חדשה, ומתרענן לבד. לעדכן יחד
      עם window.__APP_BUILD בכל העלאה. -->
-<meta name="app-build" content="2026-11-23 · 216">
+<meta name="app-build" content="2026-11-23 · 217">
 <script>
   /* 216: באתר של רותי (rutizolberg.com) — תוסף הנגישות של accessible.org.il במקום הכפתור
    * הכחול שלנו (nagish.js). בכל שאר העסקים הכול כמו קודם. ההגדרות שמישהי שמרה
@@ -5025,7 +5025,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-23 · 216';
+        window.__APP_BUILD = '2026-11-23 · 217';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -5251,7 +5251,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     var ov = document.getElementById('hkLegalOverlay'), sh = document.getElementById('hkLegalSheet');
     if (!ov || !sh) return false;
     if (!ov.classList.contains('show')) { lastFocus = document.activeElement; prevOverflow = document.documentElement.style.overflow; }
-    var vendorStmt = kind === 'accessibility' && !!window.__hkA11yVendor;   // 216
+    var vendorStmt = kind === 'accessibility' && !!window.__hkA11yVendor && !vendorStmtFailed();   // 216, 217
     sh.innerHTML = vendorStmt ? vendorStatementHtml() : pageHtml(kind === 'accessibility' ? 'accessibility' : 'privacy');
     if (vendorStmt) loadVendorStatement();
     ov.classList.add('show', 'hk-page');
@@ -5280,9 +5280,14 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     document.documentElement.style.overflow = prevOverflow;
     if (lastFocus && lastFocus.focus) try { lastFocus.focus(); } catch (e) {}
   }
+  /* 217: אצל רותי ההצהרה היא עמוד נפרד, accessibility.html (בקשת accessible.org.il, כדי שיהיה קישור לשתף).
+   * אם ההצהרה שלהם לא נטענה שם, העמוד מסמן את זה ב-sessionStorage וחוזר ל-/#accessibility,
+   * ואז מוצגת מיד ההצהרה שלנו, בלי לנסות שוב לטעון את שלהם. */
+  function vendorStmtFailed(){ try { return sessionStorage.getItem('hkVendorStmtFail') === '1'; } catch (e) { return false; } }
   // 200: הדף מקבל כתובת משלו (#accessibility), וכפתור "אחורה" בטלפון סוגר אותו
   window.hkOpenLegal = function(kind){
     kind = kind === 'accessibility' ? 'accessibility' : 'privacy';
+    if (kind === 'accessibility' && window.__hkA11yVendor && !vendorStmtFailed()) { location.href = 'accessibility.html'; return; }   // 217
     if (!showPage(kind)) return;
     if (location.hash !== HASH[kind]) { try { history.pushState({ hkLegal: kind }, '', HASH[kind]); pushed = true; } catch (e) {} }
   };
