@@ -5025,7 +5025,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-23 · 218';
+        window.__APP_BUILD = '2026-11-25 · 219';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -17064,12 +17064,17 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     /* 214: סיכום 17.11 — 7 פעמים "offers-stuck · היומן לא התעדכן" אחרי 212. השרת ענה
      * לבקשה להעביר, ולכן ההצעה יצאה ללקוחה הבאה. רק היומן במחשב לא הוריד עדיין את
      * המצב החדש. זו לא תקלה של ההצעות: מדווחים רק אם השרת לא ענה ב-10 הדקות האחרונות. */
-    if (__dueNowMs - __oldestDue >= OFFER_STUCK_REPORT_MS && !__offerLoopReported && (Date.now() - __offerTickOkAt) > OFFER_STUCK_REPORT_MS){
+    /* 219: סיכום 24.11 — פעמיים (15:05, 19:38) "pull-failed deadline-exceeded · היומן לא
+     * התעדכן": המחשב בסלון לא הגיע לא לשרת ולא למסמך (באותו יום גם הורדה של 16.4 שנ'
+     * בשמירה). "שעון ההצעות" בשרת מעביר בלי היומן, כך שזו בעיית קו של המחשב ולא הצעה
+     * תקועה. מדווחים רק כשהיומן כן מעודכן (הורדה מוצלחת ב-5 הדקות האחרונות) ועדיין
+     * רואה הצעה תקועה. כשהקו חוזר והיא עדיין תקועה — הדיווח יוצא אז. */
+    const __docStale = (Date.now() - (window.__hkLastDocOkAt || 0)) > 5 * 60000;
+    if (__dueNowMs - __oldestDue >= OFFER_STUCK_REPORT_MS && !__offerLoopReported && (Date.now() - __offerTickOkAt) > OFFER_STUCK_REPORT_MS && !__docStale){
       __offerLoopReported = true;
       try {
         const kinds = __dueList.map(o => o.status === 'offered' ? 'offeredPast' : 'expiredNotAttempted');
-        // 212: יומן שלא הצליח להוריד את המסמך 5 דקות ומעלה רואה תמונה ישנה — ייתכן שהשרת כבר העביר
-        const __stale = (Date.now() - (window.__hkLastDocOkAt || 0)) > 5 * 60000;
+        const __stale = __docStale;
         reportDiag('offers-stuck', { code: 'הצעה שפגה תקועה 10 דקות', key: (Array.from(new Set(kinds)).join(',') + ' · ' + (__offerLastStop || 'none') + (__offerPullFails ? ' · fails ' + __offerPullFails : '') + (__stale ? ' · היומן לא התעדכן' : '')).slice(0, 60), count: kinds.length });
       } catch (e) {}
     }
@@ -24545,6 +24550,9 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       // 185: גם שם הקובץ — "Unexpected end of JSON input" (2.11) הגיע בלי לדעת אם
       // מהקוד שלנו או מקובץ Firebase שנטען מהאתר (מספר השורה נמחק בשרת).
       const srcFile = src.split('?')[0].split('#')[0].split('/').pop().slice(0, 30) || 'index.html';
+      // 219: סיכום 24.11, 09:55 אצל לקוחה — "_0x…f.. is not defined". שמות _0x123abc הם
+      // של קוד מעורבל שסינון או תוסף מזריקים לדף; בקוד שלנו אין אף אחד כזה.
+      if (/(^|[^\w$])_0x[0-9a-f]{3,}/i.test(__msg)) return;
       reportDiag('js-error', { key: String((ev && ev.message) || '').slice(0, 60), code: 'line ' + ((ev && ev.lineno) || '') + ' · ' + srcFile });
     });
     window.addEventListener('unhandledrejection', function(ev){
