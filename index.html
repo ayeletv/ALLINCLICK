@@ -5025,7 +5025,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         גרסת המערכת: <span id="appBuildStamp" style="font-variant-numeric:tabular-nums;">—</span>
       </div>
       <script>
-        window.__APP_BUILD = '2026-11-25 · 219';
+        window.__APP_BUILD = '2026-11-26 · 220';
         (function(){ var el = document.getElementById('appBuildStamp'); if (el) el.textContent = window.__APP_BUILD; })();
       </script>
     </div>
@@ -15629,9 +15629,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
     // 175: ללקוחה עצמה יש תור אחר באותה שעה (אצל עובדת אחרת)
     if (typeof clientHasOverlappingAppointment === 'function' && clientHasOverlappingAppointment(appt.client, dateKey, startMin, startMin + dur, appt.id))
       return { ok: false, reason: 'ל' + (appt.client || 'לקוחה') + ' כבר יש תור אחר בשעה הזו' };
-    // 175: השעה מוצעת עכשיו ללקוחה אחרת (שעה שהתפנתה, ממתינה לאישור)
-    if (typeof slotIsHeldByOffer === 'function' && slotIsHeldByOffer(dateKey, staffIdx, startMin, startMin + dur))
-      return { ok: false, reason: 'השעה מוצעת עכשיו ללקוחה אחרת' };
+    // 175 → 220: שעה שמוצעת לרשימת ההמתנה כבר לא חסומה (היא פתוחה גם באתר).
+    // מי שתלחץ אחר כך על הקישור תקבל "השעה כבר נתפסה".
     let warn = '';
     try {
       if (typeof isDateClosedForStaff === 'function' && isDateClosedForStaff(staffIdx, dateObj)) warn = 'היום הזה סגור לעובדת';
@@ -16176,7 +16175,9 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       const dayOffers = allOffersNow
         .filter(o => o && o.date === __dayKeyForOffers
           && (selectedStaffFilter === 'all' || o.staff === selectedStaffFilter)
-          && (offerIsLive(o) || handingOver(o) || nightWait(o)));
+          && (offerIsLive(o) || handingOver(o) || nightWait(o))
+          // 220: השעה נקבעה (גם באתר) בזמן שההצעה פתוחה — מציירים רק את התור
+          && !(offerIsLive(o) && slotHasAppointmentConflict(o)));
       dayOffers.forEach(o => {
         const mins = timeToMinutes(o.time);
         const hourIdx = Math.floor(mins / 60) - calStartHour;
@@ -16224,7 +16225,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
             ' — נשלחה ' + hhmmB(x.createdAt) + ' — ' +
             (x.final ? 'הודעה אחרונה לכולן — הראשונה שתאשר מקבלת' : '') +
             (x.final ? '' : x.id === o.id ? (left > 0 ? 'ממתינה לתשובה עד ' + hhmmB(x.expiresAt) : 'פג הזמן')
-              : x.status === 'claimed' ? 'אישרה' : x.closedReason === 'booked-other' ? 'קבעה תור בשעה אחרת' : x.status === 'withdrawn' ? 'ביטלה' : 'לא ענתה עד ' + hhmmB(x.expiresAt))).join('\n') +
+              : x.status === 'claimed' ? 'אישרה' : x.closedReason === 'booked-other' ? 'קבעה תור בשעה אחרת' : x.closedReason === 'booked-on-site' ? 'השעה נקבעה באתר' : x.status === 'withdrawn' ? 'ביטלה' : 'לא ענתה עד ' + hhmmB(x.expiresAt))).join('\n') +
           (ended ? '\n\nהסבב הסתיים: כל אחת מהרשימה קיבלה עד 2 הודעות על השעה הזו, ואף אחת עוד לא אישרה. לא יישלחו עוד הודעות. אפשר לחכות — הן עדיין יכולות לאשר מהקישור — או לקחת את השעה לעצמך.' : '') +
           (night ? '\n\nבלילה (23:00–08:00) לא שולחים הודעות. ב-08:00 ההצעה תעבור לבאה בתור.' : '') +
           '\nלחיצה לפרטים.';
@@ -17180,8 +17181,9 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       return 'התפנה תור ' + when + ' ב-' + offer.time + (offer.serviceName ? ' (' + offer.serviceName + ')' : '') +
         '. הראשונה שתאשר מקבלת: ' + link + note;
     }
+    // 220: השעה פתוחה גם באתר, אז היא לא "שמורה לך" — הראשונה שקובעת מקבלת
     return 'התפנה תור ' + when + ' ב-' + offer.time + (offer.serviceName ? ' (' + offer.serviceName + ')' : '') +
-      '. שמורה לך עד ' + offerUntilLabel(offer) + (offer.broadcast ? '' : ' (ואחר כך — אם עדיין פנויה)') + ': ' + link + race + note;
+      '. הראשונה שתאשר מקבלת: ' + link + note;
   }
   // 122: עד מתי ההצעה שמורה לה — בהודעה ובמסך שהקישור פותח.
   function offerUntilLabel(offer){
@@ -17202,7 +17204,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         : offer.shared
         ? 'השעה הוצעה קודם גם ללקוחות אחרות והיא עדיין פנויה — הראשונה שתאשר מקבלת, אז כדאי לאשר מהר.\n\n'
         // 137: הקישור ממשיך לעבוד כל עוד השעה פנויה — לא להרתיע אותה (זהה לשרת)
-        : 'השעה שמורה רק לך עד ' + offerUntilLabel(offer) + '. גם אחרי זה, כל עוד היא עדיין פנויה, אפשר לאשר מהקישור הזה — אבל אז היא מוצעת גם ללקוחות נוספות, והראשונה שמאשרת מקבלת.\n\n') +
+        // 220: השעה פתוחה גם באתר — לא "שמורה רק לך" (זהה לשרת 210)
+        : 'השעה פתוחה גם לקביעה באתר, והראשונה שמאשרת מקבלת — אז כדאי לאשר מהר. גם אחרי ' + offerUntilLabel(offer) + ', כל עוד השעה פנויה, אפשר לאשר מהקישור הזה.\n\n') +
       'לאישור התור לחצי כאן: ' + link + '\n\n' +
       'התור יישמר ביומן רק לאחר שתפתחי את הקישור ותאשרי אותו.';
   }
@@ -17415,7 +17418,8 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       (o.freedFrom ? '<div class="offer-note">השעה התפנתה אחרי ביטול של ' + o.freedFrom + '.</div>' : '') +
       '<div class="offer-countdown' + (left <= 5 ? ' offer-countdown-soon' : '') + '">' +
         (left > 0
-          ? '⏳ השעה שמורה עוד <b>' + left + ' דקות</b> — עד ' + until
+          ? (slotHasAppointmentConflict(o) ? '✓ השעה נקבעה ביומן בינתיים (אפשר שבאתר) — ההצעה תיסגר.'
+            : '⏳ ההצעה ללקוחה הזו פתוחה עוד <b>' + left + ' דקות</b> — עד ' + until + '. השעה פתוחה גם באתר לכולן.')
           : (o.status === 'claimed' ? '✓ ' + (o.claimedBy || 'לקוחה') + ' אישרה — התור נקבע.'
             : o.status === 'taken' ? 'השעה נתפסה.'
             // 142: הסבב נגמר — לא יישלח עוד כלום; ההחלטה אצל רותי
@@ -20096,8 +20100,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       const end = start + dur;
       if (!windows.some(([s, e]) => start >= s && end <= e)) return false;
       if (breaksEveningLimit(windows, start, dur, selectedStaffIndex, bookingSelectedDate)) return false;
-      if (typeof slotIsHeldByOffer === 'function'
-        && slotIsHeldByOffer(formatDateKey(bookingSelectedDate), selectedStaffIndex, start, end)) return false;
+      /* 220: שעה שמוצעת לרשימת ההמתנה פתוחה גם לכולם באתר — הראשונה שקובעת מקבלת (איילת, 26.11) */
       return busy.every(([bStart, bEnd]) => end <= bStart || start >= bEnd);
     };
     const findConflict = (start, dur) => {
@@ -20111,8 +20114,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
       if (!windows.some(([s2, e2]) => start >= s2 && start + dur <= e2)) return false;
       if (!breaksEveningLimit(windows, start, dur, selectedStaffIndex, bookingSelectedDate)) return false;
       if (findConflict(start, dur)) return false;
-      if (typeof slotIsHeldByOffer === 'function'
-        && slotIsHeldByOffer(formatDateKey(bookingSelectedDate), selectedStaffIndex, start, start + dur)) return false;
+      /* 220: שעה שמוצעת לרשימת ההמתנה פתוחה גם לכולם באתר — הראשונה שקובעת מקבלת (איילת, 26.11) */
       return true;
     };
     const minutesToTime = (m) => String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0');
@@ -20222,8 +20224,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         if (!wins) continue;
         if (!wins.some(([s, e]) => start >= s && end <= e)) continue;
         if (breaksEveningLimit(mergeWindows(wins), start, dur, idx, bookingSelectedDate)) continue;
-        if (typeof slotIsHeldByOffer === 'function'
-          && slotIsHeldByOffer(formatDateKey(bookingSelectedDate), idx, start, end)) continue;
+        /* 220: שעה שמוצעת לרשימת ההמתנה פתוחה גם לכולם באתר — הראשונה שקובעת מקבלת (איילת, 26.11) */
         if ((perStaffBusy[idx] || []).every(([bStart, bEnd]) => end <= bStart || start >= bEnd)) return idx;
       }
       return null;
@@ -20241,8 +20242,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         const wins = perStaffWindows[idx];
         if (!wins || !wins.some(([s2, e2]) => start >= s2 && end <= e2)) continue;
         if (!(perStaffBusy[idx] || []).every(([bStart, bEnd]) => end <= bStart || start >= bEnd)) continue;
-        if (typeof slotIsHeldByOffer === 'function'
-          && slotIsHeldByOffer(formatDateKey(bookingSelectedDate), idx, start, end)) continue;
+        /* 220: שעה שמוצעת לרשימת ההמתנה פתוחה גם לכולם באתר — הראשונה שקובעת מקבלת (איילת, 26.11) */
         if (breaksEveningLimit(mergeWindows(wins), start, dur, idx, bookingSelectedDate)) { sawLimited = true; continue; }
         return false;   // יש מישהי שכן יכולה — אז זו אינה חסימת ערב
       }
@@ -22547,7 +22547,7 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
   function myOfferBoxHtml(o, onclickExpr){
     return `<div class="my-offer" id="myOffer_${escHtml(o.id)}" style="margin-top:10px; padding:10px 12px; border-radius:10px; background:rgba(28,138,75,0.10); border:1px solid rgba(28,138,75,0.45);">
             <div style="font-weight:700;">✨ התפנתה לך שעה: ${escHtml(myOfferDateLabel(o))} בשעה ${escHtml(o.time)}</div>
-            <div style="font-size:12.5px; opacity:.85; margin-top:2px;">ההצעה שמורה לך עד ${escHtml(new Date(o.expiresAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }))}</div>
+            <div style="font-size:12.5px; opacity:.85; margin-top:2px;">השעה פתוחה גם באתר — הראשונה שמאשרת מקבלת. ההצעה בתוקף עד ${escHtml(new Date(o.expiresAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }))}</div>
             <div class="my-appt-actions" style="margin-top:8px;"><button onclick="${onclickExpr}" style="border-color:#1c8a4b; color:#1c8a4b; font-weight:700;">✓ אני מגיעה — לאישור התור</button></div>
           </div>`;
   }
@@ -26924,11 +26924,12 @@ body.th-on:not(.admin-mode) #miniCalGrid .cal-day-cell.selected{background:var(-
         '<div class="claim-meta">' + (o.serviceName || 'תור') + ' · ' + (o.dur || 30) + ' דקות</div>' +
         // 134: עבר הזמן השמור שלה, אבל השעה עדיין פנויה — אפשר לאשר, ראשונה מקבלת.
         (o.late || result.late
-          ? '<div class="claim-timer">⏳ הזמן השמור לך עבר — אבל השעה עדיין פנויה. הראשונה שתאשר מקבלת.</div>'
+          ? '<div class="claim-timer">⏳ זמן ההצעה עבר — אבל השעה עדיין פנויה. הראשונה שתאשר מקבלת.</div>'
           // 136: הודעה לכמה לקוחות (וגם הסבב האחרון) — לא "שמורה לך", כי היא לא שמורה לה
           : (o.broadcast || o.shared)
           ? '<div class="claim-timer">⏳ השעה עדיין פנויה — ההודעה נשלחה לכמה לקוחות, הראשונה שתאשר מקבלת.</div>'
-          : '<div class="claim-timer">⏳ שמורה לך עד ' + (o.until || offerUntilLabel(o)) + ' (נותרו ' + left + ' דקות)</div>') +
+          // 220: השעה פתוחה גם באתר — לא "שמורה לך"
+          : '<div class="claim-timer">⏳ השעה עדיין פנויה והיא פתוחה גם באתר — הראשונה שתאשר מקבלת. ההצעה בתוקף עד ' + (o.until || offerUntilLabel(o)) + ' (נותרו ' + left + ' דקות).</div>') +
         '<div class="claim-note">האישור יינתן ללקוחה שההצעה נשלחה אליה. אם ההודעה נשלחה לכמה לקוחות, הראשונה שתאשר תקבל את התור.</div>' +
         '<label class="label" style="margin:16px 0 6px; display:block;">תעודת זהות או טלפון</label>' +
         '<input id="claimOfferId" class="field-dark" inputmode="numeric" autocomplete="tel" placeholder="תעודת זהות או טלפון" style="width:100%;" value="' + linkPhone + '">' +
